@@ -94,7 +94,7 @@ func TestVerifyManagedWorkerClusterRoles(t *testing.T) {
 		{
 			name: "baseline extra verb",
 			mutate: func(roles []rbacv1.ClusterRole) []rbacv1.ClusterRole {
-				roles[0].Rules[2].Verbs = append(roles[0].Rules[2].Verbs, "delete")
+				roles[0].Rules[0].Verbs = append(roles[0].Rules[0].Verbs, "delete")
 				return roles
 			},
 			wantError: "rules do not match",

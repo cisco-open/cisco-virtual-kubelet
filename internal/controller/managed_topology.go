@@ -44,11 +44,13 @@ import (
 // managedTopologyResult tells the CiscoDevice reconciler whether this device
 // has entered managed ownership and whether its worker may be reconciled.
 type managedTopologyResult struct {
-	Managed      bool
-	LegacyWorker bool
-	NodeName     string
-	Policy       *topologyrollout.ParsedAdminPolicy
-	RequeueAfter time.Duration
+	Managed              bool
+	LegacyWorker         bool
+	WorkerServiceAccount string
+	HoldWorker           bool
+	NodeName             string
+	Policy               *topologyrollout.ParsedAdminPolicy
+	RequeueAfter         time.Duration
 }
 
 // managedMaintenanceFenceError reports a rejected maintenance request after
@@ -93,6 +95,9 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 	// managed writer midway through the transfer. Finish the durable protocol;
 	// a later forward enrollment is allowed only from Complete.
 	if handoff := device.Status.LegacyHandoff; handoff != nil && handoff.Phase != ciskov1.DeviceLegacyHandoffComplete {
+		if handoff.Phase == ciskov1.DeviceLegacyHandoffSharedWriterPending {
+			return r.reconcileCompletedLegacyHandoff(ctx, device)
+		}
 		if device.Status.NodeIdentity == nil {
 			return managedTopologyResult{}, fmt.Errorf("incomplete legacy writer handoff lost its managed Node identity")
 		}
@@ -126,6 +131,14 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 		}
 		return managedTopologyResult{}, fmt.Errorf("managed topology policy: %w", err)
 	}
+	if err := r.validateSharedWorkerIdentityPolicy(policy); err != nil {
+		return r.failManagedTopology(ctx, device,
+			managedTopologyResult{Managed: device.Status.NodeIdentity != nil, NodeName: resolvedNodeName(device)},
+			ciskov1.CiscoDeviceConditionTopologyConflict,
+			"SharedWorkerIdentityPolicyMismatch",
+			err.Error(),
+		)
+	}
 
 	selected := policy.Selector.Matches(labels.Set(device.Labels))
 	wasManaged := device.Status.NodeIdentity != nil
@@ -134,8 +147,15 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 			return managedTopologyResult{}, fmt.Errorf("legacy writer handoff is incomplete in phase %q", device.Status.LegacyHandoff.Phase)
 		}
 		if request := strings.TrimSpace(device.Annotations[managedprotocol.AnnotationRequestLegacyHandoff]); request != "" {
-			return managedTopologyResult{LegacyWorker: true, NodeName: device.Status.LegacyHandoff.NodeName},
+			return managedTopologyResult{LegacyWorker: true, WorkerServiceAccount: r.vkServiceAccountName(), NodeName: device.Status.LegacyHandoff.NodeName},
 				fmt.Errorf("remove completed %s request before re-enrolling the device into managed topology", managedprotocol.AnnotationRequestLegacyHandoff)
+		}
+		ready, err := r.prepareCompletedLegacyHandoffForEnrollment(ctx, device)
+		if err != nil {
+			return managedTopologyResult{}, err
+		}
+		if !ready {
+			return sharedPendingLegacyHandoffResult(device, r.vkServiceAccountName(), true), nil
 		}
 	}
 	if selected && !wasManaged {
@@ -152,19 +172,20 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 		}
 	}
 	if !selected && !wasManaged {
-		if device.Status.LegacyHandoff == nil {
-			legacySA := topologyLegacyWorkerServiceAccountName(device)
-			if err := r.ensureVKAccess(ctx, device, legacySA, false, true); err != nil {
-				return managedTopologyResult{}, fmt.Errorf("provision isolated legacy worker access: %w", err)
-			}
-			// Marker-last makes interruption recoverable from exact owned
-			// ServiceAccount/RBAC evidence without ever trusting marker alone.
-			if err := r.ensureIsolatedLegacyWorkerMarker(ctx, device); err != nil {
-				return managedTopologyResult{}, err
-			}
-			return managedTopologyResult{LegacyWorker: true, NodeName: resolvedNodeName(device)}, nil
+		if device.Status.LegacyHandoff != nil {
+			return r.reconcileCompletedLegacyHandoff(ctx, device)
 		}
-		return r.reconcileCompletedLegacyHandoff(ctx, device)
+		// Topology-on steady state has only the two namespace-shared functional
+		// identities. A selector miss must not silently manufacture another
+		// per-device writer. UID-bound legacy identities remain valid only as a
+		// bounded reverse-handoff/migration state recorded in status.
+		message := fmt.Sprintf("CiscoDevice %s/%s is excluded by the managed topology fleet selector; no worker or per-device credentials were provisioned", device.Namespace, device.Name)
+		return r.failManagedTopology(ctx, device,
+			managedTopologyResult{NodeName: resolvedNodeName(device)},
+			ciskov1.CiscoDeviceConditionTopologyIncomplete,
+			"ManagedFleetSelectorExcluded",
+			message,
+		)
 	}
 	result := managedTopologyResult{Managed: true, NodeName: resolvedNodeName(device), Policy: policy}
 	if !selected {
@@ -250,6 +271,15 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 			err.Error(),
 		)
 	}
+	if err := r.repairManagedWorkerBindings(ctx, device); err != nil {
+		return r.failManagedTopology(ctx, device, result,
+			ciskov1.CiscoDeviceConditionTopologyConflict, "WorkerBindingRepairFailed", err.Error())
+	}
+	// Binding repair patches Node metadata through the uncached reader. Refresh
+	// this object before validating the maintenance fence or patching projection.
+	if err := r.reader().Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+		return result, err
+	}
 	if err := r.ensureManagedWorkerLeases(ctx, device, node); err != nil {
 		return r.failManagedTopology(ctx, device, result,
 			ciskov1.CiscoDeviceConditionTopologyConflict,
@@ -293,6 +323,27 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 	return result, nil
 }
 
+func (r *CiscoDeviceReconciler) validateSharedWorkerIdentityPolicy(policy *topologyrollout.ParsedAdminPolicy) error {
+	if policy == nil {
+		return fmt.Errorf("managed topology policy is unavailable")
+	}
+	configuredApp := r.appHostingServiceAccountName()
+	configuredNetwork := r.networkManagementServiceAccountName()
+	if policy.Config.AppHostingServiceAccountName != configuredApp {
+		return fmt.Errorf("configured app-hosting ServiceAccount %q differs from topology policy identity lock %q",
+			configuredApp, policy.Config.AppHostingServiceAccountName)
+	}
+	if policy.Config.NetworkManagementServiceAccountName != configuredNetwork {
+		return fmt.Errorf("configured network-management ServiceAccount %q differs from topology policy identity lock %q",
+			configuredNetwork, policy.Config.NetworkManagementServiceAccountName)
+	}
+	if policy.Config.ConfigLeaseNamespace != r.LeaseNamespace {
+		return fmt.Errorf("configured config Lease namespace %q differs from topology policy identity lock %q",
+			r.LeaseNamespace, policy.Config.ConfigLeaseNamespace)
+	}
+	return nil
+}
+
 // failManagedTopology makes the scheduling guard the first invariant on every
 // managed-path failure. Status is diagnostic; it must never be the only fence.
 // Join preserves a guard write/CAS failure alongside the primary condition so
@@ -316,12 +367,12 @@ func resolvedNodeName(device *ciskov1.CiscoDevice) string {
 }
 
 // validateTopologyWorkerNodeName preserves an exact, lookup-free admission
-// binding between the authenticated per-device ServiceAccount and the Node it
-// may update. spec.nodeName already has the 63-byte boundary and DNS-subdomain
+// binding between a shared app worker's bound Pod identity and the Node it may
+// update. spec.nodeName already has the 63-byte boundary and DNS-subdomain
 // grammar. The explicit check covers the legacy compatibility case where an
 // omitted spec.nodeName inherits a CiscoDevice metadata.name of up to 253
 // bytes, which cannot be losslessly embedded alongside protocol and
-// incarnation identity in a ServiceAccount name of the same maximum size.
+// incarnation identity in managed object names of the same maximum size.
 func validateTopologyWorkerNodeName(device *ciskov1.CiscoDevice) error {
 	name := resolvedNodeName(device)
 	if len(name) > 63 {
@@ -408,17 +459,19 @@ func (r *CiscoDeviceReconciler) reserveManagedNode(
 	projectionHash string,
 ) (*corev1.Node, error) {
 	name := resolvedNodeName(device)
-	saName := managedWorkerServiceAccountName(device)
-	workerUsername := fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, saName)
+	workerUsername := fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, r.appHostingServiceAccountName())
+	networkWorkerUsername := fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, r.networkManagementServiceAccountName())
 	binding := map[string]string{
-		managedprotocol.AnnotationManaged:         "true",
-		managedprotocol.AnnotationDeviceNamespace: device.Namespace,
-		managedprotocol.AnnotationDeviceName:      device.Name,
-		managedprotocol.AnnotationDeviceUID:       string(device.UID),
-		managedprotocol.AnnotationWorkerUsername:  workerUsername,
-		managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
-		managedprotocol.AnnotationProjectedKeys:   encodeStringSet(mapKeys(projected)),
-		managedprotocol.AnnotationProjectionHash:  projectionHash,
+		managedprotocol.AnnotationManaged:               "true",
+		managedprotocol.AnnotationDeviceNamespace:       device.Namespace,
+		managedprotocol.AnnotationDeviceName:            device.Name,
+		managedprotocol.AnnotationDeviceUID:             string(device.UID),
+		managedprotocol.AnnotationWorkerUsername:        workerUsername,
+		managedprotocol.AnnotationAppWorkerUsername:     workerUsername,
+		managedprotocol.AnnotationNetworkWorkerUsername: networkWorkerUsername,
+		managedprotocol.AnnotationWorkerProtocol:        managedprotocol.Version,
+		managedprotocol.AnnotationProjectedKeys:         encodeStringSet(mapKeys(projected)),
+		managedprotocol.AnnotationProjectionHash:        projectionHash,
 	}
 	desiredTaints := append([]corev1.Taint(nil), device.Spec.Taints...)
 	desiredTaints = upsertTaint(desiredTaints, topologyInitializationTaint())
@@ -561,7 +614,11 @@ func (r *CiscoDeviceReconciler) reconcileManagedNodeMetadata(
 	node.Annotations[managedprotocol.AnnotationDeviceName] = device.Name
 	node.Annotations[managedprotocol.AnnotationDeviceUID] = string(device.UID)
 	node.Annotations[managedprotocol.AnnotationNodeUID] = string(node.UID)
-	node.Annotations[managedprotocol.AnnotationWorkerUsername] = fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, managedWorkerServiceAccountName(device))
+	appWorkerUsername := fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, r.appHostingServiceAccountName())
+	networkWorkerUsername := fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, r.networkManagementServiceAccountName())
+	node.Annotations[managedprotocol.AnnotationWorkerUsername] = appWorkerUsername
+	node.Annotations[managedprotocol.AnnotationAppWorkerUsername] = appWorkerUsername
+	node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] = networkWorkerUsername
 	node.Annotations[managedprotocol.AnnotationWorkerProtocol] = managedprotocol.Version
 	node.Annotations[managedprotocol.AnnotationProjectedKeys] = encodeStringSet(mapKeys(desiredLabels))
 	node.Annotations[managedprotocol.AnnotationProjectionHash] = projectionHash
@@ -701,11 +758,13 @@ func (r *CiscoDeviceReconciler) patchManagedTopologyStatus(
 		before.Status.NodeIdentity.NodeUID != string(node.UID)
 	if newBinding {
 		// Status is not manager-only until NodeIdentity is established. Never
-		// adopt a pre-binding health snapshot supplied through that compatibility
-		// window, even if its source fields happen to match. The binding write
-		// intentionally leaves health absent: a later reconciliation must observe
-		// the now manager-owned sources before rollout admission can use them.
+		// adopt pre-binding health or worker-revision evidence supplied through
+		// that compatibility window, even if its source fields happen to match.
+		// A later reconciliation must observe the now manager-owned sources before
+		// rollout admission can use them.
 		device.Status.HealthObservation = nil
+		device.Status.WorkerRevision = nil
+		device.Status.NetworkWorkerRevision = nil
 	} else {
 		if err := refreshManagedHealthObservation(device, node, r.now(),
 			ciskov1.CiscoDeviceConditionNodeIdentityReady,

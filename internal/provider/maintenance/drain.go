@@ -337,13 +337,14 @@ func (c *Coordinator) AcquireDrainDelete(
 }
 
 type drainDeleteAuthority struct {
-	deadline             time.Time
-	holder               string
-	podPhase             opsv1alpha1.UpgradeDrainPodPhase
-	lease                coordv1.Lease
-	session              ciskov1.DeviceMaintenanceSessionStatus
-	drain                opsv1alpha1.UpgradeManagerDrainStatus
-	workerConfigRevision string
+	deadline              time.Time
+	holder                string
+	podPhase              opsv1alpha1.UpgradeDrainPodPhase
+	lease                 coordv1.Lease
+	session               ciskov1.DeviceMaintenanceSessionStatus
+	drain                 opsv1alpha1.UpgradeManagerDrainStatus
+	workerConfigRevision  string
+	networkWorkerRevision string
 }
 
 type drainDeleteAuthorizationMode uint8
@@ -612,18 +613,19 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 			authorityDeadline = leaseDeadline
 		}
 	}
-	workerConfigRevision := ""
+	networkRevision := ""
 	if leaf.Status.WorkerControl != nil {
-		workerConfigRevision = leaf.Status.WorkerControl.ObservedWorkerConfigRevision
+		networkRevision = leaf.Status.WorkerControl.ObservedWorkerConfigRevision
 	}
 	return drainDeleteAuthority{
-		deadline:             authorityDeadline,
-		holder:               holder,
-		podPhase:             selected.Phase,
-		lease:                lease,
-		session:              *session,
-		drain:                *drain,
-		workerConfigRevision: workerConfigRevision,
+		deadline:              authorityDeadline,
+		holder:                holder,
+		podPhase:              selected.Phase,
+		lease:                 lease,
+		session:               *session,
+		drain:                 *drain,
+		workerConfigRevision:  c.WorkerRevision,
+		networkWorkerRevision: networkRevision,
 	}, nil
 }
 
@@ -946,11 +948,23 @@ func validateDrainLeafBindingWithRevisionRollover(
 		(session.ControlRevision != control.Revision && !staleRecoveryRevision) {
 		return nil, fmt.Errorf("managed drain leaf control or worker acknowledgement is incomplete or stale")
 	}
+	networkRevision := workerRevision
+	leafUsername := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	if network := device.Status.NetworkWorkerRevision; network != nil {
+		networkRevision = network.ObservedRevision
+		leafUsername = node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername]
+		if networkRevision == "" || network.DesiredRevision != networkRevision ||
+			network.PodUID != node.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] ||
+			network.PodStartTime == nil || network.PodReadyTime == nil || network.PodReadyTime.Before(network.PodStartTime) {
+			return nil, fmt.Errorf("managed drain has no current network worker proof")
+		}
+	}
 	if requireCurrentWorker && (worker.ObservedPolicyEpoch != admission.PolicyEpoch ||
 		worker.ObservedControlRevision > control.Revision || workerRevision == "" ||
-		worker.ObservedWorkerConfigRevision != workerRevision ||
-		worker.ObservedWorkerConfigRevision != node.Annotations[managedprotocol.AnnotationWorkerObservedRevision]) {
-		return nil, fmt.Errorf("managed drain leaf control or worker acknowledgement is incomplete or stale")
+		worker.ObservedWorkerConfigRevision != networkRevision ||
+		workerRevision != node.Annotations[managedprotocol.AnnotationWorkerObservedRevision]) {
+		return nil, fmt.Errorf("managed drain worker proof is stale: network acknowledged=%q expected=%q; app runtime=%q Node=%q",
+			worker.ObservedWorkerConfigRevision, networkRevision, workerRevision, node.Annotations[managedprotocol.AnnotationWorkerObservedRevision])
 	}
 	if requireCurrentWorker && !recovering {
 		if control.Pause || control.Cancel || worker.ObservedAdmissionState != admission.State ||
@@ -994,7 +1008,7 @@ func validateDrainLeafBindingWithRevisionRollover(
 		managedprotocol.AnnotationDeviceGeneration: strconv.FormatInt(device.Generation, 10),
 		managedprotocol.AnnotationNodeName:         node.Name,
 		managedprotocol.AnnotationNodeUID:          string(node.UID),
-		managedprotocol.AnnotationWorkerUsername:   node.Annotations[managedprotocol.AnnotationWorkerUsername],
+		managedprotocol.AnnotationWorkerUsername:   leafUsername,
 		managedprotocol.AnnotationWorkerProtocol:   managedprotocol.Version,
 		managedprotocol.AnnotationCampaignUID:      admission.CampaignUID,
 		managedprotocol.AnnotationPlanHash:         admission.PlanHash,

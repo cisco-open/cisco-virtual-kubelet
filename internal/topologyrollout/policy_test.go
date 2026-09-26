@@ -39,7 +39,7 @@ func TestParseAdminPolicyProducesUIDBoundAdmissionPolicy(t *testing.T) {
 			Namespace: "cvk-system", Name: "topology-policy", UID: types.UID("policy-uid"), ResourceVersion: "41",
 			Annotations: map[string]string{
 				PolicyManagedAnnotation: "true", LedgerUIDAnnotation: "ledger-uid",
-				AdmissionPrefixAnnotation: "cvk",
+				AdmissionPrefixAnnotation: "cvk", ConfigLeaseNamespaceAnnotation: cfg.ConfigLeaseNamespace,
 			},
 		},
 		Data: map[string]string{PolicyDataKey: data},
@@ -112,6 +112,15 @@ func TestAdminPolicyHashesSeparateSemanticAndStructuralChanges(t *testing.T) {
 	if semanticA != semanticB || structuralA != structuralB {
 		t.Fatal("order-only drain namespace rewrite changed canonical policy hashes")
 	}
+	changedLeaseAuthority := base
+	changedLeaseAuthority.ConfigLeaseNamespace = "other-leases"
+	_, structuralLeaseChanged, err := AdminPolicyHashes(changedLeaseAuthority)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if structuralLeaseChanged == structural {
+		t.Fatal("config Lease namespace change did not change the structural hash")
+	}
 }
 
 func TestAdminPolicyValidationFailsClosed(t *testing.T) {
@@ -145,6 +154,7 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 		"oversize domain budget": func(cfg *AdminPolicyConfig) {
 			cfg.DomainMaxConcurrentTransfers["topology.cisco.vk/site"] = DefaultMaxCampaignTargets + 1
 		},
+		"invalid config lease namespace": func(cfg *AdminPolicyConfig) { cfg.ConfigLeaseNamespace = "Not/A/Namespace" },
 		"operational key projected": func(cfg *AdminPolicyConfig) {
 			cfg.RequiredTopologyKeys = append(cfg.RequiredTopologyKeys, "operations.cisco.vk/upgrade-ring")
 			cfg.ProjectedTopologyKeys = append(cfg.ProjectedTopologyKeys, "operations.cisco.vk/upgrade-ring")
@@ -317,12 +327,33 @@ func TestAdminPolicyRejectsUnknownJSONFields(t *testing.T) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "cvk-system", Name: "topology-policy", UID: "policy-uid", ResourceVersion: "1",
-			Annotations: map[string]string{PolicyManagedAnnotation: "true", AdmissionPrefixAnnotation: "cvk"},
+			Annotations: map[string]string{PolicyManagedAnnotation: "true", AdmissionPrefixAnnotation: "cvk", ConfigLeaseNamespaceAnnotation: "cvk-leases"},
 		},
 		Data: map[string]string{PolicyDataKey: data},
 	}
 	if _, err := inspectAdminPolicy(cm); err == nil || !strings.Contains(err.Error(), "unknown field") {
 		t.Fatalf("inspectAdminPolicy() error = %v, want unknown-field rejection", err)
+	}
+}
+
+func TestAdminPolicyRejectsConfigLeaseNamespaceAnnotationMismatch(t *testing.T) {
+	cfg := validAdminPolicyConfig()
+	data, err := CanonicalPolicyJSON(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "cvk-system", Name: "topology-policy", UID: "policy-uid", ResourceVersion: "1",
+			Annotations: map[string]string{
+				PolicyManagedAnnotation: "true", AdmissionPrefixAnnotation: "cvk",
+				ConfigLeaseNamespaceAnnotation: "other-leases",
+			},
+		},
+		Data: map[string]string{PolicyDataKey: data},
+	}
+	if _, err := inspectAdminPolicy(cm); err == nil || !strings.Contains(err.Error(), "config Lease namespace annotation") {
+		t.Fatalf("inspectAdminPolicy() error = %v, want lease namespace mismatch", err)
 	}
 }
 
@@ -334,7 +365,7 @@ func TestParseAdminPolicyRequiresIndependentLedgerBinding(t *testing.T) {
 	}
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{UID: "policy-uid", ResourceVersion: "1", Annotations: map[string]string{
-			PolicyManagedAnnotation: "true", AdmissionPrefixAnnotation: "cvk",
+			PolicyManagedAnnotation: "true", AdmissionPrefixAnnotation: "cvk", ConfigLeaseNamespaceAnnotation: cfg.ConfigLeaseNamespace,
 		}},
 		Data: map[string]string{PolicyDataKey: string(data)},
 	}
@@ -345,19 +376,22 @@ func TestParseAdminPolicyRequiresIndependentLedgerBinding(t *testing.T) {
 
 func validAdminPolicyConfig() AdminPolicyConfig {
 	return AdminPolicyConfig{
-		Version:                      PolicyVersion,
-		FleetSelector:                metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/managed": "true"}},
-		RequiredTopologyKeys:         []string{"topology.cisco.vk/site", "topology.cisco.vk/redundancy-group"},
-		ProjectedTopologyKeys:        []string{"topology.cisco.vk/site", "topology.cisco.vk/redundancy-group"},
-		GlobalMaxConcurrentTransfers: 3,
-		GlobalMaxUnavailable:         3,
-		DomainMaxConcurrentTransfers: map[string]int{"topology.cisco.vk/site": 2, "topology.cisco.vk/redundancy-group": 1},
-		DomainMaxUnavailable:         map[string]int{"topology.cisco.vk/site": 2, "topology.cisco.vk/redundancy-group": 1},
-		HealthFreshnessSeconds:       120,
-		MaxCampaignTargets:           100,
-		MaxActiveReservations:        256,
-		MaxLedgerBytes:               256 * 1024,
-		LedgerName:                   "cvk-rollout-ledger",
+		Version:                             PolicyVersion,
+		AppHostingServiceAccountName:        "cvk-app-hosting",
+		NetworkManagementServiceAccountName: "cvk-network-management",
+		ConfigLeaseNamespace:                "cvk-leases",
+		FleetSelector:                       metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/managed": "true"}},
+		RequiredTopologyKeys:                []string{"topology.cisco.vk/site", "topology.cisco.vk/redundancy-group"},
+		ProjectedTopologyKeys:               []string{"topology.cisco.vk/site", "topology.cisco.vk/redundancy-group"},
+		GlobalMaxConcurrentTransfers:        3,
+		GlobalMaxUnavailable:                3,
+		DomainMaxConcurrentTransfers:        map[string]int{"topology.cisco.vk/site": 2, "topology.cisco.vk/redundancy-group": 1},
+		DomainMaxUnavailable:                map[string]int{"topology.cisco.vk/site": 2, "topology.cisco.vk/redundancy-group": 1},
+		HealthFreshnessSeconds:              120,
+		MaxCampaignTargets:                  100,
+		MaxActiveReservations:               256,
+		MaxLedgerBytes:                      256 * 1024,
+		LedgerName:                          "cvk-rollout-ledger",
 	}
 }
 

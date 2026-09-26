@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/workloaddrain"
@@ -37,6 +38,16 @@ import (
 
 func TestVerifyAndPublishDrainInventoryIsCompleteDeterministicAndMonotonic(t *testing.T) {
 	c, objects := drainInventoryCoordinatorFixture(t, func(o *drainFixtureObjects) {
+		// The network process has a different revision and Pod from the app
+		// process that scans and deletes device workloads.
+		networkRevision := "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+		o.device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+			DesiredRevision: networkRevision, ObservedRevision: networkRevision,
+			PodUID: "network-pod-uid", PodStartTime: o.device.Status.WorkerRevision.PodStartTime,
+			PodReadyTime: o.device.Status.WorkerRevision.ReadyHeartbeatTime,
+		}
+		o.leaf.Annotations[managedprotocol.AnnotationWorkerUsername] = o.node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername]
+		o.leaf.Status.WorkerControl.ObservedWorkerConfigRevision = networkRevision
 		for _, suffix := range []string{"a", "b"} {
 			other := o.leaf.Status.ManagerDrain.Pods[0]
 			other.Name = "other-" + suffix
@@ -80,7 +91,8 @@ func TestVerifyAndPublishDrainInventoryIsCompleteDeterministicAndMonotonic(t *te
 	}
 	if firstStatus.ProtocolVersion != opsv1alpha1.ManagedDrainProtocolPDBV1 ||
 		firstStatus.ObservedSessionToken != drainSessionToken || firstStatus.ObservedPolicyEpoch != 2 ||
-		firstStatus.ObservedControlRevision != 7 || firstStatus.ObservedWorkerConfigRevision != drainWorkerHash {
+		firstStatus.ObservedControlRevision != 7 || firstStatus.ObservedWorkerConfigRevision != drainWorkerHash ||
+		firstStatus.ObservedWorkerPodUID != c.WorkerPodUID {
 		t.Fatalf("inventory status is not bound to the exact drain authority: %#v", firstStatus)
 	}
 	if !apiequality.Semantic.DeepEqual(current.Status.ManagerDrain, managerBefore) {
@@ -191,6 +203,8 @@ func TestVerifyAndPublishDrainInventoryRefreshesProofAfterWorkerRotation(t *test
 				o.device.Status.WorkerRevision.ObservedRevision = rotatedWorkerRevision
 				o.device.Status.WorkerRevision.DeploymentGeneration++
 				o.device.Status.WorkerRevision.PodUID = rotatedWorkerPodUID
+				o.node.Annotations[managedprotocol.AnnotationAppWorkerPodUID] = rotatedWorkerPodUID
+				o.lease.Annotations[managedprotocol.AnnotationAppWorkerPodUID] = rotatedWorkerPodUID
 				rotatedPodStart := metav1.NewTime(time.Now().UTC().Add(-time.Minute))
 				rotatedHeartbeat := metav1.Now()
 				o.device.Status.WorkerRevision.PodStartTime = &rotatedPodStart

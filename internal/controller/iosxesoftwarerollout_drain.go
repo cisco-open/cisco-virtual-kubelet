@@ -1428,7 +1428,17 @@ func drainWorkerProvesPodClean(
 		worker.InventoryObservedAt.IsZero() {
 		return 0, false
 	}
-	if leaf.Status.WorkerControl == nil || worker.ObservedWorkerConfigRevision != leaf.Status.WorkerControl.ObservedWorkerConfigRevision {
+	if leaf.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] != "" &&
+		(leaf.Annotations[managedprotocol.AnnotationAppWorkerPodUID] == "" ||
+			worker.ObservedWorkerPodUID != leaf.Annotations[managedprotocol.AnnotationAppWorkerPodUID]) {
+		return 0, false
+	}
+	expectedRevision := leaf.Annotations[managedprotocol.AnnotationAppWorkerConfigRevision]
+	if expectedRevision == "" && leaf.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] == "" && leaf.Status.WorkerControl != nil {
+		// Retained single-worker campaigns predate the split worker contract.
+		expectedRevision = leaf.Status.WorkerControl.ObservedWorkerConfigRevision
+	}
+	if expectedRevision == "" || worker.ObservedWorkerConfigRevision != expectedRevision {
 		return 0, false
 	}
 	// Publication is causally gated by the worker on this exact durable
@@ -1990,7 +2000,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureMaintenanceLeaseIdle(
 		return fmt.Errorf("drain mutation Lease incarnation changed")
 	}
 	expectedAnnotations, expectedLabels := managedMutationLeaseMetadata(
-		device, node.Name, string(node.UID), node.Annotations[managedprotocol.AnnotationWorkerUsername],
+		device, node.Name, string(node.UID), managedNetworkWorkerUsername(node),
 	)
 	if err := validateManagedMutationLeaseMetadata(&lease, expectedAnnotations, expectedLabels); err != nil {
 		return fmt.Errorf("%w: mutation Lease binding is no longer canonical: %v", errDrainSafetyBlocked, err)

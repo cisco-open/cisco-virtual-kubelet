@@ -53,6 +53,9 @@ func (c *Coordinator) BeforeSoftwareUpgradeMutation(
 	if !c.ManagedTopology {
 		return c.BeforeMutation(ctx)
 	}
+	if c.WorkerMode != managedprotocol.WorkerModeNetworkManagement {
+		return fmt.Errorf("managed software upgrade requires the network-management worker identity")
+	}
 	ctx, cancel := context.WithTimeout(ctx, apiTimeout)
 	defer cancel()
 	if c.Client == nil || c.Namespace == "" || c.DeviceName == "" || c.DeviceUID == "" ||
@@ -262,7 +265,51 @@ func maintenanceRequestMatches(
 		annotations[managedprotocol.AnnotationDeviceUID] == c.DeviceUID &&
 		annotations[managedprotocol.AnnotationNodeName] == node.Name &&
 		annotations[managedprotocol.AnnotationNodeUID] == string(node.UID) &&
-		annotations[managedprotocol.AnnotationWorkerUsername] == node.Annotations[managedprotocol.AnnotationWorkerUsername]
+		c.WorkerMode == managedprotocol.WorkerModeNetworkManagement &&
+		annotations[managedprotocol.AnnotationWorkerUsername] == c.ExpectedWorkerUsername &&
+		annotations[managedprotocol.AnnotationNetworkWorkerUsername] == c.ExpectedWorkerUsername &&
+		annotations[managedprotocol.AnnotationNetworkWorkerPodName] == c.WorkerPodName &&
+		annotations[managedprotocol.AnnotationNetworkWorkerPodUID] == c.WorkerPodUID &&
+		node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] == c.ExpectedWorkerUsername &&
+		node.Annotations[managedprotocol.AnnotationNetworkWorkerPodName] == c.WorkerPodName &&
+		node.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] == c.WorkerPodUID
+}
+
+func functionalWorkerAnnotationKeys(mode string) (username, podName, podUID string, ok bool) {
+	switch mode {
+	case managedprotocol.WorkerModeAppHosting:
+		return managedprotocol.AnnotationAppWorkerUsername,
+			managedprotocol.AnnotationAppWorkerPodName,
+			managedprotocol.AnnotationAppWorkerPodUID, true
+	case managedprotocol.WorkerModeNetworkManagement:
+		return managedprotocol.AnnotationNetworkWorkerUsername,
+			managedprotocol.AnnotationNetworkWorkerPodName,
+			managedprotocol.AnnotationNetworkWorkerPodUID, true
+	default:
+		return "", "", "", false
+	}
+}
+
+func (c *Coordinator) validateFunctionalWorkerBinding(annotations map[string]string, object string) error {
+	usernameKey, podNameKey, podUIDKey, ok := functionalWorkerAnnotationKeys(c.WorkerMode)
+	if !ok {
+		return fmt.Errorf("managed maintenance worker mode %q is not functional", c.WorkerMode)
+	}
+	prefix := "system:serviceaccount:" + c.Namespace + ":"
+	if !strings.HasPrefix(c.ExpectedWorkerUsername, prefix) || strings.TrimPrefix(c.ExpectedWorkerUsername, prefix) == "" ||
+		strings.TrimSpace(c.WorkerPodName) == "" || strings.TrimSpace(c.WorkerPodUID) == "" {
+		return fmt.Errorf("managed maintenance %s runtime worker identity is incomplete", c.WorkerMode)
+	}
+	for key, expected := range map[string]string{
+		usernameKey: c.ExpectedWorkerUsername,
+		podNameKey:  c.WorkerPodName,
+		podUIDKey:   c.WorkerPodUID,
+	} {
+		if annotations[key] != expected {
+			return fmt.Errorf("managed maintenance %s %s annotation %s does not match the runtime", c.WorkerMode, object, key)
+		}
+	}
+	return nil
 }
 
 func (c *Coordinator) validateManagedNode(node *corev1.Node) error {
@@ -282,10 +329,20 @@ func (c *Coordinator) validateManagedNode(node *corev1.Node) error {
 			return fmt.Errorf("managed maintenance Node annotation %s=%q, want %q", key, node.Annotations[key], value)
 		}
 	}
-	username := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	if err := c.validateFunctionalWorkerBinding(node.Annotations, "Node"); err != nil {
+		return err
+	}
+	username := node.Annotations[managedprotocol.AnnotationAppWorkerUsername]
 	prefix := "system:serviceaccount:" + c.Namespace + ":"
 	if !strings.HasPrefix(username, prefix) || strings.TrimPrefix(username, prefix) == "" {
-		return fmt.Errorf("managed maintenance Node has no valid worker binding")
+		return fmt.Errorf("managed maintenance Node has no valid app-hosting worker binding")
+	}
+	if node.Annotations[managedprotocol.AnnotationWorkerUsername] != username {
+		return fmt.Errorf("managed maintenance Node canonical worker binding is not app-hosting")
+	}
+	networkUsername := node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername]
+	if !strings.HasPrefix(networkUsername, prefix) || strings.TrimPrefix(networkUsername, prefix) == "" {
+		return fmt.Errorf("managed maintenance Node has no valid network-management worker binding")
 	}
 	return nil
 }
@@ -294,6 +351,7 @@ func (c *Coordinator) validateManagedLeaseBinding(lease *coordv1.Lease, node *co
 	if lease.UID == "" {
 		return fmt.Errorf("managed mutation Lease has no persistent UID")
 	}
+	networkUsername := node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername]
 	for annotation, expected := range map[string]string{
 		managedprotocol.AnnotationManaged:         "true",
 		managedprotocol.AnnotationDeviceNamespace: c.Namespace,
@@ -301,13 +359,28 @@ func (c *Coordinator) validateManagedLeaseBinding(lease *coordv1.Lease, node *co
 		managedprotocol.AnnotationDeviceUID:       c.DeviceUID,
 		managedprotocol.AnnotationNodeName:        node.Name,
 		managedprotocol.AnnotationNodeUID:         string(node.UID),
-		managedprotocol.AnnotationWorkerUsername:  node.Annotations[managedprotocol.AnnotationWorkerUsername],
+		managedprotocol.AnnotationWorkerUsername:  networkUsername,
 		managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
 		managedprotocol.AnnotationLeasePurpose:    managedprotocol.LeasePurposeDeviceMutation,
 		devicecoordination.RetainLeaseAnnotation:  "true",
 	} {
 		if lease.Annotations[annotation] != expected {
 			return fmt.Errorf("managed mutation Lease binding %s does not match the runtime", annotation)
+		}
+	}
+	if err := c.validateFunctionalWorkerBinding(lease.Annotations, "mutation Lease"); err != nil {
+		return err
+	}
+	for _, annotation := range []string{
+		managedprotocol.AnnotationAppWorkerUsername,
+		managedprotocol.AnnotationAppWorkerPodName,
+		managedprotocol.AnnotationAppWorkerPodUID,
+		managedprotocol.AnnotationNetworkWorkerUsername,
+		managedprotocol.AnnotationNetworkWorkerPodName,
+		managedprotocol.AnnotationNetworkWorkerPodUID,
+	} {
+		if lease.Annotations[annotation] != node.Annotations[annotation] {
+			return fmt.Errorf("managed mutation Lease binding %s does not match the Node", annotation)
 		}
 	}
 	deviceKey := devicecoordination.DeviceKey(c.Namespace, c.DeviceName)

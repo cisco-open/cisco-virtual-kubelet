@@ -27,7 +27,7 @@ limitations under the License.
 {{- if and
       (eq (get $annotations "meta.helm.sh/release-name") $.Release.Name)
       (eq (get $annotations "meta.helm.sh/release-namespace") $.Release.Namespace)
-      (eq (get $annotations "topology.cisco.vk/admission-contract-version") "v1") }}
+      (has (get $annotations "topology.cisco.vk/admission-contract-version") (list "v1" "v2")) }}
 {{- $retainedTopologyAuthority = true }}
 {{- end }}
 {{- end }}
@@ -60,8 +60,13 @@ limitations under the License.
 {{- fail (printf "topology policy %s/%s is bound to an empty ledger; recover the retained ledger through the audited break-glass procedure before upgrading" $policyNamespace $policyName) }}
 {{- end }}
 {{- end }}
+{{- $appHostingServiceAccountName := include "cisco-virtual-kubelet.appHostingServiceAccountName" . }}
+{{- $networkManagementServiceAccountName := include "cisco-virtual-kubelet.networkManagementServiceAccountName" . }}
 {{- $policy := dict
       "version" "v1"
+      "appHostingServiceAccountName" $appHostingServiceAccountName
+      "networkManagementServiceAccountName" $networkManagementServiceAccountName
+      "configLeaseNamespace" .Values.config.leaseNamespace
       "fleetSelector" .Values.topology.policy.fleetSelector
       "requiredTopologyKeys" .Values.topology.policy.requiredTopologyKeys
       "projectedTopologyKeys" .Values.topology.policy.projectedTopologyKeys
@@ -100,7 +105,10 @@ metadata:
     helm.sh/resource-policy: keep
     topology.cisco.vk/managed-policy: "true"
     topology.cisco.vk/admission-policy-prefix: {{ include "cisco-virtual-kubelet.fullname" . | quote }}
-    topology.cisco.vk/admission-contract-version: "v1"
+    topology.cisco.vk/admission-contract-version: "v2"
+    topology.cisco.vk/app-hosting-service-account: {{ $appHostingServiceAccountName | quote }}
+    topology.cisco.vk/network-management-service-account: {{ $networkManagementServiceAccountName | quote }}
+    topology.cisco.vk/config-lease-namespace: {{ .Values.config.leaseNamespace | quote }}
     {{- if ne $boundLedgerUID "" }}
     topology.cisco.vk/ledger-uid: {{ $boundLedgerUID | quote }}
     {{- end }}

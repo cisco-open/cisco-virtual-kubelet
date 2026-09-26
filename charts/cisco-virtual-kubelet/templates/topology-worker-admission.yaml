@@ -1,0 +1,1743 @@
+{{/*
+Copyright 2026 Cisco Systems Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/}}
+{{- if .Values.topology.enabled }}
+{{- include "cisco-virtual-kubelet.validateManagedTopology" . }}
+{{- $fullname := include "cisco-virtual-kubelet.fullname" . }}
+{{- $manager := include "cisco-virtual-kubelet.managerUsername" . }}
+{{- $appServiceAccount := include "cisco-virtual-kubelet.appHostingServiceAccountName" . }}
+{{- $networkServiceAccount := include "cisco-virtual-kubelet.networkManagementServiceAccountName" . }}
+{{- $generatedWorkerServiceAccountPattern := "^cisco-vk-(managed|legacy)-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$" }}
+---
+# A shared ServiceAccount username is not a device identity. Bind every
+# workload status write to the authenticated worker Pod incarnation carried by
+# the API server in the bound-token user-info extras and stamped by the manager
+# on the target Pod. An unbound/manual token has no such claims and is denied.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-pod-status
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["pods/status"]
+        scope: Namespaced
+  matchConditions:
+    - name: shared-app-worker
+      expression: >-
+        request.userInfo.username.startsWith('system:serviceaccount:') &&
+        request.userInfo.username.endsWith(':{{ $appServiceAccount }}')
+  variables:
+    - name: podUIDs
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
+    - name: podNames
+      expression: >-
+        'authentication.kubernetes.io/pod-name' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-name'] : []
+  validations:
+    - expression: >-
+        oldObject != null && object != null && has(oldObject.spec.nodeName) &&
+        oldObject.spec.nodeName != '' && object.spec.nodeName == oldObject.spec.nodeName &&
+        has(oldObject.metadata.annotations) &&
+        ['topology.cisco.vk/app-worker-username',
+         'topology.cisco.vk/app-worker-pod-name',
+         'topology.cisco.vk/app-worker-pod-uid'].all(k,
+           k in oldObject.metadata.annotations && oldObject.metadata.annotations[k] != '') &&
+        oldObject.metadata.annotations['topology.cisco.vk/app-worker-username'] == request.userInfo.username &&
+        variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
+        variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-uid'] &&
+        variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-name']
+      message: shared app-hosting status requires the exact manager-bound worker Pod name and UID
+    - expression: >-
+        object.metadata.name == oldObject.metadata.name &&
+        object.metadata.namespace == oldObject.metadata.namespace &&
+        object.metadata.uid == oldObject.metadata.uid &&
+        has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+        (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+        has(object.metadata.annotations) == has(oldObject.metadata.annotations) &&
+        (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+        has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+        (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+        (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+        object.spec == oldObject.spec
+      message: a shared app-hosting worker Pod status update may not change Pod metadata or spec
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-pod-status
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-pod-status
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Reserve workload-binding annotations to the manager. This makes the bound
+# worker Pod UID an authorization fact instead of tenant-controlled metadata.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-pod-binding
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods", "pods/status"]
+        scope: Namespaced
+  matchConditions:
+    - name: shared-binding
+      expression: >-
+        (object != null && has(object.metadata.annotations) &&
+         ['topology.cisco.vk/app-worker-username',
+          'topology.cisco.vk/app-worker-pod-name',
+          'topology.cisco.vk/app-worker-pod-uid'].exists(k, k in object.metadata.annotations)) ||
+        (oldObject != null && has(oldObject.metadata.annotations) &&
+         ['topology.cisco.vk/app-worker-username',
+          'topology.cisco.vk/app-worker-pod-name',
+          'topology.cisco.vk/app-worker-pod-uid'].exists(k, k in oldObject.metadata.annotations))
+  variables:
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: oldBindings
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) ?
+          oldObject.metadata.annotations.transformMap(k, v,
+            k in ['topology.cisco.vk/app-worker-username',
+                  'topology.cisco.vk/app-worker-pod-name',
+                  'topology.cisco.vk/app-worker-pod-uid'], v) : {}
+    - name: newBindings
+      expression: >-
+        object != null && has(object.metadata.annotations) ?
+          object.metadata.annotations.transformMap(k, v,
+            k in ['topology.cisco.vk/app-worker-username',
+                  'topology.cisco.vk/app-worker-pod-name',
+                  'topology.cisco.vk/app-worker-pod-uid'], v) : {}
+  validations:
+    - expression: >-
+        variables.manager || variables.newBindings == variables.oldBindings
+      message: only the topology manager may add, rotate, or remove a workload worker binding
+    - expression: >-
+        variables.newBindings.size() == 0 ||
+        (variables.newBindings.size() == 3 &&
+         variables.newBindings['topology.cisco.vk/app-worker-username'].startsWith('system:serviceaccount:') &&
+         variables.newBindings['topology.cisco.vk/app-worker-username'].endsWith(':{{ $appServiceAccount }}') &&
+         variables.newBindings['topology.cisco.vk/app-worker-pod-name'].matches(
+           '^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$') &&
+         variables.newBindings['topology.cisco.vk/app-worker-pod-uid'].matches(
+           '^[A-Za-z0-9]([A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$'))
+      message: a workload worker binding must be absent or contain one complete shared app-worker identity
+    - expression: >-
+        !variables.manager || request.operation != 'UPDATE' ||
+        (object.metadata.name == oldObject.metadata.name &&
+         object.metadata.namespace == oldObject.metadata.namespace &&
+         object.metadata.uid == oldObject.metadata.uid &&
+         has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+         (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+         (has(object.metadata.finalizers) ? object.metadata.finalizers.filter(f,
+            f != 'ops.cisco.vk/iosxe-rollout-drain') : []) ==
+         (has(oldObject.metadata.finalizers) ? oldObject.metadata.finalizers.filter(f,
+            f != 'ops.cisco.vk/iosxe-rollout-drain') : []) &&
+         has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+         object.spec == oldObject.spec && object.status == oldObject.status &&
+         (has(object.metadata.annotations) ? object.metadata.annotations.transformMap(k, v,
+            !(k in ['ops.cisco.vk/drain-session', 'topology.cisco.vk/worker-username',
+                    'topology.cisco.vk/app-worker-username',
+                    'topology.cisco.vk/app-worker-pod-name',
+                    'topology.cisco.vk/app-worker-pod-uid']), v) : {}) ==
+         (has(oldObject.metadata.annotations) ? oldObject.metadata.annotations.transformMap(k, v,
+            !(k in ['ops.cisco.vk/drain-session', 'topology.cisco.vk/worker-username',
+                    'topology.cisco.vk/app-worker-username',
+                    'topology.cisco.vk/app-worker-pod-name',
+                    'topology.cisco.vk/app-worker-pod-uid']), v) : {}))
+      message: the topology manager may change only exact workload worker bindings and drain protection
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-pod-binding
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-pod-binding
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Virtual Kubelet may complete only an already-initiated, UID-preconditioned,
+# zero-grace deletion for a workload bound to its exact Pod incarnation.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-pod-delete
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["DELETE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: shared-app-worker
+      expression: >-
+        request.userInfo.username.startsWith('system:serviceaccount:') &&
+        request.userInfo.username.endsWith(':{{ $appServiceAccount }}')
+  variables:
+    - name: podUIDs
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
+    - name: podNames
+      expression: >-
+        'authentication.kubernetes.io/pod-name' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-name'] : []
+  validations:
+    - expression: >-
+        oldObject != null && request.options != null &&
+        has(request.options.preconditions) && has(request.options.preconditions.uid) &&
+        string(request.options.preconditions.uid) == string(oldObject.metadata.uid) &&
+        has(request.options.gracePeriodSeconds) && request.options.gracePeriodSeconds == 0 &&
+        has(oldObject.metadata.deletionTimestamp)
+      message: shared app-hosting may complete only an already-terminating Pod using its current UID and zero grace
+    - expression: >-
+        oldObject != null && has(oldObject.spec.nodeName) && oldObject.spec.nodeName != '' &&
+        has(oldObject.metadata.annotations) &&
+        ['topology.cisco.vk/app-worker-username',
+         'topology.cisco.vk/app-worker-pod-name',
+         'topology.cisco.vk/app-worker-pod-uid'].all(k,
+           k in oldObject.metadata.annotations && oldObject.metadata.annotations[k] != '') &&
+        oldObject.metadata.annotations['topology.cisco.vk/app-worker-username'] == request.userInfo.username &&
+        variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
+        variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-uid'] &&
+        variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-name']
+      message: shared app-hosting deletion requires the exact manager-bound worker Pod name and UID
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-pod-delete
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-pod-delete
+  validationActions: [Deny]
+  matchResources: {}
+---
+# The legacy managed-node contract still constrains the shape of a status
+# write. This companion policy supplies the device-incarnation proof that a
+# reusable ServiceAccount username alone cannot provide.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-node-status
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["nodes/status"]
+        scope: Cluster
+  matchConditions:
+    - name: shared-app-worker
+      expression: >-
+        request.userInfo.username.startsWith('system:serviceaccount:') &&
+        request.userInfo.username.endsWith(':{{ $appServiceAccount }}')
+  variables:
+    - name: podUIDs
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
+    - name: podNames
+      expression: >-
+        'authentication.kubernetes.io/pod-name' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-name'] : []
+  validations:
+    - expression: >-
+        oldObject != null && object != null &&
+        has(oldObject.metadata.annotations) &&
+        oldObject.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
+        ['topology.cisco.vk/app-worker-username',
+         'topology.cisco.vk/app-worker-pod-name',
+         'topology.cisco.vk/app-worker-pod-uid'].all(k,
+           k in oldObject.metadata.annotations && oldObject.metadata.annotations[k] != '') &&
+        oldObject.metadata.annotations['topology.cisco.vk/app-worker-username'] == request.userInfo.username &&
+        variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
+        variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-uid'] &&
+        variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-name']
+      message: shared app-hosting Node status requires the exact manager-bound worker Pod name and UID
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-node-status
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-node-status
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Network-management may change only a manager-bound leaf for its exact Pod
+# incarnation. The original leaf policy remains responsible for status field
+# ownership and cleanup-finalizer shape.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-upgrade-leaf
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["ops.cisco.vk"]
+        apiVersions: ["v1alpha1"]
+        operations: ["UPDATE"]
+        resources: ["iosxesoftwareupgrades", "iosxesoftwareupgrades/status"]
+        scope: Namespaced
+  matchConditions:
+    - name: shared-network-worker
+      expression: >-
+        request.userInfo.username.startsWith('system:serviceaccount:') &&
+        (request.userInfo.username.endsWith(':{{ $networkServiceAccount }}') ||
+         request.userInfo.username.endsWith(':{{ $appServiceAccount }}'))
+  variables:
+    - name: plane
+      expression: >-
+        request.userInfo.username.endsWith(':{{ $appServiceAccount }}') ? 'app' : 'network'
+    - name: podUIDs
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
+    - name: podNames
+      expression: >-
+        'authentication.kubernetes.io/pod-name' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-name'] : []
+  validations:
+    - expression: >-
+        oldObject != null && object != null &&
+        has(oldObject.metadata.annotations) &&
+        oldObject.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
+        ['username', 'pod-name', 'pod-uid'].all(k,
+           ('topology.cisco.vk/' + variables.plane + '-worker-' + k) in oldObject.metadata.annotations &&
+           oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-' + k] != '') &&
+        oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-username'] == request.userInfo.username &&
+        variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
+        variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-pod-uid'] &&
+        variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-pod-name']
+      message: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-upgrade-leaf
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-upgrade-leaf
+  validationActions: [Deny]
+  matchResources: {}
+---
+# All network-management CRs share one ServiceAccount per namespace. Protect
+# the manager-issued device/Pod envelope, then limit a worker UPDATE to the
+# status, finalizer, and diagnostic annotation fields its reconcilers own.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-network-object
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["config.cisco.vk", "ops.cisco.vk"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources:
+          - iosxeconfigs
+          - iosxeconfigs/status
+          - nxosconfigs
+          - nxosconfigs/status
+          - iosxetelemetries
+          - iosxetelemetries/status
+          - iosxediagnostics
+          - iosxediagnostics/status
+          - iosxeconfigapplylogs
+          - iosxeconfigapplylogs/status
+          - iosxeconfigrevisions
+          - iosxeconfigrevisions/status
+          - deviceoperations
+          - deviceoperations/status
+          - iosxeoperationalactions
+          - iosxeoperationalactions/status
+        scope: Namespaced
+  matchConditions:
+    - name: protected-network-object
+      expression: >-
+        request.userInfo.username == {{ $manager | quote }} ||
+        request.userInfo.username ==
+          'system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}' ||
+        (object != null && has(object.metadata.annotations) &&
+         ['topology.cisco.vk/managed',
+          'topology.cisco.vk/device-namespace',
+          'topology.cisco.vk/device-name',
+          'topology.cisco.vk/device-uid',
+          'topology.cisco.vk/network-worker-username',
+          'topology.cisco.vk/network-worker-pod-name',
+          'topology.cisco.vk/network-worker-pod-uid'].exists(k, k in object.metadata.annotations)) ||
+        (oldObject != null && has(oldObject.metadata.annotations) &&
+         ['topology.cisco.vk/managed',
+          'topology.cisco.vk/device-namespace',
+          'topology.cisco.vk/device-name',
+          'topology.cisco.vk/device-uid',
+          'topology.cisco.vk/network-worker-username',
+          'topology.cisco.vk/network-worker-pod-name',
+          'topology.cisco.vk/network-worker-pod-uid'].exists(k, k in oldObject.metadata.annotations))
+  variables:
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: sharedWorker
+      expression: >-
+        request.userInfo.username ==
+          'system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}'
+    - name: nativeGarbageCollector
+      expression: >-
+        request.operation == 'DELETE' && oldObject != null &&
+        request.options != null && has(request.options.preconditions) &&
+        has(request.options.preconditions.uid) &&
+        string(request.options.preconditions.uid) == string(oldObject.metadata.uid) &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:generic-garbage-collector' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager') &&
+        has(oldObject.metadata.ownerReferences) &&
+        oldObject.metadata.ownerReferences.size() == 1 &&
+        has(oldObject.metadata.ownerReferences[0].controller) &&
+        oldObject.metadata.ownerReferences[0].controller &&
+        has(oldObject.metadata.ownerReferences[0].blockOwnerDeletion) &&
+        oldObject.metadata.ownerReferences[0].blockOwnerDeletion &&
+        string(oldObject.metadata.ownerReferences[0].uid) != '' &&
+        (((request.resource.group == 'config.cisco.vk' &&
+           request.resource.resource == 'iosxeconfigs') &&
+          ((oldObject.metadata.ownerReferences[0].apiVersion == 'cisco.vk/v1alpha1' &&
+            oldObject.metadata.ownerReferences[0].kind == 'CiscoDevice') ||
+           (oldObject.metadata.ownerReferences[0].apiVersion == 'config.cisco.vk/v1alpha1' &&
+            oldObject.metadata.ownerReferences[0].kind == 'IOSXEConfigBundle'))) ||
+         (request.resource.group == 'config.cisco.vk' &&
+          request.resource.resource == 'nxosconfigs' &&
+          oldObject.metadata.ownerReferences[0].apiVersion == 'cisco.vk/v1alpha1' &&
+          oldObject.metadata.ownerReferences[0].kind == 'CiscoDevice'))
+    - name: nativeNamespaceCleanup
+      expression: >-
+        request.operation == 'DELETE' && !has(request.name) &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:namespace-controller' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager')
+    - name: podUIDs
+      expression: >-
+        has(request.userInfo.extra) &&
+          'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
+    - name: podNames
+      expression: >-
+        has(request.userInfo.extra) &&
+          'authentication.kubernetes.io/pod-name' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-name'] : []
+    - name: oldBindings
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) ?
+          oldObject.metadata.annotations.transformMap(k, v,
+            k in ['topology.cisco.vk/managed',
+                  'topology.cisco.vk/device-namespace',
+                  'topology.cisco.vk/device-name',
+                  'topology.cisco.vk/device-uid',
+                  'topology.cisco.vk/network-worker-username',
+                  'topology.cisco.vk/network-worker-pod-name',
+                  'topology.cisco.vk/network-worker-pod-uid'], v) : {}
+    - name: newBindings
+      expression: >-
+        object != null && has(object.metadata.annotations) ?
+          object.metadata.annotations.transformMap(k, v,
+            k in ['topology.cisco.vk/managed',
+                  'topology.cisco.vk/device-namespace',
+                  'topology.cisco.vk/device-name',
+                  'topology.cisco.vk/device-uid',
+                  'topology.cisco.vk/network-worker-username',
+                  'topology.cisco.vk/network-worker-pod-name',
+                  'topology.cisco.vk/network-worker-pod-uid'], v) : {}
+    - name: boundObject
+      expression: >-
+        request.operation == 'CREATE' ? object : oldObject
+    - name: oldBindingComplete
+      expression: >-
+        (variables.oldBindings.size() == 5 &&
+         !('topology.cisco.vk/network-worker-pod-name' in variables.oldBindings) &&
+         !('topology.cisco.vk/network-worker-pod-uid' in variables.oldBindings) &&
+         variables.oldBindings['topology.cisco.vk/managed'] == 'true' &&
+         variables.oldBindings['topology.cisco.vk/device-namespace'] != '' &&
+         variables.oldBindings['topology.cisco.vk/device-name'] != '' &&
+         variables.oldBindings['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.oldBindings['topology.cisco.vk/network-worker-username'] != '') ||
+        (variables.oldBindings.size() == 7 &&
+         variables.oldBindings['topology.cisco.vk/managed'] == 'true' &&
+         variables.oldBindings['topology.cisco.vk/device-namespace'] != '' &&
+         variables.oldBindings['topology.cisco.vk/device-name'] != '' &&
+         variables.oldBindings['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.oldBindings['topology.cisco.vk/network-worker-username'] != '' &&
+         variables.oldBindings['topology.cisco.vk/network-worker-pod-name'] != '' &&
+         variables.oldBindings['topology.cisco.vk/network-worker-pod-uid'] != '')
+  validations:
+    - expression: >-
+        variables.manager || variables.nativeNamespaceCleanup ||
+        variables.newBindings == variables.oldBindings ||
+        (variables.sharedWorker && request.operation == 'CREATE' &&
+         variables.oldBindings.size() == 0 && variables.newBindings.size() == 7) ||
+        (request.operation == 'DELETE' && variables.newBindings.size() == 0 &&
+         variables.oldBindingComplete &&
+         (variables.sharedWorker || variables.nativeGarbageCollector))
+      message: only the topology manager may add, rotate, or remove a network-object binding
+    - expression: >-
+        variables.newBindings.size() == 0 ||
+        (variables.newBindings.size() == 5 &&
+         !('topology.cisco.vk/network-worker-pod-name' in variables.newBindings) &&
+         !('topology.cisco.vk/network-worker-pod-uid' in variables.newBindings) &&
+         variables.newBindings['topology.cisco.vk/managed'] == 'true' &&
+         variables.newBindings['topology.cisco.vk/device-namespace'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-name'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.newBindings['topology.cisco.vk/network-worker-username'] != '') ||
+        (variables.newBindings.size() == 7 &&
+         variables.newBindings['topology.cisco.vk/managed'] == 'true' &&
+         variables.newBindings['topology.cisco.vk/device-namespace'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-name'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.newBindings['topology.cisco.vk/network-worker-username'] != '' &&
+         variables.newBindings['topology.cisco.vk/network-worker-pod-name'] != '' &&
+         variables.newBindings['topology.cisco.vk/network-worker-pod-uid'] != '')
+      message: a network-object binding must be absent, manager-fenced, or complete
+    - expression: >-
+        !variables.manager || request.operation != 'UPDATE' ||
+        (object != null && oldObject != null &&
+         object.metadata.name == oldObject.metadata.name &&
+         object.metadata.namespace == oldObject.metadata.namespace &&
+         object.metadata.uid == oldObject.metadata.uid &&
+         has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+         (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+         has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+         (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+         has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+         object.spec == oldObject.spec &&
+         has(object.status) == has(oldObject.status) &&
+         (!has(object.status) || object.status == oldObject.status) &&
+         (has(object.metadata.annotations) ? object.metadata.annotations.transformMap(k, v,
+            !(k in ['topology.cisco.vk/managed',
+                    'topology.cisco.vk/device-namespace',
+                    'topology.cisco.vk/device-name',
+                    'topology.cisco.vk/device-uid',
+                    'topology.cisco.vk/network-worker-username',
+                    'topology.cisco.vk/network-worker-pod-name',
+                    'topology.cisco.vk/network-worker-pod-uid']), v) : {}) ==
+         (has(oldObject.metadata.annotations) ? oldObject.metadata.annotations.transformMap(k, v,
+            !(k in ['topology.cisco.vk/managed',
+                    'topology.cisco.vk/device-namespace',
+                    'topology.cisco.vk/device-name',
+                    'topology.cisco.vk/device-uid',
+                    'topology.cisco.vk/network-worker-username',
+                    'topology.cisco.vk/network-worker-pod-name',
+                    'topology.cisco.vk/network-worker-pod-uid']), v) : {}))
+      message: the topology manager may change only the protected network-object binding
+    - expression: >-
+        !variables.sharedWorker ||
+        (variables.boundObject != null && has(variables.boundObject.spec.deviceRef) &&
+         has(variables.boundObject.spec.deviceRef.name) &&
+         variables.boundObject.spec.deviceRef.name != '' &&
+         has(variables.boundObject.metadata.annotations) &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/device-namespace'] == request.namespace &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/device-name'] ==
+           variables.boundObject.spec.deviceRef.name &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-username'] ==
+           request.userInfo.username &&
+         variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
+         variables.podUIDs[0] ==
+           variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-pod-uid'] &&
+         variables.podNames[0] ==
+           variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-pod-name'] &&
+         variables.podNames[0].startsWith(
+           'n' + string(variables.boundObject.spec.deviceRef.name.size()) + '-' +
+           variables.boundObject.spec.deviceRef.name + '-u' +
+           variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'] + '-network-'))
+      message: shared network-management mutation requires its exact device-derived, manager-bound Pod
+    - expression: >-
+        !variables.sharedWorker || request.operation != 'UPDATE' ||
+        (object != null && oldObject != null && object.metadata.name == oldObject.metadata.name &&
+         object.metadata.namespace == oldObject.metadata.namespace && object.metadata.uid == oldObject.metadata.uid &&
+         has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+         (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+         has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+         object.spec == oldObject.spec &&
+         ((has(request.subResource) && request.subResource == 'status' &&
+           has(object.status) && object.status != null &&
+           has(object.metadata.annotations) == has(oldObject.metadata.annotations) &&
+           (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+           has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+           (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers)) ||
+          ((!has(request.subResource) || request.subResource == '') &&
+           has(object.status) == has(oldObject.status) &&
+           (!has(object.status) || object.status == oldObject.status) &&
+           (has(object.metadata.annotations) ? object.metadata.annotations.transformMap(k, v,
+             !(request.resource.resource == 'iosxeconfigs' &&
+               k in ['config.cisco.vk/replay-from-log', 'cisco.vk/last-trace-id',
+                     'cisco.vk/last-trace-duration', 'cisco.vk/last-error-trace-id']), v) : {}) ==
+           (has(oldObject.metadata.annotations) ? oldObject.metadata.annotations.transformMap(k, v,
+             !(request.resource.resource == 'iosxeconfigs' &&
+               k in ['config.cisco.vk/replay-from-log', 'cisco.vk/last-trace-id',
+                     'cisco.vk/last-trace-duration', 'cisco.vk/last-error-trace-id']), v) : {}) &&
+           (!(has(object.metadata.annotations) && 'config.cisco.vk/replay-from-log' in object.metadata.annotations) ||
+             (has(oldObject.metadata.annotations) &&
+              'config.cisco.vk/replay-from-log' in oldObject.metadata.annotations &&
+              object.metadata.annotations['config.cisco.vk/replay-from-log'] ==
+                oldObject.metadata.annotations['config.cisco.vk/replay-from-log']) ||
+             request.resource.resource != 'iosxeconfigs') &&
+           (!has(object.metadata.annotations) ||
+             !('cisco.vk/last-trace-id' in object.metadata.annotations) ||
+             object.metadata.annotations['cisco.vk/last-trace-id'].matches('^[a-f0-9]{32}$')) &&
+           (!has(object.metadata.annotations) ||
+             !('cisco.vk/last-error-trace-id' in object.metadata.annotations) ||
+             object.metadata.annotations['cisco.vk/last-error-trace-id'].matches('^[a-f0-9]{32}$')) &&
+           (!has(object.metadata.annotations) ||
+             !('cisco.vk/last-trace-duration' in object.metadata.annotations) ||
+             (object.metadata.annotations['cisco.vk/last-trace-duration'] != '' &&
+              object.metadata.annotations['cisco.vk/last-trace-duration'].size() <= 64)) &&
+           (has(object.metadata.finalizers) ? object.metadata.finalizers.filter(f,
+              !((request.resource.resource == 'iosxeconfigs' && f == 'config.cisco.vk/lease-cleanup') ||
+                (request.resource.resource == 'nxosconfigs' && f == 'config.cisco.vk/nxos-lease-cleanup') ||
+                (request.resource.resource == 'iosxetelemetries' && f == 'config.cisco.vk/telemetry-cleanup') ||
+                (request.resource.resource == 'iosxeoperationalactions' &&
+                 f == 'ops.cisco.vk/iosxeoperationalaction-finalizer'))) : []) ==
+           (has(oldObject.metadata.finalizers) ? oldObject.metadata.finalizers.filter(f,
+              !((request.resource.resource == 'iosxeconfigs' && f == 'config.cisco.vk/lease-cleanup') ||
+                (request.resource.resource == 'nxosconfigs' && f == 'config.cisco.vk/nxos-lease-cleanup') ||
+                (request.resource.resource == 'iosxetelemetries' && f == 'config.cisco.vk/telemetry-cleanup') ||
+                (request.resource.resource == 'iosxeoperationalactions' &&
+                 f == 'ops.cisco.vk/iosxeoperationalaction-finalizer'))) : []) &&
+           (!has(object.metadata.finalizers) ||
+            object.metadata.finalizers.filter(f,
+              (request.resource.resource == 'iosxeconfigs' && f == 'config.cisco.vk/lease-cleanup') ||
+              (request.resource.resource == 'nxosconfigs' && f == 'config.cisco.vk/nxos-lease-cleanup') ||
+              (request.resource.resource == 'iosxetelemetries' && f == 'config.cisco.vk/telemetry-cleanup') ||
+              (request.resource.resource == 'iosxeoperationalactions' &&
+               f == 'ops.cisco.vk/iosxeoperationalaction-finalizer')).size() <= 1))))
+      message: a shared network worker may update only status or its exact controller-owned metadata fields
+    - expression: >-
+        !variables.sharedWorker || request.operation != 'DELETE' ||
+        (((request.resource.group == 'ops.cisco.vk' &&
+           request.resource.resource == 'deviceoperations') ||
+          (request.resource.group == 'config.cisco.vk' &&
+           request.resource.resource == 'iosxeconfigrevisions')) &&
+         (!has(request.subResource) || request.subResource == '') &&
+         oldObject != null && request.options != null &&
+         has(request.options.preconditions) && has(request.options.preconditions.uid) &&
+         string(request.options.preconditions.uid) == string(oldObject.metadata.uid))
+      message: a shared network worker may delete only a supported owned object with its exact UID precondition
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-network-object
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-network-object
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Result ConfigMaps are worker-created children, but their protected identity,
+# labels, and ownership remain immutable after CREATE; only result bytes vary.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-network-result
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["configmaps"]
+        scope: Namespaced
+  matchConditions:
+    - name: protected-network-result
+      expression: >-
+        request.userInfo.username ==
+          'system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}' ||
+        (object != null && has(object.metadata.annotations) &&
+         ['topology.cisco.vk/managed', 'topology.cisco.vk/device-namespace',
+          'topology.cisco.vk/device-name', 'topology.cisco.vk/device-uid',
+          'topology.cisco.vk/network-worker-username',
+          'topology.cisco.vk/network-worker-pod-name',
+          'topology.cisco.vk/network-worker-pod-uid'].exists(k, k in object.metadata.annotations)) ||
+        (oldObject != null && has(oldObject.metadata.annotations) &&
+         ['topology.cisco.vk/managed', 'topology.cisco.vk/device-namespace',
+          'topology.cisco.vk/device-name', 'topology.cisco.vk/device-uid',
+          'topology.cisco.vk/network-worker-username',
+          'topology.cisco.vk/network-worker-pod-name',
+          'topology.cisco.vk/network-worker-pod-uid'].exists(k, k in oldObject.metadata.annotations))
+  variables:
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: sharedWorker
+      expression: >-
+        request.userInfo.username ==
+          'system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}'
+    - name: nativeGarbageCollector
+      expression: >-
+        request.operation == 'DELETE' && has(request.name) &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:generic-garbage-collector' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+         request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager')
+    - name: nativeNamespaceCleanup
+      expression: >-
+        request.operation == 'DELETE' && !has(request.name) &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:namespace-controller' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager')
+    - name: podUIDs
+      expression: >-
+        has(request.userInfo.extra) &&
+          'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
+    - name: podNames
+      expression: >-
+        has(request.userInfo.extra) &&
+          'authentication.kubernetes.io/pod-name' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-name'] : []
+    - name: oldBindings
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) ?
+          oldObject.metadata.annotations.transformMap(k, v,
+            k in ['topology.cisco.vk/managed', 'topology.cisco.vk/device-namespace',
+                  'topology.cisco.vk/device-name', 'topology.cisco.vk/device-uid',
+                  'topology.cisco.vk/network-worker-username',
+                  'topology.cisco.vk/network-worker-pod-name',
+                  'topology.cisco.vk/network-worker-pod-uid'], v) : {}
+    - name: newBindings
+      expression: >-
+        object != null && has(object.metadata.annotations) ?
+          object.metadata.annotations.transformMap(k, v,
+            k in ['topology.cisco.vk/managed', 'topology.cisco.vk/device-namespace',
+                  'topology.cisco.vk/device-name', 'topology.cisco.vk/device-uid',
+                  'topology.cisco.vk/network-worker-username',
+                  'topology.cisco.vk/network-worker-pod-name',
+                  'topology.cisco.vk/network-worker-pod-uid'], v) : {}
+    - name: boundObject
+      expression: >-
+        request.operation == 'CREATE' ? object : oldObject
+  validations:
+    - expression: >-
+        variables.oldBindings.size() == 0 || variables.manager ||
+        variables.sharedWorker || variables.nativeGarbageCollector ||
+        variables.nativeNamespaceCleanup
+      message: only the topology manager, exact shared network worker, or native garbage collector may mutate a bound result
+    - expression: >-
+        variables.manager || variables.newBindings == variables.oldBindings ||
+        (variables.sharedWorker && request.operation == 'CREATE' &&
+         variables.oldBindings.size() == 0 && variables.newBindings.size() == 7) ||
+        ((variables.sharedWorker || variables.nativeGarbageCollector) &&
+         request.operation == 'DELETE' && variables.oldBindings.size() == 7 &&
+         variables.newBindings.size() == 0) ||
+        (variables.nativeNamespaceCleanup && request.operation == 'DELETE' &&
+         variables.newBindings.size() == 0)
+      message: only the topology manager may add, rotate, or remove a result binding
+    - expression: >-
+        variables.newBindings.size() == 0 ||
+        (variables.newBindings.size() == 5 &&
+         !('topology.cisco.vk/network-worker-pod-name' in variables.newBindings) &&
+         !('topology.cisco.vk/network-worker-pod-uid' in variables.newBindings) &&
+         variables.newBindings['topology.cisco.vk/managed'] == 'true' &&
+         variables.newBindings['topology.cisco.vk/device-namespace'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-name'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.newBindings['topology.cisco.vk/network-worker-username'] != '') ||
+        (variables.newBindings.size() == 7 &&
+         variables.newBindings['topology.cisco.vk/managed'] == 'true' &&
+         variables.newBindings['topology.cisco.vk/device-namespace'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-name'] != '' &&
+         variables.newBindings['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.newBindings['topology.cisco.vk/network-worker-username'] != '' &&
+         variables.newBindings['topology.cisco.vk/network-worker-pod-name'] != '' &&
+         variables.newBindings['topology.cisco.vk/network-worker-pod-uid'] != '')
+      message: a result binding must be absent, manager-fenced, or complete
+    - expression: >-
+        !variables.manager || request.operation != 'UPDATE' ||
+        (object != null && oldObject != null &&
+         has(object.data) == has(oldObject.data) &&
+         (!has(object.data) || object.data == oldObject.data) &&
+         has(object.binaryData) == has(oldObject.binaryData) &&
+         (!has(object.binaryData) || object.binaryData == oldObject.binaryData) &&
+         has(object.immutable) == has(oldObject.immutable) &&
+         (!has(object.immutable) || object.immutable == oldObject.immutable) &&
+         has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+         (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+         has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+         (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+         has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+         (has(object.metadata.annotations) ? object.metadata.annotations.transformMap(k, v,
+           !(k in ['topology.cisco.vk/managed', 'topology.cisco.vk/device-namespace',
+                   'topology.cisco.vk/device-name', 'topology.cisco.vk/device-uid',
+                   'topology.cisco.vk/network-worker-username',
+                   'topology.cisco.vk/network-worker-pod-name',
+                   'topology.cisco.vk/network-worker-pod-uid']), v) : {}) ==
+         (has(oldObject.metadata.annotations) ? oldObject.metadata.annotations.transformMap(k, v,
+           !(k in ['topology.cisco.vk/managed', 'topology.cisco.vk/device-namespace',
+                   'topology.cisco.vk/device-name', 'topology.cisco.vk/device-uid',
+                   'topology.cisco.vk/network-worker-username',
+                   'topology.cisco.vk/network-worker-pod-name',
+                   'topology.cisco.vk/network-worker-pod-uid']), v) : {}))
+      message: the topology manager may change only the protected result binding
+    - expression: >-
+        !variables.sharedWorker ||
+        (variables.boundObject != null && has(variables.boundObject.metadata.annotations) &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/device-namespace'] == request.namespace &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/device-name'] != '' &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-username'] ==
+           request.userInfo.username && variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
+         variables.podUIDs[0] ==
+           variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-pod-uid'] &&
+         variables.podNames[0] ==
+           variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-pod-name'] &&
+         variables.podNames[0].startsWith(
+           'n' + string(variables.boundObject.metadata.annotations['topology.cisco.vk/device-name'].size()) + '-' +
+           variables.boundObject.metadata.annotations['topology.cisco.vk/device-name'] + '-u' +
+           variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'] + '-network-') &&
+         (request.operation != 'CREATE' || variables.boundObject.metadata.name.startsWith(
+           'u' + variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'] + '-result-')) &&
+         has(variables.boundObject.metadata.ownerReferences) &&
+         variables.boundObject.metadata.ownerReferences.size() == 1 &&
+         has(variables.boundObject.metadata.ownerReferences[0].controller) &&
+         variables.boundObject.metadata.ownerReferences[0].controller == true &&
+         string(variables.boundObject.metadata.ownerReferences[0].uid).matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         ((variables.boundObject.metadata.ownerReferences[0].apiVersion == 'config.cisco.vk/v1alpha1' &&
+           variables.boundObject.metadata.ownerReferences[0].kind == 'IOSXEDiagnostic') ||
+          (variables.boundObject.metadata.ownerReferences[0].apiVersion == 'ops.cisco.vk/v1alpha1' &&
+           variables.boundObject.metadata.ownerReferences[0].kind == 'DeviceOperation')))
+      message: a shared network result requires its exact device-derived Pod and supported controller owner
+    - expression: >-
+        !variables.sharedWorker || request.operation != 'CREATE' ||
+        (object != null && has(object.metadata.annotations) && object.metadata.annotations.size() == 7 &&
+         (!has(object.metadata.finalizers) || object.metadata.finalizers.size() == 0) &&
+         (!has(object.immutable) || !object.immutable) &&
+         ((object.metadata.ownerReferences[0].kind == 'IOSXEDiagnostic' &&
+           has(object.metadata.labels) && object.metadata.labels.size() == 3 &&
+           object.metadata.labels['cisco.vk/diagnostic'] == object.metadata.ownerReferences[0].name &&
+           object.metadata.labels['cisco.vk/diagnostic-uid'] ==
+             string(object.metadata.ownerReferences[0].uid) &&
+           object.metadata.labels['cisco.vk/diagnostic-capturedAt'].matches('^[0-9]{8}-[0-9]{6}$') &&
+           object.metadata.name ==
+             'u' + object.metadata.annotations['topology.cisco.vk/device-uid'] + '-result-u' +
+             string(object.metadata.ownerReferences[0].uid) + '-' +
+             object.metadata.labels['cisco.vk/diagnostic-capturedAt']) ||
+          (object.metadata.ownerReferences[0].kind == 'DeviceOperation' &&
+           (!has(object.metadata.labels) || object.metadata.labels.size() == 0) &&
+           object.metadata.name ==
+             'u' + object.metadata.annotations['topology.cisco.vk/device-uid'] + '-result-u' +
+             string(object.metadata.ownerReferences[0].uid) + '-output')))
+      message: a shared network worker must create only the exact immutable metadata shape for a supported result sink
+    - expression: >-
+        !variables.sharedWorker || request.operation != 'UPDATE' ||
+        (object != null && oldObject != null && object.metadata.name == oldObject.metadata.name &&
+         object.metadata.namespace == oldObject.metadata.namespace && object.metadata.uid == oldObject.metadata.uid &&
+         has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+         (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+         has(object.metadata.annotations) == has(oldObject.metadata.annotations) &&
+         (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+         has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+         (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+         has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+         has(object.immutable) == has(oldObject.immutable) &&
+         (!has(object.immutable) || object.immutable == oldObject.immutable))
+      message: a shared network worker may change only result ConfigMap data
+    - expression: >-
+        !variables.sharedWorker || request.operation != 'DELETE' ||
+        (oldObject != null && request.options != null &&
+         has(request.options.preconditions) && has(request.options.preconditions.uid) &&
+         string(request.options.preconditions.uid) == string(oldObject.metadata.uid))
+      message: a shared network worker may delete only an exact result ConfigMap UID
+    - expression: >-
+        !variables.nativeGarbageCollector ||
+        (oldObject != null && request.options != null &&
+         has(request.options.preconditions) && has(request.options.preconditions.uid) &&
+         string(request.options.preconditions.uid) == string(oldObject.metadata.uid) &&
+         has(oldObject.metadata.annotations) && oldObject.metadata.annotations.size() == 7 &&
+         variables.oldBindings.size() == 7 &&
+         variables.oldBindings['topology.cisco.vk/managed'] == 'true' &&
+         variables.oldBindings['topology.cisco.vk/device-namespace'] == request.namespace &&
+         variables.oldBindings['topology.cisco.vk/device-name'] != '' &&
+         variables.oldBindings['topology.cisco.vk/device-uid'].matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         variables.oldBindings['topology.cisco.vk/network-worker-username'] ==
+           'system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}' &&
+         variables.oldBindings['topology.cisco.vk/network-worker-pod-name'].startsWith(
+           'n' + string(variables.oldBindings['topology.cisco.vk/device-name'].size()) + '-' +
+           variables.oldBindings['topology.cisco.vk/device-name'] + '-u' +
+           variables.oldBindings['topology.cisco.vk/device-uid'] + '-network-') &&
+         variables.oldBindings['topology.cisco.vk/network-worker-pod-uid'] != '' &&
+         (!has(oldObject.metadata.finalizers) || oldObject.metadata.finalizers.size() == 0) &&
+         (!has(oldObject.immutable) || !oldObject.immutable) &&
+         has(oldObject.metadata.ownerReferences) &&
+         oldObject.metadata.ownerReferences.size() == 1 &&
+         has(oldObject.metadata.ownerReferences[0].controller) &&
+         oldObject.metadata.ownerReferences[0].controller == true &&
+         string(oldObject.metadata.ownerReferences[0].uid).matches(
+           '^[a-z0-9]([-a-z0-9.]{0,62}[a-z0-9])?$') &&
+         ((oldObject.metadata.ownerReferences[0].apiVersion == 'config.cisco.vk/v1alpha1' &&
+           oldObject.metadata.ownerReferences[0].kind == 'IOSXEDiagnostic' &&
+           has(oldObject.metadata.labels) && oldObject.metadata.labels.size() == 3 &&
+           oldObject.metadata.labels['cisco.vk/diagnostic'] ==
+             oldObject.metadata.ownerReferences[0].name &&
+           oldObject.metadata.labels['cisco.vk/diagnostic-uid'] ==
+             string(oldObject.metadata.ownerReferences[0].uid) &&
+           oldObject.metadata.labels['cisco.vk/diagnostic-capturedAt'].matches(
+             '^[0-9]{8}-[0-9]{6}$') &&
+           oldObject.metadata.name ==
+             'u' + variables.oldBindings['topology.cisco.vk/device-uid'] + '-result-u' +
+             string(oldObject.metadata.ownerReferences[0].uid) + '-' +
+             oldObject.metadata.labels['cisco.vk/diagnostic-capturedAt']) ||
+          (oldObject.metadata.ownerReferences[0].apiVersion == 'ops.cisco.vk/v1alpha1' &&
+           oldObject.metadata.ownerReferences[0].kind == 'DeviceOperation' &&
+           (!has(oldObject.metadata.labels) || oldObject.metadata.labels.size() == 0) &&
+           oldObject.metadata.name ==
+             'u' + variables.oldBindings['topology.cisco.vk/device-uid'] + '-result-u' +
+             string(oldObject.metadata.ownerReferences[0].uid) + '-output')))
+      message: native garbage collection requires a UID-preconditioned delete of an exact supported result sink
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-network-result
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-network-result
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Heartbeat Leases belong to app hosting, config-family Leases belong to
+# network management, and either exact plane may serialize its device write on
+# the shared device-mutation Lease. The existing Lease policy constrains the
+# permitted state transition; this policy authenticates its Pod incarnation.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-maintenance-lease
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["coordination.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["leases"]
+        scope: Namespaced
+  matchConditions:
+    - name: shared-functional-worker
+      expression: >-
+        request.userInfo.username.startsWith('system:serviceaccount:') &&
+        (request.userInfo.username.endsWith(':{{ $appServiceAccount }}') ||
+         request.userInfo.username.endsWith(':{{ $networkServiceAccount }}'))
+  variables:
+    - name: podUIDs
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
+    - name: podNames
+      expression: >-
+        'authentication.kubernetes.io/pod-name' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-name'] : []
+    - name: appWorker
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) &&
+        'topology.cisco.vk/app-worker-username' in oldObject.metadata.annotations &&
+        oldObject.metadata.annotations['topology.cisco.vk/app-worker-username'] == request.userInfo.username
+    - name: networkWorker
+      expression: >-
+        oldObject != null && has(oldObject.metadata.annotations) &&
+        'topology.cisco.vk/network-worker-username' in oldObject.metadata.annotations &&
+        oldObject.metadata.annotations['topology.cisco.vk/network-worker-username'] == request.userInfo.username
+  validations:
+    - expression: >-
+        oldObject != null && object != null && has(oldObject.metadata.annotations) &&
+        oldObject.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
+        'topology.cisco.vk/lease-purpose' in oldObject.metadata.annotations &&
+        ((oldObject.metadata.annotations['topology.cisco.vk/lease-purpose'] == 'node-heartbeat' && variables.appWorker) ||
+         (oldObject.metadata.annotations['topology.cisco.vk/lease-purpose'] == 'config-family' && variables.networkWorker) ||
+         (oldObject.metadata.annotations['topology.cisco.vk/lease-purpose'] == 'device-mutation' &&
+          (variables.appWorker || variables.networkWorker)))
+      message: the shared worker plane is not authorized for this managed Lease purpose
+    - expression: >-
+        variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
+        (variables.appWorker ?
+          (['topology.cisco.vk/app-worker-pod-name',
+            'topology.cisco.vk/app-worker-pod-uid'].all(k,
+              k in oldObject.metadata.annotations && oldObject.metadata.annotations[k] != '') &&
+           variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-uid'] &&
+           variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/app-worker-pod-name']) :
+          (variables.networkWorker &&
+           ['topology.cisco.vk/network-worker-pod-name',
+            'topology.cisco.vk/network-worker-pod-uid'].all(k,
+              k in oldObject.metadata.annotations && oldObject.metadata.annotations[k] != '') &&
+           variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/network-worker-pod-uid'] &&
+           variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/network-worker-pod-name']))
+      message: managed Lease mutation requires the exact manager-bound worker Pod name and UID
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-maintenance-lease
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-maintenance-lease
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Reserve the two shared ServiceAccount objects themselves. Kubernetes RBAC
+# subjects are name based, so allowing a namespace principal to delete and
+# recreate one would preserve its grants under an attacker-controlled identity
+# incarnation while the RoleBinding or ClusterRoleBinding still exists. The
+# generated-name boundary is deliberately a separate policy below so its
+# server-issued policy UID can participate in the shared-account upgrade epoch.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-worker-serviceaccount
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["serviceaccounts"]
+        scope: Namespaced
+  matchConditions:
+    - name: reserved-worker-account
+      expression: >-
+        (object != null && object.metadata.name in
+           [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}]) ||
+        (oldObject != null && oldObject.metadata.name in
+           [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}]) ||
+        (has(request.name) && request.name in
+           [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}])
+  validations:
+    - expression: >-
+        request.userInfo.username == {{ $manager | quote }} ||
+        (request.operation == 'DELETE' && !has(request.name) &&
+         request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+         ((request.userInfo.username ==
+             'system:serviceaccount:kube-system:namespace-controller' &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+          request.userInfo.username == 'system:kube-controller-manager'))
+      message: only the topology manager may create, update, or delete a reserved worker ServiceAccount
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-worker-serviceaccount
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-worker-serviceaccount
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Reserve UID-derived phase-zero and managed ServiceAccounts under a distinct
+# policy identity. On CREATE/UPDATE, the manager must also supply the complete
+# CiscoDevice incarnation envelope; name reservation alone is not ownership.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-generated-worker-serviceaccount
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["serviceaccounts"]
+        scope: Namespaced
+  matchConditions:
+    - name: generated-worker-account
+      expression: >-
+        (object != null &&
+         object.metadata.name.matches({{ $generatedWorkerServiceAccountPattern | quote }})) ||
+        (oldObject != null &&
+         oldObject.metadata.name.matches({{ $generatedWorkerServiceAccountPattern | quote }})) ||
+        (has(request.name) &&
+         request.name.matches({{ $generatedWorkerServiceAccountPattern | quote }}))
+  validations:
+    - expression: >-
+        request.userInfo.username == {{ $manager | quote }} ||
+        (request.operation == 'DELETE' && !has(request.name) &&
+         request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+         ((request.userInfo.username ==
+             'system:serviceaccount:kube-system:namespace-controller' &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+          request.userInfo.username == 'system:kube-controller-manager'))
+      message: only the topology manager may create, update, or delete a reserved worker ServiceAccount
+    - expression: >-
+        request.operation == 'DELETE' ||
+        (object != null && has(object.metadata.annotations) &&
+         object.metadata.annotations['topology.cisco.vk/device-namespace'] == request.namespace &&
+         object.metadata.annotations['topology.cisco.vk/device-name'] != '' &&
+         object.metadata.annotations['topology.cisco.vk/device-uid'] != '' &&
+         object.metadata.annotations['topology.cisco.vk/node-name'] != '' &&
+         object.metadata.annotations['topology.cisco.vk/worker-protocol'] == 'rollout-v1' &&
+         ((request.name.startsWith('cisco-vk-managed-') &&
+           object.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
+           !('topology.cisco.vk/worker-mode' in object.metadata.annotations)) ||
+          (request.name.startsWith('cisco-vk-legacy-') &&
+           object.metadata.annotations['topology.cisco.vk/worker-mode'] == 'legacy' &&
+           !('topology.cisco.vk/managed' in object.metadata.annotations))) &&
+         has(object.metadata.ownerReferences) && object.metadata.ownerReferences.size() == 1 &&
+         object.metadata.ownerReferences[0].apiVersion == 'cisco.vk/v1alpha1' &&
+         object.metadata.ownerReferences[0].kind == 'CiscoDevice' &&
+         object.metadata.ownerReferences[0].name ==
+           object.metadata.annotations['topology.cisco.vk/device-name'] &&
+         string(object.metadata.ownerReferences[0].uid) ==
+           object.metadata.annotations['topology.cisco.vk/device-uid'] &&
+         has(object.metadata.ownerReferences[0].controller) &&
+         object.metadata.ownerReferences[0].controller &&
+         has(object.metadata.ownerReferences[0].blockOwnerDeletion) &&
+         object.metadata.ownerReferences[0].blockOwnerDeletion)
+      message: a generated worker ServiceAccount must carry its exact CiscoDevice owner and identity envelope
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-generated-worker-serviceaccount
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-generated-worker-serviceaccount
+  validationActions: [Deny]
+  matchResources: {}
+---
+# A caller with serviceaccounts/token can otherwise request a token bound to a
+# legitimate worker Pod and inherit the exact pod-name/pod-uid claims used by
+# the functional-object admission boundary. Only a kubelet may obtain the
+# short-lived, Pod-bound projected token mounted into a worker container.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-worker-token
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["serviceaccounts/token"]
+        scope: Namespaced
+  matchConditions:
+    - name: reserved-worker-account
+      expression: >-
+        has(request.name) &&
+        (request.name in
+           [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+         request.name.matches({{ $generatedWorkerServiceAccountPattern | quote }}))
+  validations:
+    - expression: >-
+        request.userInfo.username.matches('^system:node:.+$') &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        request.userInfo.groups.exists(g, g == 'system:nodes') &&
+        object != null && has(object.spec.boundObjectRef) &&
+        object.spec.boundObjectRef.apiVersion == 'v1' &&
+        object.spec.boundObjectRef.kind == 'Pod' &&
+        object.spec.boundObjectRef.name != '' &&
+        has(object.spec.boundObjectRef.uid) &&
+        string(object.spec.boundObjectRef.uid) != ''
+      message: a reserved worker token must be requested by a kubelet and bound to one exact Pod UID
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-worker-token
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-worker-token
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Kubernetes 1.35 still accepts manually created legacy ServiceAccount-token
+# Secrets. Workers use projected bound tokens exclusively, so any such Secret
+# for a shared or UID-derived reserved identity is unnecessary and unsafe.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-worker-token-secret
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["secrets"]
+        scope: Namespaced
+  matchConditions:
+    - name: reserved-worker-token-secret
+      expression: >-
+        (object != null && object.type == 'kubernetes.io/service-account-token' &&
+         has(object.metadata.annotations) &&
+         'kubernetes.io/service-account.name' in object.metadata.annotations &&
+         (object.metadata.annotations['kubernetes.io/service-account.name'] in
+            [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+          object.metadata.annotations['kubernetes.io/service-account.name'].matches(
+            {{ $generatedWorkerServiceAccountPattern | quote }}))) ||
+        (oldObject != null && oldObject.type == 'kubernetes.io/service-account-token' &&
+         has(oldObject.metadata.annotations) &&
+         'kubernetes.io/service-account.name' in oldObject.metadata.annotations &&
+         (oldObject.metadata.annotations['kubernetes.io/service-account.name'] in
+            [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+          oldObject.metadata.annotations['kubernetes.io/service-account.name'].matches(
+            {{ $generatedWorkerServiceAccountPattern | quote }})))
+  validations:
+    - expression: request.operation == 'DELETE'
+      message: legacy token Secrets are forbidden for reserved worker ServiceAccounts
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-worker-token-secret
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-worker-token-secret
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Reserve every shared and UID-derived worker identity. A tenant cannot mint a
+# valid token merely by naming one of these ServiceAccounts on its workload.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-worker-deployment
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["deployments", "deployments/status"]
+        scope: Namespaced
+  matchConditions:
+    - name: reserved-worker-account
+      expression: >-
+        (object != null && has(object.spec.template.spec.serviceAccountName) &&
+          (object.spec.template.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           object.spec.template.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }}))) ||
+        (oldObject != null && has(oldObject.spec.template.spec.serviceAccountName) &&
+          (oldObject.spec.template.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           oldObject.spec.template.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }})))
+  variables:
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: namespaceCleanup
+      expression: >-
+        request.operation == 'DELETE' && !has(request.name) &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:namespace-controller' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager')
+    - name: nativeDeploymentMetadata
+      expression: >-
+        request.operation == 'UPDATE' &&
+        (!has(request.subResource) || request.subResource == '') &&
+        object != null && oldObject != null &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:deployment-controller' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager') &&
+        object.metadata.name == oldObject.metadata.name &&
+        object.metadata.namespace == oldObject.metadata.namespace &&
+        object.metadata.uid == oldObject.metadata.uid &&
+        has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+        (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+        has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+        (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+        (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+        object.spec == oldObject.spec && has(object.metadata.annotations) &&
+        'deployment.kubernetes.io/revision' in object.metadata.annotations &&
+        object.metadata.annotations['deployment.kubernetes.io/revision'].matches('^[0-9]+$') &&
+        object.metadata.annotations.transformMap(k, v,
+          k != 'deployment.kubernetes.io/revision', v) ==
+        (has(oldObject.metadata.annotations) ?
+          oldObject.metadata.annotations.transformMap(k, v,
+            k != 'deployment.kubernetes.io/revision', v) : {})
+    - name: nativeDeploymentStatus
+      expression: >-
+        request.operation == 'UPDATE' && request.subResource == 'status' &&
+        object != null && oldObject != null &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        ((request.userInfo.username ==
+            'system:serviceaccount:kube-system:deployment-controller' &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+          request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+         request.userInfo.username == 'system:kube-controller-manager') &&
+        object.metadata.name == oldObject.metadata.name &&
+        object.metadata.namespace == oldObject.metadata.namespace &&
+        object.metadata.uid == oldObject.metadata.uid &&
+        object.spec == oldObject.spec
+  validations:
+    - expression: >-
+        variables.manager || variables.namespaceCleanup ||
+        variables.nativeDeploymentMetadata || variables.nativeDeploymentStatus
+      message: only the topology manager, exact native Deployment controller, or namespace cleanup may mutate a Deployment that uses a reserved worker account
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-worker-deployment
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-worker-deployment
+  validationActions: [Deny]
+  matchResources: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-worker-replicaset
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["replicasets", "replicasets/status"]
+        scope: Namespaced
+  matchConditions:
+    - name: reserved-worker-account
+      expression: >-
+        (object != null && has(object.spec.template.spec.serviceAccountName) &&
+          (object.spec.template.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           object.spec.template.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }}))) ||
+        (oldObject != null && has(oldObject.spec.template.spec.serviceAccountName) &&
+          (oldObject.spec.template.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           oldObject.spec.template.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }})))
+  validations:
+    - expression: >-
+        (request.operation == 'UPDATE' && request.subResource == 'status' &&
+         object != null && oldObject != null &&
+         request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+         ((request.userInfo.username ==
+             'system:serviceaccount:kube-system:replicaset-controller' &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+          request.userInfo.username == 'system:kube-controller-manager') &&
+         object.metadata.name == oldObject.metadata.name &&
+         object.metadata.namespace == oldObject.metadata.namespace &&
+         object.metadata.uid == oldObject.metadata.uid &&
+         object.spec == oldObject.spec &&
+         has(oldObject.metadata.ownerReferences) &&
+         oldObject.metadata.ownerReferences.size() == 1 &&
+         oldObject.metadata.ownerReferences[0].apiVersion == 'apps/v1' &&
+         oldObject.metadata.ownerReferences[0].kind == 'Deployment' &&
+         has(oldObject.metadata.ownerReferences[0].controller) &&
+         oldObject.metadata.ownerReferences[0].controller) ||
+        (request.operation != 'DELETE' &&
+         (!has(request.subResource) || request.subResource == '') &&
+         request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+         ((request.userInfo.username ==
+             'system:serviceaccount:kube-system:deployment-controller' &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+           request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+          request.userInfo.username == 'system:kube-controller-manager') &&
+         object != null && has(object.metadata.ownerReferences) &&
+         object.metadata.ownerReferences.size() == 1 &&
+         object.metadata.ownerReferences[0].apiVersion == 'apps/v1' &&
+         object.metadata.ownerReferences[0].kind == 'Deployment' &&
+         has(object.metadata.ownerReferences[0].controller) &&
+         object.metadata.ownerReferences[0].controller) ||
+        (request.operation == 'DELETE' &&
+         (( !has(request.name) &&
+            request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+            ((request.userInfo.username ==
+                'system:serviceaccount:kube-system:namespace-controller' &&
+              request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+              request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+             request.userInfo.username == 'system:kube-controller-manager')) ||
+          request.userInfo.username == {{ $manager | quote }} ||
+          (oldObject != null && has(oldObject.metadata.ownerReferences) &&
+           oldObject.metadata.ownerReferences.size() == 1 &&
+           oldObject.metadata.ownerReferences[0].apiVersion == 'apps/v1' &&
+           oldObject.metadata.ownerReferences[0].kind == 'Deployment' &&
+           has(oldObject.metadata.ownerReferences[0].controller) &&
+           oldObject.metadata.ownerReferences[0].controller &&
+           request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+           ((request.userInfo.username ==
+               'system:serviceaccount:kube-system:deployment-controller' &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+            request.userInfo.username == 'system:kube-controller-manager' ||
+            (request.userInfo.username ==
+               'system:serviceaccount:kube-system:generic-garbage-collector' &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system') &&
+             request.options != null && has(request.options.preconditions) &&
+             has(request.options.preconditions.uid) &&
+             string(request.options.preconditions.uid) == string(oldObject.metadata.uid))))))
+      message: only the topology manager or exact native Deployment, ReplicaSet status, namespace, or garbage-collection path may mutate a ReplicaSet that uses a reserved worker account
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-worker-replicaset
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-worker-replicaset
+  validationActions: [Deny]
+  matchResources: {}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-worker-pod
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "DELETE"]
+        resources: ["pods"]
+        scope: Namespaced
+  matchConditions:
+    - name: reserved-worker-account
+      expression: >-
+        (object != null && has(object.spec.serviceAccountName) &&
+          (object.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           object.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }}))) ||
+        (oldObject != null && has(oldObject.spec.serviceAccountName) &&
+          (oldObject.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           oldObject.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }})))
+  validations:
+    - expression: >-
+        (request.operation == 'CREATE' &&
+         request.userInfo.username in
+           ['system:kube-controller-manager',
+            'system:serviceaccount:kube-system:replicaset-controller'] &&
+         has(object.metadata.ownerReferences) &&
+         object.metadata.ownerReferences.size() == 1 &&
+         object.metadata.ownerReferences[0].apiVersion == 'apps/v1' &&
+         object.metadata.ownerReferences[0].kind == 'ReplicaSet' &&
+         has(object.metadata.ownerReferences[0].controller) &&
+         object.metadata.ownerReferences[0].controller) ||
+        (request.operation == 'DELETE' &&
+         (( !has(request.name) &&
+            request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+            ((request.userInfo.username ==
+                'system:serviceaccount:kube-system:namespace-controller' &&
+              request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+              request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+             request.userInfo.username == 'system:kube-controller-manager')) ||
+          request.userInfo.username == {{ $manager | quote }} ||
+          (oldObject != null && has(oldObject.metadata.ownerReferences) &&
+           oldObject.metadata.ownerReferences.size() == 1 &&
+           oldObject.metadata.ownerReferences[0].apiVersion == 'apps/v1' &&
+           oldObject.metadata.ownerReferences[0].kind == 'ReplicaSet' &&
+           has(oldObject.metadata.ownerReferences[0].controller) &&
+           oldObject.metadata.ownerReferences[0].controller &&
+           request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+           ((request.userInfo.username ==
+               'system:serviceaccount:kube-system:replicaset-controller' &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
+            request.userInfo.username == 'system:kube-controller-manager' ||
+            (has(oldObject.spec.nodeName) && oldObject.spec.nodeName != '' &&
+             request.userInfo.username == 'system:node:' + oldObject.spec.nodeName &&
+             request.userInfo.groups.exists(g, g == 'system:nodes') &&
+             request.options != null && has(request.options.preconditions) &&
+             has(request.options.preconditions.uid) &&
+             string(request.options.preconditions.uid) == string(oldObject.metadata.uid) &&
+             has(request.options.gracePeriodSeconds) &&
+             request.options.gracePeriodSeconds == 0 &&
+             has(oldObject.metadata.deletionTimestamp)) ||
+            (request.userInfo.username ==
+               'system:serviceaccount:kube-system:generic-garbage-collector' &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
+             request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system') &&
+             request.options != null && has(request.options.preconditions) &&
+             has(request.options.preconditions.uid) &&
+             string(request.options.preconditions.uid) == string(oldObject.metadata.uid))))))
+      message: only the topology manager or exact native ReplicaSet/kubelet/garbage-collection path may mutate a Pod that uses a reserved worker account
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-worker-pod
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-worker-pod
+  validationActions: [Deny]
+  matchResources: {}
+---
+# Worker Pods are replaced through their Deployment; they are never edited in
+# place. In particular, a namespace user must not inject an ephemeral
+# container into a privileged shared-identity Pod, copy its bound token, or
+# forge readiness consumed by the manager. Only the Pod's authenticated node
+# may change status while every identity, metadata, and spec field is stable.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-shared-worker-pod-update
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["UPDATE"]
+        resources: ["pods", "pods/status", "pods/ephemeralcontainers", "pods/resize"]
+        scope: Namespaced
+  matchConditions:
+    - name: reserved-worker-account
+      expression: >-
+        (object != null && has(object.spec.serviceAccountName) &&
+          (object.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           object.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }}))) ||
+        (oldObject != null && has(oldObject.spec.serviceAccountName) &&
+          (oldObject.spec.serviceAccountName in
+             [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+           oldObject.spec.serviceAccountName.matches(
+             {{ $generatedWorkerServiceAccountPattern | quote }})))
+  variables:
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: nativeKubeletStatus
+      expression: >-
+        request.subResource == 'status' && object != null && oldObject != null &&
+        has(oldObject.spec.nodeName) && oldObject.spec.nodeName != '' &&
+        request.userInfo.username == 'system:node:' + oldObject.spec.nodeName &&
+        request.userInfo.groups.exists(g, g == 'system:nodes') &&
+        request.userInfo.groups.exists(g, g == 'system:authenticated') &&
+        object.metadata.name == oldObject.metadata.name &&
+        object.metadata.namespace == oldObject.metadata.namespace &&
+        object.metadata.uid == oldObject.metadata.uid &&
+        has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+        (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+        has(object.metadata.annotations) == has(oldObject.metadata.annotations) &&
+        (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+        has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+        (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+        (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+        object.spec == oldObject.spec
+  validations:
+    - expression: variables.manager || variables.nativeKubeletStatus
+      message: a reserved worker Pod is immutable except for status written by its exact authenticated node
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-shared-worker-pod-update
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-shared-worker-pod-update
+  validationActions: [Deny]
+  matchResources: {}
+{{- end }}

@@ -342,7 +342,7 @@ func staleDrainRecoveryManagerFixture(
 			NodeName: "switch-node", PhysicalIdentity: "serial-switch",
 		},
 	}
-	workerUsername := "system:serviceaccount:edge:" + managedWorkerServiceAccountName(device)
+	workerUsername := "system:serviceaccount:edge:cisco-vk-network-management"
 	node := &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "switch-node", UID: "node-uid",
@@ -353,7 +353,13 @@ func staleDrainRecoveryManagerFixture(
 				managedprotocol.AnnotationDeviceUID:              string(device.UID),
 				managedprotocol.AnnotationNodeName:               "switch-node",
 				managedprotocol.AnnotationNodeUID:                "node-uid",
-				managedprotocol.AnnotationWorkerUsername:         workerUsername,
+				managedprotocol.AnnotationWorkerUsername:         "system:serviceaccount:edge:cisco-vk-app-hosting",
+				managedprotocol.AnnotationAppWorkerUsername:      "system:serviceaccount:edge:cisco-vk-app-hosting",
+				managedprotocol.AnnotationAppWorkerPodName:       "app-worker",
+				managedprotocol.AnnotationAppWorkerPodUID:        "worker-pod-uid",
+				managedprotocol.AnnotationNetworkWorkerUsername:  workerUsername,
+				managedprotocol.AnnotationNetworkWorkerPodName:   "network-worker",
+				managedprotocol.AnnotationNetworkWorkerPodUID:    "network-pod-uid",
 				managedprotocol.AnnotationWorkerProtocol:         managedprotocol.Version,
 				managedprotocol.AnnotationProjectionHash:         projectionHash,
 				managedprotocol.AnnotationProjectedKeys:          "",
@@ -395,6 +401,10 @@ func staleDrainRecoveryManagerFixture(
 		DeploymentUID: "worker-deployment-uid", DeploymentGeneration: 1,
 		PodUID: "worker-pod-uid", PodStartTime: &workerPodStart, ReadyHeartbeatTime: &workerHeartbeat,
 		ObservedAt: metav1.NewTime(now),
+	}
+	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+		DesiredRevision: workerRevision, ObservedRevision: workerRevision,
+		PodUID: "network-pod-uid", PodStartTime: &workerPodStart, PodReadyTime: &workerHeartbeat,
 	}
 
 	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{
@@ -481,6 +491,7 @@ func staleDrainRecoveryManagerFixture(
 	baseAnnotations, leaseLabels := managedMutationLeaseMetadata(
 		device, node.Name, string(node.UID), workerUsername,
 	)
+	copyManagedWorkerBindingAnnotations(baseAnnotations, node.Annotations)
 	oldRevision := int64(7)
 	for annotation, value := range map[string]string{
 		managedprotocol.AnnotationMaintenanceRequestVersion:  managedprotocol.DrainProtocolVersion,
@@ -605,6 +616,9 @@ func TestStaleDrainRecoveryPreservesNodeThenRetiresExactLease(t *testing.T) {
 				WorkerRevision: objects.workerRevision, WorkerPodUID: "worker-pod-uid",
 				LeaseNamespace:  objects.lease.Namespace,
 				ManagedTopology: true, MutationsEnabled: true,
+				WorkerMode:             managedprotocol.WorkerModeAppHosting,
+				ExpectedWorkerUsername: restored.Annotations[managedprotocol.AnnotationAppWorkerUsername],
+				WorkerPodName:          restored.Annotations[managedprotocol.AnnotationAppWorkerPodName],
 			}
 			if _, finish, err := coordinator.AcquireDrainDelete(ctx, objects.pod.DeepCopy()); finish != nil || !errors.Is(err, devicecoordination.ErrMutationIncomplete) ||
 				!strings.Contains(err.Error(), "retired expired stale drain Lease revision 7") {

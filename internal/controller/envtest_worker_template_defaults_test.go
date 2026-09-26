@@ -107,6 +107,7 @@ func TestEnvtest_WorkerTemplateDefaultsAreAPIRoundTripStable(t *testing.T) {
 				}},
 			},
 		}
+		configureNetworkWorkerHealthProbes(&deployment.Spec.Template)
 		applyVKPodTemplateDefaults(&deployment.Spec.Template)
 		revision, err := managedWorkerPodTemplateRevision(&deployment.Spec.Template)
 		if err != nil {

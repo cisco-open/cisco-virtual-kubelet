@@ -301,13 +301,7 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 		device.Spec.Driver != ciskov1.DeviceDriverXE {
 		return fmt.Errorf("live CiscoDevice UID, generation, or driver no longer matches the managed grant")
 	}
-	if device.Status.WorkerRevision == nil ||
-		device.Status.WorkerRevision.DesiredRevision != r.WorkerRevision ||
-		device.Status.WorkerRevision.ObservedRevision != r.WorkerRevision ||
-		device.Status.WorkerRevision.PodUID != r.WorkerPodUID ||
-		device.Status.WorkerRevision.PodStartTime == nil ||
-		device.Status.WorkerRevision.ReadyHeartbeatTime == nil ||
-		device.Status.WorkerRevision.ReadyHeartbeatTime.Before(device.Status.WorkerRevision.PodStartTime) {
+	if !managedUpgradeWorkerReady(&device, r.WorkerRevision, r.WorkerPodUID) {
 		return fmt.Errorf("live CiscoDevice has no ready worker proof for runtime revision %q", r.WorkerRevision)
 	}
 	if err := r.validateManagedRuntimeSecretRevisions(ctx, &device); err != nil {
@@ -352,6 +346,9 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 	if err != nil {
 		return fmt.Errorf("live physical identity consistency check failed: %w", err)
 	}
+	if device.Status.WorkerRevision == nil || device.Status.WorkerRevision.ObservedRevision == "" {
+		return fmt.Errorf("live CiscoDevice has no observed app-hosting worker revision")
+	}
 	if identity.PhysicalIdentity != physicalIdentity {
 		return fmt.Errorf("live CiscoDevice manager-bound physical identity %q does not match declaration and Node observation %q",
 			identity.PhysicalIdentity, physicalIdentity)
@@ -366,13 +363,16 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 		{key: managedprotocol.AnnotationDeviceUID, expected: r.DeviceUID},
 		{key: managedprotocol.AnnotationNodeUID, expected: nodeUID},
 		{key: managedprotocol.AnnotationWorkerProtocol, expected: managedprotocol.Version},
-		{key: managedprotocol.AnnotationWorkerObservedRevision, expected: r.WorkerRevision},
+		{key: managedprotocol.AnnotationWorkerObservedRevision, expected: device.Status.WorkerRevision.ObservedRevision},
 	} {
 		if err := requireAnnotation(node.Annotations, binding.key, binding.expected); err != nil {
 			return fmt.Errorf("Node binding: %w", err)
 		}
 	}
-	workerUsername := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	workerUsername := node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername]
+	if device.Status.NetworkWorkerRevision == nil {
+		workerUsername = node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	}
 	if !strings.HasPrefix(workerUsername, "system:serviceaccount:"+r.DeviceNamespace+":") ||
 		strings.TrimPrefix(workerUsername, "system:serviceaccount:"+r.DeviceNamespace+":") == "" {
 		return fmt.Errorf("Node binding annotation %s does not name a worker ServiceAccount in namespace %q",
@@ -470,6 +470,32 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 		return err
 	}
 	return validateManagedClaimCoverage(up, up.Status.ManagerControl.Revision)
+}
+
+// managedUpgradeWorkerReady verifies the worker which owns the software
+// upgrade control plane. In managed topology that is the dedicated
+// network-management worker, whose proof is recorded separately from the
+// app-hosting worker. The app-hosting status remains the compatibility
+// fallback for legacy/isolated workers where no network worker status exists.
+func managedUpgradeWorkerReady(device *ciskov1.CiscoDevice, revision, podUID string) bool {
+	if device == nil {
+		return false
+	}
+	if network := device.Status.NetworkWorkerRevision; network != nil {
+		return network.DesiredRevision == revision && network.ObservedRevision == revision &&
+			network.PodUID == podUID &&
+			network.PodStartTime != nil &&
+			network.PodReadyTime != nil &&
+			!network.PodReadyTime.Before(network.PodStartTime)
+	}
+	worker := device.Status.WorkerRevision
+	return worker != nil &&
+		worker.DesiredRevision == revision &&
+		worker.ObservedRevision == revision &&
+		worker.PodUID == podUID &&
+		worker.PodStartTime != nil &&
+		worker.ReadyHeartbeatTime != nil &&
+		!worker.ReadyHeartbeatTime.Before(worker.PodStartTime)
 }
 
 func (r *Reconciler) validateManagedRuntimeSecretRevisions(ctx context.Context, device *ciskov1.CiscoDevice) error {

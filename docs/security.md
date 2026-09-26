@@ -482,97 +482,61 @@ Used by each VK pod. Permissions:
 | `events` | create, patch | Emit pod lifecycle events |
 | `leases` (`kube-node-lease`, the worker namespace, and optional configured lease namespace) | get, list, watch, create, update, patch, delete | Node heartbeat, config arbitration, and the shared disruptive-mutation fence |
 
-The table above describes the legacy/shared VK identity. With
-`topology.enabled=true`, selected devices instead receive an incarnation-bound
-ServiceAccount and the fixed managed-worker role. That role removes Pod
-main-resource mutation, Pod log/exec, Node metadata/spec mutation, and Lease
-create/delete. A separate retained role contains only `pods/delete` and is
-bound to each exact managed identity only after manager startup verifies the
-native admission contract. It grants no Pod `deletecollection`. A fail-closed
-policy permits that DELETE for either generated managed or legacy worker
-identity only when the Pod is already terminating, the request supplies its
-current UID as a precondition with zero grace, and immutable `spec.nodeName` is
-the exact Node encoded in the identity; live and peer Pod deletes are denied.
-The independent managed-drain policy still blocks direct deletion while its
-protected marker or finalizer remains. The manager
-pre-creates identity- and purpose-bound heartbeat, config-family, and mutation
-Leases; fail-closed admission permits only monotonic updates by their exact
-worker. A separate policy confines `pods/status` writes to Pods whose immutable
-`spec.nodeName` is encoded in that worker identity.
-Both fixed managed-worker roles are Helm-retained. Downgrade-state discovery
-treats any remaining binding to the completion role as active authority—even
-if its generated annotations are damaged—so native admission cannot disappear
-while `pods/delete` remains granted.
+The table above describes the topology-disabled legacy identity. Managed
+topology replaces the per-device account model with exactly two reusable
+functional identities in each managed CiscoDevice namespace, independent of
+device count. They are namespaced ServiceAccounts, not two cluster-global
+accounts. Selecting `disabled` removes the corresponding account, bindings,
+and worker plane; no per-device account replaces it:
 
-Helm does not transactionally order independent RBAC and admission objects. On
-install or upgrade, the topology manager's resource-name-scoped `get`/`bind`
-grant may therefore become effective before the Pod-delete policy is observed.
-Helm never binds the completion role to a worker: manager startup first verifies
-the complete admission contract and exact-compares both retained ClusterRole
-rule sets, rejecting aggregation or any added resource/verb, before the
-CiscoDevice controller can create that second binding. The controller
-ServiceAccount and the principals allowed to perform the Helm release are part
-of the trusted computing base for this interval; compromise of either can
-bypass application-level sequencing because the manager also creates dynamic
-ClusterRoleBindings. Protect them as cluster-privileged identities and do not
-allow concurrent out-of-band mutation of these retained objects.
+| Account | `readOnly` | `readWrite` |
+|---|---|---|
+| app hosting | Observe Nodes and Pods; no schedulable Node or workload execution | Adds Node/Pod status, exact terminating-Pod cleanup, workload inputs, Events, and manager-precreated Lease updates |
+| network management | Read configuration/device/operation objects and publish narrowly scoped diagnostic, telemetry, and read-only operation results | Adds configuration apply/history, mutation coordination, and explicitly enabled software/action APIs |
 
-Managed PDB-aware drain is a second, default-off authority boundary. The chart
-initially binds the manager in an explicitly allowlisted workload namespace
-only when managed topology, software-upgrade gNOI, and
-`topology.policy.workloadDrain.enabled=true` are all active. One retained Role
-permits Pod read/update/patch plus read-only controller/PDB access for exact
-cleanup. A separate non-retained Role grants only `pods/eviction` create while
-every gate remains active. Neither grants Pod delete. Removing administrator
-drain authority makes the manager start no new Eviction, and the corresponding
-live Helm update removes the non-retained execution Role without stranding an
-accepted teardown. The worker completion grant above does not add any workload
-Pod deletion authority to the manager. Remove the retained cleanup pair
-explicitly only after every associated drain is `Settled`. The top-level
-topology and gNOI gates must remain active until then so their controllers can
-finish recovery.
+Each account is bound to exactly one profile; read-only and read-write roles
+are never additive. `disabled` omits that plane. The network profile is
+RoleBound in its tenant namespace and, when configured, the dedicated Lease
+namespace. App read-write also receives an implementation-only namespaced
+support role for its exact CiscoDevice and maintenance-risk scan. For PDB drain,
+this namespaced role also permits upgrade status patches; native admission
+restricts the exact Pod-bound app identity to `workerDrain` inventory only.
+It cannot change gNOI phase, network acknowledgement, mutation claims, or
+manager grants. Inventory carries the app revision and Pod UID separately
+from the network worker's revision, so a restart invalidates previous clean
+evidence. These CRD permissions are not placed in its cluster-bound profile. A separate non-selectable network
+cluster-read role supplies only `IOSXEConfigDefaults`, Node/Pod observations
+needed to fence maintenance, and no tenant CRD read. Its only create verb is
+`SelfSubjectReview`, used to verify the caller's Pod-bound token; it cannot
+mutate a persisted object. The app profile
+must be ClusterRoleBound because Pods placed on a virtual Node can originate
+in any namespace.
 
-Managed topology installs the reserved-field admission policy even while drain
-is disabled, keeping the startup contract feature-independent without granting
-new namespace RBAC. That fail-closed policy permits the manager to add or remove
-only the paired
-`ops.cisco.vk/drain-session` annotation and
-`ops.cisco.vk/iosxe-rollout-drain` finalizer on a Pod. It cannot use that grant
-to change the Pod spec, labels, owners, or unrelated metadata, and every direct
-Pod DELETE by the manager identity is denied. A campaign must separately opt
-into `workloads.policy: Drain`, and the API server's live `policy/v1`
-Eviction/PDB decision remains authoritative. See
-[Opt-in PDB-aware drain](topology-awareness.md#opt-in-pdb-aware-drain-development-preview)
-for the narrow eligible workload subset and recovery contract.
+Empty account names derive release-qualified DNS labels and are the safe
+default. Admission cluster-reserves each resolved name to prevent an identity
+from being reused by another CVK control plane; explicit overrides must be
+unique across all releases, despite the ServiceAccounts being namespaced.
 
-The drain teardown holder uses a fixed 31-minute Lease quarantine, one minute
-longer than the worker's maximum device callback. An expired retained drain
-Lease is not reusable evidence. Across a recovery revision change, CVK can
-retire only an exact expired holder whose Lease UID, session, operation, holder
-identity, and complete strictly older request still match (or whose request
-metadata is wholly absent because publication never occurred). Partial,
-foreign, malformed, or unexpired state stays quarantined, and retirement
-dispatches no device work. Cleanup cannot reacquire the Lease until a later
-reconcile observes a fresh current-revision CiscoDevice maintenance-session
-acknowledgement.
-If cancellation reaches a promoted software-upgrade holder before any durable
-mutation claim or dispatch marker exists, the worker first persists the exact
-`Cancelled` control acknowledgement. Only a later fresh reconciliation may
-release that leaf-UID-bound holder and its request metadata; any claim or
-marker keeps the 26-hour mutation quarantine intact.
-Before device dispatch and every Lease renewal, the worker reauthorizes the
-exact Pod, leaf, Node, maintenance session, and Lease binding. A cache-lagged
-delete callback is resolved against the uncached live Pod, and a changed UID
-fails closed rather than falling through to ordinary teardown.
+The access mode is also enforced inside the worker process. A network
+`readOnly` worker starts telemetry, diagnostics, and read-only operations but
+does not construct configuration or gNOI mutation reconcilers. Setting a gNOI
+mutation gate while network management is not `readWrite` fails Helm
+validation. App-hosting `readOnly` is an intentional observer mode: it cannot
+advertise a Ready schedulable Node or execute Pods.
 
-Two native-authorization gaps remain explicit. The ServiceAccount can read
-Secrets cluster-wide for cross-namespace Pod volume resolution; RBAC cannot
-limit that grant to Secrets referenced by Pods on one dynamic virtual Node.
-It can also publish any schema-valid status for Pods on its own virtual Node,
-even though admission blocks peer-Node and metadata/spec writes. Provider cache
-filtering is not an authorization boundary. A future hardening phase should
-qualify `system:node:<virtual-node>` credentials with Kubernetes Node Authorizer
-and NodeRestriction, or mediate Pod status through the manager.
+Two native-authorization gaps remain explicit. The app read-write account can
+read Secrets cluster-wide for cross-namespace Pod volume resolution; RBAC
+cannot limit that grant to Secrets referenced by Pods assigned to this
+namespace's virtual Nodes. Because the account is shared within a tenant
+namespace, compromise of one app worker also exposes the Kubernetes API
+permissions for peer device workers using that account. Admission still
+confines object writes to manager-bound Nodes/Pods, but provider cache
+filtering is not an authorization boundary. Use namespaces as trust boundaries
+and keep device credentials unique. The real kubelets that request projected
+worker tokens must authenticate as `system:node:<nodeName>` under the Node and
+RBAC authorizers with `NodeRestriction` enabled. That prerequisite protects the
+kubelet-side token path; it does not make the ServiceAccount token node-scoped
+or remove the app account's cluster-wide reads.
 
 Write-class gNOI actions and software upgrades share one
 `device-disruptive-mutation` Lease per namespaced device. Definitive outcomes
@@ -712,24 +676,83 @@ reconciling.
 
 ### Production RBAC hardening
 
-The default chart preserves the broad Virtual Kubelet permissions needed by the
-current per-device runtime, including pod lifecycle, node registration,
-configuration CR access, and operations CR access. Before declaring the NX-OS
-runtime production-grade, split this into explicit profiles:
+Topology-disabled installs preserve the broad legacy Virtual Kubelet identity
+for compatibility. Managed topology is the production split: app hosting and
+network management run as separate processes and identities, with namespaced
+network mutation authority and explicit access modes. The manager can bind
+only the four fixed profile roles plus implementation-only app-read,
+network-global-read, and Lease-only support roles;
+workers have no RBAC or service-account-token creation permission. Profile
+rules are deterministic across releases: network read-write carries the
+bounded mutation API verbs, while runtime gates and native admission decide
+whether and where those verbs can be exercised.
 
-| Profile | Intended scope |
-|---|---|
-| Controller | Watches `CiscoDevice`, creates Deployments/ConfigMaps, manages finalizers and virtual node cleanup. |
-| Per-device runtime | Owns pod lifecycle and node status for one device worker. |
-| Config writer | Reads/writes only the config CRDs required by the enabled platform. |
-| Diagnostics | Creates and updates read-only `DeviceOperation` requests and artifacts. |
-| Lifecycle operations | Opt-in profile for software upgrades and other write-class operations. |
+Admission reserves both functional ServiceAccount objects to the topology
+manager. A `serviceaccounts/token` request for either name must come from a
+kubelet and name one exact bound Pod UID, while legacy
+`kubernetes.io/service-account-token` Secrets for the accounts are forbidden.
+Workers then use `SelfSubjectReview` plus API-server Pod token claims; a shared
+username by itself is never accepted as a device identity.
 
-Strict production installs should prefer namespaced Roles for pod, config,
-operation, and artifact surfaces, keeping ClusterRoles only where Kubernetes
-requires cluster scope, such as `nodes` and cluster-scoped CRDs. Additions to
-cluster-wide verbs should carry a rationale in this page and a regression test
-so RBAC broadening is visible during review.
+Managed CiscoDevices must live in dedicated, administrator-controlled
+namespaces. Do not bind tenant `edit`/`admin` or any role that permits
+ServiceAccount impersonation; use of either functional ServiceAccount; worker
+Pod logs, `exec`, `attach`, `portforward`, or `proxy`; Deployment/ReplicaSet
+`scale`; or deletion of the worker, RBAC, Lease, Secret, or admission-related
+objects. Those capabilities can reuse the shared username, extract its bound
+token or mounted device credentials, bypass a controlled drain, or remove the
+enforcement surface. A Kubernetes ServiceAccount impersonated in one namespace
+can exercise every cluster-scoped grant held by that account. The controller's
+namespaced binding audit fails closed, but cluster-admin and principals able to
+create or mutate ClusterRoleBindings remain a separate root trust boundary;
+admission does not attempt to constrain them.
+See the Kubernetes documentation for the upstream
+[impersonation](https://kubernetes.io/docs/reference/access-authn-authz/user-impersonation/),
+[Node authorization](https://kubernetes.io/docs/reference/access-authn-authz/node/),
+and
+[NodeRestriction](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#noderestriction)
+semantics behind these requirements.
+
+If `CONFIG_LEASE_NAMESPACE` differs from the device namespace, the network
+account receives only the matching read-only or read-write Lease support role
+there. The tenant network profile is never rebound into that namespace, so
+config, operation, and Secret permissions do not leak into a shared lease
+namespace. Resolved worker account names are retained in `policy.json` and
+protected policy annotations. They cannot be renamed in place; retirement and
+clean re-enrollment are required. The retained policy coordinates and
+admission-policy prefix are locked to the owning Helm release as well, so a
+`fullnameOverride`, `nameOverride`, policy-name, or policy-namespace change
+also requires retirement and clean re-enrollment.
+
+The resolved `CONFIG_LEASE_NAMESPACE` is locked in the same retained policy
+(empty means the CiscoDevice namespace). It cannot be changed after topology
+bootstrap: retire managed topology and all old Lease authority, then re-enroll
+with the new value. This prevents a profile change from leaving a writable
+binding in the former Lease namespace.
+
+Profile changes are manager-controlled drains. A write-to-read-only or
+write-to-disabled transition waits for topology locks, maintenance, rollout
+reservations, and device mutations to settle; the app plane also requires that
+no scheduled workloads depend on it. The manager removes the applicable
+Deployment, ReplicaSet, and Pod before revoking or replacing its binding, and
+an escalation waits for the old worker incarnation to disappear. Operators
+must not edit generated bindings directly.
+
+This is capability separation, not per-device isolation. Namespace placement
+therefore matters: put mutually untrusted fleets in separate namespaces, audit
+the two bindings after every chart upgrade, and use `kubectl auth can-i` against
+both accounts. Any future cluster-wide verb must retain a documented rationale
+and a rendered-RBAC regression test.
+
+Functional app hosting has a broader inherited upstream Virtual Kubelet trust
+boundary: app read-write must list/watch Pods, Secrets, ConfigMaps, and Services
+cluster-wide because `nodeutil` builds cluster-wide informers for workloads
+that can originate in any namespace. Pod-bound tokens and admission confine
+writes, but they cannot scope those reads. Treat compromise of any app worker
+as cluster-wide Secret-read exposure and run app hosting only in a dedicated
+trusted workload cluster, or in a cluster whose workload namespaces explicitly
+share that trust boundary. Namespace isolation does not mitigate this read
+grant. Network-management workers do not receive it.
 
 The chart exposes the first strict-profile control as:
 

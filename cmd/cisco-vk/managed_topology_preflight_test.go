@@ -15,6 +15,7 @@ import (
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	strictYAML "sigs.k8s.io/yaml"
 
@@ -29,11 +30,13 @@ func TestRenderedManagedAdmissionContract(t *testing.T) {
 
 	prefix := envOrDefault("CVK_ADMISSION_PREFIX", "cvk-cisco-virtual-kubelet")
 	bindings := admissionContractBindings{
-		AdmissionPrefix: prefix,
-		ManagerUsername: envOrDefault("CVK_ADMISSION_MANAGER_USERNAME", "system:serviceaccount:cisco-vk-system:cisco-virtual-kubelet-controller"),
-		PolicyNamespace: envOrDefault("CVK_ADMISSION_POLICY_NAMESPACE", "cisco-vk-system"),
-		PolicyName:      envOrDefault("CVK_ADMISSION_POLICY_NAME", prefix+"-topology-policy"),
-		LedgerName:      envOrDefault("CVK_ADMISSION_LEDGER_NAME", prefix+"-topology-ledger"),
+		AdmissionPrefix:                 prefix,
+		ManagerUsername:                 envOrDefault("CVK_ADMISSION_MANAGER_USERNAME", "system:serviceaccount:cisco-vk-system:cisco-virtual-kubelet-controller"),
+		PolicyNamespace:                 envOrDefault("CVK_ADMISSION_POLICY_NAMESPACE", "cisco-vk-system"),
+		PolicyName:                      envOrDefault("CVK_ADMISSION_POLICY_NAME", prefix+"-topology-policy"),
+		LedgerName:                      envOrDefault("CVK_ADMISSION_LEDGER_NAME", prefix+"-topology-ledger"),
+		AppHostingServiceAccount:        envOrDefault("CVK_ADMISSION_APP_SERVICE_ACCOUNT", prefix+"-app-hosting"),
+		NetworkManagementServiceAccount: envOrDefault("CVK_ADMISSION_NETWORK_SERVICE_ACCOUNT", prefix+"-network-management"),
 	}
 	assertStrictYAMLDocuments(t, manifestPath)
 
@@ -137,11 +140,13 @@ func TestManagedAdmissionPolicyDigestDetectsExpressionChange(t *testing.T) {
 	expected := managedAdmissionExpectations["managed-node"]
 	policy := validManagedAdmissionPolicy(expected)
 	bindings := admissionContractBindings{
-		AdmissionPrefix: "prefix",
-		ManagerUsername: "system:serviceaccount:system:manager",
-		PolicyNamespace: "system",
-		PolicyName:      "policy",
-		LedgerName:      "ledger",
+		AdmissionPrefix:                 "prefix",
+		ManagerUsername:                 "system:serviceaccount:system:manager",
+		PolicyNamespace:                 "system",
+		PolicyName:                      "policy",
+		LedgerName:                      "ledger",
+		AppHostingServiceAccount:        "app-worker",
+		NetworkManagementServiceAccount: "network-worker",
 	}
 	digest, err := managedAdmissionPolicyDigest(policy, bindings)
 	if err != nil {
@@ -162,11 +167,13 @@ func TestManagedAdmissionPolicyDigestNormalizesAPIServerEmptySelectors(t *testin
 	expected := managedAdmissionExpectations["managed-node"]
 	policy := validManagedAdmissionPolicy(expected)
 	bindings := admissionContractBindings{
-		AdmissionPrefix: "prefix",
-		ManagerUsername: "system:serviceaccount:system:manager",
-		PolicyNamespace: "system",
-		PolicyName:      "policy",
-		LedgerName:      "ledger",
+		AdmissionPrefix:                 "prefix",
+		ManagerUsername:                 "system:serviceaccount:system:manager",
+		PolicyNamespace:                 "system",
+		PolicyName:                      "policy",
+		LedgerName:                      "ledger",
+		AppHostingServiceAccount:        "app-worker",
+		NetworkManagementServiceAccount: "network-worker",
 	}
 	before, err := managedAdmissionPolicyDigest(policy, bindings)
 	if err != nil {
@@ -189,17 +196,18 @@ func TestManagedAdmissionPolicyDigestNormalizesAPIServerEmptySelectors(t *testin
 func TestManagedAdmissionPolicyDigestNormalizesAdmissionPrefix(t *testing.T) {
 	expected := managedAdmissionExpectations["topology-policy"]
 	policyA := validManagedAdmissionPolicy(expected)
-	policyA.Spec.Validations[0].Expression = "'prefix-a' == 'prefix-a'"
+	policyA.Spec.Validations[0].Expression = `"prefix-a" == "prefix-a"`
 	bindingsA := admissionContractBindings{
 		AdmissionPrefix: "prefix-a", ManagerUsername: "manager",
 		PolicyNamespace: "namespace", PolicyName: "policy", LedgerName: "ledger",
+		AppHostingServiceAccount: "app-worker", NetworkManagementServiceAccount: "network-worker",
 	}
 	digestA, err := managedAdmissionPolicyDigest(policyA, bindingsA)
 	if err != nil {
 		t.Fatal(err)
 	}
 	policyB := policyA.DeepCopy()
-	policyB.Spec.Validations[0].Expression = "'prefix-b' == 'prefix-b'"
+	policyB.Spec.Validations[0].Expression = `"prefix-b" == "prefix-b"`
 	bindingsB := bindingsA
 	bindingsB.AdmissionPrefix = "prefix-b"
 	digestB, err := managedAdmissionPolicyDigest(policyB, bindingsB)
@@ -211,18 +219,80 @@ func TestManagedAdmissionPolicyDigestNormalizesAdmissionPrefix(t *testing.T) {
 	}
 }
 
+func TestManagedAdmissionPolicyDigestNormalizesOnlyExactBoundCELLiterals(t *testing.T) {
+	expected := managedAdmissionExpectations["shared-worker-serviceaccount"]
+	policyA := validManagedAdmissionPolicy(expected)
+	policyA.Spec.Validations[0].Expression = `
+		object.metadata.annotations['topology.cisco.vk/managed'] == 'managed' &&
+		request.name in ["managed", "network"] &&
+		request.userInfo.username.endsWith(':managed') &&
+		object.metadata.annotations['network'] == 'network'`
+	policyA.Spec.Validations[0].Message = "the manager's managed policy remains fixed"
+	bindingsA := admissionContractBindings{
+		AdmissionPrefix: "prefix", ManagerUsername: "system:serviceaccount:system:manager",
+		PolicyNamespace: "system", PolicyName: "policy", LedgerName: "ledger",
+		AppHostingServiceAccount: "managed", NetworkManagementServiceAccount: "network",
+	}
+	digestA, err := managedAdmissionPolicyDigest(policyA, bindingsA)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	policyB := policyA.DeepCopy()
+	policyB.Spec.Validations[0].Expression = `
+		object.metadata.annotations['topology.cisco.vk/managed'] == 'managed' &&
+		request.name in ["app-worker", "network-worker"] &&
+		request.userInfo.username.endsWith(':app-worker') &&
+		object.metadata.annotations['network'] == 'network'`
+	bindingsB := bindingsA
+	bindingsB.AppHostingServiceAccount = "app-worker"
+	bindingsB.NetworkManagementServiceAccount = "network-worker"
+	digestB, err := managedAdmissionPolicyDigest(policyB, bindingsB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if digestA != digestB {
+		t.Fatalf("equivalent short worker identities changed contract digest: %s != %s", digestA, digestB)
+	}
+
+	messageChanged := policyB.DeepCopy()
+	messageChanged.Spec.Validations[0].Message = "changed validation prose"
+	changed, err := managedAdmissionPolicyDigest(messageChanged, bindingsB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed == digestA {
+		t.Fatal("change to fixed validation prose was normalized away")
+	}
+
+	policyB.Spec.Validations[0].Expression = strings.Replace(
+		policyB.Spec.Validations[0].Expression,
+		"object.metadata.annotations['network'] == 'network'",
+		"object.metadata.annotations['network'] == 'changed'", 1,
+	)
+	changed, err = managedAdmissionPolicyDigest(policyB, bindingsB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed == digestA {
+		t.Fatal("change to fixed single-quoted contract vocabulary was normalized away")
+	}
+}
+
 func TestAdmissionContractBindingsRequireEveryIdentity(t *testing.T) {
 	valid := admissionContractBindings{
-		AdmissionPrefix: "prefix",
-		ManagerUsername: "manager",
-		PolicyNamespace: "namespace",
-		PolicyName:      "policy",
-		LedgerName:      "ledger",
+		AdmissionPrefix:                 "prefix",
+		ManagerUsername:                 "manager",
+		PolicyNamespace:                 "namespace",
+		PolicyName:                      "policy",
+		LedgerName:                      "ledger",
+		AppHostingServiceAccount:        "app-worker",
+		NetworkManagementServiceAccount: "network-worker",
 	}
 	if err := valid.validate(); err != nil {
 		t.Fatalf("valid bindings rejected: %v", err)
 	}
-	for _, field := range []string{"prefix", "manager", "namespace", "policy", "ledger"} {
+	for _, field := range []string{"prefix", "manager", "namespace", "policy", "ledger", "app", "network"} {
 		t.Run(field, func(t *testing.T) {
 			candidate := valid
 			switch field {
@@ -236,11 +306,23 @@ func TestAdmissionContractBindingsRequireEveryIdentity(t *testing.T) {
 				candidate.PolicyName = ""
 			case "ledger":
 				candidate.LedgerName = ""
+			case "app":
+				candidate.AppHostingServiceAccount = ""
+			case "network":
+				candidate.NetworkManagementServiceAccount = ""
 			}
 			if err := candidate.validate(); err == nil {
 				t.Fatal("incomplete bindings were accepted")
 			}
 		})
+	}
+	collision := valid
+	collision.AppHostingServiceAccount = collision.PolicyNamespace
+	if err := collision.validate(); err == nil ||
+		!strings.Contains(err.Error(), "must be pairwise distinct") ||
+		!strings.Contains(err.Error(), "app-hosting ServiceAccount") ||
+		!strings.Contains(err.Error(), "policy namespace") {
+		t.Fatalf("binding collision error = %v, want both colliding fields", err)
 	}
 }
 
@@ -348,6 +430,172 @@ func TestValidateManagedAdmissionBindingRejectsNarrowing(t *testing.T) {
 	defaulted.Spec.MatchResources.ObjectSelector = &metav1.LabelSelector{}
 	if err := validateManagedAdmissionBinding(defaulted, "cvk-managed-node"); err != nil {
 		t.Fatalf("API-server semantic defaults rejected: %v", err)
+	}
+}
+
+func validWorkerServiceAccountAdmissionGenerations() []workerServiceAccountAdmissionGeneration {
+	generations := make([]workerServiceAccountAdmissionGeneration, 0,
+		len(workerServiceAccountPolicyEpochSuffixes))
+	for _, suffix := range workerServiceAccountPolicyEpochSuffixes {
+		generations = append(generations, workerServiceAccountAdmissionGeneration{
+			suffix: suffix, policyUID: types.UID(suffix + "-policy-uid"), policyGeneration: 1,
+			policySpecDigest: "sha256:" + suffix + "-policy-spec",
+			bindingUID:       types.UID(suffix + "-binding-uid"), bindingGeneration: 1,
+			bindingSpecDigest: "sha256:" + suffix + "-binding-spec",
+		})
+	}
+	return generations
+}
+
+func TestDeriveWorkerServiceAccountPolicyEpochIsStableAndOrderIndependent(t *testing.T) {
+	binding := &admissionv1.ValidatingAdmissionPolicyBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cvk-shared-worker-serviceaccount", UID: "shared-binding-uid", Generation: 3,
+			ResourceVersion: "11", Labels: map[string]string{"chart": "old"},
+		},
+		Spec: admissionv1.ValidatingAdmissionPolicyBindingSpec{
+			PolicyName:        "cvk-shared-worker-serviceaccount",
+			ValidationActions: []admissionv1.ValidationAction{admissionv1.Deny},
+		},
+	}
+	bindingDigest, err := managedAdmissionBindingSpecDigest(binding)
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadataOnly := binding.DeepCopy()
+	metadataOnly.ResourceVersion = "999"
+	metadataOnly.Labels = map[string]string{"chart": "new"}
+	metadataOnly.Annotations = map[string]string{"unrelated": "metadata"}
+	metadataDigest, err := managedAdmissionBindingSpecDigest(metadataOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if metadataDigest != bindingDigest {
+		t.Fatalf("metadata-only binding update changed Spec digest: %q != %q", metadataDigest, bindingDigest)
+	}
+	specChanged := binding.DeepCopy()
+	specChanged.Spec.PolicyName = "cvk-generated-worker-serviceaccount"
+	specDigest, err := managedAdmissionBindingSpecDigest(specChanged)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if specDigest == bindingDigest {
+		t.Fatal("binding Spec change did not change compiled digest")
+	}
+
+	generations := validWorkerServiceAccountAdmissionGenerations()
+	for i := range generations {
+		if generations[i].suffix == "shared-worker-serviceaccount" {
+			generations[i].policyGeneration = 2
+			generations[i].bindingUID = binding.UID
+			generations[i].bindingGeneration = binding.Generation
+			generations[i].bindingSpecDigest = bindingDigest
+		}
+	}
+	want, err := deriveWorkerServiceAccountPolicyEpoch(generations)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reversed := make([]workerServiceAccountAdmissionGeneration, len(generations))
+	for i := range generations {
+		reversed[len(generations)-1-i] = generations[i]
+	}
+	got, err := deriveWorkerServiceAccountPolicyEpoch(reversed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("epoch depends on policy iteration order: %q != %q", got, want)
+	}
+	metadataGenerations := append([]workerServiceAccountAdmissionGeneration(nil), generations...)
+	metadataGenerations[0].bindingSpecDigest = metadataDigest
+	got, err = deriveWorkerServiceAccountPolicyEpoch(metadataGenerations)
+	if err != nil || got != want {
+		t.Fatalf("metadata-only update rotated epoch: got=%q want=%q err=%v", got, want, err)
+	}
+}
+
+func TestDeriveWorkerServiceAccountPolicyEpochRotatesOnContractIdentityChange(t *testing.T) {
+	base := validWorkerServiceAccountAdmissionGenerations()
+	want, err := deriveWorkerServiceAccountPolicyEpoch(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(*workerServiceAccountAdmissionGeneration)
+	}{
+		{"policy UID", func(g *workerServiceAccountAdmissionGeneration) { g.policyUID = "new-policy" }},
+		{"policy generation", func(g *workerServiceAccountAdmissionGeneration) { g.policyGeneration++ }},
+		{"policy Spec digest", func(g *workerServiceAccountAdmissionGeneration) { g.policySpecDigest = "sha256:new-policy" }},
+		{"binding UID", func(g *workerServiceAccountAdmissionGeneration) { g.bindingUID = "new-binding" }},
+		{"binding generation", func(g *workerServiceAccountAdmissionGeneration) { g.bindingGeneration++ }},
+		{"binding Spec digest", func(g *workerServiceAccountAdmissionGeneration) { g.bindingSpecDigest = "sha256:new-binding" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			changed := append([]workerServiceAccountAdmissionGeneration(nil), base...)
+			test.mutate(&changed[0])
+			got, err := deriveWorkerServiceAccountPolicyEpoch(changed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got == want {
+				t.Fatalf("%s did not rotate worker ServiceAccount epoch", test.name)
+			}
+		})
+	}
+	for _, suffix := range []string{"shared-worker-token", "shared-worker-token-secret", "shared-worker-deployment", "shared-worker-pod-update"} {
+		t.Run(suffix+" contract", func(t *testing.T) {
+			changed := append([]workerServiceAccountAdmissionGeneration(nil), base...)
+			for i := range changed {
+				if changed[i].suffix == suffix {
+					changed[i].policySpecDigest = "sha256:changed-" + suffix
+				}
+			}
+			got, err := deriveWorkerServiceAccountPolicyEpoch(changed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got == want {
+				t.Fatalf("%s policy contract change did not rotate worker ServiceAccount epoch", suffix)
+			}
+		})
+	}
+}
+
+func TestDeriveWorkerServiceAccountPolicyEpochRejectsIncompleteIdentity(t *testing.T) {
+	valid := validWorkerServiceAccountAdmissionGenerations()
+	if _, err := deriveWorkerServiceAccountPolicyEpoch(valid[:len(valid)-1]); err == nil {
+		t.Fatal("missing worker policy/binding generation was accepted")
+	}
+	duplicate := append([]workerServiceAccountAdmissionGeneration(nil), valid...)
+	duplicate[1].suffix = duplicate[0].suffix
+	if _, err := deriveWorkerServiceAccountPolicyEpoch(duplicate); err == nil {
+		t.Fatal("duplicate policy/binding generation was accepted")
+	}
+	tests := []struct {
+		name   string
+		mutate func(*workerServiceAccountAdmissionGeneration)
+	}{
+		{"policy UID", func(g *workerServiceAccountAdmissionGeneration) { g.policyUID = "" }},
+		{"policy generation", func(g *workerServiceAccountAdmissionGeneration) { g.policyGeneration = 0 }},
+		{"policy digest", func(g *workerServiceAccountAdmissionGeneration) { g.policySpecDigest = "" }},
+		{"binding UID", func(g *workerServiceAccountAdmissionGeneration) { g.bindingUID = "" }},
+		{"binding generation", func(g *workerServiceAccountAdmissionGeneration) { g.bindingGeneration = 0 }},
+		{"binding digest", func(g *workerServiceAccountAdmissionGeneration) { g.bindingSpecDigest = "" }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			broken := append([]workerServiceAccountAdmissionGeneration(nil), valid...)
+			test.mutate(&broken[0])
+			if _, err := deriveWorkerServiceAccountPolicyEpoch(broken); err == nil {
+				t.Fatalf("empty/zero %s was accepted", test.name)
+			}
+		})
+	}
+	if _, err := managedAdmissionBindingSpecDigest(nil); err == nil {
+		t.Fatal("nil admission binding Spec was accepted")
 	}
 }
 

@@ -180,7 +180,13 @@ func drainCoordinatorFixture(
 				managedprotocol.AnnotationDeviceUID:              string(device.UID),
 				managedprotocol.AnnotationNodeName:               "switch-node",
 				managedprotocol.AnnotationNodeUID:                "node-uid",
-				managedprotocol.AnnotationWorkerUsername:         "system:serviceaccount:edge:worker",
+				managedprotocol.AnnotationWorkerUsername:         "system:serviceaccount:edge:cisco-vk-app-hosting",
+				managedprotocol.AnnotationAppWorkerUsername:      "system:serviceaccount:edge:cisco-vk-app-hosting",
+				managedprotocol.AnnotationAppWorkerPodName:       "app-worker",
+				managedprotocol.AnnotationAppWorkerPodUID:        "worker-pod-uid",
+				managedprotocol.AnnotationNetworkWorkerUsername:  "system:serviceaccount:edge:cisco-vk-network-management",
+				managedprotocol.AnnotationNetworkWorkerPodName:   "network-worker",
+				managedprotocol.AnnotationNetworkWorkerPodUID:    "network-pod-uid",
 				managedprotocol.AnnotationWorkerProtocol:         managedprotocol.Version,
 				managedprotocol.AnnotationProjectionHash:         "projection-hash",
 				managedprotocol.AnnotationWorkerObservedRevision: drainWorkerHash,
@@ -316,6 +322,10 @@ func drainCoordinatorFixture(
 			"cisco.vk/family": devicecoordination.MutationLeaseFamily,
 		},
 	}}
+	lease.Annotations[managedprotocol.AnnotationWorkerUsername] = node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername]
+	for _, key := range []string{managedprotocol.AnnotationAppWorkerUsername, managedprotocol.AnnotationAppWorkerPodName, managedprotocol.AnnotationAppWorkerPodUID, managedprotocol.AnnotationNetworkWorkerUsername, managedprotocol.AnnotationNetworkWorkerPodName, managedprotocol.AnnotationNetworkWorkerPodUID} {
+		lease.Annotations[key] = node.Annotations[key]
+	}
 	device.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
 		Phase:           ciskov1.DeviceMaintenanceSessionActive,
 		ProtocolVersion: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
@@ -352,6 +362,9 @@ func drainCoordinatorFixture(
 		Client: kubeClient, Namespace: device.Namespace, DeviceName: device.Name, DeviceUID: string(device.UID),
 		NodeName: node.Name, WorkerRevision: drainWorkerHash, WorkerPodUID: "worker-pod-uid", LeaseNamespace: lease.Namespace,
 		ManagedTopology: true, MutationsEnabled: true,
+		WorkerMode:             managedprotocol.WorkerModeAppHosting,
+		ExpectedWorkerUsername: node.Annotations[managedprotocol.AnnotationAppWorkerUsername],
+		WorkerPodName:          node.Annotations[managedprotocol.AnnotationAppWorkerPodName],
 	}
 	return coordinator, objects
 }

@@ -10,6 +10,9 @@ chart_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repo_root="$(cd "$chart_dir/../.." && pwd)"
 release_name="cvk-topology-it"
 admission_prefix="${release_name}-cisco-virtual-kubelet"
+expected_policy_count=27
+legacy_node_marker_policy="${admission_prefix}-legacy-node-marker"
+legacy_node_marker_digest="sha256:02c0e65602ac0ebcc3d19b15bd7cbcd7c3840c081d72f7541efbafc394f2ee76"
 system_namespace="cvk-topology-system"
 device_namespace="cvk-topology-test"
 manager_username="system:serviceaccount:${system_namespace}:cisco-virtual-kubelet-controller"
@@ -30,6 +33,27 @@ sha256_stdin() {
   else
     shasum -a 256 | awk '{print $1}'
   fi
+}
+
+# Mirror internal/controller.shortHash exactly; its zero seed is part of the
+# persisted ClusterRoleBinding naming contract.
+cvk_short_hash() {
+  local value="$1"
+  local hash=0
+  local octet
+
+  for octet in $(LC_ALL=C printf '%s' "$value" | od -An -tu1 -v); do
+    hash=$(( ((hash ^ octet) * 16777619) & 0xffffffff ))
+  done
+  printf '%08x' "$hash"
+}
+
+vk_access_clusterrolebinding_name() {
+  local namespace="$1"
+  local service_account="$2"
+  local raw="${namespace}-${service_account}"
+
+  printf 'cisco-vk-%s-%s' "$raw" "$(cvk_short_hash "$raw")"
 }
 
 # This suite intentionally creates cluster-scoped admission and RBAC objects.
@@ -120,6 +144,22 @@ cleanup() {
     cvk-topology-it-retirement-worker \
     --ignore-not-found --wait=true --timeout=60s \
     >/dev/null || cleanup_status=1
+  if [ -n "${worker_cluster_binding:-}" ]; then
+    kubectl delete clusterrolebinding "$worker_cluster_binding" \
+      --ignore-not-found --wait=true --timeout=60s >/dev/null || cleanup_status=1
+  fi
+  if [ -n "${legacy_cluster_binding:-}" ]; then
+    kubectl delete clusterrolebinding "$legacy_cluster_binding" \
+      --ignore-not-found --wait=true --timeout=60s >/dev/null || cleanup_status=1
+  fi
+  if [ -n "${retirement_legacy_cluster_binding:-}" ]; then
+    kubectl delete clusterrolebinding "$retirement_legacy_cluster_binding" \
+      --ignore-not-found --wait=true --timeout=60s >/dev/null || cleanup_status=1
+  fi
+  if [ -n "${shared_compatibility_cluster_binding:-}" ]; then
+    kubectl delete clusterrolebinding "$shared_compatibility_cluster_binding" \
+      --ignore-not-found --wait=true --timeout=60s >/dev/null || cleanup_status=1
+  fi
   kubectl delete clusterrole \
     -l "app.kubernetes.io/instance=${release_name}" \
     --ignore-not-found --wait=false >/dev/null || cleanup_status=1
@@ -229,6 +269,7 @@ helm upgrade "$release_name" "$chart_dir" \
   --set topology.enabled=true \
   --set controller.leaderElect=true \
   --set rbac.profile=strict \
+  --set topology.workerAccounts.networkManagement.accessMode=readWrite \
   --set gnoi.enableSoftwareUpgrade=true \
   --set topology.policy.workloadDrain.enabled=true \
   --set-json "topology.policy.workloadDrain.allowedNamespaces=[\"${device_namespace}\"]" \
@@ -269,7 +310,7 @@ kubectl delete rolebinding cisco-virtual-kubelet-device \
 policy_count="$(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')"
-test "$policy_count" -eq 10
+test "$policy_count" -eq "$expected_policy_count"
 for policy in $(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}'); do
@@ -294,25 +335,96 @@ for policy in $(kubectl get validatingadmissionpolicy \
   fi
 done
 
-# Re-read the server-stored policy Specs and retained ClusterRole rules and
-# prove API defaulting/canonicalization has not changed the complete contracts
-# the manager verifies at startup. Custom release names are included in this
-# normalization check.
+# A direct upgrade from a chart that never installed the retained Node marker
+# guard must not disable topology: released legacy Nodes would otherwise keep
+# an unprotected handoff marker. Remove that guard to reproduce the old-chart
+# state, prove the disable is rejected with an actionable two-step migration,
+# then restore it through a topology-enabled upgrade before continuing.
+test "$(kubectl get validatingadmissionpolicy "$legacy_node_marker_policy" \
+  -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/admission-contract-digest}')" = \
+  "$legacy_node_marker_digest"
+test "$(kubectl get validatingadmissionpolicybinding "$legacy_node_marker_policy" \
+  -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/admission-contract-digest}')" = \
+  "$legacy_node_marker_digest"
+kubectl delete validatingadmissionpolicybinding \
+  "$legacy_node_marker_policy" >/dev/null
+kubectl delete validatingadmissionpolicy "$legacy_node_marker_policy" >/dev/null
+if helm upgrade "$release_name" "$chart_dir" \
+    --namespace "$system_namespace" \
+    "${image_values[@]}" \
+    --set topology.enabled=false \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set topology.workerAccounts.networkManagement.accessMode=readWrite \
+    --set gnoi.enableSoftwareUpgrade=true \
+    >"$scratch_dir/topology-disable-missing-node-marker-policy.txt" 2>&1; then
+  echo "topology disable unexpectedly accepted a missing retained Node marker guard" >&2
+  exit 1
+fi
+grep -Fq \
+  'upgrade this release once with topology.enabled=true before disabling topology' \
+  "$scratch_dir/topology-disable-missing-node-marker-policy.txt"
+
+helm upgrade "$release_name" "$chart_dir" \
+  --namespace "$system_namespace" \
+  "${image_values[@]}" \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set topology.workerAccounts.networkManagement.accessMode=readWrite \
+  --set gnoi.enableSoftwareUpgrade=true >/dev/null
+restored_observed=""
+for _ in $(seq 1 60); do
+  restored_generation="$(kubectl get validatingadmissionpolicy \
+    "$legacy_node_marker_policy" -o jsonpath='{.metadata.generation}')"
+  restored_observed="$(kubectl get validatingadmissionpolicy \
+    "$legacy_node_marker_policy" -o jsonpath='{.status.observedGeneration}')"
+  if [ -n "$restored_observed" ] && \
+     [ "$restored_observed" = "$restored_generation" ]; then
+    break
+  fi
+  sleep 1
+done
+test "$restored_observed" = "$restored_generation"
+restored_warnings="$(kubectl get validatingadmissionpolicy \
+  "$legacy_node_marker_policy" \
+  -o jsonpath='{range .status.typeChecking.expressionWarnings[*]}{.fieldRef}{": "}{.warning}{"\n"}{end}')"
+if [ -n "$restored_warnings" ]; then
+  echo "restored legacy Node marker policy has expression warnings:" >&2
+  echo "$restored_warnings" >&2
+  exit 1
+fi
+test "$(kubectl get validatingadmissionpolicy "$legacy_node_marker_policy" \
+  -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/admission-contract-digest}')" = \
+  "$legacy_node_marker_digest"
+test "$(kubectl get validatingadmissionpolicybinding "$legacy_node_marker_policy" \
+  -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/admission-contract-digest}')" = \
+  "$legacy_node_marker_digest"
+
+# Re-read the server-stored Specs and prove API defaulting/canonicalization has
+# not changed the complete contract the manager hashes at startup. Custom
+# release names are included in this normalization check.
 live_admission_manifest="$scratch_dir/live-admission.yaml"
 first_policy=true
-for suffix in \
-  managed-node managed-pod-status managed-pod-delete managed-drain-pod managed-device managed-rollout managed-upgrade-leaf \
-  topology-policy topology-ledger managed-maintenance-lease; do
+for policy in $(kubectl get validatingadmissionpolicy \
+  -l "app.kubernetes.io/instance=${release_name}" \
+  -o jsonpath='{.items[*].metadata.name}'); do
   if [ "$first_policy" = false ]; then
     printf '%s\n' '---' >>"$live_admission_manifest"
   fi
-  kubectl get validatingadmissionpolicy \
-    "${admission_prefix}-${suffix}" -o yaml >>"$live_admission_manifest"
+  kubectl get validatingadmissionpolicy "$policy" \
+    -o yaml >>"$live_admission_manifest"
   first_policy=false
 done
 for role in \
-  cisco-virtual-kubelet-managed-worker \
-  cisco-virtual-kubelet-managed-worker-pod-delete; do
+  cisco-virtual-kubelet-app-hosting-read-only \
+  cisco-virtual-kubelet-app-hosting-read-write \
+  cisco-virtual-kubelet-app-hosting-device-read \
+  cisco-virtual-kubelet-network-management-global-read \
+  cisco-virtual-kubelet-network-management-lease-read-only \
+  cisco-virtual-kubelet-network-management-lease-read-write \
+  cisco-virtual-kubelet-network-management-read-only \
+  cisco-virtual-kubelet-network-management-read-write; do
   printf '%s\n' '---' >>"$live_admission_manifest"
   kubectl get clusterrole "$role" -o yaml >>"$live_admission_manifest"
 done
@@ -329,9 +441,10 @@ done
       -run '^TestRenderedManaged(AdmissionContract|WorkerClusterRoleContracts)$' -count=1
 )
 
-# Persist the CiscoDevice before deriving its incarnation-bound worker name.
-# Production uses the resolved virtual Node name plus the device UID hash; the
-# test must exercise that exact identity contract rather than a synthetic alias.
+# Persist the CiscoDevice before deriving the retained PR #190-era per-device
+# worker name. This compatibility fixture proves that an upgrade can constrain
+# and retire that historical identity; steady-state production now uses the
+# two namespace-shared functional accounts.
 cat >"$scratch_dir/device.yaml" <<EOF
 apiVersion: cisco.vk/v1alpha1
 kind: CiscoDevice
@@ -373,6 +486,8 @@ kind: CiscoDevice
 metadata:
   name: device-legacy
   namespace: ${device_namespace}
+  finalizers:
+    - cisco.vk/device-cleanup
 spec:
   nodeName: ${legacy_node}
   driver: XE
@@ -399,6 +514,8 @@ device_uid="$(kubectl get ciscodevice device-a --namespace "$device_namespace" \
 worker_uid_hash="$(printf '%s' "$device_uid" | sha256_stdin | cut -c1-8)"
 worker_service_account="cisco-vk-managed-${managed_node}-${worker_uid_hash}"
 worker_username="system:serviceaccount:${device_namespace}:${worker_service_account}"
+worker_cluster_binding="$(vk_access_clusterrolebinding_name \
+  "$device_namespace" "$worker_service_account")"
 worker_revision="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 worker_revision_rotated="sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 worker_revision_recovery="sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
@@ -407,35 +524,211 @@ legacy_device_uid="$(kubectl get ciscodevice device-legacy --namespace "$device_
 legacy_uid_hash="$(printf '%s' "$legacy_device_uid" | sha256_stdin | cut -c1-8)"
 legacy_service_account="cisco-vk-legacy-${legacy_node}-${legacy_uid_hash}"
 legacy_username="system:serviceaccount:${device_namespace}:${legacy_service_account}"
+legacy_cluster_binding="$(vk_access_clusterrolebinding_name \
+  "$device_namespace" "$legacy_service_account")"
 device_key="device-$(printf '%s\0%s' "$device_namespace" device-a | sha256_stdin | cut -c1-16)"
 
-# Create the exact per-device worker identity and bind only the fixed managed
-# worker role. The manager role is already bound by the rendered chart output.
-kubectl create serviceaccount "$worker_service_account" \
-  --namespace "$device_namespace" >/dev/null
-kubectl create clusterrolebinding cvk-topology-it-worker \
-  --clusterrole=cisco-virtual-kubelet-managed-worker \
-  --serviceaccount="${device_namespace}:${worker_service_account}" >/dev/null
-kubectl create clusterrolebinding cvk-topology-it-worker-pod-delete \
-  --clusterrole=cisco-virtual-kubelet-managed-worker-pod-delete \
-  --serviceaccount="${device_namespace}:${worker_service_account}" >/dev/null
-kubectl create rolebinding cvk-topology-it-worker-device \
-  --namespace "$device_namespace" \
-  --clusterrole=cisco-virtual-kubelet-device \
-  --serviceaccount="${device_namespace}:${worker_service_account}" >/dev/null
+# Reproduce the retained PR #190-era role that exists during a real live
+# upgrade. A fresh chart no longer renders it, but this suite still exercises
+# the compatibility admission path and proves that the old identity cannot
+# escape its device while the manager retires it.
+cat >"$scratch_dir/legacy-managed-worker-role.yaml" <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-managed-worker
+  labels:
+    app.kubernetes.io/instance: ${release_name}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: [""]
+    resources: ["pods/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets", "services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigdefaults"]
+    verbs: ["get", "list", "watch"]
+EOF
+kubectl create -f "$scratch_dir/legacy-managed-worker-role.yaml" >/dev/null
+
+# Create the exact retained per-device identities: canonical names, reserved
+# incarnation annotations, sole subjects, and controller ownership on the two
+# namespaced objects. This is the shape the production audit/cleanup path must
+# recognize after a PR #190-era live upgrade.
+cat >"$scratch_dir/generated-worker-access.yaml" <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${worker_service_account}
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/managed: "true"
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-a
+    topology.cisco.vk/device-uid: ${device_uid}
+    topology.cisco.vk/node-name: ${managed_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+  ownerReferences:
+    - apiVersion: cisco.vk/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: CiscoDevice
+      name: device-a
+      uid: ${device_uid}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${worker_service_account}
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/managed: "true"
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-a
+    topology.cisco.vk/device-uid: ${device_uid}
+    topology.cisco.vk/node-name: ${managed_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+  ownerReferences:
+    - apiVersion: cisco.vk/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: CiscoDevice
+      name: device-a
+      uid: ${device_uid}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cisco-virtual-kubelet-device
+subjects:
+  - kind: ServiceAccount
+    name: ${worker_service_account}
+    namespace: ${device_namespace}
+EOF
+kubectl create --as="$manager_username" \
+  -f "$scratch_dir/generated-worker-access.yaml" >/dev/null
+
+# The retired managed role is deliberately outside the current manager's bind
+# allowlist. Reproduce only that historical cluster-scoped grant as the test
+# administrator; reserved generated ServiceAccounts and current legacy access
+# are still created through the production manager identity.
+cat >"$scratch_dir/generated-managed-worker-cluster-binding.yaml" <<EOF
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${worker_cluster_binding}
+  annotations:
+    topology.cisco.vk/managed: "true"
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-a
+    topology.cisco.vk/device-uid: ${device_uid}
+    topology.cisco.vk/node-name: ${managed_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cisco-virtual-kubelet-managed-worker
+subjects:
+  - kind: ServiceAccount
+    name: ${worker_service_account}
+    namespace: ${device_namespace}
+EOF
+kubectl create \
+  -f "$scratch_dir/generated-managed-worker-cluster-binding.yaml" >/dev/null
+
+cat >"$scratch_dir/generated-legacy-worker-access.yaml" <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${legacy_service_account}
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-legacy
+    topology.cisco.vk/device-uid: ${legacy_device_uid}
+    topology.cisco.vk/node-name: ${legacy_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-mode: legacy
+  ownerReferences:
+    - apiVersion: cisco.vk/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: CiscoDevice
+      name: device-legacy
+      uid: ${legacy_device_uid}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${legacy_service_account}
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-legacy
+    topology.cisco.vk/device-uid: ${legacy_device_uid}
+    topology.cisco.vk/node-name: ${legacy_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-mode: legacy
+  ownerReferences:
+    - apiVersion: cisco.vk/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: CiscoDevice
+      name: device-legacy
+      uid: ${legacy_device_uid}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cisco-virtual-kubelet-device
+subjects:
+  - kind: ServiceAccount
+    name: ${legacy_service_account}
+    namespace: ${device_namespace}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${legacy_cluster_binding}
+  annotations:
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-legacy
+    topology.cisco.vk/device-uid: ${legacy_device_uid}
+    topology.cisco.vk/node-name: ${legacy_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-mode: legacy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cisco-virtual-kubelet
+subjects:
+  - kind: ServiceAccount
+    name: ${legacy_service_account}
+    namespace: ${device_namespace}
+EOF
+kubectl create --as="$manager_username" \
+  -f "$scratch_dir/generated-legacy-worker-access.yaml" >/dev/null
 
 # An unselected topology-aware device gets a distinct UID-derived identity and
 # keeps the legacy runtime/role. Fresh installs deliberately leave the old
 # release-wide ServiceAccount unbound.
-kubectl create serviceaccount "$legacy_service_account" \
-  --namespace "$device_namespace" >/dev/null
-kubectl create clusterrolebinding cvk-topology-it-legacy-worker \
-  --clusterrole=cisco-virtual-kubelet \
-  --serviceaccount="${device_namespace}:${legacy_service_account}" >/dev/null
-kubectl create rolebinding cvk-topology-it-legacy-worker-device \
-  --namespace "$device_namespace" \
-  --clusterrole=cisco-virtual-kubelet-device \
-  --serviceaccount="${device_namespace}:${legacy_service_account}" >/dev/null
 test "$(kubectl auth can-i patch pods --subresource=status \
   --namespace "$device_namespace" \
   --as="system:serviceaccount:${system_namespace}:cisco-virtual-kubelet")" = "no"
@@ -477,10 +770,17 @@ metadata:
     topology.cisco.vk/device-uid: ${device_uid}
     topology.cisco.vk/worker-username: ${worker_username}
     topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/projected-keys: topology.kubernetes.io/region,topology.kubernetes.io/zone
+    topology.cisco.vk/projection-hash: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    topology.cisco.vk/managed-taints: "topology.cisco.vk/uninitialized|NoSchedule"
   labels:
     topology.kubernetes.io/region: test-region
     topology.kubernetes.io/zone: test-zone-a
-spec: {}
+spec:
+  taints:
+    - key: topology.cisco.vk/uninitialized
+      value: "true"
+      effect: NoSchedule
 EOF
 kubectl create --as="$manager_username" -f "$scratch_dir/managed-node.yaml" >/dev/null
 managed_node_uid="$(kubectl get node "$managed_node" -o jsonpath='{.metadata.uid}')"
@@ -1585,6 +1885,8 @@ if kubectl delete --as="$worker_username" lease "$config_lease" \
 fi
 grep -Eq 'only the manager may create|denied the request|failed expression' \
   "$scratch_dir/lease-delete-negative.txt"
+kubectl delete rolebinding lease-adversary --namespace "$device_namespace" >/dev/null
+kubectl delete role lease-adversary --namespace "$device_namespace" >/dev/null
 kubectl create -f - >/dev/null <<EOF
 apiVersion: coordination.k8s.io/v1
 kind: Lease
@@ -1617,6 +1919,20 @@ kubectl create rolebinding managed-status-writer --namespace "$device_namespace"
   --role=managed-status-writer \
   --serviceaccount="${system_namespace}:cisco-virtual-kubelet-controller" >/dev/null
 device_editor_username="system:serviceaccount:${device_namespace}:device-editor"
+
+# This is the access-before-marker crash window: the generated ownerless CRB
+# already grants cluster-wide legacy worker authority, while neither status nor
+# the isolated-worker marker is durable yet. The cleanup finalizer must remain
+# manager-owned even though the later lifecycle coordinates are all absent.
+if kubectl patch --as="$device_editor_username" ciscodevice device-legacy \
+    --namespace "$device_namespace" --type=merge --dry-run=server \
+    -p '{"metadata":{"finalizers":[]}}' \
+    >"$scratch_dir/device-phase-zero-finalizer-negative.txt" 2>&1; then
+  echo "ordinary device editor removed the cleanup finalizer during access-before-marker recovery" >&2
+  exit 1
+fi
+grep -Eq 'only the manager may remove the CiscoDevice cleanup finalizer|denied the request|failed expression' \
+  "$scratch_dir/device-phase-zero-finalizer-negative.txt"
 
 # Existing pre-feature objects may populate a previously absent physical
 # identity exactly once before enrollment. This migration path must stay open
@@ -1667,31 +1983,42 @@ grep -Eq 'physicalIdentity is write-once|denied the request|failed expression' \
 # Preserve legacy status compatibility before enrollment, but never let that
 # compatibility path manufacture manager-owned authority. Each forged object
 # below is schema-valid so denial is attributable to native admission.
+bootstrap_device_uid="$(kubectl get ciscodevice device-identity-bootstrap \
+  --namespace "$device_namespace" -o jsonpath='{.metadata.uid}')"
+if kubectl patch --as="$manager_username" ciscodevice device-identity-bootstrap \
+    --namespace "$device_namespace" --subresource=status --type=merge \
+    --dry-run=server \
+    -p "{\"status\":{\"legacyHandoff\":{\"phase\":\"Complete\",\"deviceUID\":\"${bootstrap_device_uid}\",\"nodeName\":\"${legacy_node}\",\"nodeUID\":\"${legacy_node_uid}\",\"projectionHash\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacyWorkerUsername\":\"${legacy_username}\",\"requestedAt\":\"2026-01-01T00:00:00Z\",\"nodeReleasedAt\":\"2026-01-01T00:00:01Z\",\"isolatedReadyAt\":\"2026-01-01T00:00:02Z\",\"completedAt\":\"2026-01-01T00:00:03Z\"}}}" \
+    >"$scratch_dir/device-handoff-first-status-phase-negative.txt" 2>&1; then
+  echo "manager inserted a first legacy handoff status beyond Preparing" >&2
+  exit 1
+fi
+grep -Fq 'a legacy handoff must begin in Preparing phase' \
+  "$scratch_dir/device-handoff-first-status-phase-negative.txt"
 kubectl patch --as="$device_editor_username" ciscodevice device-legacy \
   --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
   -p '{"status":{"phase":"Ready"}}' >/dev/null
 if kubectl patch --as="$device_editor_username" ciscodevice device-legacy \
     --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
-    -p "{\"status\":{\"legacyHandoff\":{\"phase\":\"Complete\",\"deviceUID\":\"${legacy_device_uid}\",\"nodeName\":\"${legacy_node}\",\"nodeUID\":\"11111111-1111-4111-8111-111111111111\",\"projectionHash\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacyWorkerUsername\":\"${legacy_username}\",\"requestedAt\":\"2026-01-01T00:00:00Z\",\"nodeReleasedAt\":\"2026-01-01T00:00:01Z\",\"completedAt\":\"2026-01-01T00:00:02Z\"}}}" \
+    -p "{\"status\":{\"legacyHandoff\":{\"phase\":\"Complete\",\"deviceUID\":\"${legacy_device_uid}\",\"nodeName\":\"${legacy_node}\",\"nodeUID\":\"11111111-1111-4111-8111-111111111111\",\"projectionHash\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"legacyWorkerUsername\":\"${legacy_username}\",\"requestedAt\":\"2026-01-01T00:00:00Z\",\"nodeReleasedAt\":\"2026-01-01T00:00:01Z\",\"isolatedReadyAt\":\"2026-01-01T00:00:02Z\",\"completedAt\":\"2026-01-01T00:00:03Z\"}}}" \
     >"$scratch_dir/device-legacy-handoff-forgery.txt" 2>&1; then
   echo "legacy status writer forged a completed manager handoff" >&2
   exit 1
 fi
-grep -Eq 'manager-owned CiscoDevice identity|denied the request|failed expression' \
+grep -Eq 'a legacy handoff must begin in Preparing phase|manager-owned CiscoDevice identity|denied the request|failed expression' \
   "$scratch_dir/device-legacy-handoff-forgery.txt"
 if kubectl patch --as="$device_editor_username" ciscodevice device-legacy \
     --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
-    -p "{\"status\":{\"workerRevision\":{\"desiredRevision\":\"sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"deploymentUID\":\"22222222-2222-4222-8222-222222222222\",\"deploymentGeneration\":1,\"observedAt\":\"2026-01-01T00:00:00Z\"},\"healthObservation\":{\"observedAt\":\"2026-01-01T00:00:00Z\",\"nodeReadyHeartbeatTime\":\"2026-01-01T00:00:00Z\",\"deviceConditionsHash\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"topologyLock\":{\"state\":\"Active\",\"policyEpoch\":1,\"acquisitionID\":\"cccccccccccccccccccccccccccccccc\",\"campaignNamespace\":\"${device_namespace}\",\"campaignName\":\"forged\",\"campaignUID\":\"22222222-2222-4222-8222-222222222222\",\"planHash\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"reservationID\":\"forged-reservation\",\"deviceUID\":\"${legacy_device_uid}\",\"deviceGeneration\":1,\"nodeUID\":\"11111111-1111-4111-8111-111111111111\",\"projectionHash\":\"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"acquiredAt\":\"2026-01-01T00:00:00Z\"}}}" \
+    -p "{\"status\":{\"workerRevision\":{\"desiredRevision\":\"sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"deploymentUID\":\"22222222-2222-4222-8222-222222222222\",\"deploymentGeneration\":1,\"observedAt\":\"2026-01-01T00:00:00Z\"},\"networkWorkerRevision\":{\"desiredRevision\":\"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"deploymentUID\":\"33333333-3333-4333-8333-333333333333\",\"deploymentGeneration\":1,\"observedAt\":\"2026-01-01T00:00:00Z\"},\"healthObservation\":{\"observedAt\":\"2026-01-01T00:00:00Z\",\"nodeReadyHeartbeatTime\":\"2026-01-01T00:00:00Z\",\"deviceConditionsHash\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"},\"topologyLock\":{\"state\":\"Active\",\"policyEpoch\":1,\"acquisitionID\":\"cccccccccccccccccccccccccccccccc\",\"campaignNamespace\":\"${device_namespace}\",\"campaignName\":\"forged\",\"campaignUID\":\"22222222-2222-4222-8222-222222222222\",\"planHash\":\"sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"reservationID\":\"forged-reservation\",\"deviceUID\":\"${legacy_device_uid}\",\"deviceGeneration\":1,\"nodeUID\":\"11111111-1111-4111-8111-111111111111\",\"projectionHash\":\"sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"acquiredAt\":\"2026-01-01T00:00:00Z\"}}}" \
     >"$scratch_dir/device-manager-status-forgery.txt" 2>&1; then
-  echo "legacy status writer forged manager worker, health, or topology-lock authority" >&2
+  echo "legacy status writer forged manager app/network worker, health, or topology-lock authority" >&2
   exit 1
 fi
 grep -Eq 'manager-owned CiscoDevice identity|denied the request|failed expression' \
   "$scratch_dir/device-manager-status-forgery.txt"
 
-# The isolated legacy identity marker itself selects UID-derived broad worker
-# RBAC. It must be absent at user creation, manager-created with the exact live
-# CiscoDevice UID, and immutable thereafter.
+# The isolated legacy identity marker selects UID-derived broad worker RBAC.
+# It must be absent at user creation, and an ordinary editor cannot add it.
 if kubectl create --as="$device_editor_username" --dry-run=server -f - \
     >"$scratch_dir/device-isolated-marker-create.txt" 2>&1 <<EOF; then
 apiVersion: cisco.vk/v1alpha1
@@ -1734,18 +2061,13 @@ if kubectl patch --as="$device_editor_username" ciscodevice device-legacy \
 fi
 grep -Eq 'isolated legacy worker marker is manager-created|denied the request|failed expression' \
   "$scratch_dir/device-isolated-marker-update.txt"
-kubectl patch --as="$manager_username" ciscodevice device-legacy \
-  --namespace "$device_namespace" --type=merge \
-  -p "{\"metadata\":{\"annotations\":{\"topology.cisco.vk/isolated-legacy-worker\":\"${legacy_device_uid}\"}}}" >/dev/null
-if kubectl patch --as="$device_editor_username" ciscodevice device-legacy \
-    --namespace "$device_namespace" --type=json --dry-run=server \
-    -p '[{"op":"remove","path":"/metadata/annotations/topology.cisco.vk~1isolated-legacy-worker"}]' \
-    >"$scratch_dir/device-isolated-marker-remove.txt" 2>&1; then
-  echo "ordinary device editor removed isolated legacy worker authority" >&2
-  exit 1
-fi
-grep -Eq 'isolated legacy worker marker is manager-created|denied the request|failed expression' \
-  "$scratch_dir/device-isolated-marker-remove.txt"
+# Phase-zero recovery is manager-only and UID-bound. The exact generated
+# legacy ServiceAccount, RoleBinding, and ClusterRoleBinding fixture above is
+# the controller's independent proof; native admission deliberately verifies
+# only the durable object-local preconditions.
+kubectl annotate --as="$manager_username" ciscodevice device-legacy \
+  --namespace "$device_namespace" --dry-run=server \
+  "topology.cisco.vk/isolated-legacy-worker=${legacy_device_uid}" >/dev/null
 device_resource_version="$(kubectl get ciscodevice device-a \
   --namespace "$device_namespace" -o jsonpath='{.metadata.resourceVersion}')"
 # The desired revision itself is a durable fail-closed fence while no new
@@ -1765,17 +2087,17 @@ if kubectl patch --as="$manager_username" ciscodevice device-legacy \
   echo "manager published an in-flight handoff without managed binding state" >&2
   exit 1
 fi
-grep -Eq 'in-flight legacy handoff retains managed binding state|denied the request|failed expression' \
+grep -Eq 'legacy handoff retains managed binding state|denied the request|failed expression' \
   "$scratch_dir/device-handoff-missing-binding.txt"
 if kubectl patch --as="$manager_username" ciscodevice device-a \
     --namespace "$device_namespace" --subresource=status --type=merge \
     --dry-run=server \
-    -p "{\"status\":{\"legacyHandoff\":{\"phase\":\"Complete\",\"deviceUID\":\"${device_uid}\",\"nodeName\":\"${managed_node}\",\"nodeUID\":\"${managed_node_uid}\",\"projectionHash\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"legacyWorkerUsername\":\"${legacy_username}\",\"requestedAt\":\"2026-01-01T00:00:00Z\",\"nodeReleasedAt\":\"2026-01-01T00:00:01Z\",\"completedAt\":\"2026-01-01T00:00:02Z\"}}}" \
+    -p "{\"status\":{\"legacyHandoff\":{\"phase\":\"Complete\",\"deviceUID\":\"${device_uid}\",\"nodeName\":\"${managed_node}\",\"nodeUID\":\"${managed_node_uid}\",\"projectionHash\":\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"legacyWorkerUsername\":\"${legacy_username}\",\"requestedAt\":\"2026-01-01T00:00:00Z\",\"nodeReleasedAt\":\"2026-01-01T00:00:01Z\",\"isolatedReadyAt\":\"2026-01-01T00:00:02Z\",\"completedAt\":\"2026-01-01T00:00:03Z\"}}}" \
     >"$scratch_dir/device-handoff-dual-writer.txt" 2>&1; then
   echo "manager published Complete while managed binding state remained" >&2
   exit 1
 fi
-grep -Eq 'completed handoff releases it|denied the request|failed expression' \
+grep -Eq 'legacy handoff retains managed binding state|denied the request|failed expression' \
   "$scratch_dir/device-handoff-dual-writer.txt"
 # An unlocked device remains ordinarily editable and deletable. These dry-run
 # probes ensure the lock/session fences below do not become a blanket lifecycle
@@ -1797,6 +2119,15 @@ grep -Eq 'physicalIdentity is write-once|denied the request|failed expression' \
   "$scratch_dir/device-physical-identity-negative.txt"
 kubectl delete --as="$device_editor_username" ciscodevice device-legacy \
   --namespace "$device_namespace" --dry-run=server >/dev/null
+# The retained production-shaped legacy identity has served its admission and
+# recovery probes. Remove it so the later live retirement gate is testing only
+# device-a's active handoff state, not an unrelated generated grant.
+kubectl delete --as="$manager_username" clusterrolebinding \
+  "$legacy_cluster_binding" >/dev/null
+kubectl delete --as="$manager_username" rolebinding "$legacy_service_account" \
+  --namespace "$device_namespace" >/dev/null
+kubectl delete --as="$manager_username" serviceaccount "$legacy_service_account" \
+  --namespace "$device_namespace" >/dev/null
 kubectl label --as="$device_editor_username" ciscodevice device-a \
   --namespace "$device_namespace" test.cisco.vk/note=allowed >/dev/null
 if kubectl label --as="$device_editor_username" ciscodevice device-a \
@@ -1828,7 +2159,7 @@ if kubectl patch --as="$device_editor_username" ciscodevice device-a \
   echo "ordinary device editor removed the managed lifecycle finalizer" >&2
   exit 1
 fi
-grep -Eq 'finalizers and owner references are manager-owned|denied the request|failed expression' \
+grep -Eq 'only the manager may remove the CiscoDevice cleanup finalizer|finalizers and owner references are manager-owned|denied the request|failed expression' \
   "$scratch_dir/device-finalizer-negative.txt"
 if kubectl patch --as="$device_editor_username" ciscodevice device-a \
     --namespace "$device_namespace" --type=merge --dry-run=server \
@@ -2405,9 +2736,9 @@ test "$(kubectl get pod topology-direct-binding --namespace "$device_namespace" 
   -o jsonpath='{.spec.nodeName}')" = "cvk-scheduler-guarded"
 
 # Exercise the reverse writer handoff and the chart's live-only retirement
-# gate. The manager image is intentionally unavailable in this test, so the
-# fixtures below reproduce only its exact API transactions; no device RPC is
-# involved.
+# gate. The manager image is intentionally unavailable in this test, so these
+# fixtures reproduce its security-significant API state transitions; no device
+# RPC is involved. Controller tests separately cover workload readiness timing.
 ledger_uid="$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
   -o jsonpath='{.metadata.uid}')"
 kubectl patch --as="$manager_username" configmap "$ledger_name" \
@@ -2548,29 +2879,101 @@ fi
 grep -Eq 'still has managed status.nodeIdentity|handoff.*not Complete' \
   "$scratch_dir/topology-disable-incomplete.txt"
 
-# Release the synthetic lock, authorize the exact Node UID, and persist the
-# manager-only device marker before publishing durable handoff state.
+# Release the synthetic lock and authorize the exact Node UID. The manager
+# publishes durable Preparing status before the marker so a crash cannot leave
+# mutable request/selection state behind an apparently authoritative marker.
 kubectl patch --as="$manager_username" ciscodevice device-a \
   --namespace "$device_namespace" --subresource=status --type=merge \
   -p '{"status":{"topologyLock":null}}' >/dev/null
 kubectl annotate --as="$topology_author_username" ciscodevice device-a \
   --namespace "$device_namespace" \
   "topology.cisco.vk/request-legacy-handoff=${managed_node_uid}" --overwrite >/dev/null
-kubectl annotate --as="$manager_username" ciscodevice device-a \
-  --namespace "$device_namespace" \
-  "topology.cisco.vk/isolated-legacy-worker=${device_uid}" --overwrite >/dev/null
 
 retirement_legacy_service_account="cisco-vk-legacy-${managed_node}-${worker_uid_hash}"
 retirement_legacy_username="system:serviceaccount:${device_namespace}:${retirement_legacy_service_account}"
-kubectl create serviceaccount "$retirement_legacy_service_account" \
-  --namespace "$device_namespace" >/dev/null
-kubectl create clusterrolebinding cvk-topology-it-retirement-worker \
-  --clusterrole=cisco-virtual-kubelet \
-  --serviceaccount="${device_namespace}:${retirement_legacy_service_account}" >/dev/null
-kubectl create rolebinding cvk-topology-it-retirement-worker-device \
-  --namespace "$device_namespace" \
-  --clusterrole=cisco-virtual-kubelet-device \
-  --serviceaccount="${device_namespace}:${retirement_legacy_service_account}" >/dev/null
+retirement_legacy_cluster_binding="$(vk_access_clusterrolebinding_name \
+  "$device_namespace" "$retirement_legacy_service_account")"
+cat >"$scratch_dir/isolated-legacy-access.yaml" <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ${retirement_legacy_service_account}
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-a
+    topology.cisco.vk/device-uid: ${device_uid}
+    topology.cisco.vk/node-name: ${managed_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-mode: legacy
+  ownerReferences:
+    - apiVersion: cisco.vk/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: CiscoDevice
+      name: device-a
+      uid: ${device_uid}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ${retirement_legacy_service_account}
+  namespace: ${device_namespace}
+  annotations:
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-a
+    topology.cisco.vk/device-uid: ${device_uid}
+    topology.cisco.vk/node-name: ${managed_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-mode: legacy
+  ownerReferences:
+    - apiVersion: cisco.vk/v1alpha1
+      blockOwnerDeletion: true
+      controller: true
+      kind: CiscoDevice
+      name: device-a
+      uid: ${device_uid}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cisco-virtual-kubelet-device
+subjects:
+  - kind: ServiceAccount
+    name: ${retirement_legacy_service_account}
+    namespace: ${device_namespace}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ${retirement_legacy_cluster_binding}
+  annotations:
+    topology.cisco.vk/device-namespace: ${device_namespace}
+    topology.cisco.vk/device-name: device-a
+    topology.cisco.vk/device-uid: ${device_uid}
+    topology.cisco.vk/node-name: ${managed_node}
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-mode: legacy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cisco-virtual-kubelet
+subjects:
+  - kind: ServiceAccount
+    name: ${retirement_legacy_service_account}
+    namespace: ${device_namespace}
+EOF
+kubectl create --as="$manager_username" \
+  -f "$scratch_dir/isolated-legacy-access.yaml" >/dev/null
+
+if kubectl annotate --as="$manager_username" ciscodevice device-a \
+    --namespace "$device_namespace" \
+    "topology.cisco.vk/isolated-legacy-worker=${device_uid}" --overwrite \
+    --dry-run=server >"$scratch_dir/device-isolated-marker-before-status.txt" 2>&1; then
+  echo "manager created an isolated worker marker before durable Preparing status" >&2
+  exit 1
+fi
+grep -Eq 'isolated legacy worker marker is manager-created|denied the request|failed expression' \
+  "$scratch_dir/device-isolated-marker-before-status.txt"
 
 kubectl patch --as="$manager_username" ciscodevice device-a \
   --namespace "$device_namespace" --subresource=status --type=merge -p "{
@@ -2584,6 +2987,43 @@ kubectl patch --as="$manager_username" ciscodevice device-a \
       \"requestedAt\":\"2026-01-01T00:10:00Z\"
     }}
   }" >/dev/null
+
+# Preparing is the one intentional status-before-marker recovery point. A
+# later phase may not be published until the exact UID marker is present.
+if kubectl patch --as="$manager_username" ciscodevice device-a \
+    --namespace "$device_namespace" --subresource=status --type=merge \
+    --dry-run=server \
+    -p '{"status":{"legacyHandoff":{"phase":"LegacyWriterPending","nodeReleasedAt":"2026-01-01T00:11:00Z"}}}' \
+    >"$scratch_dir/device-handoff-phase-without-marker.txt" 2>&1; then
+  echo "manager advanced handoff beyond Preparing without its UID marker" >&2
+  exit 1
+fi
+grep -Eq 'marker must match the durable handoff phase|denied the request|failed expression' \
+  "$scratch_dir/device-handoff-phase-without-marker.txt"
+
+kubectl annotate --as="$manager_username" ciscodevice device-a \
+  --namespace "$device_namespace" \
+  "topology.cisco.vk/isolated-legacy-worker=${device_uid}" --overwrite >/dev/null
+
+if kubectl annotate --as="$device_editor_username" ciscodevice device-a \
+    --namespace "$device_namespace" \
+    topology.cisco.vk/isolated-legacy-worker- --dry-run=server \
+    >"$scratch_dir/device-isolated-marker-remove.txt" 2>&1; then
+  echo "ordinary device editor removed isolated legacy worker authority" >&2
+  exit 1
+fi
+grep -Eq 'isolated legacy worker marker is manager-created|denied the request|failed expression' \
+  "$scratch_dir/device-isolated-marker-remove.txt"
+
+if kubectl annotate --as="$manager_username" ciscodevice device-a \
+    --namespace "$device_namespace" \
+    topology.cisco.vk/isolated-legacy-worker- --dry-run=server \
+    >"$scratch_dir/device-isolated-marker-early-remove.txt" 2>&1; then
+  echo "manager removed the isolated worker marker before shared-writer transition" >&2
+  exit 1
+fi
+grep -Fq 'removable only after an exact worker transition' \
+  "$scratch_dir/device-isolated-marker-early-remove.txt"
 
 if kubectl delete --as="$device_editor_username" ciscodevice device-a \
     --namespace "$device_namespace" --dry-run=server \
@@ -2624,6 +3064,29 @@ fi
 grep -Eq 'exact UID-bound legacy handoff|managed Node bindings must be complete|denied the request|failed expression' \
   "$scratch_dir/node-handoff-marker-negative.txt"
 
+# The historical managed identity must lose its topology mutation grants
+# before the Node is released to the isolated compatibility worker. A retained
+# projected token is then powerless during the writer transition.
+kubectl delete --as="$manager_username" clusterrolebinding \
+  "$worker_cluster_binding" >/dev/null
+kubectl delete --as="$manager_username" rolebinding "$worker_service_account" \
+  --namespace "$device_namespace" >/dev/null
+kubectl delete --as="$manager_username" serviceaccount "$worker_service_account" \
+  --namespace "$device_namespace" >/dev/null
+test "$(kubectl auth can-i patch nodes --subresource=status \
+  --as="$worker_username")" = "no"
+test "$(kubectl auth can-i create leases.coordination.k8s.io \
+  --namespace "$device_namespace" --as="$worker_username")" = "no"
+test "$(kubectl auth can-i delete leases.coordination.k8s.io \
+  --namespace "$device_namespace" --as="$worker_username")" = "no"
+
+# Persist the release epoch before changing Node ownership. A crash here is
+# safe: the old writer has no RBAC authority, and the next manager reconcile
+# can idempotently finish the exact Node metadata transaction.
+kubectl patch --as="$manager_username" ciscodevice device-a \
+  --namespace "$device_namespace" --subresource=status --type=merge \
+  -p '{"status":{"legacyHandoff":{"phase":"LegacyWriterPending","nodeReleasedAt":"2026-01-01T00:11:00Z"}}}' >/dev/null
+
 kubectl patch --as="$manager_username" node "$managed_node" --type=merge -p "{
   \"metadata\":{\"annotations\":{
     \"topology.cisco.vk/managed\":null,
@@ -2648,15 +3111,106 @@ if kubectl annotate --as="$retirement_legacy_username" node "$managed_node" \
   echo "legacy worker removed the manager's Node handoff audit marker" >&2
   exit 1
 fi
-grep -Eq 'preserve its handoff marker|manager/bound-worker owned|denied the request|failed expression' \
+grep -Eq 'preserve its handoff marker|manager/bound-worker owned|only the manager may remove or change a released Node handoff marker|denied the request|failed expression' \
   "$scratch_dir/node-handoff-marker-remove.txt"
 
+test "$(kubectl get node "$managed_node" \
+  -o jsonpath='{.spec.taints[?(@.key=="topology.cisco.vk/uninitialized")].effect}')" = "NoSchedule"
 kubectl patch --as="$manager_username" ciscodevice device-a \
   --namespace "$device_namespace" --subresource=status --type=merge \
-  -p '{"status":{"legacyHandoff":{"phase":"LegacyWriterPending","nodeReleasedAt":"2026-01-01T00:11:00Z"}}}' >/dev/null
+  -p '{"status":{"nodeIdentity":null,"topologyProjection":null,"healthObservation":null,"workerRevision":null,"networkWorkerRevision":null,"legacyHandoff":{"phase":"SharedWriterPending","isolatedReadyAt":"2026-01-01T00:12:00Z"}}}' >/dev/null
+# The manager-only released-Node exception must not broaden even the exact
+# generated legacy worker's Node authority. It may report readiness above, but
+# it cannot clear the initialization fence before the manager has durably
+# advanced the handoff.
+if kubectl patch --as="$retirement_legacy_username" node "$managed_node" --type=json \
+    --dry-run=server -p '[{"op":"remove","path":"/spec/taints/0"}]' \
+    >"$scratch_dir/node-released-manager-exception-negative.txt" 2>&1; then
+  echo "generated legacy worker used the released-Node manager exception" >&2
+  exit 1
+fi
+grep -Eq 'only the manager may remove or change a released Node initialization fence|denied the request|failed expression' \
+  "$scratch_dir/node-released-manager-exception-negative.txt"
+kubectl patch --as="$manager_username" node "$managed_node" --type=json \
+  -p '[{"op":"remove","path":"/spec/taints/0"}]' >/dev/null
+test -z "$(kubectl get node "$managed_node" \
+  -o jsonpath='{.spec.taints[?(@.key=="topology.cisco.vk/uninitialized")].effect}')"
+
+# Even with managed status released, Helm must not retire the topology boundary
+# while the temporary identity marker records an incomplete shared replacement.
+if helm upgrade "$release_name" "$chart_dir" \
+    --namespace "$system_namespace" \
+    "${image_values[@]}" \
+    --set topology.enabled=false \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set gnoi.enableSoftwareUpgrade=true \
+    >"$scratch_dir/topology-disable-isolated-marker.txt" 2>&1; then
+  echo "Helm disabled managed topology while an isolated worker marker remained" >&2
+  exit 1
+fi
+grep -Fq 'legacy handoff is SharedWriterPending, not Complete' \
+  "$scratch_dir/topology-disable-isolated-marker.txt"
+
+# Replace the now-drained isolated identity with the exact namespace-shared
+# compatibility identity, then revoke every temporary object before Complete.
+shared_compatibility_service_account="cisco-virtual-kubelet"
+shared_compatibility_username="system:serviceaccount:${device_namespace}:${shared_compatibility_service_account}"
+shared_compatibility_cluster_binding="$(vk_access_clusterrolebinding_name \
+  "$device_namespace" "$shared_compatibility_service_account")"
+kubectl create --as="$manager_username" serviceaccount \
+  "$shared_compatibility_service_account" --namespace "$device_namespace" >/dev/null
+kubectl create --as="$manager_username" rolebinding \
+  "$shared_compatibility_service_account" --namespace "$device_namespace" \
+  --clusterrole=cisco-virtual-kubelet-device \
+  --serviceaccount="${device_namespace}:${shared_compatibility_service_account}" >/dev/null
+kubectl create --as="$manager_username" clusterrolebinding \
+  "$shared_compatibility_cluster_binding" --clusterrole=cisco-virtual-kubelet \
+  --serviceaccount="${device_namespace}:${shared_compatibility_service_account}" >/dev/null
+kubectl label --as="$shared_compatibility_username" node "$managed_node" \
+  topology.cisco.vk/legacy-ready=shared --overwrite >/dev/null
+if kubectl annotate --as="$shared_compatibility_username" node "$managed_node" \
+    topology.cisco.vk/legacy-handoff- --dry-run=server \
+    >"$scratch_dir/node-shared-handoff-marker-remove.txt" 2>&1; then
+  echo "shared compatibility worker removed the manager's Node handoff audit marker" >&2
+  exit 1
+fi
+grep -Eq 'only the manager may remove or change a released Node handoff marker|denied the request|failed expression' \
+  "$scratch_dir/node-shared-handoff-marker-remove.txt"
+
+kubectl delete --as="$manager_username" rolebinding \
+  "$retirement_legacy_service_account" --namespace "$device_namespace" >/dev/null
+kubectl delete --as="$manager_username" clusterrolebinding \
+  "$retirement_legacy_cluster_binding" >/dev/null
+kubectl delete --as="$manager_username" serviceaccount \
+  "$retirement_legacy_service_account" --namespace "$device_namespace" >/dev/null
+if kubectl get serviceaccount "$retirement_legacy_service_account" \
+    --namespace "$device_namespace" >/dev/null 2>&1 || \
+   kubectl get rolebinding "$retirement_legacy_service_account" \
+    --namespace "$device_namespace" >/dev/null 2>&1 || \
+   kubectl get clusterrolebinding "$retirement_legacy_cluster_binding" \
+    >/dev/null 2>&1; then
+  echo "isolated legacy worker authority remained after shared replacement" >&2
+  exit 1
+fi
+# Complete cannot become durable while its temporary device marker remains;
+# cleanup followed by status publication is the only admitted ordering.
+if kubectl patch --as="$manager_username" ciscodevice device-a \
+    --namespace "$device_namespace" --subresource=status --type=merge \
+    --dry-run=server \
+    -p '{"status":{"legacyHandoff":{"phase":"Complete","completedAt":"2026-01-01T00:13:00Z"}}}' \
+    >"$scratch_dir/device-handoff-complete-with-marker.txt" 2>&1; then
+  echo "manager completed handoff while its isolated worker marker remained" >&2
+  exit 1
+fi
+grep -Eq 'marker must match the durable handoff phase|denied the request|failed expression' \
+  "$scratch_dir/device-handoff-complete-with-marker.txt"
+kubectl annotate --as="$manager_username" ciscodevice device-a \
+  --namespace "$device_namespace" \
+  topology.cisco.vk/isolated-legacy-worker- >/dev/null
 kubectl patch --as="$manager_username" ciscodevice device-a \
   --namespace "$device_namespace" --subresource=status --type=merge \
-  -p '{"status":{"nodeIdentity":null,"topologyProjection":null,"healthObservation":null,"workerRevision":null,"legacyHandoff":{"phase":"Complete","completedAt":"2026-01-01T00:12:00Z"}}}' >/dev/null
+  -p '{"status":{"legacyHandoff":{"phase":"Complete","completedAt":"2026-01-01T00:13:00Z"}}}' >/dev/null
 kubectl annotate --as="$device_editor_username" ciscodevice device-a \
   --namespace "$device_namespace" test.cisco.vk/post-handoff=allowed >/dev/null
 kubectl annotate --as="$topology_author_username" ciscodevice device-a \
@@ -2673,9 +3227,9 @@ grep -Eq 'manager-owned CiscoDevice identity|all CiscoDevice status is manager-o
   "$scratch_dir/device-complete-handoff-remove.txt"
 
 # This live lookup now proves the exact policy/ledger identity, retained
-# manager authority, no shared binding, and Complete device state. The chart
-# must preserve admission and omit the historical shared identity after the
-# feature flag is turned off.
+# manager authority, no historical release-namespace shared binding, and
+# Complete device state. The chart must preserve admission and omit that
+# historical shared identity after the feature flag is turned off.
 helm upgrade "$release_name" "$chart_dir" \
   --namespace "$system_namespace" \
   "${image_values[@]}" \
@@ -2700,7 +3254,8 @@ if kubectl get clusterrole cisco-virtual-kubelet-controller -o yaml | \
 fi
 test "$(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
-  -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')" -eq 10
+  -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')" -eq \
+  "$expected_policy_count"
 test -z "$(kubectl get deployment "${release_name}-cisco-virtual-kubelet-controller" \
   --namespace "$system_namespace" \
   -o jsonpath='{.spec.template.spec.containers[0].command}' | grep -o -- '--enable-managed-topology' || true)"

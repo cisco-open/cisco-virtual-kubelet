@@ -15,10 +15,13 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -45,6 +48,22 @@ func newMaintenanceCoordinator(cfg *rest.Config, identity workerRuntimeIdentity,
 	if err := identity.validate(); err != nil {
 		return nil, err
 	}
+	if identity.ManagedTopology {
+		switch identity.WorkerMode {
+		case workerModeAppHosting, workerModeNetworkManagement:
+		default:
+			return nil, fmt.Errorf("managed maintenance requires an app-hosting or network-management worker mode, got %q", identity.WorkerMode)
+		}
+		for _, required := range []struct{ name, value string }{
+			{name: managedprotocol.EnvExpectedWorkerUsername, value: identity.WorkerUsername},
+			{name: "POD_NAME", value: identity.WorkerPodName},
+			{name: "POD_UID", value: identity.WorkerPodUID},
+		} {
+			if strings.TrimSpace(required.value) == "" {
+				return nil, fmt.Errorf("managed maintenance requires non-empty %s", required.name)
+			}
+		}
+	}
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		return nil, err
@@ -65,10 +84,13 @@ func newMaintenanceCoordinator(cfg *rest.Config, identity workerRuntimeIdentity,
 	}
 	return &maintenance.Coordinator{
 		Client: c, Namespace: identity.DeviceNamespace, DeviceName: identity.DeviceName,
-		DeviceUID: identity.DeviceUID, NodeName: identity.NodeName, WorkerRevision: identity.WorkerRevision,
-		WorkerPodUID:     identity.WorkerPodUID,
-		LeaseNamespace:   leaseNamespace,
-		ManagedTopology:  identity.ManagedTopology,
-		MutationsEnabled: (opts.EnableIOSXESoftwareUpgrade || opts.EnableWriteClassGNOI) && !envEnabled(gNOIDisabledEnv),
+		WorkerRevision: identity.WorkerRevision,
+		DeviceUID:      identity.DeviceUID, NodeName: identity.NodeName, LeaseNamespace: leaseNamespace,
+		ManagedTopology:        identity.ManagedTopology,
+		WorkerMode:             string(identity.WorkerMode),
+		ExpectedWorkerUsername: identity.WorkerUsername,
+		WorkerPodName:          identity.WorkerPodName,
+		WorkerPodUID:           identity.WorkerPodUID,
+		MutationsEnabled:       (opts.softwareUpgradeEnabled() || opts.writeClassGNOIEnabled()) && !envEnabled(gNOIDisabledEnv),
 	}, nil
 }

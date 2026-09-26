@@ -32,6 +32,23 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/intent"
 )
 
+type recordingRevisionDeleteClient struct {
+	client.Client
+	preconditionUIDs []types.UID
+}
+
+func (c *recordingRevisionDeleteClient) Delete(
+	ctx context.Context,
+	obj client.Object,
+	opts ...client.DeleteOption,
+) error {
+	options := (&client.DeleteOptions{}).ApplyOptions(opts)
+	if options.Preconditions != nil && options.Preconditions.UID != nil {
+		c.preconditionUIDs = append(c.preconditionUIDs, *options.Preconditions.UID)
+	}
+	return c.Client.Delete(ctx, obj, opts...)
+}
+
 func TestSplitReplayAnnotationAcceptsHashSelector(t *testing.T) {
 	// "edge-01-log:sha256:abc" splits as
 	// ["edge-01-log", "sha256:abc"] — the hash selector itself
@@ -252,6 +269,7 @@ func TestAppendConfigRevisionCreatesAndPrunesOldest(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:              name,
 				Namespace:         "network",
+				UID:               types.UID(name + "-uid"),
 				CreationTimestamp: metav1.NewTime(ts),
 				Labels: map[string]string{
 					revisionSourceNameLabel: "edge-01",
@@ -268,12 +286,13 @@ func TestAppendConfigRevisionCreatesAndPrunesOldest(t *testing.T) {
 		}
 	}
 	now := time.Now().UTC()
-	c := fake.NewClientBuilder().WithScheme(scheme).
+	base := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(
 			old("oldest", now.Add(-2*time.Hour)),
 			old("middle", now.Add(-1*time.Hour)),
 		).
 		Build()
+	c := &recordingRevisionDeleteClient{Client: base}
 	r := &ConfigReconciler{Client: c, DeviceName: "edge-01"}
 	resolved := &intent.ResolvedIntent{
 		Configuration: map[string]any{"vlan": map[string]any{"vlans": []any{
@@ -301,6 +320,9 @@ func TestAppendConfigRevisionCreatesAndPrunesOldest(t *testing.T) {
 	}
 	if !names["middle"] || !names[revisionName(cr, "sha256:newest")] {
 		t.Fatalf("expected middle and newest revisions, got %#v", names)
+	}
+	if len(c.preconditionUIDs) != 1 || c.preconditionUIDs[0] != types.UID("oldest-uid") {
+		t.Fatalf("delete UID preconditions=%v, want [oldest-uid]", c.preconditionUIDs)
 	}
 }
 

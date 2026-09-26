@@ -17,7 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"slices"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,37 +28,23 @@ import (
 )
 
 func managedWorkerClusterRoleContracts() []rbacv1.ClusterRole {
-	read := func() []string { return []string{"get", "list", "watch"} }
-	return []rbacv1.ClusterRole{
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: managedprotocol.ManagedWorkerClusterRole},
-			Rules: []rbacv1.PolicyRule{
-				{APIGroups: []string{""}, Resources: []string{"nodes"}, Verbs: []string{"get"}},
-				{APIGroups: []string{""}, Resources: []string{"nodes/status"}, Verbs: []string{"get", "update", "patch"}},
-				{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: read()},
-				{APIGroups: []string{""}, Resources: []string{"pods/status"}, Verbs: []string{"get", "update", "patch"}},
-				{APIGroups: []string{""}, Resources: []string{"configmaps"}, Verbs: read()},
-				{APIGroups: []string{""}, Resources: []string{"secrets"}, Verbs: read()},
-				{APIGroups: []string{""}, Resources: []string{"services"}, Verbs: read()},
-				{APIGroups: []string{""}, Resources: []string{"events"}, Verbs: []string{"create", "patch"}},
-				{APIGroups: []string{"coordination.k8s.io"}, Resources: []string{"leases"}, Verbs: []string{"get", "list", "watch", "update", "patch"}},
-				{APIGroups: []string{"cisco.vk"}, Resources: []string{"ciscodevices"}, Verbs: read()},
-				{APIGroups: []string{"config.cisco.vk"}, Resources: []string{"iosxeconfigdefaults"}, Verbs: read()},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{Name: managedprotocol.ManagedWorkerPodDeleteClusterRole},
-			Rules: []rbacv1.PolicyRule{{
-				APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"delete"},
-			}},
-		},
+	contracts := managedprotocol.WorkerClusterRoleContracts()
+	names := make([]string, 0, len(contracts))
+	for name := range contracts {
+		names = append(names, name)
 	}
+	slices.Sort(names)
+	roles := make([]rbacv1.ClusterRole, 0, len(names))
+	for _, name := range names {
+		roles = append(roles, rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: name}, Rules: contracts[name]})
+	}
+	return roles
 }
 
 // verifyManagedWorkerClusterRoles attests the complete live authority which a
-// generated managed worker receives. A retained role may outlive Helm, so
+// shared functional worker receives. A retained role may outlive Helm, so
 // admission compatibility alone is insufficient: any rule drift must prevent
-// the controller from creating or repairing per-device bindings.
+// the controller from creating or repairing functional worker bindings.
 func verifyManagedWorkerClusterRoles(ctx context.Context, reader client.Reader) error {
 	if reader == nil {
 		return fmt.Errorf("managed worker RBAC reader is nil")
@@ -75,7 +61,7 @@ func verifyManagedWorkerClusterRoles(ctx context.Context, reader client.Reader) 
 		if actual.AggregationRule != nil {
 			return fmt.Errorf("managed worker ClusterRole %s must not use rule aggregation", expected.Name)
 		}
-		if !reflect.DeepEqual(actual.Rules, expected.Rules) {
+		if err := managedprotocol.ValidateWorkerClusterRole(&actual); err != nil {
 			return fmt.Errorf("managed worker ClusterRole %s rules do not match the compiled contract", expected.Name)
 		}
 	}

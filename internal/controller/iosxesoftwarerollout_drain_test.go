@@ -1606,7 +1606,9 @@ func TestPromotedZeroPodCancellationConvergesAfterWorkerLeaseBecomesIdle(t *test
 		t.Fatalf("finish acknowledged cancellation: %v", err)
 	}
 	if result.RequeueAfter != 0 {
-		t.Fatalf("finished cancellation result = %#v, want terminal result", result)
+		var pending opsv1alpha1.IOSXESoftwareRollout
+		_ = fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &pending)
+		t.Fatalf("finished cancellation result = %#v, want terminal result; targets=%#v", result, pending.Status.Targets)
 	}
 	if err := fixture.rolloutReconciler.Get(ctx, client.ObjectKeyFromObject(fixture.rollout), &rollout); err != nil {
 		t.Fatal(err)
@@ -2512,8 +2514,9 @@ func promotedZeroPodCancellationFixture(
 	if node.Annotations == nil {
 		node.Annotations = map[string]string{}
 	}
-	worker := "system:serviceaccount:" + device.Namespace + ":" + managedWorkerServiceAccountName(device)
+	worker := "system:serviceaccount:" + device.Namespace + ":" + managedprotocol.NetworkManagementServiceAccount
 	leaf.Annotations[managedprotocol.AnnotationWorkerUsername] = worker
+	leaf.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] = worker
 	for key, value := range map[string]string{
 		managedprotocol.AnnotationManaged:          "true",
 		managedprotocol.AnnotationDeviceNamespace:  device.Namespace,
@@ -2919,6 +2922,20 @@ func TestDrainWorkerProofRejectsStaleWorkerConfigUntilFreshRepublish(t *testing.
 	leaf.Status.WorkerDrain.UpdatedAt = leaf.Status.WorkerDrain.InventoryObservedAt
 	if revision, ok := drainWorkerProvesPodClean(leaf, &pod); !ok || revision != 10 {
 		t.Fatalf("fresh republished WorkerDrain evidence = (%d, %v), want revision 10", revision, ok)
+	}
+	leaf.Annotations = map[string]string{
+		managedprotocol.AnnotationNetworkWorkerPodUID:     "network-pod",
+		managedprotocol.AnnotationAppWorkerPodUID:         "app-pod",
+		managedprotocol.AnnotationAppWorkerConfigRevision: "sha256:new-worker",
+	}
+	leaf.Status.WorkerControl.ObservedWorkerConfigRevision = "sha256:distinct-network"
+	leaf.Status.WorkerDrain.ObservedWorkerPodUID = "app-pod"
+	if _, ok := drainWorkerProvesPodClean(leaf, &pod); !ok {
+		t.Fatal("distinct app and network revisions prevented valid clean proof")
+	}
+	leaf.Annotations[managedprotocol.AnnotationAppWorkerPodUID] = "replacement-app-pod"
+	if _, ok := drainWorkerProvesPodClean(leaf, &pod); ok {
+		t.Fatal("same-config app restart reused the previous Pod's inventory")
 	}
 }
 
@@ -3904,18 +3921,20 @@ func drainEvictionAuthorityFixture(
 	}
 	const siteKey = "topology.cisco.vk/site"
 	policyConfig := topologyrollout.AdminPolicyConfig{
-		Version:                      topologyrollout.PolicyVersion,
-		FleetSelector:                metav1.LabelSelector{MatchLabels: map[string]string{managedprotocol.AnnotationManaged: "true"}},
-		RequiredTopologyKeys:         []string{siteKey},
-		ProjectedTopologyKeys:        []string{siteKey},
-		GlobalMaxConcurrentTransfers: 1,
-		GlobalMaxUnavailable:         1,
-		DomainMaxConcurrentTransfers: map[string]int{siteKey: 1},
-		DomainMaxUnavailable:         map[string]int{siteKey: 1},
-		HealthFreshnessSeconds:       300,
-		MaxCampaignTargets:           100,
-		MaxActiveReservations:        256,
-		MaxLedgerBytes:               256 * 1024,
+		AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
+		NetworkManagementServiceAccountName: managedprotocol.NetworkManagementServiceAccount,
+		Version:                             topologyrollout.PolicyVersion,
+		FleetSelector:                       metav1.LabelSelector{MatchLabels: map[string]string{managedprotocol.AnnotationManaged: "true"}},
+		RequiredTopologyKeys:                []string{siteKey},
+		ProjectedTopologyKeys:               []string{siteKey},
+		GlobalMaxConcurrentTransfers:        1,
+		GlobalMaxUnavailable:                1,
+		DomainMaxConcurrentTransfers:        map[string]int{siteKey: 1},
+		DomainMaxUnavailable:                map[string]int{siteKey: 1},
+		HealthFreshnessSeconds:              300,
+		MaxCampaignTargets:                  100,
+		MaxActiveReservations:               256,
+		MaxLedgerBytes:                      256 * 1024,
 		WorkloadDrain: &topologyrollout.AdminWorkloadDrainPolicy{
 			Enabled: true, AllowedNamespaces: []string{"apps"}, MaxTimeoutSeconds: 600,
 			MaxPods: 4, MaxTerminationGraceSeconds: 60,
@@ -3938,9 +3957,10 @@ func drainEvictionAuthorityFixture(
 		Name:      rollout.Status.FrozenPlan.Policy.Name,
 		UID:       types.UID(rollout.Status.FrozenPlan.Policy.UID),
 		Annotations: map[string]string{
-			topologyrollout.PolicyManagedAnnotation:   "true",
-			topologyrollout.LedgerUIDAnnotation:       rollout.Status.FrozenPlan.Policy.LedgerUID,
-			topologyrollout.AdmissionPrefixAnnotation: "cvk-topology",
+			topologyrollout.PolicyManagedAnnotation:        "true",
+			topologyrollout.ConfigLeaseNamespaceAnnotation: "",
+			topologyrollout.LedgerUIDAnnotation:            rollout.Status.FrozenPlan.Policy.LedgerUID,
+			topologyrollout.AdmissionPrefixAnnotation:      "cvk-topology",
 		},
 	}, Data: map[string]string{topologyrollout.PolicyDataKey: policyData}}
 	controller := true

@@ -937,6 +937,12 @@ type UpgradeWorkerDrainStatus struct {
 	// only together with a strictly newer device scan.
 	ObservedWorkerConfigRevision string `json:"observedWorkerConfigRevision"`
 
+	// ObservedWorkerPodUID binds inventory to the app worker process, including
+	// restarts that keep the same configuration. Required for split workers.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	ObservedWorkerPodUID string `json:"observedWorkerPodUID,omitempty"`
+
 	// InventoryRevision identifies one complete, device-derived workload scan.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Minimum=1

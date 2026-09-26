@@ -1506,6 +1506,12 @@ spec:
                       only together with a strictly newer device scan.
                     pattern: ^sha256:[a-f0-9]{64}$
                     type: string
+                  observedWorkerPodUID:
+                    description: |-
+                      ObservedWorkerPodUID binds inventory to the app worker process, including
+                      restarts that keep the same configuration. Required for split workers.
+                    maxLength: 128
+                    type: string
                   protocolVersion:
                     description: |-
                       ManagedDrainProtocolVersion identifies an explicitly enabled workload-drain

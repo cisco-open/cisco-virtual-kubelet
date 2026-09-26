@@ -771,7 +771,9 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 		Name: "global", URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
 	}
 	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{
-		RequiredTopologyKeys: []string{topologyKey}, ProjectedTopologyKeys: []string{topologyKey},
+		AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
+		NetworkManagementServiceAccountName: managedprotocol.NetworkManagementServiceAccount,
+		RequiredTopologyKeys:                []string{topologyKey}, ProjectedTopologyKeys: []string{topologyKey},
 	}}
 
 	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
@@ -1777,7 +1779,9 @@ func TestReconcileCancelsFrozenPlanWithoutApproval(t *testing.T) {
 	}}
 
 	policyConfig := topologyrollout.AdminPolicyConfig{
-		Version: topologyrollout.PolicyVersion,
+		AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
+		NetworkManagementServiceAccountName: managedprotocol.NetworkManagementServiceAccount,
+		Version:                             topologyrollout.PolicyVersion,
 		FleetSelector: metav1.LabelSelector{MatchLabels: map[string]string{
 			"topology.cisco.vk/managed": "true",
 		}},
@@ -1801,9 +1805,10 @@ func TestReconcileCancelsFrozenPlanWithoutApproval(t *testing.T) {
 		Name:      rollout.Status.FrozenPlan.Policy.Name,
 		UID:       types.UID(rollout.Status.FrozenPlan.Policy.UID), ResourceVersion: "10",
 		Annotations: map[string]string{
-			topologyrollout.PolicyManagedAnnotation:   "true",
-			topologyrollout.AdmissionPrefixAnnotation: "cvk-topology",
-			topologyrollout.LedgerUIDAnnotation:       rollout.Status.FrozenPlan.Policy.LedgerUID,
+			topologyrollout.PolicyManagedAnnotation:        "true",
+			topologyrollout.ConfigLeaseNamespaceAnnotation: "",
+			topologyrollout.AdmissionPrefixAnnotation:      "cvk-topology",
+			topologyrollout.LedgerUIDAnnotation:            rollout.Status.FrozenPlan.Policy.LedgerUID,
 		},
 	}, Data: map[string]string{topologyrollout.PolicyDataKey: policyJSON}}
 	parsedPolicy, err := topologyrollout.ParseAdminPolicy(policyCM)
@@ -2093,10 +2098,12 @@ func rolloutPolicyFixture() (*opsv1alpha1.IOSXESoftwareRollout, *topologyrollout
 		Namespace: "cvk-system", Name: "topology-policy", PolicyUID: "policy-uid", ResourceVersion: "11",
 		LedgerUID: "ledger-uid", HealthFreshness: 5 * time.Minute,
 		Config: topologyrollout.AdminPolicyConfig{
-			Version:                      topologyrollout.PolicyVersion,
-			FleetSelector:                metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/managed": "true"}},
-			RequiredTopologyKeys:         []string{siteKey},
-			GlobalMaxConcurrentTransfers: 3, GlobalMaxUnavailable: 2,
+			Version:                             topologyrollout.PolicyVersion,
+			AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
+			NetworkManagementServiceAccountName: managedprotocol.NetworkManagementServiceAccount,
+			FleetSelector:                       metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/managed": "true"}},
+			RequiredTopologyKeys:                []string{siteKey},
+			GlobalMaxConcurrentTransfers:        3, GlobalMaxUnavailable: 2,
 			DomainMaxConcurrentTransfers: map[string]int{siteKey: 2}, DomainMaxUnavailable: map[string]int{siteKey: 1},
 			HealthFreshnessSeconds: 300, MaxCampaignTargets: 100, MaxActiveReservations: 256,
 			MaxLedgerBytes: 256 * 1024, LedgerName: "topology-ledger",

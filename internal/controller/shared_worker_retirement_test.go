@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 func TestSharedWorkerRetirementZeroDeviceCluster(t *testing.T) {
@@ -270,6 +271,65 @@ func TestTopologyLegacyToManagedRetiresBroadIdentityAfterQuiescence(t *testing.T
 	if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: legacySA}, &corev1.ServiceAccount{}); !apierrors.IsNotFound(err) {
 		t.Fatalf("legacy ServiceAccount remains: %v", err)
 	}
+}
+
+func TestRecoveredPhaseZeroMarkerRetiresOnlyAfterManagedReplacement(t *testing.T) {
+	ctx := context.Background()
+	now := metav1.Now()
+	device := newDevice("switch-phase-zero", "edge")
+	device.UID = "phase-zero-device-uid"
+	device.Annotations = map[string]string{
+		managedprotocol.AnnotationIsolatedLegacyWorker: string(device.UID),
+	}
+	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
+		DeviceUID: string(device.UID), NodeName: device.Name, NodeUID: "node-uid",
+	}
+	device.Status.TopologyProjection = &ciskov1.DeviceTopologyProjectionStatus{
+		EffectiveLabelHash:    "sha256:" + strings.Repeat("a", 64),
+		SourceResourceVersion: "1",
+		LastSuccessfulTime:    now,
+	}
+	device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+		DesiredRevision: "app", ObservedRevision: "app", DeploymentUID: "app-deployment",
+		PodUID: "app-pod", PodStartTime: &now, ReadyHeartbeatTime: &now,
+	}
+	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+		DesiredRevision: "network", ObservedRevision: "network", DeploymentUID: "network-deployment",
+		PodUID: "network-pod", PodStartTime: &now, PodReadyTime: &now,
+	}
+	r := reconcilerFor(t, device)
+	r.ManagedTopology = true
+	legacySA := topologyLegacyWorkerServiceAccountName(device)
+	if err := r.ensureVKAccess(ctx, device, legacySA, false, true); err != nil {
+		t.Fatal(err)
+	}
+
+	// An intermediate per-device managed replacement may retire legacy access,
+	// but it is not the shared app worker whose readiness authorizes marker
+	// removal under the forward-handoff admission contract.
+	retired, err := r.retirePriorTopologyWorkerAccessIfSafe(ctx, device, managedWorkerServiceAccountName(device))
+	if err != nil || !retired {
+		t.Fatalf("per-device predecessor retirement=%v, %v", retired, err)
+	}
+	var current ciskov1.CiscoDevice
+	if err := r.Get(ctx, clientKey(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	if marker := current.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker]; marker != string(device.UID) {
+		t.Fatalf("non-shared replacement changed phase-zero marker to %q", marker)
+	}
+
+	retired, err = r.retirePriorTopologyWorkerAccessIfSafe(ctx, &current, r.appHostingServiceAccountName())
+	if err != nil || !retired {
+		t.Fatalf("phase-zero retirement=%v, %v", retired, err)
+	}
+	if err := r.Get(ctx, clientKey(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	if marker := current.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker]; marker != "" {
+		t.Fatalf("retired phase-zero marker remains: %q", marker)
+	}
+	assertWorkerAccessAbsent(t, r.Client, device, legacySA)
 }
 
 func topologyTestDeployment(device *ciskov1.CiscoDevice, uid types.UID, serviceAccount string) *appsv1.Deployment {

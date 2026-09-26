@@ -46,7 +46,7 @@
 
   RBAC RECONCILE — the chart updates its ClusterRoles and bindings on every
   Helm upgrade, and Kubernetes applies those permissions without a pod
-  restart. If a per-device kubelet still reports:
+  restart. If a device worker still reports:
 
     "iosxediagnostics is forbidden: User <ServiceAccount> cannot list
      resource ..."
@@ -54,7 +54,7 @@
   verify that the installed release owns the expected role and binding:
 
     kubectl auth can-i list iosxediagnostics.config.cisco.vk \
-      --as=system:serviceaccount:{{ .Release.Namespace }}:{{ include "cisco-virtual-kubelet.vkServiceAccountName" . }} \
+      --as=system:serviceaccount:{{ .Release.Namespace }}:{{ if .Values.topology.enabled }}{{ include "cisco-virtual-kubelet.networkManagementServiceAccountName" . }}{{ else }}{{ include "cisco-virtual-kubelet.vkServiceAccountName" . }}{{ end }} \
       --namespace {{ .Release.Namespace }}
 
   ───────────────────────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   policy: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyPolicyName" . }}
   ledger: {{ include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}/{{ include "cisco-virtual-kubelet.topologyLedgerName" . }}
 
-  The manager validates the policy selector and all ten versioned admission
+  The manager validates the policy selector and the complete versioned admission
   policy/binding pairs before initializing ledger.json with the ledger
   ConfigMap's live UID and binding that UID into the policy annotation. It
   fails closed if admission discovery/type checking, either object identity,
@@ -109,10 +109,9 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   the kept, manager-owned ledger from its update set. It refuses partial or
   UID-mismatched retained state rather than creating replacement authority.
   Do not use helm upgrade --force and do not recreate the ledger to clear an
-  error. The ledger, policy, admission pairs, managed-worker baseline role, and
-  Pod-delete completion role carry Helm keep protection; disabling or
-  uninstalling does not retire them. Verify all policy bindings and that type
-  checking has no warnings:
+  error. The ledger, policy, admission pairs, and functional profile roles carry
+  Helm keep protection; disabling or uninstalling does not retire them. Verify
+  all policy bindings and that type checking has no warnings:
 
     kubectl get validatingadmissionpolicies.admissionregistration.k8s.io \
       -l app.kubernetes.io/instance={{ .Release.Name }}
@@ -125,24 +124,38 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   Kubernetes does not type-check these expressions against CRD schemas. Empty
   warnings are necessary but do not replace live API-server denial probes.
   The manager pre-creates retained Node-heartbeat, config-family, and
-  disruptive-mutation Leases. Generated workers can update only their exact
+  disruptive-mutation Leases. Functional workers can update only their exact
   bound objects and cannot create/delete Leases. Do not remove them or recreate
   a same-name CiscoDevice until reservations and maintenance are settled and
   the documented retirement is complete.
 
-  Every device now receives a UID-derived ServiceAccount. Selected devices
-  use a narrow baseline role with no Pod main-resource mutation. Only after
-  startup admission preflight and exact verification of both fixed ClusterRole
-  rule sets does the manager bind their exact identity to a retained role
-  containing only pods/delete. Unselected devices keep the
-  legacy runtime under an isolated cisco-vk-legacy-<node>-<uid-hash> identity.
-  Native admission confines both identity families to their embedded Node for
-  Node/Pod status. Their Pod delete verb cannot initiate deletion: it requires
-  a current-UID precondition and zero grace to complete an already-terminating
-  Pod bound to that exact Node, never deletecollection.
-  The topology manager has no workload Pod delete grant; it starts drain only
-  through policy/v1 Eviction. The independent managed-drain policy still
-  blocks direct deletion of protected Pods.
+  Managed namespaces use at most two shared functional accounts, independent
+  of device count:
+    app hosting:        {{ include "cisco-virtual-kubelet.appHostingServiceAccountName" . }} ({{ .Values.topology.workerAccounts.appHosting.accessMode }})
+    network management: {{ include "cisco-virtual-kubelet.networkManagementServiceAccountName" . }} ({{ .Values.topology.workerAccounts.networkManagement.accessMode }})
+  Each account is bound to exactly one fixed profile. App readOnly/disabled
+  launches no app worker and leaves Nodes unschedulable. Network readOnly runs
+  only telemetry, diagnostics, and read-only operations; configuration and
+  gNOI mutation need readWrite. Native admission remains the object-level
+  boundary for the namespace-shared identities.
+  Resolved account names are cluster-reserved by admission. If you override
+  either derived name, keep it unique across every CVK release.
+
+  ServiceAccounts are namespaced: these are the only two functional identities
+  defined per managed CiscoDevice namespace, not two cluster-global accounts
+  and not two accounts per device. A disabled plane is removed. Access-mode
+  changes drain the old worker objects before RBAC is replaced or revoked.
+
+  Managed-device namespaces must be dedicated and administrator-controlled.
+  Do not grant tenant edit/admin, ServiceAccount impersonation, either shared
+  account, worker Pod logs/exec/attach/portforward/proxy, scale, or delete
+  authority. ClusterRoleBinding writers remain a cluster-admin trust boundary.
+  Kubelets must authenticate as system:node:<nodeName> with the Node and RBAC
+  authorizers and NodeRestriction enabled.
+
+  CONFIG_LEASE_NAMESPACE is bootstrap-immutable (current value:
+  {{ .Values.config.leaseNamespace | default "<device namespace>" }}). Retire
+  managed topology and re-enroll before moving Lease authority.
 {{- if .Release.IsUpgrade }}
 
   During migration, exact preexisting shared worker bindings are retained with
@@ -150,6 +163,9 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   bridge manually. The manager removes it only after all shared-identity
   Deployments, ReplicaSets, and Pods are quiesced and replacements are audited;
   first managed admission remains deferred until that retirement completes.
+  Any PR #190-era UID-derived worker identities are transitional as well; the
+  manager removes only exact owned accounts/bindings after the split workers
+  are audited. Steady state is the two functional accounts shown above.
 
   This migration requires a live Helm upgrade because lookup supplies the
   existing binding identities. Offline helm template / GitOps pruning is not a
@@ -161,11 +177,12 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   are intentionally unbound. Delegate only the roles required in each target
   namespace. See charts/cisco-virtual-kubelet/README.md before enrolling a
   CiscoDevice or changing policy.
-{{- if or .Values.gnoi.disabled (not .Values.gnoi.enableSoftwareUpgrade) }}
+{{- if or .Values.gnoi.disabled (not .Values.gnoi.enableSoftwareUpgrade) (ne .Values.topology.workerAccounts.networkManagement.accessMode "readWrite") }}
 
   ℹ️  Managed topology projection is active, but rollout-created IOS-XE
   upgrade leaves will not execute until gnoi.disabled=false and
-  gnoi.enableSoftwareUpgrade=true enable the existing per-worker mutation gate.
+  gnoi.enableSoftwareUpgrade=true and networkManagement.accessMode=readWrite
+  enable the existing mutation gate.
 {{- end }}
 
   Direct/unmanaged IOSXESoftwareUpgrade objects are not executed or modified

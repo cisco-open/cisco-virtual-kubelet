@@ -62,13 +62,17 @@ type Coordinator struct {
 	// worker proof and the live Node observation so a stale process cannot
 	// impersonate its replacement.
 	WorkerRevision string
-	// WorkerPodUID is this process's immutable downward-API Pod UID. It
-	// distinguishes overlapping or replacement Pods running the same revision.
-	WorkerPodUID   string
 	LeaseNamespace string
 	// ManagedTopology replaces direct worker Node-spec writes with the
 	// durable Lease request / manager acknowledgement protocol.
 	ManagedTopology bool
+	// WorkerMode and the bound Pod identity select the exact functional worker
+	// annotation bundle. Shared ServiceAccounts make username alone insufficient
+	// to distinguish two device workers in the same namespace.
+	WorkerMode             string
+	ExpectedWorkerUsername string
+	WorkerPodName          string
+	WorkerPodUID           string
 	// MutationsEnabled enables routine-write acquisition before new gNOI
 	// operations can start. When false, existing leases still fence writes and
 	// retain taints, but an idle legacy worker performs only Kubernetes reads.

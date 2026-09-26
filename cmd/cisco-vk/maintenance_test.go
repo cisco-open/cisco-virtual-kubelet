@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"k8s.io/client-go/rest"
 )
 
@@ -62,7 +63,10 @@ func TestNewMaintenanceCoordinatorUsesDistinctRuntimeIdentity(t *testing.T) {
 		NodeName:        "cvk-edge-node-01",
 		ManagedTopology: true,
 		WorkerRevision:  "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		WorkerPodUID:    "worker-pod-uid",
+		WorkerMode:      workerModeAppHosting,
+		WorkerUsername:  "system:serviceaccount:edge:cisco-vk-app-hosting",
+		WorkerPodName:   "switch-01-vk-abc123",
+		WorkerPodUID:    "app-pod-uid",
 	}
 
 	coordinator, err := newMaintenanceCoordinator(
@@ -85,6 +89,11 @@ func TestNewMaintenanceCoordinatorUsesDistinctRuntimeIdentity(t *testing.T) {
 	}
 	if coordinator.LeaseNamespace != "fleet-leases" {
 		t.Fatalf("LeaseNamespace = %q", coordinator.LeaseNamespace)
+	}
+	if coordinator.WorkerMode != string(identity.WorkerMode) || coordinator.ExpectedWorkerUsername != identity.WorkerUsername ||
+		coordinator.WorkerPodName != identity.WorkerPodName || coordinator.WorkerPodUID != identity.WorkerPodUID {
+		t.Fatalf("coordinator worker binding = mode=%q username=%q pod=%s/%s",
+			coordinator.WorkerMode, coordinator.ExpectedWorkerUsername, coordinator.WorkerPodName, coordinator.WorkerPodUID)
 	}
 
 	t.Setenv("CONFIG_LEASE_NAMESPACE", "")
@@ -109,7 +118,10 @@ func TestNewMaintenanceCoordinatorManagedRequiresDeviceUID(t *testing.T) {
 		NodeName:        "cvk-edge-node-01",
 		ManagedTopology: true,
 		WorkerRevision:  "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		WorkerPodUID:    "worker-pod-uid",
+		WorkerMode:      workerModeAppHosting,
+		WorkerUsername:  "system:serviceaccount:edge:cisco-vk-app-hosting",
+		WorkerPodName:   "switch-01-vk-abc123",
+		WorkerPodUID:    "app-pod-uid",
 	}
 
 	_, err := newMaintenanceCoordinator(
@@ -122,13 +134,46 @@ func TestNewMaintenanceCoordinatorManagedRequiresDeviceUID(t *testing.T) {
 	}
 }
 
+func TestNewMaintenanceCoordinatorManagedRequiresFunctionalPodBinding(t *testing.T) {
+	base := workerRuntimeIdentity{
+		DeviceNamespace: "edge", DeviceName: "switch-01", DeviceUID: "device-uid",
+		NodeName: "cvk-edge-node-01", ManagedTopology: true,
+		WorkerRevision: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		WorkerMode:     workerModeNetworkManagement, WorkerUsername: "system:serviceaccount:edge:cisco-vk-network-management",
+		WorkerPodName: "switch-01-network-abc123", WorkerPodUID: "network-pod-uid",
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*workerRuntimeIdentity)
+		want   string
+	}{
+		{name: "mode", mutate: func(i *workerRuntimeIdentity) { i.WorkerMode = workerModeCombined }, want: "worker mode"},
+		{name: "username", mutate: func(i *workerRuntimeIdentity) { i.WorkerUsername = "" }, want: managedprotocol.EnvExpectedWorkerUsername},
+		{name: "pod name", mutate: func(i *workerRuntimeIdentity) { i.WorkerPodName = "" }, want: "POD_NAME"},
+		{name: "pod UID", mutate: func(i *workerRuntimeIdentity) { i.WorkerPodUID = "" }, want: "POD_UID"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			identity := base
+			tc.mutate(&identity)
+			_, err := newMaintenanceCoordinator(
+				&rest.Config{Host: "https://127.0.0.1"}, identity,
+				configReconcilerOptions{Spec: &ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE}},
+			)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("newMaintenanceCoordinator() error = %v, want text %q", err, tc.want)
+			}
+		})
+	}
+}
+
 func TestNewMaintenanceCoordinatorManagedProtectsNonIOSXEAppWrites(t *testing.T) {
 	t.Setenv("DISABLE_IN_POD_CONFIG_RECONCILER", "false")
 	identity := workerRuntimeIdentity{
 		DeviceNamespace: "edge", DeviceName: "router-01", DeviceUID: "device-uid",
 		NodeName: "cvk-router-01", ManagedTopology: true,
 		WorkerRevision: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-		WorkerPodUID:   "worker-pod-uid",
+		WorkerMode:     workerModeAppHosting, WorkerUsername: "system:serviceaccount:edge:cisco-vk-app-hosting",
+		WorkerPodName: "router-01-vk-abc123", WorkerPodUID: "app-pod-uid",
 	}
 	coordinator, err := newMaintenanceCoordinator(
 		&rest.Config{Host: "https://127.0.0.1"}, identity,

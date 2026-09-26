@@ -29,17 +29,61 @@
     },
     {
       "if": {
-        "required": ["topology"],
+        "required": ["topology", "gnoi"],
         "properties": {
           "topology": {
-            "required": ["policy"],
+            "required": ["enabled"],
+            "properties": { "enabled": { "const": true } }
+          },
+          "gnoi": {
+            "anyOf": [
+              { "required": ["enableSoftwareUpgrade"], "properties": { "enableSoftwareUpgrade": { "const": true } } },
+              { "required": ["enableWriteClass"], "properties": { "enableWriteClass": { "const": true } } }
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "topology": {
+            "properties": {
+              "workerAccounts": {
+                "properties": {
+                  "networkManagement": {
+                    "properties": { "accessMode": { "const": "readWrite" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "topology"
+        ],
+        "properties": {
+          "topology": {
+            "required": [
+              "policy"
+            ],
             "properties": {
               "policy": {
-                "required": ["workloadDrain"],
+                "required": [
+                  "workloadDrain"
+                ],
                 "properties": {
                   "workloadDrain": {
-                    "required": ["enabled"],
-                    "properties": { "enabled": { "const": true } }
+                    "required": [
+                      "enabled"
+                    ],
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    }
                   }
                 }
               }
@@ -48,17 +92,33 @@
         }
       },
       "then": {
-        "required": ["topology", "gnoi"],
+        "required": [
+          "topology",
+          "gnoi"
+        ],
         "properties": {
           "topology": {
-            "required": ["enabled"],
-            "properties": { "enabled": { "const": true } }
+            "required": [
+              "enabled"
+            ],
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
           },
           "gnoi": {
-            "required": ["disabled", "enableSoftwareUpgrade"],
+            "required": [
+              "disabled",
+              "enableSoftwareUpgrade"
+            ],
             "properties": {
-              "disabled": { "const": false },
-              "enableSoftwareUpgrade": { "const": true }
+              "disabled": {
+                "const": false
+              },
+              "enableSoftwareUpgrade": {
+                "const": true
+              }
             }
           }
         }
@@ -100,6 +160,21 @@
       "type": "string",
       "maxLength": 63,
       "pattern": "^$|^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+    },
+    "workerAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["serviceAccountName", "accessMode"],
+      "properties": {
+        "serviceAccountName": {
+          "allOf": [{ "$ref": "#/definitions/dnsLabelOrEmpty" }],
+          "description": "Empty derives a release-qualified name. Explicit overrides are cluster-reserved by managed admission and must be unique across CVK releases."
+        },
+        "accessMode": {
+          "type": "string",
+          "enum": ["disabled", "readOnly", "readWrite"]
+        }
+      }
     },
     "managedFleetSelectorKey": {
       "type": "string",
@@ -204,11 +279,20 @@
     "topology": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "policy", "ledger"],
+      "required": ["enabled", "workerAccounts", "policy", "ledger"],
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable manager-owned topology and rollout admission. Requires Kubernetes 1.35 or newer, aggregator.enabled=false, controller.leaderElect=true, serviceAccount.vkName=cisco-virtual-kubelet, rbac.profile=strict, and gnoi.enableWriteClass=false. Migrating an existing release requires live Helm lookup; offline GitOps pruning is unsupported for the one-time shared-worker handoff."
+          "description": "Enable manager-owned topology and rollout admission. Requires Kubernetes 1.35 or newer, aggregator.enabled=false, controller.leaderElect=true, serviceAccount.vkName=cisco-virtual-kubelet, rbac.profile=strict, and gnoi.enableWriteClass=false. Managed workers use the two shared functional identities selected under workerAccounts. Migrating an existing release requires live Helm lookup; offline GitOps pruning is unsupported for the one-time shared-worker handoff."
+        },
+        "workerAccounts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["appHosting", "networkManagement"],
+          "properties": {
+            "appHosting": { "$ref": "#/definitions/workerAccount" },
+            "networkManagement": { "$ref": "#/definitions/workerAccount" }
+          }
         },
         "policy": {
           "type": "object",
@@ -325,15 +409,35 @@
             "workloadDrain": {
               "type": "object",
               "additionalProperties": false,
-              "required": ["enabled", "allowedNamespaces", "maxTimeoutSeconds", "maxPods", "maxTerminationGraceSeconds"],
+              "required": [
+                "enabled",
+                "allowedNamespaces",
+                "maxTimeoutSeconds",
+                "maxPods",
+                "maxTerminationGraceSeconds"
+              ],
               "allOf": [
                 {
-                  "if": { "properties": { "enabled": { "const": true } } },
-                  "then": { "properties": { "allowedNamespaces": { "minItems": 1 } } }
+                  "if": {
+                    "properties": {
+                      "enabled": {
+                        "const": true
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "allowedNamespaces": {
+                        "minItems": 1
+                      }
+                    }
+                  }
                 }
               ],
               "properties": {
-                "enabled": { "type": "boolean" },
+                "enabled": {
+                  "type": "boolean"
+                },
                 "allowedNamespaces": {
                   "type": "array",
                   "maxItems": 16,
@@ -345,9 +449,21 @@
                     "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
                   }
                 },
-                "maxTimeoutSeconds": { "type": "integer", "minimum": 300, "maximum": 7200 },
-                "maxPods": { "type": "integer", "minimum": 1, "maximum": 32 },
-                "maxTerminationGraceSeconds": { "type": "integer", "minimum": 30, "maximum": 600 }
+                "maxTimeoutSeconds": {
+                  "type": "integer",
+                  "minimum": 300,
+                  "maximum": 7200
+                },
+                "maxPods": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 32
+                },
+                "maxTerminationGraceSeconds": {
+                  "type": "integer",
+                  "minimum": 30,
+                  "maximum": 600
+                }
               }
             }
           }
@@ -489,7 +605,9 @@
       "properties": {
         "leaseNamespace": {
           "type": "string",
-          "description": "Storage namespace for per-(device, family) config and disruptive-mutation arbitration leases. Empty uses each worker's pod/device namespace."
+          "maxLength": 63,
+          "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+          "description": "Storage namespace for per-(device, family) config and disruptive-mutation arbitration leases. Empty uses each worker's pod/device namespace. With managed topology the resolved value is immutable after bootstrap; retire and re-enroll before moving it."
         },
         "yangValidationMode": {
           "type": "string",

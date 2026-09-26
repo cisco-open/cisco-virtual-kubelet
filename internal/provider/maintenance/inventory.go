@@ -156,6 +156,7 @@ func sameDrainInventoryAuthority(
 		before.drain.ControlRevision != after.drain.ControlRevision ||
 		before.drain.NodeUID != after.drain.NodeUID ||
 		before.workerConfigRevision != after.workerConfigRevision ||
+		before.networkWorkerRevision != after.networkWorkerRevision ||
 		beforeSelection != afterSelection {
 		return errors.New("managed drain authority changed during the device inventory scan")
 	}
@@ -224,6 +225,7 @@ func (c *Coordinator) publishDrainInventoryStatus(
 			ObservedPolicyEpoch:          fresh.drain.PolicyEpoch,
 			ObservedControlRevision:      fresh.drain.ControlRevision,
 			ObservedWorkerConfigRevision: fresh.workerConfigRevision,
+			ObservedWorkerPodUID:         c.WorkerPodUID,
 			InventoryRevision:            revision,
 			InventoryObservedAt:          metav1.NewTime(observedAt),
 			InventoryComplete:            observation.complete,
@@ -272,7 +274,7 @@ func validateDrainInventoryStatusBinding(
 		control.Revision != authority.drain.ControlRevision ||
 		worker.ObservedPolicyEpoch != authority.drain.PolicyEpoch ||
 		worker.ObservedControlRevision != authority.drain.ControlRevision ||
-		worker.ObservedWorkerConfigRevision != authority.workerConfigRevision ||
+		worker.ObservedWorkerConfigRevision != authority.networkWorkerRevision ||
 		drain.ProtocolVersion != authority.drain.ProtocolVersion ||
 		drain.SessionToken != authority.drain.SessionToken || drain.ReservationID != authority.drain.ReservationID ||
 		drain.PolicyEpoch != authority.drain.PolicyEpoch || drain.ControlRevision != authority.drain.ControlRevision ||

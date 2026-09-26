@@ -23,6 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 // patchDrainPodDeviceClean commits the durable acquisition fence only from the
@@ -50,6 +52,9 @@ func (r *IOSXESoftwareRolloutReconciler) patchDrainPodDeviceClean(
 			}
 			if pod.Phase != opsv1alpha1.UpgradeDrainPodTerminationObserved {
 				return fmt.Errorf("drain Pod %q left TerminationObserved before final device-clean proof", uid)
+			}
+			if err := r.validateDrainAppWorker(ctx, current); err != nil {
+				return err
 			}
 			revision, ok := drainWorkerProvesPodClean(current, pod)
 			if !ok {
@@ -97,6 +102,9 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateDrainPodFinalProof(
 			pod.DeviceCleanAt.IsZero() || pod.DeviceCleanInventoryRevision <= pod.DeletionObservedInventoryRevision {
 			return nil, nil, false, fmt.Errorf("drain Pod %q has invalid DeviceClean evidence", uid)
 		}
+		if err := r.validateDrainAppWorker(ctx, &current); err != nil {
+			return &current, pod, false, err
+		}
 		revision, ok := drainWorkerProvesPodClean(&current, pod)
 		if !ok || revision < pod.DeviceCleanInventoryRevision {
 			return &current, pod, false, nil
@@ -107,4 +115,29 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateDrainPodFinalProof(
 		return &current, pod, true, nil
 	}
 	return nil, nil, false, fmt.Errorf("selected drain Pod UID %q is absent", uid)
+}
+
+// Recheck app-worker readiness independently from the network worker's gNOI
+// acknowledgement. A restarted Pod must publish its own inventory before the
+// manager can accept DeviceClean or remove a workload's protection.
+func (r *IOSXESoftwareRolloutReconciler) validateDrainAppWorker(ctx context.Context, leaf *opsv1alpha1.IOSXESoftwareUpgrade) error {
+	if leaf.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] == "" {
+		return nil // retained single-worker campaigns use their existing proof
+	}
+	var device ciskov1.CiscoDevice
+	if err := r.reader().Get(ctx, client.ObjectKey{Namespace: leaf.Namespace, Name: leaf.Spec.DeviceRef.Name}, &device); err != nil {
+		return err
+	}
+	if string(device.UID) != leaf.Annotations[managedprotocol.AnnotationDeviceUID] {
+		return fmt.Errorf("drain CiscoDevice incarnation changed")
+	}
+	revision, err := r.currentReadyLegacyWorkerRevision(ctx, &device)
+	if err != nil {
+		return err
+	}
+	if revision != leaf.Annotations[managedprotocol.AnnotationAppWorkerConfigRevision] ||
+		device.Status.WorkerRevision.PodUID != leaf.Annotations[managedprotocol.AnnotationAppWorkerPodUID] {
+		return fmt.Errorf("drain app worker binding is stale")
+	}
+	return nil
 }

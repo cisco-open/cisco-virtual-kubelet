@@ -60,6 +60,9 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 	if opts.Spec == nil {
 		return fmt.Errorf("nil DeviceSpec")
 	}
+	if opts.ReadOnly {
+		log.G(ctx).Info("read-only network-management runtime; NXOSConfig controller is disabled")
+	}
 
 	scheme := k8sruntime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -116,12 +119,15 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
-		HealthProbeBindAddress: "0",
+		HealthProbeBindAddress: configManagerHealthProbeAddress(opts.ManagerLifecycle),
 		LeaderElection:         false,
 		Cache:                  configCache,
 	})
 	if err != nil {
 		return fmt.Errorf("build NXOSConfig manager: %w", err)
+	}
+	if err := addConfigManagerLifecycleChecks(mgr, opts.ManagerLifecycle); err != nil {
+		return err
 	}
 
 	dctx, dErr := drivers.NewConfigDriver(ctx, opts.Spec, opts.Password, configDriverBuildOptions(opts))
@@ -133,7 +139,7 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 	}
 
 	var notify <-chan struct{}
-	if dctx.Transport != nil && dctx.Transport.Capabilities().SupportsSubscribe && len(dctx.SubscribePaths) > 0 {
+	if !opts.ReadOnly && dctx.Transport != nil && dctx.Transport.Capabilities().SupportsSubscribe && len(dctx.SubscribePaths) > 0 {
 		n, err := provider.StartSubscribeWatcher(ctx, dctx.Transport, dctx.SubscribePaths, 100*time.Millisecond)
 		if err != nil {
 			log.G(ctx).WithError(err).Warn("NXOSConfig subscribe watcher unavailable; falling back to polling")
@@ -200,8 +206,10 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 			}
 		}()
 	}
-	if err := r.SetupWithManager(mgr); err != nil {
-		return fmt.Errorf("NXOSConfig SetupWithManager: %w", err)
+	if opts.configWritesEnabled() {
+		if err := r.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("NXOSConfig SetupWithManager: %w", err)
+		}
 	}
 	operationReconciler := &deviceoperation.Reconciler{
 		Client:          mgr.GetClient(),
@@ -248,11 +256,9 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 			"NXOSConfig transport is not available yet: %v", dErr)
 		go retryNXOSConfigDriverDial(ctx, opts, r, dctx)
 	}
-	go func() {
-		if runErr := mgr.Start(ctx); runErr != nil && runErr != context.Canceled {
-			log.G(ctx).WithError(runErr).Warn("NXOSConfig manager stopped unexpectedly")
-		}
-	}()
+	startConfigManager(ctx, mgr, opts.ManagerLifecycle, func(runErr error) {
+		log.G(ctx).WithError(runErr).Warn("NXOSConfig manager stopped unexpectedly")
+	})
 	return nil
 }
 

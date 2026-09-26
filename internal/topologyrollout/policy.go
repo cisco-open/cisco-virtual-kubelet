@@ -38,40 +38,44 @@ import (
 )
 
 const (
-	PolicyVersion             = "v1"
-	PolicyDataKey             = "policy.json"
-	LedgerUIDAnnotation       = "topology.cisco.vk/ledger-uid"
-	PolicyManagedAnnotation   = "topology.cisco.vk/managed-policy"
-	AdmissionPrefixAnnotation = "topology.cisco.vk/admission-policy-prefix"
-	DefaultMaxCampaignTargets = 100
-	MaxProjectedTopologyKeys  = 16
-	minDrainTimeoutSeconds    = 300
-	maxDrainTimeoutSeconds    = 7200
-	minDrainPods              = 1
-	maxDrainPods              = 32
-	minDrainGraceSeconds      = 30
-	maxDrainGraceSeconds      = 600
-	drainCompletionBuffer     = 120
+	PolicyVersion                  = "v1"
+	PolicyDataKey                  = "policy.json"
+	LedgerUIDAnnotation            = "topology.cisco.vk/ledger-uid"
+	PolicyManagedAnnotation        = "topology.cisco.vk/managed-policy"
+	AdmissionPrefixAnnotation      = "topology.cisco.vk/admission-policy-prefix"
+	DefaultMaxCampaignTargets      = 100
+	MaxProjectedTopologyKeys       = 16
+	minDrainTimeoutSeconds         = 300
+	maxDrainTimeoutSeconds         = 7200
+	minDrainPods                   = 1
+	maxDrainPods                   = 32
+	minDrainGraceSeconds           = 30
+	maxDrainGraceSeconds           = 600
+	drainCompletionBuffer          = 120
+	ConfigLeaseNamespaceAnnotation = "topology.cisco.vk/config-lease-namespace"
 )
 
 // AdminPolicyConfig is intentionally stored as one JSON value so readers see
 // one coherent ConfigMap resourceVersion. The ConfigMap UID/resourceVersion,
 // not user-provided identity fields, become the effective policy identity.
 type AdminPolicyConfig struct {
-	Version                      string                    `json:"version"`
-	FleetSelector                metav1.LabelSelector      `json:"fleetSelector"`
-	RequiredTopologyKeys         []string                  `json:"requiredTopologyKeys"`
-	ProjectedTopologyKeys        []string                  `json:"projectedTopologyKeys"`
-	GlobalMaxConcurrentTransfers int                       `json:"globalMaxConcurrentTransfers"`
-	GlobalMaxUnavailable         int                       `json:"globalMaxUnavailable"`
-	DomainMaxConcurrentTransfers map[string]int            `json:"domainMaxConcurrentTransfers"`
-	DomainMaxUnavailable         map[string]int            `json:"domainMaxUnavailable"`
-	HealthFreshnessSeconds       int                       `json:"healthFreshnessSeconds"`
-	MaxCampaignTargets           int                       `json:"maxCampaignTargets"`
-	MaxActiveReservations        int                       `json:"maxActiveReservations"`
-	MaxLedgerBytes               int                       `json:"maxLedgerBytes"`
-	WorkloadDrain                *AdminWorkloadDrainPolicy `json:"workloadDrain,omitempty"`
-	LedgerName                   string                    `json:"ledgerName"`
+	AppHostingServiceAccountName        string                    `json:"appHostingServiceAccountName"`
+	NetworkManagementServiceAccountName string                    `json:"networkManagementServiceAccountName"`
+	ConfigLeaseNamespace                string                    `json:"configLeaseNamespace"`
+	Version                             string                    `json:"version"`
+	FleetSelector                       metav1.LabelSelector      `json:"fleetSelector"`
+	RequiredTopologyKeys                []string                  `json:"requiredTopologyKeys"`
+	ProjectedTopologyKeys               []string                  `json:"projectedTopologyKeys"`
+	GlobalMaxConcurrentTransfers        int                       `json:"globalMaxConcurrentTransfers"`
+	GlobalMaxUnavailable                int                       `json:"globalMaxUnavailable"`
+	DomainMaxConcurrentTransfers        map[string]int            `json:"domainMaxConcurrentTransfers"`
+	DomainMaxUnavailable                map[string]int            `json:"domainMaxUnavailable"`
+	HealthFreshnessSeconds              int                       `json:"healthFreshnessSeconds"`
+	MaxCampaignTargets                  int                       `json:"maxCampaignTargets"`
+	MaxActiveReservations               int                       `json:"maxActiveReservations"`
+	MaxLedgerBytes                      int                       `json:"maxLedgerBytes"`
+	WorkloadDrain                       *AdminWorkloadDrainPolicy `json:"workloadDrain,omitempty"`
+	LedgerName                          string                    `json:"ledgerName"`
 }
 
 // AdminWorkloadDrainPolicy is an explicit administrator feature gate and set
@@ -287,6 +291,10 @@ func decodeAdminPolicyConfig(cm *corev1.ConfigMap) (AdminPolicyConfig, error) {
 	if err := validateAdminPolicyConfig(&cfg); err != nil {
 		return AdminPolicyConfig{}, err
 	}
+	leaseNamespace, recorded := cm.Annotations[ConfigLeaseNamespaceAnnotation]
+	if !recorded || leaseNamespace != cfg.ConfigLeaseNamespace {
+		return AdminPolicyConfig{}, fmt.Errorf("administrator topology policy config Lease namespace annotation does not match policy.json")
+	}
 	return cfg, nil
 }
 
@@ -399,16 +407,23 @@ func AdminPolicyHashes(cfg AdminPolicyConfig) (semantic, structural string, err 
 		return "", "", err
 	}
 	structure := struct {
-		Version               string               `json:"version"`
-		FleetSelector         metav1.LabelSelector `json:"fleetSelector"`
-		RequiredTopologyKeys  []string             `json:"requiredTopologyKeys"`
-		ProjectedTopologyKeys []string             `json:"projectedTopologyKeys"`
-		TransferDomainKeys    []string             `json:"transferDomainKeys"`
-		UnavailableDomainKeys []string             `json:"unavailableDomainKeys"`
-		LedgerName            string               `json:"ledgerName"`
+		Version                             string               `json:"version"`
+		AppHostingServiceAccountName        string               `json:"appHostingServiceAccountName"`
+		NetworkManagementServiceAccountName string               `json:"networkManagementServiceAccountName"`
+		ConfigLeaseNamespace                string               `json:"configLeaseNamespace"`
+		FleetSelector                       metav1.LabelSelector `json:"fleetSelector"`
+		RequiredTopologyKeys                []string             `json:"requiredTopologyKeys"`
+		ProjectedTopologyKeys               []string             `json:"projectedTopologyKeys"`
+		TransferDomainKeys                  []string             `json:"transferDomainKeys"`
+		UnavailableDomainKeys               []string             `json:"unavailableDomainKeys"`
+		LedgerName                          string               `json:"ledgerName"`
 	}{
-		Version: cfg.Version, FleetSelector: cfg.FleetSelector,
-		RequiredTopologyKeys: cfg.RequiredTopologyKeys, ProjectedTopologyKeys: cfg.ProjectedTopologyKeys,
+		Version:                             cfg.Version,
+		AppHostingServiceAccountName:        cfg.AppHostingServiceAccountName,
+		NetworkManagementServiceAccountName: cfg.NetworkManagementServiceAccountName,
+		ConfigLeaseNamespace:                cfg.ConfigLeaseNamespace,
+		FleetSelector:                       cfg.FleetSelector,
+		RequiredTopologyKeys:                cfg.RequiredTopologyKeys, ProjectedTopologyKeys: cfg.ProjectedTopologyKeys,
 		TransferDomainKeys:    sortedIntMapKeys(cfg.DomainMaxConcurrentTransfers),
 		UnavailableDomainKeys: sortedIntMapKeys(cfg.DomainMaxUnavailable), LedgerName: cfg.LedgerName,
 	}
@@ -453,6 +468,22 @@ func hashCanonicalJSON(value any) (string, error) {
 func validateAdminPolicyConfig(cfg *AdminPolicyConfig) error {
 	if cfg.Version != PolicyVersion {
 		return fmt.Errorf("unsupported administrator topology policy version %q", cfg.Version)
+	}
+	for field, name := range map[string]string{
+		"appHostingServiceAccountName":        cfg.AppHostingServiceAccountName,
+		"networkManagementServiceAccountName": cfg.NetworkManagementServiceAccountName,
+	} {
+		if problems := validation.IsDNS1123Label(name); len(problems) > 0 {
+			return fmt.Errorf("%s is invalid: %s", field, strings.Join(problems, "; "))
+		}
+	}
+	if cfg.AppHostingServiceAccountName == cfg.NetworkManagementServiceAccountName {
+		return fmt.Errorf("appHostingServiceAccountName and networkManagementServiceAccountName must be different")
+	}
+	if cfg.ConfigLeaseNamespace != "" {
+		if problems := validation.IsDNS1123Label(cfg.ConfigLeaseNamespace); len(problems) > 0 {
+			return fmt.Errorf("configLeaseNamespace is invalid: %s", strings.Join(problems, "; "))
+		}
 	}
 	if len(cfg.FleetSelector.MatchLabels) == 0 && len(cfg.FleetSelector.MatchExpressions) == 0 {
 		return fmt.Errorf("fleetSelector must be non-empty")
