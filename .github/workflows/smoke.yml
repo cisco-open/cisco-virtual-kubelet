@@ -47,6 +47,8 @@ jobs:
   build-and-smoke:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    env:
+      KIND_NODE_IMAGE: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
     permissions:
       contents: read
     steps:
@@ -279,7 +281,7 @@ jobs:
           # not kind's newer default. Pin by digest so admission/defaulting and
           # scheduler behavior move only through an explicit review.
           version: v0.32.0
-          node_image: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
+          node_image: ${{ env.KIND_NODE_IMAGE }}
           cluster_name: smoke
           wait: 60s
 
@@ -327,6 +329,14 @@ jobs:
         # fixed cluster-scoped worker roles. This disposable-cluster test also
         # exercises the shared-identity-to-per-device Helm upgrade bridge.
         run: charts/cisco-virtual-kubelet/tests/topology-kind-test.sh
+
+      - name: Managed shared-worker admission integration
+        # This safety-focused suite owns and removes a second disposable 1.35
+        # cluster so it can prove the two functional ServiceAccounts and their
+        # Pod-bound admission boundary without inheriting compatibility state.
+        env:
+          CVK_SHARED_WORKER_KIND_IMAGE: ${{ env.KIND_NODE_IMAGE }}
+        run: charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh --cluster-name cvk-shared-worker-ci
 
       - name: Build controller image (linux/amd64)
         id: build-smoke-amd64

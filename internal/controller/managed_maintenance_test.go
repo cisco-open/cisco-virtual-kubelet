@@ -32,6 +32,14 @@ import (
 
 func managerMaintenanceFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.CiscoDevice, *corev1.Node, *ops.IOSXESoftwareUpgrade, *coordv1.Lease) {
 	t.Helper()
+	const (
+		appUsername     = "system:serviceaccount:edge:cisco-vk-app-hosting"
+		networkUsername = "system:serviceaccount:edge:cisco-vk-network-management"
+		appPodName      = "switch-vk-abc123"
+		appPodUID       = "app-pod-uid"
+		networkPodName  = "switch-network-abc123"
+		networkPodUID   = "network-pod-uid"
+	)
 	device := newDevice("switch", "edge")
 	device.UID = "device-uid"
 	device.Spec.NodeName = "separate-node"
@@ -40,8 +48,14 @@ func managerMaintenanceFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.C
 		managedprotocol.AnnotationManaged: "true", managedprotocol.AnnotationDeviceNamespace: device.Namespace,
 		managedprotocol.AnnotationDeviceName: device.Name, managedprotocol.AnnotationDeviceUID: string(device.UID),
 		managedprotocol.AnnotationNodeName: "separate-node", managedprotocol.AnnotationNodeUID: "node-uid",
-		managedprotocol.AnnotationWorkerUsername: "system:serviceaccount:edge:" + managedWorkerServiceAccountName(device),
-		managedprotocol.AnnotationWorkerProtocol: managedprotocol.Version,
+		managedprotocol.AnnotationWorkerUsername:        appUsername,
+		managedprotocol.AnnotationAppWorkerUsername:     appUsername,
+		managedprotocol.AnnotationAppWorkerPodName:      appPodName,
+		managedprotocol.AnnotationAppWorkerPodUID:       appPodUID,
+		managedprotocol.AnnotationNetworkWorkerUsername: networkUsername,
+		managedprotocol.AnnotationNetworkWorkerPodName:  networkPodName,
+		managedprotocol.AnnotationNetworkWorkerPodUID:   networkPodUID,
+		managedprotocol.AnnotationWorkerProtocol:        managedprotocol.Version,
 	}}}
 	node.Status.Conditions = []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}}
 	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
@@ -52,6 +66,7 @@ func managerMaintenanceFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.C
 	for key, value := range node.Annotations {
 		leaf.Annotations[key] = value
 	}
+	leaf.Annotations[managedprotocol.AnnotationWorkerUsername] = networkUsername
 	for key, value := range map[string]string{managedprotocol.AnnotationCampaignUID: "campaign-uid", managedprotocol.AnnotationLedgerUID: "ledger-uid", managedprotocol.AnnotationPlanHash: "sha256:" + strings.Repeat("a", 64), managedprotocol.AnnotationReservationID: "reservation"} {
 		leaf.Annotations[key] = value
 	}
@@ -68,6 +83,7 @@ func managerMaintenanceFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.C
 	for key, value := range node.Annotations {
 		annotations[key] = value
 	}
+	annotations[managedprotocol.AnnotationWorkerUsername] = networkUsername
 	for key, value := range map[string]string{
 		managedprotocol.AnnotationMaintenanceRequestVersion: managedprotocol.Version,
 		managedprotocol.AnnotationMaintenanceSessionToken:   "00000000-0000-0000-0000-000000000001",
@@ -122,7 +138,11 @@ func TestManagedMaintenancePersistsGuardAcknowledgementOnUnchangedTopology(t *te
 	if persisted.Status.MaintenanceSession == nil || !meta.IsStatusConditionTrue(persisted.Status.Conditions, ciskov1.CiscoDeviceConditionMaintenanceReady) {
 		t.Fatal("maintenance session/condition was not persisted")
 	}
-	c := &maintenance.Coordinator{Client: r.Client, Namespace: device.Namespace, DeviceName: device.Name, DeviceUID: string(device.UID), NodeName: node.Name, LeaseNamespace: r.LeaseNamespace, ManagedTopology: true}
+	c := &maintenance.Coordinator{Client: r.Client, Namespace: device.Namespace, DeviceName: device.Name, DeviceUID: string(device.UID), NodeName: node.Name, LeaseNamespace: r.LeaseNamespace, ManagedTopology: true,
+		WorkerMode:             managedprotocol.WorkerModeNetworkManagement,
+		ExpectedWorkerUsername: node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername],
+		WorkerPodName:          node.Annotations[managedprotocol.AnnotationNetworkWorkerPodName],
+		WorkerPodUID:           node.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID]}
 	if err := c.BeforeSoftwareUpgradeMutation(ctx, leaf); err != nil {
 		t.Fatalf("worker could not use manager's persisted guard: %v", err)
 	}

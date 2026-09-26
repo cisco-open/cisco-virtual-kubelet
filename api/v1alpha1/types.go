@@ -82,6 +82,7 @@ const (
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.nodeIdentity) || (has(self.spec.physicalIdentity) && self.status.nodeIdentity.physicalIdentity == self.spec.physicalIdentity.lowerAscii())",message="status.nodeIdentity.physicalIdentity must equal the canonical declared spec.physicalIdentity"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.status) && has(oldSelf.status.legacyHandoff)) || !has(self.status) || !has(self.status.legacyHandoff) || self.status.legacyHandoff.phase == 'Preparing'",message="a legacy handoff must begin in Preparing phase"
 type CiscoDevice struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -323,8 +324,8 @@ type ConfigPrereqs struct {
 // DeviceStatus defines the observed state of a CiscoDevice.
 //
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.legacyHandoff) || has(self.legacyHandoff) || (oldSelf.legacyHandoff.phase == 'Complete' && has(self.nodeIdentity))",message="a legacy handoff may be cleared only by a new managed Node binding"
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.nodeIdentity) || has(self.nodeIdentity) || (has(self.legacyHandoff) && self.legacyHandoff.phase == 'Complete')",message="managed Node identity may be cleared only by a completed legacy handoff"
-// +kubebuilder:validation:XValidation:rule="!has(self.legacyHandoff) || (self.legacyHandoff.phase == 'Complete' ? (!has(self.nodeIdentity) && !has(self.topologyProjection) && !has(self.healthObservation) && !has(self.workerRevision)) : (has(self.nodeIdentity) && has(self.topologyProjection)))",message="an in-flight legacy handoff retains managed binding state and a completed handoff releases it"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.nodeIdentity) || has(self.nodeIdentity) || (has(self.legacyHandoff) && self.legacyHandoff.phase in ['SharedWriterPending', 'Complete'])",message="managed Node identity may be cleared only after isolated legacy writer readiness"
+// +kubebuilder:validation:XValidation:rule="!has(self.legacyHandoff) || (self.legacyHandoff.phase in ['SharedWriterPending', 'Complete'] ? (!has(self.nodeIdentity) && !has(self.topologyProjection) && !has(self.healthObservation) && !has(self.workerRevision) && !has(self.networkWorkerRevision)) : (has(self.nodeIdentity) && has(self.topologyProjection)))",message="legacy handoff retains managed binding state until shared-writer transition and releases it thereafter"
 type DeviceStatus struct {
 	// Phase represents the current lifecycle phase of the device.
 	// +kubebuilder:validation:Enum=Pending;Provisioning;Ready;Error;Deleting
@@ -361,10 +362,17 @@ type DeviceStatus struct {
 	// +kubebuilder:validation:Optional
 	WorkerRevision *DeviceWorkerRevisionStatus `json:"workerRevision,omitempty"`
 
-	// LegacyHandoff records the explicit, UID-bound reverse writer handoff from
-	// managed topology to an isolated per-device legacy worker. A Complete
-	// record is retained after NodeIdentity is cleared so later reconciles never
-	// fall back to the release-wide shared ServiceAccount.
+	// NetworkWorkerRevision binds the desired network-management PodTemplate to
+	// the sole ready Pod of the exact Deployment incarnation. Software lifecycle
+	// admission uses this proof, rather than the app-hosting worker heartbeat,
+	// because only the network-management plane may execute device mutations.
+	// +kubebuilder:validation:Optional
+	NetworkWorkerRevision *DeviceNetworkWorkerRevisionStatus `json:"networkWorkerRevision,omitempty"`
+
+	// LegacyHandoff records the explicit reverse writer handoff from managed
+	// topology through a temporary UID-bound proof worker to the configured
+	// namespace-shared compatibility worker. A Complete record is retained after
+	// NodeIdentity is cleared as release and credential-retirement audit state.
 	// +kubebuilder:validation:Optional
 	LegacyHandoff *DeviceLegacyHandoffStatus `json:"legacyHandoff,omitempty"`
 
@@ -444,18 +452,27 @@ type DeviceNodeIdentityStatus struct {
 
 // DeviceLegacyHandoffPhase is the durable reverse writer-handoff phase.
 //
-// +kubebuilder:validation:Enum=Preparing;LegacyWriterPending;Complete
+// +kubebuilder:validation:Enum=Preparing;LegacyWriterPending;SharedWriterPending;Complete
 type DeviceLegacyHandoffPhase string
 
 const (
 	// DeviceLegacyHandoffPreparing means the managed mutation boundary was
-	// proven idle and the isolated legacy identity is being rolled out.
+	// proven idle and the isolated legacy identity is being rolled out. The
+	// status record is deliberately persisted before its UID marker, so a retry
+	// can finish that metadata write without losing the accepted request.
 	DeviceLegacyHandoffPreparing DeviceLegacyHandoffPhase = "Preparing"
 	// DeviceLegacyHandoffLegacyWriterPending means managed API authority and
-	// Leases were revoked and the guarded Node was released to the legacy writer.
+	// Leases were revoked and release of the guarded Node is durably authorized.
+	// The Node may still carry its managed binding until the next idempotent
+	// reconcile completes the metadata transaction.
 	DeviceLegacyHandoffLegacyWriterPending DeviceLegacyHandoffPhase = "LegacyWriterPending"
-	// DeviceLegacyHandoffComplete means a new legacy worker and post-release
-	// Node Ready heartbeat were observed. The record remains as identity state.
+	// DeviceLegacyHandoffSharedWriterPending means the isolated handoff worker
+	// proved post-release readiness and is being replaced by the namespace-shared
+	// compatibility worker under a Recreate transition.
+	DeviceLegacyHandoffSharedWriterPending DeviceLegacyHandoffPhase = "SharedWriterPending"
+	// DeviceLegacyHandoffComplete means the shared compatibility worker proved a
+	// post-transition Node Ready heartbeat and the isolated identity was retired.
+	// The record remains as durable release/audit state.
 	DeviceLegacyHandoffComplete DeviceLegacyHandoffPhase = "Complete"
 )
 
@@ -465,10 +482,11 @@ const (
 // record only after a fresh forward writer handoff.
 //
 // +kubebuilder:validation:XValidation:rule="self.deviceUID == oldSelf.deviceUID && self.nodeName == oldSelf.nodeName && self.nodeUID == oldSelf.nodeUID && self.projectionHash == oldSelf.projectionHash && self.legacyWorkerUsername == oldSelf.legacyWorkerUsername && self.requestedAt == oldSelf.requestedAt",message="legacy handoff identity is immutable"
-// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Preparing' ? self.phase in ['Preparing', 'LegacyWriterPending'] : (oldSelf.phase == 'LegacyWriterPending' ? self.phase in ['LegacyWriterPending', 'Complete'] : self.phase == 'Complete')",message="legacy handoff phase may only advance"
-// +kubebuilder:validation:XValidation:rule="self.phase == 'Preparing' ? !has(self.nodeReleasedAt) && !has(self.completedAt) : (self.phase == 'LegacyWriterPending' ? has(self.nodeReleasedAt) && !has(self.completedAt) : has(self.nodeReleasedAt) && has(self.completedAt))",message="legacy handoff timestamps must match phase"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Preparing' ? self.phase in ['Preparing', 'LegacyWriterPending'] : (oldSelf.phase == 'LegacyWriterPending' ? self.phase in ['LegacyWriterPending', 'SharedWriterPending'] : (oldSelf.phase == 'SharedWriterPending' ? self.phase in ['SharedWriterPending', 'Complete'] : self.phase == 'Complete'))",message="legacy handoff phase may only advance"
+// +kubebuilder:validation:XValidation:rule="self.phase == 'Preparing' ? !has(self.nodeReleasedAt) && !has(self.isolatedReadyAt) && !has(self.completedAt) : (self.phase == 'LegacyWriterPending' ? has(self.nodeReleasedAt) && !has(self.isolatedReadyAt) && !has(self.completedAt) : (self.phase == 'SharedWriterPending' ? has(self.nodeReleasedAt) && has(self.isolatedReadyAt) && !has(self.completedAt) : has(self.nodeReleasedAt) && has(self.isolatedReadyAt) && has(self.completedAt)))",message="legacy handoff timestamps must match phase"
 // +kubebuilder:validation:XValidation:rule="!has(self.nodeReleasedAt) || self.nodeReleasedAt >= self.requestedAt",message="legacy handoff release cannot precede its request"
-// +kubebuilder:validation:XValidation:rule="!has(self.completedAt) || (has(self.nodeReleasedAt) && self.completedAt >= self.nodeReleasedAt)",message="legacy handoff completion cannot precede release"
+// +kubebuilder:validation:XValidation:rule="!has(self.isolatedReadyAt) || (has(self.nodeReleasedAt) && self.isolatedReadyAt >= self.nodeReleasedAt)",message="isolated legacy readiness cannot precede release"
+// +kubebuilder:validation:XValidation:rule="!has(self.completedAt) || (has(self.isolatedReadyAt) && self.completedAt >= self.isolatedReadyAt)",message="legacy handoff completion cannot precede isolated readiness"
 type DeviceLegacyHandoffStatus struct {
 	// Phase is the current durable reverse handoff phase.
 	// +kubebuilder:validation:Required
@@ -507,12 +525,22 @@ type DeviceLegacyHandoffStatus struct {
 	// +kubebuilder:validation:Required
 	RequestedAt metav1.Time `json:"requestedAt"`
 
-	// NodeReleasedAt is set immediately before the manager removes managed Node
-	// ownership. The legacy readiness heartbeat must not predate it.
+	// NodeReleasedAt is the durable release epoch recorded after managed API
+	// authority is revoked and before the manager removes managed Node ownership.
+	// A crash may therefore leave the Node managed while this timestamp is
+	// present; the next reconcile completes the idempotent release. The legacy
+	// readiness heartbeat must not predate it.
 	// +kubebuilder:validation:Optional
 	NodeReleasedAt *metav1.Time `json:"nodeReleasedAt,omitempty"`
 
-	// CompletedAt is set only after the legacy writer readiness proof passes.
+	// IsolatedReadyAt is set after the UID-scoped handoff worker proves a
+	// post-release Node Ready heartbeat. The shared compatibility replacement
+	// must prove a newer heartbeat before the isolated identity is retired.
+	// +kubebuilder:validation:Optional
+	IsolatedReadyAt *metav1.Time `json:"isolatedReadyAt,omitempty"`
+
+	// CompletedAt is set only after the namespace-shared compatibility worker
+	// proves post-transition readiness and the isolated identity is retired.
 	// +kubebuilder:validation:Optional
 	CompletedAt *metav1.Time `json:"completedAt,omitempty"`
 }
@@ -622,6 +650,49 @@ type DeviceWorkerRevisionStatus struct {
 	ReadyHeartbeatTime *metav1.Time `json:"readyHeartbeatTime,omitempty"`
 
 	// ObservedAt is manager time for this desired/observed snapshot.
+	// +kubebuilder:validation:Required
+	ObservedAt metav1.Time `json:"observedAt"`
+}
+
+// DeviceNetworkWorkerRevisionStatus is manager-authenticated evidence that the
+// exact network-management worker Pod for a device is ready. Unlike the
+// app-hosting worker it does not own Node status, so readiness is bound to the
+// Deployment rollout and Pod Ready transition instead of a Node heartbeat.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.deploymentUID) == has(self.deploymentGeneration)",message="deployment UID and generation must be present together"
+// +kubebuilder:validation:XValidation:rule="has(self.podUID) == has(self.podStartTime)",message="Pod UID and start time must be present together"
+// +kubebuilder:validation:XValidation:rule="has(self.podReadyTime) ? (has(self.podUID) && self.observedRevision == self.desiredRevision) : true",message="Pod readiness requires matching desired/observed revisions and Pod identity"
+type DeviceNetworkWorkerRevisionStatus struct {
+	// DesiredRevision is the content address of the desired PodTemplate.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	DesiredRevision string `json:"desiredRevision"`
+
+	// ObservedRevision is copied from the sole ready Pod's immutable template.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	ObservedRevision string `json:"observedRevision,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	DeploymentUID string `json:"deploymentUID,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	DeploymentGeneration int64 `json:"deploymentGeneration,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	PodUID string `json:"podUID,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	PodStartTime *metav1.Time `json:"podStartTime,omitempty"`
+
+	// PodReadyTime is the Ready=True transition of the sole non-terminating Pod.
+	// +kubebuilder:validation:Optional
+	PodReadyTime *metav1.Time `json:"podReadyTime,omitempty"`
+
 	// +kubebuilder:validation:Required
 	ObservedAt metav1.Time `json:"observedAt"`
 }

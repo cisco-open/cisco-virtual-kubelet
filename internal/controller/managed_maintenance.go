@@ -71,11 +71,12 @@ func (r *CiscoDeviceReconciler) ensureManagedMutationLease(
 		Namespace: namespace,
 		Name:      engine.LeaseName(deviceKey, devicecoordination.MutationLeaseFamily),
 	}
-	worker := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	worker := managedNetworkWorkerUsername(node)
 	if device.UID == "" || node.UID == "" || worker == "" {
 		return fmt.Errorf("managed Node identity/worker binding is incomplete before mutation Lease creation")
 	}
 	desiredAnnotations, desiredLabels := managedMutationLeaseMetadata(device, node.Name, string(node.UID), worker)
+	copyManagedWorkerBindingAnnotations(desiredAnnotations, node.Annotations)
 	lease := &coordv1.Lease{ObjectMeta: metav1.ObjectMeta{
 		Namespace: key.Namespace, Name: key.Name,
 		Labels:      desiredLabels,
@@ -93,7 +94,7 @@ func (r *CiscoDeviceReconciler) ensureManagedMutationLease(
 		return fmt.Errorf("read managed mutation Lease %s: %w", key, err)
 	}
 	if lease.Annotations[managedprotocol.AnnotationManaged] == "true" {
-		if err := validateManagedMutationLeaseMetadata(lease, desiredAnnotations, desiredLabels); err != nil {
+		if err := r.repairManagedLeaseBindings(ctx, lease, desiredAnnotations, desiredLabels, nil); err != nil {
 			return fmt.Errorf("managed mutation Lease %s is unsafe to use: %w", key, err)
 		}
 		return nil
@@ -213,7 +214,7 @@ func (r *CiscoDeviceReconciler) resolveManagedMaintenance(
 		return r.retainOrSettleMaintenance(ctx, device, node, nil)
 	}
 	expectedAnnotations, expectedLabels := managedMutationLeaseMetadata(
-		device, node.Name, string(node.UID), node.Annotations[managedprotocol.AnnotationWorkerUsername],
+		device, node.Name, string(node.UID), managedNetworkWorkerUsername(node),
 	)
 	if err := validateManagedMutationLeaseMetadata(&lease, expectedAnnotations, expectedLabels); err != nil {
 		return blockedMaintenanceDecision(device, fmt.Errorf("mutation Lease binding is invalid: %w", err))
@@ -340,10 +341,20 @@ func (r *CiscoDeviceReconciler) validateMaintenanceRequest(
 		managedprotocol.AnnotationDeviceUID:                 string(device.UID),
 		managedprotocol.AnnotationNodeName:                  node.Name,
 		managedprotocol.AnnotationNodeUID:                   string(node.UID),
-		managedprotocol.AnnotationWorkerUsername:            node.Annotations[managedprotocol.AnnotationWorkerUsername],
+		managedprotocol.AnnotationWorkerUsername:            managedNetworkWorkerUsername(node),
 		managedprotocol.AnnotationWorkerProtocol:            managedprotocol.Version,
 		managedprotocol.AnnotationLeasePurpose:              managedprotocol.LeasePurposeDeviceMutation,
 		devicecoordination.RetainLeaseAnnotation:            "true",
+	}
+	for _, key := range []string{
+		managedprotocol.AnnotationAppWorkerUsername,
+		managedprotocol.AnnotationAppWorkerPodName,
+		managedprotocol.AnnotationAppWorkerPodUID,
+		managedprotocol.AnnotationNetworkWorkerUsername,
+		managedprotocol.AnnotationNetworkWorkerPodName,
+		managedprotocol.AnnotationNetworkWorkerPodUID,
+	} {
+		required[key] = node.Annotations[key]
 	}
 	for key, want := range required {
 		if strings.TrimSpace(want) == "" || annotations[key] != want {
@@ -463,8 +474,15 @@ func validateMaintenanceLeafBinding(
 		managedprotocol.AnnotationDeviceUID:       string(device.UID),
 		managedprotocol.AnnotationNodeName:        node.Name,
 		managedprotocol.AnnotationNodeUID:         string(node.UID),
-		managedprotocol.AnnotationWorkerUsername:  node.Annotations[managedprotocol.AnnotationWorkerUsername],
+		managedprotocol.AnnotationWorkerUsername:  managedNetworkWorkerUsername(node),
 		managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
+	}
+	for _, key := range []string{
+		managedprotocol.AnnotationNetworkWorkerUsername,
+		managedprotocol.AnnotationNetworkWorkerPodName,
+		managedprotocol.AnnotationNetworkWorkerPodUID,
+	} {
+		expected[key] = node.Annotations[key]
 	}
 	for key, want := range expected {
 		if leaf.Annotations[key] != want {

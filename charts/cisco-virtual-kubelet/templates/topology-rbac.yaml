@@ -16,43 +16,58 @@ limitations under the License.
 {{- if .Values.topology.enabled }}
 {{- include "cisco-virtual-kubelet.validateManagedTopology" . }}
 ---
-# Every managed CiscoDevice receives a unique ServiceAccount and a dynamic
-# ClusterRoleBinding to this fixed role. Node metadata/spec creation, mutation,
-# and deletion deliberately remain absent. A fail-closed admission policy below
-# additionally confines status writes to the exact Node identity annotation.
+# App-hosting observation profile. This is intentionally insufficient for a
+# schedulable virtual Node: it cannot publish Node/Pod status, clean up a
+# terminating workload, emit Events, or update a heartbeat Lease.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: cisco-virtual-kubelet-managed-worker
+  name: cisco-virtual-kubelet-app-hosting-read-only
   annotations:
     helm.sh/resource-policy: keep
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
-    app.kubernetes.io/component: managed-worker
+    app.kubernetes.io/component: managed-app-hosting
+    rbac.cisco.vk/access-mode: read-only
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
-    verbs: ["get"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+# Functional app-hosting profile. It is a strict superset of read-only and
+# still has no Node metadata/spec mutation, generic Pod mutation, Pod exec/log,
+# RBAC, token, or Secret write authority. Native admission confines status and
+# exact terminating-Pod cleanup to Pods assigned to the managed virtual Node.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-app-hosting-read-write
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-app-hosting
+    rbac.cisco.vk/access-mode: read-write
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["nodes/status"]
     verbs: ["get", "update", "patch"]
   - apiGroups: [""]
     resources: ["pods"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "delete"]
   - apiGroups: [""]
     resources: ["pods/status"]
     verbs: ["get", "update", "patch"]
-  # Pods may be scheduled from any namespace, so their volume inputs and
-  # Service discovery remain cluster-readable. ConfigMap writes are confined
-  # to the device namespace by the existing namespaced -device RoleBinding.
+  # Workloads may be scheduled from any namespace, so their volume inputs and
+  # Service discovery must remain cluster-readable.
   - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["services"]
+    resources: ["configmaps", "secrets", "services"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
     resources: ["events"]
@@ -60,16 +75,245 @@ rules:
   - apiGroups: ["coordination.k8s.io"]
     resources: ["leases"]
     verbs: ["get", "list", "watch", "update", "patch"]
+  # Bound projected-token claims are verified in-process before the worker
+  # accepts its shared functional identity.
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["selfsubjectreviews"]
+    verbs: ["create"]
+---
+# Namespaced reads used by the app write fence. This implementation-only role
+# is bound to the app account only when app hosting is read-write; keeping it
+# out of the cluster-bound profile avoids exposing every tenant's operation
+# objects to every app worker.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-app-hosting-device-read
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-app-hosting-support
+rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
+    verbs: ["get"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    verbs: ["list"]
+---
+# Shared cluster observations required by either network-management profile.
+# This support role is never selectable by itself and contains no object
+# mutation verb; SelfSubjectReview create only returns the caller's identity.
+# The manager ClusterRoleBinds it to the network-management ServiceAccount,
+# while binding the selected profile below only inside the device namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-network-management-global-read
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-network-management
+rules:
+  # Maintenance fencing needs to observe workloads on the managed Node.
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["pods"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigdefaults"]
     verbs: ["get", "list", "watch"]
-  # Upgrade-leaf permissions deliberately remain out of this cluster-wide
-  # role. The existing per-device namespaced RoleBinding grants them only when
-  # gnoi.enableSoftwareUpgrade is explicitly enabled; native admission then
-  # limits writes to that worker's manager-created leaf.
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["selfsubjectreviews"]
+    verbs: ["create"]
+---
+# Alternate CONFIG_LEASE_NAMESPACE support. These implementation-only roles
+# keep config, operation, and Secret authority out of a shared lease namespace;
+# the manager selects exactly one from the network account's access mode.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-network-management-lease-read-only
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-network-management-support
+    rbac.cisco.vk/access-mode: read-only
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-network-management-lease-read-write
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-network-management-support
+    rbac.cisco.vk/access-mode: read-write
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+---
+# Network-management read-only profile. This ClusterRole is used only through
+# namespaced RoleBindings. It may report diagnostic, telemetry, and read-only
+# operation results, but it cannot apply configuration or invoke a device
+# mutation. The runtime access gate enforces the same device-side boundary.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-network-management-read-only
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-network-management
+    rbac.cisco.vk/access-mode: read-only
+rules:
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources:
+      - iosxedevicegroupconfigs
+      - iosxeinterfacegroupconfigs
+      - iosxetemplates
+      - iosxeconfigs
+      - nxosconfigs
+      - iosxeconfigapplylogs
+      - iosxeconfigrevisions
+    verbs: ["get", "list", "watch"]
+  # Telemetry maintains a finalizer as well as status; diagnostics writes only
+  # status and owned result artifacts. Read-only mode never starts a controller
+  # that applies device configuration.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxetelemetries"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxediagnostics"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources:
+      - iosxetelemetries/status
+      - iosxediagnostics/status
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations/status"]
+    verbs: ["get", "update", "patch"]
+  # Diagnostic ConfigMap result sinks are Kubernetes-side output only.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # A read-only observer may inspect an existing maintenance fence but cannot
+  # acquire, renew, release, create, or delete it.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch"]
+---
+# Network-management read-write profile. This is a strict superset of the
+# read-only profile. It is still namespaced and has no RBAC, token, Node, or
+# Pod mutation authority. The manager pre-creates Leases; workers may update
+# them but cannot create or delete them.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-network-management-read-write
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: managed-network-management
+    rbac.cisco.vk/access-mode: read-write
+rules:
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources:
+      - iosxedevicegroupconfigs
+      - iosxeinterfacegroupconfigs
+      - iosxetemplates
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigs", "nxosconfigs", "iosxetelemetries", "iosxediagnostics"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources:
+      - iosxeconfigs/status
+      - nxosconfigs/status
+      - iosxetelemetries/status
+      - iosxediagnostics/status
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigapplylogs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigapplylogs/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigrevisions"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxeconfigrevisions/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations/status"]
+    verbs: ["get", "update", "patch"]
+  # Both kinds remain observable so an unsettled operation always fences new
+  # work after its individual mutation gate is disabled.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    verbs: ["get", "list", "watch"]
+  # These bounded writes are stable profile capabilities. The corresponding
+  # controller is registered only when its explicit runtime gate is enabled;
+  # managed admission independently checks operation ownership and protocol.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades"]
+    verbs: ["update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxeoperationalactions"]
+    verbs: ["update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxeoperationalactions/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Config payload and image-source authentication references are confined to
+  # the device namespace by this profile's RoleBinding.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "update", "patch"]
 {{- end }}
 {{- $managerRoleName := printf "%s-managed-topology-manager" (include "cisco-virtual-kubelet.fullname" .) }}
 {{- $existingManagerRole := lookup "rbac.authorization.k8s.io/v1" "ClusterRole" "" $managerRoleName }}
@@ -95,7 +339,9 @@ rules:
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["pods"]
-    verbs: ["get", "list", "watch"]
+    # Patch writes only the protected worker-Pod binding annotations consumed
+    # by admission; the manager has no Pod create/update/delete authority.
+    verbs: ["get", "list", "watch", "patch"]
   # ReplicaSet authority exists only for the topology migration bridge. The
   # manager inventories legacy consumers and deletes an exact, owner-verified,
   # zero-replica ReplicaSet before retiring the former shared worker identity.
@@ -107,6 +353,15 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades"]
     verbs: ["get", "list", "watch"]
+  # Stamp the protected device/Pod envelope on every mutable network API. The
+  # base controller role already covers config, telemetry, apply-log, and
+  # revision objects used outside managed topology.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["iosxediagnostics"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations", "iosxeoperationalactions"]
+    verbs: ["get", "list", "watch", "update", "patch"]
   {{- if and .Values.topology.enabled (not .Values.gnoi.disabled) .Values.gnoi.enableSoftwareUpgrade }}
   # Campaign reconciliation and new leaf/status mutation exist only behind the
   # same explicit gate that registers the rollout controller.
@@ -118,7 +373,8 @@ rules:
     verbs: ["get", "update", "patch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades"]
-    verbs: ["create"]
+    # Reconcile exact worker Pod bindings on retained leaves.
+    verbs: ["create", "update", "patch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades/status"]
     verbs: ["get", "update", "patch"]
@@ -135,7 +391,18 @@ rules:
     verbs: ["get"]
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["clusterroles"]
-    resourceNames: ["cisco-virtual-kubelet-managed-worker"]
+    # The manager may bind only the four selectable functional profiles and
+    # implementation-only support roles. It never receives wildcard bind
+    # authority and managed workers receive no RBAC mutation permission.
+    resourceNames:
+      - cisco-virtual-kubelet-app-hosting-read-only
+      - cisco-virtual-kubelet-app-hosting-read-write
+      - cisco-virtual-kubelet-app-hosting-device-read
+      - cisco-virtual-kubelet-network-management-global-read
+      - cisco-virtual-kubelet-network-management-lease-read-only
+      - cisco-virtual-kubelet-network-management-lease-read-write
+      - cisco-virtual-kubelet-network-management-read-only
+      - cisco-virtual-kubelet-network-management-read-write
     verbs: ["bind"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1

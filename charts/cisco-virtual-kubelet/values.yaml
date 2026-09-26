@@ -71,9 +71,9 @@ aggregator:
 
 # topology enables the manager-owned CiscoDevice-to-Node identity, topology
 # projection, and IOS-XE rollout-admission contract. It is deliberately off by
-# default: enabling it changes Node writer ownership, creates one ServiceAccount
-# per device (including an isolated legacy identity for unselected devices),
-# and installs fail-closed native admission policies.
+# default: enabling it changes Node writer ownership, splits each device worker
+# into app-hosting and network-management planes, and installs fail-closed
+# native admission policies.
 #
 # The initial qualified control-plane floor is Kubernetes 1.35. Helm refuses to
 # render this mode on an older cluster. The manager performs additional API
@@ -82,12 +82,43 @@ aggregator:
 # Enabling an existing release requires a live Helm upgrade so lookup can
 # preserve the exact shared worker bindings during their one-time retirement;
 # offline GitOps pruning is not a supported migration path.
-# Managed mode also requires the default serviceAccount.vkName because the
-# controller combines the fixed cisco-virtual-kubelet-managed-worker role with
-# a namespaced binding to cisco-virtual-kubelet-device, and rbac.profile=strict
-# so disabled write-class controllers grant no latent RBAC.
+# Managed-device namespaces must be dedicated and administrator-controlled:
+# tenant edit/admin, ServiceAccount impersonation, shared-account use, worker
+# pod exec/attach/portforward/proxy/logs, scale, and delete authority are not
+# compatible with this trust boundary. Kubelets must authenticate as
+# system:node:<nodeName> with Node and RBAC authorization plus NodeRestriction.
+# Managed mode retains the default serviceAccount.vkName only as the known
+# topology-disabled migration identity. Steady state uses the two functional
+# accounts below. rbac.profile=strict ensures the legacy bridge and disabled
+# write-class controllers grant no latent authority.
 topology:
   enabled: false
+
+  # workerAccounts replaces per-device ServiceAccounts with exactly two named,
+  # reusable functional identity slots in every managed CiscoDevice namespace.
+  # They are per namespace, not global, because ServiceAccounts are namespaced.
+  # Each selects one fixed read-only/read-write profile; `disabled` removes the
+  # corresponding account, bindings, and worker plane.
+  #
+  # appHosting.readOnly is observation-only: it cannot publish Node/Pod status
+  # or run scheduled applications. readWrite is required for functional app
+  # hosting. networkManagement.readOnly starts only telemetry, diagnostics, and
+  # other non-mutating device observers. Configuration application and every
+  # gNOI mutation require networkManagement.readWrite. Runtime gates enforce
+  # the same boundary as RBAC; selecting readOnly does not merely hide status
+  # writes after a device mutation.
+  workerAccounts:
+    appHosting:
+      # Empty derives <release-fullname>-app-hosting. An explicit override is
+      # cluster-reserved by admission and must be unique across CVK releases.
+      serviceAccountName: ""
+      accessMode: readWrite
+    networkManagement:
+      # Empty derives <release-fullname>-network-management with safe DNS-label
+      # truncation. Explicit overrides share the same cluster-unique rule.
+      serviceAccountName: ""
+      accessMode: readOnly
+
   policy:
     # Empty namespace/name values use the release namespace and
     # <fullname>-topology-policy. The policy and ledger must remain in the same
@@ -255,6 +286,9 @@ config:
   # RBAC (see vk-rbac.yaml), so no additional bindings are required.
   #
   # Leave empty to store each worker's leases in its pod/device namespace.
+  # With managed topology this resolved choice is immutable after bootstrap.
+  # Retire managed topology and re-enroll before moving Lease authority; an
+  # in-place change is rejected so no writable binding remains behind.
   leaseNamespace: ""
 
 # podSecurityContext is applied at the controller pod level. Defaults meet

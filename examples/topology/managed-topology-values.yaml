@@ -13,6 +13,18 @@ rbac:
 
 topology:
   enabled: true
+  # These are the only managed worker identities created in a namespace,
+  # regardless of device count. App-hosting readWrite is required to expose a
+  # schedulable virtual Node. Network readOnly runs telemetry, diagnostics, and
+  # read-only operations without permitting config or gNOI device mutation.
+  workerAccounts:
+    appHosting:
+      # Empty derives a release-qualified, cluster-unique default.
+      serviceAccountName: ""
+      accessMode: readWrite
+    networkManagement:
+      serviceAccountName: ""
+      accessMode: readOnly
   policy:
     # Empty values select the Helm release namespace and generated names.
     namespace: ""
@@ -47,6 +59,8 @@ topology:
 
 # Projection is useful without software mutation. Leave this false until the
 # managed rollout path, secure gNOI, and device certificates are qualified.
+# Before setting it true, also set
+# topology.workerAccounts.networkManagement.accessMode=readWrite.
 gnoi:
   disabled: false
   enableSoftwareUpgrade: false

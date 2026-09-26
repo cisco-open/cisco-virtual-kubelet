@@ -23,7 +23,9 @@ import (
 	"testing"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -76,6 +78,54 @@ func TestManagedTopologyDisabledAllowsNeverManagedDevice(t *testing.T) {
 	result, err := (&CiscoDeviceReconciler{}).reconcileManagedTopology(context.Background(), &ciskov1.CiscoDevice{})
 	if err != nil || result.Managed {
 		t.Fatalf("reconcileManagedTopology() = (%+v, %v), want unmanaged success", result, err)
+	}
+}
+
+func TestManagedTopologySelectorMissFailsClosedWithoutPerDeviceAccess(t *testing.T) {
+	ctx := context.Background()
+	device := newDevice("selector-miss", "edge")
+	device.UID = "selector-miss-uid"
+	policy, ledger := managedPolicyAndLedger(t, nil)
+	scheme := newTestScheme(t)
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&ciskov1.CiscoDevice{}).
+		WithObjects(device, policy, ledger).Build()
+	r := &CiscoDeviceReconciler{
+		Client: apiClient, APIReader: apiClient, Scheme: scheme, ManagedTopology: true,
+		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(device), device); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := r.reconcileManagedTopology(ctx, device)
+	if err == nil || !strings.Contains(err.Error(), "ManagedFleetSelectorExcluded") {
+		t.Fatalf("selector-miss result/error = %+v, %v", result, err)
+	}
+	if result.Managed || result.LegacyWorker {
+		t.Fatalf("selector miss activated a worker: %+v", result)
+	}
+
+	var serviceAccounts corev1.ServiceAccountList
+	var roleBindings rbacv1.RoleBindingList
+	var clusterRoleBindings rbacv1.ClusterRoleBindingList
+	var deployments appsv1.DeploymentList
+	if err := apiClient.List(ctx, &serviceAccounts, client.InNamespace(device.Namespace)); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.List(ctx, &roleBindings, client.InNamespace(device.Namespace)); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.List(ctx, &clusterRoleBindings); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.List(ctx, &deployments, client.InNamespace(device.Namespace)); err != nil {
+		t.Fatal(err)
+	}
+	if len(serviceAccounts.Items) != 0 || len(roleBindings.Items) != 0 ||
+		len(clusterRoleBindings.Items) != 0 || len(deployments.Items) != 0 {
+		t.Fatalf("selector miss provisioned credentials/workload: serviceAccounts=%d roleBindings=%d clusterRoleBindings=%d deployments=%d",
+			len(serviceAccounts.Items), len(roleBindings.Items), len(clusterRoleBindings.Items), len(deployments.Items))
 	}
 }
 
@@ -197,6 +247,12 @@ func TestManagedTopologyFirstBindingRejectsPrebindingHealthForgery(t *testing.T)
 		Spec: ciskov1.DeviceSpec{PhysicalIdentity: "SERIAL-SWITCH-01"},
 		Status: ciskov1.DeviceStatus{
 			Phase: "Ready",
+			WorkerRevision: &ciskov1.DeviceWorkerRevisionStatus{
+				DesiredRevision: "sha256:" + strings.Repeat("b", 64),
+			},
+			NetworkWorkerRevision: &ciskov1.DeviceNetworkWorkerRevisionStatus{
+				DesiredRevision: "sha256:" + strings.Repeat("c", 64),
+			},
 			Conditions: []metav1.Condition{{
 				Type: ciskov1.CiscoDeviceConditionGNOIConfigurationReady, Status: metav1.ConditionTrue,
 				ObservedGeneration: 7, Reason: "ForgedBeforeBinding", LastTransitionTime: metav1.NewTime(now),
@@ -247,6 +303,10 @@ func TestManagedTopologyFirstBindingRejectsPrebindingHealthForgery(t *testing.T)
 	}
 	if current.Status.HealthObservation != nil {
 		t.Fatalf("first binding retained or manufactured health trust: %#v", current.Status.HealthObservation)
+	}
+	if current.Status.WorkerRevision != nil || current.Status.NetworkWorkerRevision != nil {
+		t.Fatalf("first binding retained pre-binding worker trust: app=%#v network=%#v",
+			current.Status.WorkerRevision, current.Status.NetworkWorkerRevision)
 	}
 	if _, err := managedDeviceHealthObservedAt(&current, node, now,
 		ciskov1.CiscoDeviceConditionNodeIdentityReady,
@@ -697,8 +757,10 @@ func TestManagedReclassificationLockRetainsOldProjectionAndGuard(t *testing.T) {
 
 func TestManagedProjectionLabelsPreservesOnlyCompatibleLegacyLabels(t *testing.T) {
 	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{
-		RequiredTopologyKeys:  []string{corev1.LabelTopologyRegion, corev1.LabelTopologyZone},
-		ProjectedTopologyKeys: []string{corev1.LabelTopologyRegion, corev1.LabelTopologyZone},
+		AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
+		NetworkManagementServiceAccountName: managedprotocol.NetworkManagementServiceAccount,
+		RequiredTopologyKeys:                []string{corev1.LabelTopologyRegion, corev1.LabelTopologyZone},
+		ProjectedTopologyKeys:               []string{corev1.LabelTopologyRegion, corev1.LabelTopologyZone},
 	}}
 	device := &ciskov1.CiscoDevice{
 		ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{

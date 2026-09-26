@@ -41,6 +41,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 )
 
@@ -73,21 +74,38 @@ func newDevice(name, namespace string) *ciskov1.CiscoDevice {
 	}
 }
 
+const testWorkerServiceAccountPolicyEpoch = "sha256:test-worker-serviceaccount-policy-epoch"
+
 // reconcilerFor builds a CiscoDeviceReconciler backed by a fake client that
 // already contains the provided objects.
 func reconcilerFor(t *testing.T, objs ...runtime.Object) *CiscoDeviceReconciler {
 	t.Helper()
 	s := newTestScheme(t)
+	for name, rules := range managedprotocol.WorkerClusterRoleContracts() {
+		objs = append(objs, &rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Rules:      rules,
+		})
+	}
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(s).
 		WithStatusSubresource(&ciskov1.CiscoDevice{}).
+		WithIndex(&ciskov1.CiscoDevice{}, ciscoDevicePhysicalIdentityIndex, physicalIdentityIndexValues).
+		WithIndex(&corev1.Pod{}, podNodeNameIndex, func(object client.Object) []string {
+			pod := object.(*corev1.Pod)
+			if pod.Spec.NodeName == "" {
+				return nil
+			}
+			return []string{pod.Spec.NodeName}
+		}).
 		WithRuntimeObjects(objs...).
 		Build()
 	return &CiscoDeviceReconciler{
-		Client:         fakeClient,
-		Scheme:         s,
-		Image:          "cisco-vk:test",
-		ServiceAccount: "test-sa",
+		Client:                          fakeClient,
+		Scheme:                          s,
+		Image:                           "cisco-vk:test",
+		ServiceAccount:                  "test-sa",
+		WorkerServiceAccountPolicyEpoch: testWorkerServiceAccountPolicyEpoch,
 	}
 }
 
@@ -1951,6 +1969,7 @@ func TestNXOSPrereqsTeardownExternalDeleteSkipsWhenOwnershipStateGone(t *testing
 func TestPrereqsTeardownLeaseBlockedHonoursForceAnnotation(t *testing.T) {
 	now := metav1.NewTime(time.Now())
 	device := newDevice("router-force", "default")
+	device.UID = "router-force-uid"
 	device.Finalizers = []string{ciscoDeviceFinalizer}
 	device.DeletionTimestamp = &now
 	device.Status.Conditions = []metav1.Condition{{

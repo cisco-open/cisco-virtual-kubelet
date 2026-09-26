@@ -35,6 +35,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	telemetrystate "github.com/cisco/virtual-kubelet-cisco/internal/telemetry/state"
@@ -48,6 +49,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/node/api"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	"go.opentelemetry.io/otel"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -76,6 +78,8 @@ var (
 
 	enableWriteClassGNOI       bool
 	enableIOSXESoftwareUpgrade bool
+	workerModeFlag             string
+	workerAccessFlag           string
 )
 
 const (
@@ -102,6 +106,10 @@ type workerRuntimeIdentity struct {
 	NodeName        string
 	ManagedTopology bool
 	WorkerRevision  string
+	WorkerMode      workerMode
+	WorkerUsername  string
+	WorkerPodName   string
+	WorkerPodUID    string
 }
 
 var runCmd = &cobra.Command{
@@ -129,6 +137,10 @@ func init() {
 		"enable write-class gNOI reconcilers such as IOSXEOperationalAction (default: false)")
 	runCmd.Flags().BoolVar(&enableIOSXESoftwareUpgrade, "enable-iosxesoftwareupgrade", false,
 		"enable IOSXESoftwareUpgrade gNOI OS upgrade reconciler (default: false)")
+	runCmd.Flags().StringVar(&workerModeFlag, "worker-mode", "",
+		"runtime plane: combined, app-hosting, or network-management (default: $CISCO_VK_WORKER_MODE or combined)")
+	runCmd.Flags().StringVar(&workerAccessFlag, "worker-access", "",
+		"runtime access: readOnly or readWrite (default: $CISCO_VK_WORKER_ACCESS or readWrite)")
 }
 
 // validateConfig checks if the config file exists at the given path
@@ -371,9 +383,20 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("resolve worker runtime identity: %w", err)
 	}
+	runtimeProfile, err := resolveWorkerRuntimeProfile(workerModeFlag, workerAccessFlag, identity.ManagedTopology)
+	if err != nil {
+		return fmt.Errorf("resolve worker runtime profile: %w", err)
+	}
+	identity.WorkerMode = runtimeProfile.Mode
+	identity.WorkerUsername = os.Getenv(managedprotocol.EnvExpectedWorkerUsername)
+	identity.WorkerPodName = os.Getenv("POD_NAME")
+	identity.WorkerPodUID = os.Getenv("POD_UID")
 	projectionMode := topology.ProjectionModeStandaloneCompatibility
-	initialNodeSpec := provider.GetInitialNodeSpec(identity.NodeName, &appCfg.Device)
-	if identity.ManagedTopology {
+	var initialNodeSpec v1.Node
+	if runtimeProfile.runsAppHosting() {
+		initialNodeSpec = provider.GetInitialNodeSpec(identity.NodeName, &appCfg.Device)
+	}
+	if identity.ManagedTopology && runtimeProfile.runsAppHosting() {
 		projectionMode = topology.ProjectionModeManaged
 		initialNodeSpec, err = provider.GetInitialNodeSpecWithTopologyMode(identity.NodeName, &appCfg.Device, projectionMode)
 		if err != nil {
@@ -439,16 +462,34 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to load kubeconfig: %w", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(kubeconfigCfg)
-	if err != nil {
-		return fmt.Errorf("failed to create Kubernetes client: %w", err)
+	var clientset kubernetes.Interface
+	if runtimeProfile.runsAppHosting() || identity.ManagedTopology {
+		clientset, err = kubernetes.NewForConfig(kubeconfigCfg)
+		if err != nil {
+			return fmt.Errorf("failed to create Kubernetes client: %w", err)
+		}
 	}
 	if identity.ManagedTopology {
 		preflightCtx, preflightCancel := context.WithTimeout(ctx, 30*time.Second)
 		defer preflightCancel()
-		if err := verifyManagedWorkerAdmission(preflightCtx, clientset, identity.NodeName); err != nil {
-			return fmt.Errorf("managed worker native admission preflight: %w", err)
+		if err := verifyManagedWorkerPodIdentity(
+			preflightCtx,
+			clientset,
+			identity.WorkerUsername,
+			identity.WorkerPodName,
+			identity.WorkerPodUID,
+		); err != nil {
+			return fmt.Errorf("managed worker bound-token preflight: %w", err)
 		}
+		if runtimeProfile.runsAppHosting() {
+			if err := verifyManagedWorkerAdmission(preflightCtx, clientset, identity.NodeName); err != nil {
+				return fmt.Errorf("managed worker native admission preflight: %w", err)
+			}
+		}
+	}
+
+	if runtimeProfile.Mode == workerModeNetworkManagement {
+		return runNetworkManagementRuntime(ctx, kubeconfigCfg, identity, &appCfg.Device, runtimeProfile)
 	}
 
 	certFile := tlsCertFile
@@ -520,21 +561,25 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		}()
 	}
 
-	telemetryProviders, telemetryShutdown, err := buildTelemetryProviders(ctx, identity.DeviceName, configReconcilerOptions{
-		Spec: &appCfg.Device,
-	})
-	if err != nil {
-		log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
-	}
-	if telemetryShutdown != nil {
-		go func() {
-			<-ctx.Done()
-			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := telemetryShutdown(shutdownCtx); err != nil {
-				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
-			}
-		}()
+	var telemetryProviders *otelproviders.Providers
+	if runtimeProfile.runsNetworkManagement() {
+		var telemetryShutdown func(context.Context) error
+		telemetryProviders, telemetryShutdown, err = buildTelemetryProviders(ctx, identity.DeviceName, configReconcilerOptions{
+			Spec: &appCfg.Device,
+		})
+		if err != nil {
+			log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
+		}
+		if telemetryShutdown != nil {
+			go func() {
+				<-ctx.Done()
+				shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if err := telemetryShutdown(shutdownCtx); err != nil {
+					log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+				}
+			}()
+		}
 	}
 
 	maintenanceCoordinator, err := newMaintenanceCoordinator(kubeconfigCfg, identity, configReconcilerOptions{
@@ -639,9 +684,11 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	// and the in-pod reconciler both write the same (device, family)
 	// concurrently, defeating the whole point of single-manager
 	// topology and producing a duplicate-writer hazard.
-	if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
+	if !runtimeProfile.runsNetworkManagement() {
+		log.G(ctx).Info("app-hosting worker mode; skipping config, telemetry, and gNOI reconcilers")
+	} else if v := os.Getenv("DISABLE_IN_POD_CONFIG_RECONCILER"); v == "true" || v == "1" {
 		log.G(ctx).Info("DISABLE_IN_POD_CONFIG_RECONCILER set; skipping in-pod ConfigReconciler (aggregator-mode topology)")
-	} else if err := startConfigReconciler(ctx, kubeconfigCfg, identity.DeviceName, configReconcilerOptions{
+	} else if err := startConfigReconciler(ctx, kubeconfigCfg, identity.DeviceName, runtimeProfile.constrainNetworkOptions(configReconcilerOptions{
 		Spec:                       &appCfg.Device,
 		Password:                   appCfg.Device.Password,
 		DeviceNamespace:            identity.DeviceNamespace,
@@ -660,7 +707,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		CorrelationCache:           traceCorrelationCache,
 		Maintenance:                maintenanceCoordinator,
 		DevicePodLister:            devicePodLister,
-	}); err != nil {
+	})); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}
 
@@ -684,11 +731,146 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func runNetworkManagementRuntime(
+	ctx context.Context,
+	kubeconfigCfg *rest.Config,
+	identity workerRuntimeIdentity,
+	spec *ciskov1.DeviceSpec,
+	profile workerRuntimeProfile,
+) error {
+	telemetryProviders, telemetryShutdown, err := buildTelemetryProviders(ctx, identity.DeviceName, configReconcilerOptions{Spec: spec})
+	if err != nil {
+		log.G(ctx).WithError(err).Warn("telemetry OTel providers unavailable; continuing with signal-specific fallbacks")
+	}
+	if telemetryShutdown != nil {
+		defer func() {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if err := telemetryShutdown(shutdownCtx); err != nil {
+				log.G(ctx).WithError(err).Warn("telemetry OTel providers shutdown error")
+			}
+		}()
+	}
+
+	opts := profile.constrainNetworkOptions(configReconcilerOptions{
+		Spec:                       spec,
+		Password:                   spec.Password,
+		DeviceNamespace:            identity.DeviceNamespace,
+		DeviceUID:                  identity.DeviceUID,
+		NodeName:                   identity.NodeName,
+		ManagedTopology:            identity.ManagedTopology,
+		WorkerRevision:             identity.WorkerRevision,
+		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
+		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
+		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),
+		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
+		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),
+		TelemetryProviders:         telemetryProviders,
+		StateCache:                 telemetrystate.NewCache(),
+		CorrelationCache:           correlation.NewCache(0, 0, 0),
+	})
+	maintenanceCoordinator, err := newMaintenanceCoordinator(kubeconfigCfg, identity, opts)
+	if err != nil {
+		return fmt.Errorf("configure device maintenance: %w", err)
+	}
+	opts.Maintenance = maintenanceCoordinator
+	if maintenanceCoordinator != nil {
+		go maintenanceCoordinator.Run(ctx)
+	}
+	inventorySpec := spec.DeepCopy()
+	// Building the inventory-only driver must never inherit the app-hosting
+	// startup side effect that disables package signature verification.
+	inventorySpec.AllowUnsignedApps = false
+	inventoryCtx := ctx
+	if maintenanceCoordinator != nil {
+		inventoryCtx = devicecoordination.WithMutationGuard(ctx, maintenanceCoordinator.AcquireWrite)
+	}
+	inventoryDriver, err := drivers.NewDriver(inventoryCtx, inventorySpec)
+	if err != nil {
+		return fmt.Errorf("configure device app inventory for network-management safety checks: %w", err)
+	}
+	opts.DevicePodLister = inventoryDriver.ListPods
+	managerLifecycle := newConfigManagerLifecycle()
+	opts.ManagerLifecycle = managerLifecycle
+
+	if err := startConfigReconciler(ctx, kubeconfigCfg, identity.DeviceName, opts); err != nil {
+		return fmt.Errorf("start network-management runtime: %w", err)
+	}
+	if os.Getenv("CONFIG_NETCONF_PROBE") != "" {
+		go runNETCONFProbe(ctx, spec, spec.Password)
+	}
+	log.G(ctx).WithFields(log.Fields{"workerMode": profile.Mode, "workerAccess": profile.Access}).
+		Info("network-management runtime started without Virtual Kubelet Node or Pod controllers")
+	if err := waitForNetworkManager(ctx, managerLifecycle); err != nil {
+		return err
+	}
+	log.G(ctx).Info("Cisco Virtual Kubelet network-management runtime stopped")
+	return nil
+}
+
 func managedWorkerInitialNode(node v1.Node) v1.Node {
 	node.Labels = nil
 	node.Annotations = nil
 	node.Spec = v1.NodeSpec{}
 	return node
+}
+
+const (
+	boundTokenPodNameClaim = "authentication.kubernetes.io/pod-name"
+	boundTokenPodUIDClaim  = "authentication.kubernetes.io/pod-uid"
+)
+
+// verifyManagedWorkerPodIdentity proves that a managed shared-ServiceAccount
+// credential is a bound Pod token for this exact runtime. Shared identities no
+// longer encode a device in the username, so admission must be able to bind
+// requests to immutable Pod name/UID claims instead of trusting an unbound or
+// manually copied bearer token.
+func verifyManagedWorkerPodIdentity(
+	ctx context.Context,
+	clientset kubernetes.Interface,
+	expectedUsername, podName, podUID string,
+) error {
+	if clientset == nil {
+		return fmt.Errorf("missing Kubernetes client")
+	}
+	if strings.TrimSpace(podName) == "" || strings.TrimSpace(podUID) == "" {
+		return fmt.Errorf("managed shared worker requires non-empty POD_NAME and POD_UID downward-API bindings")
+	}
+	review, err := clientset.AuthenticationV1().SelfSubjectReviews().Create(
+		ctx,
+		&authenticationv1.SelfSubjectReview{},
+		metav1.CreateOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("create SelfSubjectReview: %w", err)
+	}
+	if review == nil {
+		return fmt.Errorf("SelfSubjectReview returned no identity")
+	}
+	if strings.TrimSpace(review.Status.UserInfo.Username) == "" {
+		return fmt.Errorf("SelfSubjectReview returned an empty authenticated username")
+	}
+	if expectedUsername != "" && review.Status.UserInfo.Username != expectedUsername {
+		return fmt.Errorf("authenticated username %q does not match expected worker username %q",
+			review.Status.UserInfo.Username, expectedUsername)
+	}
+	for _, claim := range []struct {
+		name string
+		want string
+	}{
+		{name: boundTokenPodNameClaim, want: podName},
+		{name: boundTokenPodUIDClaim, want: podUID},
+	} {
+		values, ok := review.Status.UserInfo.Extra[claim.name]
+		if !ok || len(values) != 1 {
+			return fmt.Errorf("SelfSubjectReview claim %q must contain exactly one value", claim.name)
+		}
+		if values[0] != claim.want {
+			return fmt.Errorf("SelfSubjectReview claim %q=%q does not match downward-API value %q",
+				claim.name, values[0], claim.want)
+		}
+	}
+	return nil
 }
 
 // verifyManagedWorkerAdmission proves the native ownership boundary using the

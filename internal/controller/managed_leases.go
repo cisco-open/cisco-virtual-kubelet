@@ -101,18 +101,20 @@ func (r *CiscoDeviceReconciler) ensureManagedNodeHeartbeatLease(
 	device *ciskov1.CiscoDevice,
 	node *corev1.Node,
 ) error {
-	worker := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	worker := managedAppWorkerUsername(node)
 	if device.UID == "" || node.UID == "" || worker == "" {
 		return fmt.Errorf("managed Node identity/worker binding is incomplete before heartbeat Lease creation")
 	}
+	desiredAnnotations := managedLeaseBindingAnnotations(
+		device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeNodeHeartbeat,
+	)
+	copyManagedWorkerBindingAnnotations(desiredAnnotations, node.Annotations)
 	desired := &coordv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceNodeLease,
-			Name:      node.Name,
-			Annotations: managedLeaseBindingAnnotations(
-				device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeNodeHeartbeat,
-			),
-			Labels: managedLeaseLabels(devicecoordination.DeviceKey(device.Namespace, device.Name), managedNodeHeartbeatFamily),
+			Namespace:   corev1.NamespaceNodeLease,
+			Name:        node.Name,
+			Annotations: desiredAnnotations,
+			Labels:      managedLeaseLabels(devicecoordination.DeviceKey(device.Namespace, device.Name), managedNodeHeartbeatFamily),
 			OwnerReferences: []metav1.OwnerReference{{
 				APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Node", Name: node.Name, UID: node.UID,
 			}},
@@ -139,14 +141,16 @@ func (r *CiscoDeviceReconciler) ensureManagedConfigLease(
 		namespace = device.Namespace
 	}
 	deviceKey := devicecoordination.DeviceKey(device.Namespace, device.Name)
-	worker := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	worker := managedNetworkWorkerUsername(node)
+	desiredAnnotations := managedLeaseBindingAnnotations(
+		device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeConfigFamily,
+	)
+	copyManagedWorkerBindingAnnotations(desiredAnnotations, node.Annotations)
 	desired := &coordv1.Lease{ObjectMeta: metav1.ObjectMeta{
-		Namespace: namespace,
-		Name:      configengine.LeaseName(deviceKey, family),
-		Annotations: managedLeaseBindingAnnotations(
-			device, node.Name, string(node.UID), worker, managedprotocol.LeasePurposeConfigFamily,
-		),
-		Labels: managedLeaseLabels(deviceKey, family),
+		Namespace:   namespace,
+		Name:        configengine.LeaseName(deviceKey, family),
+		Annotations: desiredAnnotations,
+		Labels:      managedLeaseLabels(deviceKey, family),
 	}}
 	if device.UID == "" || node.UID == "" || worker == "" {
 		return fmt.Errorf("managed Node identity/worker binding is incomplete before config Lease creation")
@@ -176,7 +180,7 @@ func (r *CiscoDeviceReconciler) ensureManagedBoundLease(
 		return fmt.Errorf("read managed Lease %s: %w", key, err)
 	}
 	if existing.Annotations[managedprotocol.AnnotationManaged] == "true" {
-		if err := validateManagedBoundLeaseMetadata(&existing, desired.Annotations, desired.Labels, desired.OwnerReferences); err != nil {
+		if err := r.repairManagedLeaseBindings(ctx, &existing, desired.Annotations, desired.Labels, desired.OwnerReferences); err != nil {
 			return fmt.Errorf("managed Lease %s is unsafe to use: %w", key, err)
 		}
 		return nil
@@ -216,6 +220,38 @@ func (r *CiscoDeviceReconciler) ensureManagedBoundLease(
 		return fmt.Errorf("adopted managed Lease %s is unsafe to use: %w", key, err)
 	}
 	return nil
+}
+
+// Only worker bindings are mutable during Pod rotation. Device/Node ownership,
+// purpose, labels and the complete lock/request state remain unchanged.
+func (r *CiscoDeviceReconciler) repairManagedLeaseBindings(ctx context.Context, lease *coordv1.Lease,
+	annotations, labels map[string]string, owners []metav1.OwnerReference) error {
+	workerKeys := []string{
+		managedprotocol.AnnotationWorkerUsername,
+		managedprotocol.AnnotationAppWorkerUsername, managedprotocol.AnnotationAppWorkerPodName, managedprotocol.AnnotationAppWorkerPodUID,
+		managedprotocol.AnnotationNetworkWorkerUsername, managedprotocol.AnnotationNetworkWorkerPodName, managedprotocol.AnnotationNetworkWorkerPodUID,
+	}
+	immutable := make(map[string]string, len(annotations))
+	for key, value := range annotations {
+		if !slices.Contains(workerKeys, key) {
+			immutable[key] = value
+		}
+	}
+	if err := validateManagedBoundLeaseMetadata(lease, immutable, labels, owners); err != nil {
+		return err
+	}
+	before := lease.DeepCopy()
+	for _, key := range workerKeys {
+		if value, ok := annotations[key]; ok {
+			lease.Annotations[key] = value
+		} else {
+			delete(lease.Annotations, key)
+		}
+	}
+	if reflect.DeepEqual(before.Annotations, lease.Annotations) {
+		return nil
+	}
+	return r.Patch(ctx, lease, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{}))
 }
 
 func validateManagedBoundLeaseMetadata(
@@ -355,7 +391,6 @@ func (r *CiscoDeviceReconciler) cleanupManagedWorkerLeases(
 		return fmt.Errorf("bound Node identity changed before managed Lease cleanup")
 	}
 	deviceKey := devicecoordination.DeviceKey(device.Namespace, device.Name)
-	worker := "system:serviceaccount:" + device.Namespace + ":" + managedWorkerServiceAccountName(device)
 	var leases coordv1.LeaseList
 	if err := r.reader().List(ctx, &leases, client.MatchingLabels{"cisco.vk/device": deviceKey}); err != nil {
 		return fmt.Errorf("list managed worker Leases before cleanup: %w", err)
@@ -369,6 +404,16 @@ func (r *CiscoDeviceReconciler) cleanupManagedWorkerLeases(
 		}
 		family := lease.Labels["cisco.vk/family"]
 		purpose := lease.Annotations[managedprotocol.AnnotationLeasePurpose]
+		worker := managedNetworkWorkerUsername(&node)
+		if purpose == managedprotocol.LeasePurposeNodeHeartbeat {
+			worker = managedAppWorkerUsername(&node)
+		}
+		if worker == "" {
+			// The Node may already be gone on an idempotent cleanup retry. The
+			// Lease is still accepted only after every other UID-bound annotation,
+			// label, owner, and canonical name is checked below.
+			worker = lease.Annotations[managedprotocol.AnnotationWorkerUsername]
+		}
 		expectedAnnotations := managedLeaseBindingAnnotations(device, node.Name, string(node.UID), worker, purpose)
 		expectedLabels := managedLeaseLabels(deviceKey, family)
 		var expectedOwners []metav1.OwnerReference

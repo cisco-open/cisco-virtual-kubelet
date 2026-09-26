@@ -74,14 +74,8 @@ func (r *IOSXESoftwareRolloutReconciler) SetupWithManager(mgr ctrl.Manager) erro
 		rolloutSourceSecretNameIndex, rolloutSourceSecretNameIndexValues); err != nil {
 		return fmt.Errorf("index rollout source Secret names: %w", err)
 	}
-	// The manager normally uses its uncached APIReader, for which spec.nodeName
-	// is a server-supported Pod field selector. Register the same index so a
-	// reconciler deliberately constructed with only the cached client retains
-	// identical fail-closed workload checks.
-	if err := indexer.IndexField(context.Background(), // ctxlint:allow manager field-index registration root
-		&corev1.Pod{}, rolloutPodNodeNameIndex, rolloutPodNodeNameIndexValues); err != nil {
-		return fmt.Errorf("index rollout Pod Node names: %w", err)
-	}
+	// spec.nodeName works with both the APIReader and the shared Pod index
+	// registered by CiscoDeviceReconciler. Duplicate registration is rejected.
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&opsv1alpha1.IOSXESoftwareRollout{}).
@@ -599,21 +593,22 @@ func expectedLeafAnnotations(
 	workerUsername string,
 ) map[string]string {
 	annotations := map[string]string{
-		managedprotocol.AnnotationManaged:           "true",
-		managedprotocol.AnnotationCampaignNamespace: rollout.Namespace,
-		managedprotocol.AnnotationCampaignName:      rollout.Name,
-		managedprotocol.AnnotationCampaignUID:       string(rollout.UID),
-		managedprotocol.AnnotationPlanHash:          rollout.Status.FrozenPlan.Hash,
-		managedprotocol.AnnotationLedgerUID:         rollout.Status.FrozenPlan.Policy.LedgerUID,
-		managedprotocol.AnnotationReservationID:     reservationID(string(rollout.UID), target.DeviceUID),
-		managedprotocol.AnnotationDeviceNamespace:   rollout.Namespace,
-		managedprotocol.AnnotationDeviceName:        target.DeviceName,
-		managedprotocol.AnnotationDeviceUID:         target.DeviceUID,
-		managedprotocol.AnnotationDeviceGeneration:  strconv.FormatInt(target.DeviceGeneration, 10),
-		managedprotocol.AnnotationNodeName:          target.NodeName,
-		managedprotocol.AnnotationNodeUID:           target.NodeUID,
-		managedprotocol.AnnotationWorkerUsername:    workerUsername,
-		managedprotocol.AnnotationWorkerProtocol:    managedprotocol.Version,
+		managedprotocol.AnnotationManaged:               "true",
+		managedprotocol.AnnotationCampaignNamespace:     rollout.Namespace,
+		managedprotocol.AnnotationCampaignName:          rollout.Name,
+		managedprotocol.AnnotationCampaignUID:           string(rollout.UID),
+		managedprotocol.AnnotationPlanHash:              rollout.Status.FrozenPlan.Hash,
+		managedprotocol.AnnotationLedgerUID:             rollout.Status.FrozenPlan.Policy.LedgerUID,
+		managedprotocol.AnnotationReservationID:         reservationID(string(rollout.UID), target.DeviceUID),
+		managedprotocol.AnnotationDeviceNamespace:       rollout.Namespace,
+		managedprotocol.AnnotationDeviceName:            target.DeviceName,
+		managedprotocol.AnnotationDeviceUID:             target.DeviceUID,
+		managedprotocol.AnnotationDeviceGeneration:      strconv.FormatInt(target.DeviceGeneration, 10),
+		managedprotocol.AnnotationNodeName:              target.NodeName,
+		managedprotocol.AnnotationNodeUID:               target.NodeUID,
+		managedprotocol.AnnotationWorkerUsername:        workerUsername,
+		managedprotocol.AnnotationNetworkWorkerUsername: workerUsername,
+		managedprotocol.AnnotationWorkerProtocol:        managedprotocol.Version,
 	}
 	if target.Source.SecretUID != "" {
 		annotations[managedprotocol.AnnotationSourceSecretUID] = target.Source.SecretUID
@@ -686,7 +681,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentWorkerUsername(ctx context.Conte
 	if string(node.UID) != target.NodeUID || node.Annotations[managedprotocol.AnnotationWorkerProtocol] != managedprotocol.Version {
 		return "", fmt.Errorf("target Node incarnation or managed protocol changed")
 	}
-	username := node.Annotations[managedprotocol.AnnotationWorkerUsername]
+	username := managedNetworkWorkerUsername(&node)
 	if username == "" {
 		return "", fmt.Errorf("target Node has no bound worker username")
 	}
@@ -1458,21 +1453,34 @@ func (r *IOSXESoftwareRolloutReconciler) currentReadyWorkerRevision(
 	ctx context.Context,
 	device *ciskov1.CiscoDevice,
 ) (string, error) {
-	if device == nil || device.Status.WorkerRevision == nil {
-		return "", fmt.Errorf("CiscoDevice has no managed worker revision status")
+	if device == nil || device.Status.NetworkWorkerRevision == nil {
+		// During the one-way migration from PR #190, an incarnation-bound
+		// per-device worker remains valid until the split network Deployment is
+		// ready. Never use this compatibility proof after the manager has stamped
+		// the shared network identity on the Node.
+		if device == nil || device.Status.WorkerRevision == nil {
+			return "", fmt.Errorf("CiscoDevice has no managed network worker revision status")
+		}
+		var node corev1.Node
+		if device.Status.NodeIdentity == nil || r.reader().Get(ctx,
+			types.NamespacedName{Name: device.Status.NodeIdentity.NodeName}, &node) != nil ||
+			node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] != "" {
+			return "", fmt.Errorf("CiscoDevice has no managed network worker revision status")
+		}
+		return r.currentReadyLegacyWorkerRevision(ctx, device)
 	}
-	status := device.Status.WorkerRevision
+	status := device.Status.NetworkWorkerRevision
 	if status.DesiredRevision == "" || status.DesiredRevision != status.ObservedRevision ||
 		status.DeploymentUID == "" || status.DeploymentGeneration < 1 || status.PodUID == "" ||
-		status.PodStartTime == nil || status.ReadyHeartbeatTime == nil ||
-		status.ReadyHeartbeatTime.Before(status.PodStartTime) {
-		return "", fmt.Errorf("CiscoDevice managed worker revision proof is incomplete")
+		status.PodStartTime == nil || status.PodReadyTime == nil ||
+		status.PodReadyTime.Before(status.PodStartTime) {
+		return "", fmt.Errorf("CiscoDevice managed network worker revision proof is incomplete")
 	}
 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 		Namespace: device.Namespace,
-		Name:      device.Name + deploymentSuffix,
+		Name:      networkDeploymentName(device.Name, string(device.UID)),
 	}}
-	fresh, ready, err := observeManagedWorkerRevision(
+	fresh, ready, err := observeManagedNetworkWorkerRevision(
 		ctx, r.reader(), r.now(), device, deployment, status.DesiredRevision,
 	)
 	if err != nil {
@@ -1482,10 +1490,32 @@ func (r *IOSXESoftwareRolloutReconciler) currentReadyWorkerRevision(
 		fresh.ObservedRevision != status.ObservedRevision ||
 		fresh.DeploymentUID != status.DeploymentUID ||
 		fresh.DeploymentGeneration != status.DeploymentGeneration ||
-		fresh.PodUID != status.PodUID || fresh.PodStartTime == nil || fresh.ReadyHeartbeatTime == nil ||
+		fresh.PodUID != status.PodUID || fresh.PodStartTime == nil || fresh.PodReadyTime == nil ||
 		!fresh.PodStartTime.Equal(status.PodStartTime) ||
-		!fresh.ReadyHeartbeatTime.Equal(status.ReadyHeartbeatTime) {
-		return "", fmt.Errorf("live Deployment, Pod, or worker heartbeat no longer matches CiscoDevice status")
+		!fresh.PodReadyTime.Equal(status.PodReadyTime) {
+		return "", fmt.Errorf("live network Deployment or Pod no longer matches CiscoDevice status")
+	}
+	return status.DesiredRevision, nil
+}
+
+func (r *IOSXESoftwareRolloutReconciler) currentReadyLegacyWorkerRevision(
+	ctx context.Context, device *ciskov1.CiscoDevice) (string, error) {
+	status := device.Status.WorkerRevision
+	if status == nil || status.DesiredRevision == "" || status.DesiredRevision != status.ObservedRevision ||
+		status.DeploymentUID == "" || status.DeploymentGeneration < 1 || status.PodUID == "" ||
+		status.PodStartTime == nil || status.ReadyHeartbeatTime == nil ||
+		status.ReadyHeartbeatTime.Before(status.PodStartTime) {
+		return "", fmt.Errorf("CiscoDevice legacy managed worker revision proof is incomplete")
+	}
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: device.Name + deploymentSuffix,
+	}}
+	fresh, ready, err := observeManagedWorkerRevision(ctx, r.reader(), r.now(), device, deployment, status.DesiredRevision)
+	if err != nil {
+		return "", err
+	}
+	if !ready || fresh == nil || !workerRevisionEvidenceEqual(fresh, status) {
+		return "", fmt.Errorf("live legacy Deployment, Pod, or worker heartbeat no longer matches CiscoDevice status")
 	}
 	return status.DesiredRevision, nil
 }
@@ -1617,7 +1647,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 			Domains: domains, HealthKnown: observationErr == nil && !observed.IsZero(), Healthy: healthy,
 			Maintenance: maintenance, HealthObserved: observed,
 		})
-		workers[string(device.UID)] = node.Annotations[managedprotocol.AnnotationWorkerUsername]
+		workers[string(device.UID)] = managedNetworkWorkerUsername(&node)
 	}
 	if len(members) == 0 {
 		return nil, nil, fmt.Errorf("administrator-managed fleet is empty")
