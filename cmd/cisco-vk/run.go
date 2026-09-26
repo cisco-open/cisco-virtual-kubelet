@@ -609,10 +609,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create device driver: %w", err)
 		}
-		devicePodLister = sharedDriver.ListPods
-		if strictInventory, ok := sharedDriver.(drivers.DrainPodInventoryProvider); ok {
-			drainDevicePodLister = strictInventory.ListPodsForDrain
-		}
+		devicePodLister, drainDevicePodLister = devicePodInventoryListers(sharedDriver)
 
 		nodeHandler := provider.NewAppHostingNodeWithTopologyMode(ctx, identity.NodeName, &appCfg.Device, sharedDriver, projectionMode)
 		if identity.ManagedTopology {
@@ -799,7 +796,7 @@ func runNetworkManagementRuntime(
 	if err != nil {
 		return fmt.Errorf("configure device app inventory for network-management safety checks: %w", err)
 	}
-	opts.DevicePodLister = inventoryDriver.ListPods
+	opts.DevicePodLister, opts.DrainDevicePodLister = devicePodInventoryListers(inventoryDriver)
 	managerLifecycle := newConfigManagerLifecycle()
 	opts.ManagerLifecycle = managerLifecycle
 
@@ -816,6 +813,17 @@ func runNetworkManagementRuntime(
 	}
 	log.G(ctx).Info("Cisco Virtual Kubelet network-management runtime stopped")
 	return nil
+}
+
+// Both combined and network-only workers must preserve the driver's explicit
+// strict-inventory capability. Compatibility ListPods is never a drain fallback.
+func devicePodInventoryListers(driver drivers.CiscoKubernetesDeviceDriver) (
+	ordinary, strict func(context.Context) ([]*v1.Pod, error),
+) {
+	if inventory, ok := driver.(drivers.DrainPodInventoryProvider); ok {
+		strict = inventory.ListPodsForDrain
+	}
+	return driver.ListPods, strict
 }
 
 func managedWorkerInitialNode(node v1.Node) v1.Node {

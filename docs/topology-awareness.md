@@ -1203,6 +1203,11 @@ evidence before promotion. The provider coordination contract is
 driver-neutral for future platforms, although campaign registration and the
 software lifecycle remain explicitly IOS XE only.
 
+Both combined and network-only workers select strict inventory through the
+driver's explicit `DrainPodInventoryProvider` capability. The ordinary
+`ListPods` reader is never substituted for this complete scan; a missing
+capability or a partial-inventory error blocks a new device mutation.
+
 Campaign phases are `AwaitingApproval`, `Paused`, `Executing`, `Soaking`,
 `Cancelling`, `Succeeded`, `Failed`, and `Cancelled`. The explicitly frozen
 canary from every qualification cohort is wave zero; non-canaries are wave one
