@@ -956,9 +956,9 @@ expect_denied "shared network worker unbound result update" \
 # Qualify result CREATE/UPDATE/DELETE with an API-server-issued token bound to
 # an exact manager-created network worker Pod. The name encodes the device name
 # and UID exactly as the production controller does.
-network_device_name="switch-a"
+network_device_name="switch-with-a-lab-device-name-that-must-not-truncate-worker-uid"
 network_device_uid="11111111-1111-4111-8111-111111111111"
-network_deployment="n${#network_device_name}-${network_device_name}-u${network_device_uid}-network"
+network_deployment="u${network_device_uid}-network"
 create_reserved_deployment "$manager_username" "$network_deployment" \
   "$network_service_account" >/dev/null
 kubectl --context "$context" rollout status "deployment/${network_deployment}" \
