@@ -589,6 +589,10 @@ func podStateFingerprint(pod *v1.Pod) string {
 	}
 
 	payload := struct {
+		Labels            map[string]string       `json:"labels"`
+		Annotations       map[string]string       `json:"annotations"`
+		Finalizers        []string                `json:"finalizers"`
+		OwnerReferences   []metav1.OwnerReference `json:"ownerReferences"`
 		Phase             v1.PodPhase             `json:"phase"`
 		Reason            string                  `json:"reason"`
 		Message           string                  `json:"message"`
@@ -597,6 +601,14 @@ func podStateFingerprint(pod *v1.Pod) string {
 		PodIP             string                  `json:"podIP"`
 		PodIPs            []string                `json:"podIPs"`
 	}{
+		// Upstream VK retains this entire Pod for UpdateStatus, not only its
+		// status. Republish manager binding/drain metadata changes even when
+		// device state is unchanged, or admission will reject its stale copy
+		// forever. Exclude resourceVersion/managedFields to avoid write loops.
+		Labels:            pod.Labels,
+		Annotations:       pod.Annotations,
+		Finalizers:        pod.Finalizers,
+		OwnerReferences:   pod.OwnerReferences,
 		Phase:             pod.Status.Phase,
 		Reason:            pod.Status.Reason,
 		Message:           pod.Status.Message,
