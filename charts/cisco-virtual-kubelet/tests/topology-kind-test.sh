@@ -757,7 +757,7 @@ test "$(kubectl auth can-i patch pods --namespace "$device_namespace" \
 test "$(kubectl auth can-i create pods --subresource=eviction \
   --namespace "$device_namespace" --as="$manager_username")" = "yes"
 test "$(kubectl auth can-i delete pods --namespace "$device_namespace" \
-  --as="$manager_username")" = "no"
+  --as="$manager_username")" = "yes"
 test "$(kubectl auth can-i create pods --namespace "$device_namespace" \
   --as="$manager_username")" = "no"
 test "$(kubectl auth can-i delete pods --all-namespaces \

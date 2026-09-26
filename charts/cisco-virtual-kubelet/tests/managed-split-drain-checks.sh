@@ -70,8 +70,10 @@ expect_denied "app worker cannot write gNOI phase" "managed upgrade leaves are m
 expect_denied "app worker cannot change network acknowledgement" "managed upgrade leaves are manager-owned" \
   kubectl --kubeconfig "$bound_kubeconfig" patch iosxesoftwareupgrade "$drain_leaf" --subresource=status --type=merge -p '{"status":{"workerControl":{"effectiveState":"Claimed"}}}'
 kubectl --context "$context" --as="$manager_username" annotate iosxesoftwareupgrade "$drain_leaf" -n "$worker_namespace" topology.cisco.vk/app-worker-pod-uid=replacement --overwrite >/dev/null
+# Forge the replacement inventory UID so only the bound-token identity check
+# rejects this request, independent of the order in which policies execute.
 expect_denied "old app Pod cannot publish inventory after rotation" "exact manager-bound worker Pod name and UID" \
-  kubectl --kubeconfig "$bound_kubeconfig" patch iosxesoftwareupgrade "$drain_leaf" --subresource=status --type=merge -p '{"status":{"workerDrain":{"inventoryRevision":2,"inventoryObservedAt":"2026-01-01T00:00:03Z","updatedAt":"2026-01-01T00:00:03Z"}}}'
+  kubectl --kubeconfig "$bound_kubeconfig" patch iosxesoftwareupgrade "$drain_leaf" --subresource=status --type=merge -p '{"status":{"workerDrain":{"observedWorkerPodUID":"replacement","inventoryRevision":2,"inventoryObservedAt":"2026-01-01T00:00:03Z","updatedAt":"2026-01-01T00:00:03Z"}}}'
 # Dispose only this synthetic leaf through the admitted manager identity.
 # Production manager RBAC deliberately does not grant leaf DELETE.
 kubectl --context "$context" create role split-drain-fixture-cleanup -n "$worker_namespace" \
