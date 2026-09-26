@@ -146,12 +146,12 @@ const (
 	envCVKNXOSAllowExperimental = "CVK_NXOS_ALLOW_EXPERIMENTAL_RELEASES"
 )
 
-// networkDeploymentName encodes both the unambiguous device name and immutable
-// device UID. Shared network-management ServiceAccounts make the bound Pod
-// name an admission credential; the UID also fences a deleted/recreated
-// same-name CiscoDevice from the prior Pod incarnation.
-func networkDeploymentName(deviceName, deviceUID string) string {
-	return fmt.Sprintf("n%d-%s-u%s%s", len(deviceName), deviceName, deviceUID, networkDeploymentSuffix)
+// networkDeploymentName puts the immutable, cluster-unique device UID before
+// the generated suffix. Kubernetes truncates generated Pod name prefixes to
+// 58 bytes; including a device name before the UID can truncate the credential
+// that admission uses to fence deleted/recreated CiscoDevices.
+func networkDeploymentName(deviceUID string) string {
+	return "u" + deviceUID + networkDeploymentSuffix
 }
 
 // telemetryEnvPropagationNames is the legacy name for the set of controller
@@ -1153,7 +1153,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			return ctrl.Result{}, fmt.Errorf("managed network worker template is incomplete")
 		}
 		networkDeploy = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
-			Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID)),
+			Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID)),
 		}}
 		networkOp, networkErr := controllerutil.CreateOrUpdate(ctx, r.Client, networkDeploy, func() error {
 			previousRevision := networkDeploy.Spec.Template.Annotations[managedprotocol.AnnotationWorkerConfigRevision]
@@ -1196,7 +1196,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		logger.Info("Network worker Deployment reconciled", "name", networkDeploy.Name, "operation", networkOp)
 	} else {
 		stale := &appsv1.Deployment{}
-		key := types.NamespacedName{Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID))}
+		key := types.NamespacedName{Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID))}
 		if err := r.reader().Get(ctx, key, stale); err == nil {
 			if !metav1.IsControlledBy(stale, &device) {
 				return ctrl.Result{}, fmt.Errorf("network worker Deployment %s is not controlled by this CiscoDevice", key)

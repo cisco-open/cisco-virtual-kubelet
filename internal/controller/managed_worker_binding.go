@@ -583,7 +583,7 @@ func (r *CiscoDeviceReconciler) repairManagedWorkerBindings(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	network, err := r.currentManagedWorkerIdentity(ctx, device, networkDeploymentName(device.Name, string(device.UID)),
+	network, err := r.currentManagedWorkerIdentity(ctx, device, networkDeploymentName(string(device.UID)),
 		r.networkManagementServiceAccountName(), perDeviceNetworkDeploymentLabels(device.Name))
 	if err != nil {
 		return err

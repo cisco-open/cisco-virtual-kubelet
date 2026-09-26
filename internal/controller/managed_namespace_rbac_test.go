@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -32,6 +33,42 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
+
+func TestWorkerNameScopeIncludesTruncatedGeneratedPods(t *testing.T) {
+	device := managedAccessDevice("switch-with-a-long-device-name-that-must-not-truncate-worker-uid")
+	device.UID = "11111111-1111-4111-8111-111111111111"
+	scope := newManagedWorkerNameScope(nil, device)
+	for _, prefix := range []string{
+		device.Name + deploymentSuffix + "-",
+		fmt.Sprintf("n%d-%s-u%s%s-", len(device.Name), device.Name, device.UID, networkDeploymentSuffix),
+		networkDeploymentName(string(device.UID)) + "-",
+	} {
+		if len(prefix) > 58 {
+			prefix = prefix[:58]
+		}
+		if !scope.includes("pods/exec", prefix+"abcde") {
+			t.Fatalf("missed exact generated worker Pod %q", prefix+"abcde")
+		}
+	}
+	if scope.includes("pods/exec", "ordinary-workload-abcde") {
+		t.Fatal("ordinary workload was classified as a reserved worker")
+	}
+}
+
+func TestNetworkDeploymentNamePreservesFullUIDInGeneratedPod(t *testing.T) {
+	uid := "11111111-1111-4111-8111-111111111111"
+	deployment := networkDeploymentName(uid)
+	prefix := deployment + "-1234567890-"
+	if len(prefix) > 58 {
+		prefix = prefix[:58]
+	}
+	if !strings.HasPrefix(prefix+"abcde", "u"+uid+"-network-") {
+		t.Fatalf("generated Pod truncated the network credential: %q", prefix)
+	}
+	if deployment == networkDeploymentName("22222222-2222-4222-8222-222222222222") {
+		t.Fatal("recreated device reused the old network name")
+	}
+}
 
 func namespacedRBACBinding(namespace, name, kind, role string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
@@ -323,7 +360,7 @@ func TestManagedNamespaceRBACRiskQuarantinesExistingSharedBindings(t *testing.T)
 		account string
 	}{
 		{device.Name + deploymentSuffix, perDeviceDeploymentLabels(device.Name), r.appHostingServiceAccountName()},
-		{networkDeploymentName(device.Name, string(device.UID)), perDeviceNetworkDeploymentLabels(device.Name), r.networkManagementServiceAccountName()},
+		{networkDeploymentName(string(device.UID)), perDeviceNetworkDeploymentLabels(device.Name), r.networkManagementServiceAccountName()},
 	} {
 		deployment := &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
@@ -361,7 +398,7 @@ func TestManagedNamespaceRBACRiskQuarantinesExistingSharedBindings(t *testing.T)
 		t.Fatalf("quarantine error = %v", err)
 	}
 	assertNoSharedWorkerAuthority(t, r, device.Namespace)
-	for _, name := range []string{device.Name + deploymentSuffix, networkDeploymentName(device.Name, string(device.UID))} {
+	for _, name := range []string{device.Name + deploymentSuffix, networkDeploymentName(string(device.UID))} {
 		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: name}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
 			t.Fatalf("quarantine did not foreground-delete worker Deployment %s: %v", name, err)
 		}

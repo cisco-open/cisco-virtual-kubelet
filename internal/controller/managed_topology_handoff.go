@@ -1169,7 +1169,7 @@ func (r *CiscoDeviceReconciler) completeLegacyHandoffStatus(
 func (r *CiscoDeviceReconciler) quiesceManagedDeviceWorkersForDeletion(ctx context.Context,
 	device *ciskov1.CiscoDevice) (bool, error) {
 	deleting := false
-	for _, name := range []string{device.Name + deploymentSuffix, networkDeploymentName(device.Name, string(device.UID))} {
+	for _, name := range []string{device.Name + deploymentSuffix, networkDeploymentName(string(device.UID))} {
 		var deployment appsv1.Deployment
 		key := types.NamespacedName{Namespace: device.Namespace, Name: name}
 		if err := r.reader().Get(ctx, key, &deployment); err != nil {
@@ -1266,7 +1266,7 @@ func (r *CiscoDeviceReconciler) managedWriterWorkloadsStopped(ctx context.Contex
 		case labelsContain(pod.Labels, perDeviceDeploymentLabels(device.Name)):
 			workerDeployment = device.Name + deploymentSuffix
 		case labelsContain(pod.Labels, perDeviceNetworkDeploymentLabels(device.Name)):
-			workerDeployment = networkDeploymentName(device.Name, string(device.UID))
+			workerDeployment = networkDeploymentName(string(device.UID))
 		default:
 			// The shared accounts are intentionally reused by other devices. Their
 			// Pods must not block this device's bounded reverse handoff.
