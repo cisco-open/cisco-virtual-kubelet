@@ -37,6 +37,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 type staticTP struct{ tr transport.Interface }
@@ -56,6 +57,21 @@ type staleDeviceOperationClient struct {
 type failingDeviceOperationStatusClient struct {
 	client.Client
 	err error
+}
+
+type recordingDeviceOperationDeleteClient struct {
+	client.Client
+	preconditions *metav1.Preconditions
+}
+
+func (c *recordingDeviceOperationDeleteClient) Delete(
+	ctx context.Context,
+	obj client.Object,
+	opts ...client.DeleteOption,
+) error {
+	options := (&client.DeleteOptions{}).ApplyOptions(opts)
+	c.preconditions = options.Preconditions
+	return c.Client.Delete(ctx, obj, opts...)
 }
 
 func (c *failingDeviceOperationStatusClient) Status() client.StatusWriter {
@@ -982,6 +998,60 @@ func TestReconcilePacketCaptureRefusesUnownedConfigMap(t *testing.T) {
 	}
 }
 
+func TestArtifactConfigMapRefusesCrossDeviceBinding(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("capture", nil)
+	op.UID = types.UID("11111111-1111-4111-8111-111111111111")
+	op.Annotations = managedNetworkBinding("device-b", "device-b-uid")
+	foreignBinding := managedNetworkBinding("device-a", "device-a-uid")
+	controller := true
+	preexisting := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   op.Namespace,
+			Name:        artifactConfigMapName(op),
+			Annotations: foreignBinding,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: opsv1alpha1.GroupVersion.String(),
+				Kind:       "DeviceOperation",
+				Name:       op.Name,
+				UID:        op.UID,
+				Controller: &controller,
+			}},
+		},
+	}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(preexisting).Build()
+	r := &Reconciler{Client: c, Scheme: scheme}
+
+	err := r.assertArtifactConfigMapOwned(ctx, op)
+	if err == nil || err.reason != "ArtifactBindingMismatch" {
+		t.Fatalf("assertArtifactConfigMapOwned error=%#v, want ArtifactBindingMismatch", err)
+	}
+}
+
+func TestHandleTTLDeletesWithExactUIDPrecondition(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	ttl := int32(30)
+	completed := metav1.NewTime(time.Unix(100, 0).UTC())
+	op := newOperation("expired", func(op *opsv1alpha1.DeviceOperation) {
+		op.UID = types.UID("22222222-2222-4222-8222-222222222222")
+		op.Spec.TTLSecondsAfterFinished = &ttl
+		op.Status.CompletionTime = &completed
+	})
+	base := fake.NewClientBuilder().WithScheme(scheme).WithObjects(op).Build()
+	c := &recordingDeviceOperationDeleteClient{Client: base}
+	r := &Reconciler{Client: c}
+
+	if _, err := r.handleTTL(ctx, op, completed.Add(time.Minute)); err != nil {
+		t.Fatalf("handleTTL: %v", err)
+	}
+	if c.preconditions == nil || c.preconditions.UID == nil ||
+		*c.preconditions.UID != op.UID {
+		t.Fatalf("delete preconditions=%#v, want UID %q", c.preconditions, op.UID)
+	}
+}
+
 // TestReconcileShowCommandTotalInlineBudgetSpills is the regression
 // test for adversarial-review Finding #4. A ShowCommand operation
 // with many outputs whose cumulative size exceeds totalInlineMaxBytes
@@ -1089,6 +1159,18 @@ func newOperation(name string, mutate func(*opsv1alpha1.DeviceOperation)) *opsv1
 		mutate(op)
 	}
 	return op
+}
+
+func managedNetworkBinding(deviceName, deviceUID string) map[string]string {
+	return map[string]string{
+		managedprotocol.AnnotationManaged:               "true",
+		managedprotocol.AnnotationDeviceNamespace:       "default",
+		managedprotocol.AnnotationDeviceName:            deviceName,
+		managedprotocol.AnnotationDeviceUID:             deviceUID,
+		managedprotocol.AnnotationNetworkWorkerUsername: "system:serviceaccount:default:network",
+		managedprotocol.AnnotationNetworkWorkerPodName:  deviceName + "-network-pod",
+		managedprotocol.AnnotationNetworkWorkerPodUID:   deviceUID + "-pod",
+	}
 }
 
 func operationConditionIs(conds []metav1.Condition, typ string, status metav1.ConditionStatus, reason string) bool {

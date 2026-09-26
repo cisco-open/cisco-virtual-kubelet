@@ -44,6 +44,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -77,6 +78,9 @@ const (
 	configMapSuffix = "-config"
 	// deploymentSuffix is appended to the CiscoDevice name for the Deployment.
 	deploymentSuffix = "-vk"
+	// networkDeploymentSuffix is the separate device-management worker used by
+	// managed topology. The historical -vk Deployment remains app-hosting.
+	networkDeploymentSuffix = "-network"
 	// configMountPath is where the config YAML is mounted in the VK container.
 	configMountPath = "/etc/virtual-kubelet"
 	// configFileName is the key used inside the ConfigMap.
@@ -141,6 +145,14 @@ const (
 	envConfigYANGValidation     = "CONFIG_YANG_VALIDATION"
 	envCVKNXOSAllowExperimental = "CVK_NXOS_ALLOW_EXPERIMENTAL_RELEASES"
 )
+
+// networkDeploymentName encodes both the unambiguous device name and immutable
+// device UID. Shared network-management ServiceAccounts make the bound Pod
+// name an admission credential; the UID also fences a deleted/recreated
+// same-name CiscoDevice from the prior Pod incarnation.
+func networkDeploymentName(deviceName, deviceUID string) string {
+	return fmt.Sprintf("n%d-%s-u%s%s", len(deviceName), deviceName, deviceUID, networkDeploymentSuffix)
+}
 
 // telemetryEnvPropagationNames is the legacy name for the set of controller
 // env vars whose literal values are copied into every per-device VK pod's env
@@ -212,6 +224,23 @@ type CiscoDeviceReconciler struct {
 	Image string
 	// ServiceAccount is the name of the service account for VK pods (defaults to DefaultServiceAccount).
 	ServiceAccount string
+	// Managed topology separates Kubernetes authority by functional plane. The
+	// two identities are namespace-shared; per-device confinement is enforced by
+	// admission using the bound worker Pod name and UID stamped by this manager.
+	AppHostingServiceAccount        string
+	NetworkManagementServiceAccount string
+	AppHostingAccessMode            string
+	NetworkManagementAccessMode     string
+	AppHostingClusterRole           string
+	AppHostingDeviceReadRole        string
+	NetworkManagementClusterRole    string
+	NetworkManagementGlobalReadRole string
+	// WorkerServiceAccountPolicyEpoch is derived at manager startup from the
+	// UIDs, generations, and compiled Specs of every preflighted worker-account
+	// ownership, token, token-Secret, and workload policy and binding. Accounts
+	// from an older contract are revoked, drained, and recreated with a new UID
+	// before use.
+	WorkerServiceAccountPolicyEpoch string
 	// AggregatorEnabled mirrors the manager's --enable-config-aggregator
 	// flag. When true, the in-process aggregator owns the per-device
 	// config-reconcile loop for configdriver-registered platforms, so
@@ -233,7 +262,8 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;delete
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=get;list;watch;patch;update;delete
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=iosxeconfigs/status,verbs=get
 // +kubebuilder:rbac:groups=config.cisco.vk,resources=nxosconfigs,verbs=get;list;watch;create;update;patch;delete
@@ -245,7 +275,12 @@ type CiscoDeviceReconciler struct {
 // ServiceAccount in the release namespace, so tenant namespaces need their own
 // local ServiceAccount plus bindings to the chart-supplied ClusterRole.
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
+// Namespace RBAC safety audits resolve every RoleBinding in a managed-device
+// namespace and watch role changes so unsafe edit/admin-style grants promptly
+// quarantine the reusable worker identities.
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch
 // +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
 // The controller manages its own per-device ClusterRoleBindings named by
 // vkAccessClusterRoleBindingName; resourceNames pinning is infeasible because
@@ -256,7 +291,11 @@ type CiscoDeviceReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;watch;create;update;delete
 // Required by the API server's privilege-escalation check when binding the
 // chart-supplied ClusterRole into a tenant namespace.
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet;cisco-virtual-kubelet-device,verbs=bind
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet;cisco-virtual-kubelet-device;cisco-virtual-kubelet-app-hosting-read-only;cisco-virtual-kubelet-app-hosting-read-write;cisco-virtual-kubelet-app-hosting-device-read;cisco-virtual-kubelet-network-management-read-only;cisco-virtual-kubelet-network-management-read-write;cisco-virtual-kubelet-network-management-global-read;cisco-virtual-kubelet-network-management-lease-read-only;cisco-virtual-kubelet-network-management-lease-read-write,verbs=bind
+// Arbitrary ClusterRoles can be referenced by device-namespace RoleBindings.
+// list/watch cannot be resourceNames-scoped, so this read-only grant is
+// necessarily cluster-wide; bind remains restricted to the fixed roles above.
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=get;list;watch
 
 // Reconcile ensures a ConfigMap and Deployment exist for each CiscoDevice.
 func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
@@ -313,21 +352,30 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			}
 
 			if device.Status.NodeIdentity != nil {
-				if r.ManagedTopology {
-					retiredPrior, err := r.retirePriorTopologyWorkerAccessIfSafe(
-						ctx, &device, managedWorkerServiceAccountName(&device),
-					)
-					if err != nil {
-						return ctrl.Result{}, err
-					}
-					if !retiredPrior {
-						return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
-					}
+				// NodeIdentity is the durable proof that this object entered the
+				// managed, namespace-shared worker model. Honour it even if a manager
+				// restart disabled the feature flag; falling back to legacy cleanup
+				// here would revoke only the shared app grant and disrupt peer devices.
+				stopped, err := r.quiesceManagedDeviceWorkersForDeletion(ctx, &device)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				if !stopped {
+					return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
+				}
+				retiredPrior, err := r.retirePriorTopologyWorkerAccessIfSafe(
+					ctx, &device, r.appHostingServiceAccountName(),
+				)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+				if !retiredPrior {
+					return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
 				}
 				// Revoke API authority before removing any pre-created identity.
 				// DeletionTimestamp makes managed mutation guards reject new device
 				// work, while the safety check above proves prior work is settled.
-				if err := r.cleanupVKClusterAccess(ctx, &device, r.serviceAccountForDevice(&device)); err != nil {
+				if err := r.cleanupManagedSharedWorkerAccess(ctx, &device); err != nil {
 					return ctrl.Result{}, err
 				}
 				if err := r.cleanupManagedWorkerLeases(ctx, &device); err != nil {
@@ -338,8 +386,51 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				}
 			} else {
 				serviceAccount := r.serviceAccountForDevice(&device)
-				isolatedLegacy := device.Status.LegacyHandoff != nil ||
-					device.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker] == string(device.UID)
+				handoff := device.Status.LegacyHandoff
+				isolatedMarker := device.Annotations[managedprotocol.AnnotationIsolatedLegacyWorker]
+				if isolatedMarker != "" && isolatedMarker != string(device.UID) {
+					return ctrl.Result{}, fmt.Errorf("refusing CiscoDevice deletion: isolated legacy worker marker belongs to another incarnation")
+				}
+				isolatedLegacy := isolatedMarker == string(device.UID) ||
+					(handoff != nil && handoff.Phase != ciskov1.DeviceLegacyHandoffComplete)
+				sharedCompatibility := handoff != nil && handoff.Phase == ciskov1.DeviceLegacyHandoffComplete
+				if r.ManagedTopology && !isolatedLegacy {
+					if sharedCompatibility {
+						// A completed reverse handoff is a topology-disabled
+						// compatibility device even when the manager still serves
+						// other managed devices.
+					} else {
+						// Phase-zero topology enrollment creates and audits the exact
+						// UID-scoped legacy identity before it can persist the recovery
+						// marker. A delete in that crash window must discover and revoke
+						// the ownerless ClusterRoleBinding; owner-reference garbage
+						// collection covers only the namespaced SA and RoleBinding.
+						phaseZeroAccess, err := r.cleanupPhaseZeroGeneratedWorkerAccessIfPresent(ctx, &device)
+						if err != nil {
+							return ctrl.Result{}, fmt.Errorf("revoke phase-zero generated worker access before deletion: %w", err)
+						}
+						if phaseZeroAccess {
+							logger.Info("revoked phase-zero generated worker access before unowned deletion")
+						}
+						// A topology-on device that never acquired a UID-bound Node must
+						// never fall back to the legacy name-based Node deletion path or
+						// treat the namespace-shared app identity as device-owned.
+						controllerutil.RemoveFinalizer(&device, ciscoDeviceFinalizer)
+						if err := r.Update(ctx, &device); err != nil {
+							return ctrl.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+						}
+						return ctrl.Result{}, nil
+					}
+				}
+				if isolatedLegacy || sharedCompatibility {
+					stopped, err := r.drainLegacyDeviceWorkerForDeletion(ctx, &device)
+					if err != nil {
+						return ctrl.Result{}, err
+					}
+					if !stopped {
+						return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
+					}
+				}
 				if isolatedLegacy {
 					// Cleanup may trust the marker only to choose a deletion target;
 					// cleanupGeneratedWorkerAccess independently verifies exact owner,
@@ -355,10 +446,18 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				if err := r.deleteDeviceNode(ctx, &device); err != nil {
 					return ctrl.Result{}, err
 				}
-				if !isolatedLegacy {
+				if sharedCompatibility {
+					if err := r.cleanupVKClusterAccess(ctx, &device, r.vkServiceAccountName()); err != nil {
+						return ctrl.Result{}, err
+					}
+				} else if !isolatedLegacy {
 					if err := r.cleanupVKClusterAccess(ctx, &device, serviceAccount); err != nil {
 						return ctrl.Result{}, err
 					}
+				} else if err := r.cleanupVKClusterAccess(ctx, &device, r.vkServiceAccountName()); err != nil {
+					// A crash after shared access establishment but before terminal
+					// status must not strand that compatibility grant.
+					return ctrl.Result{}, err
 				}
 			}
 			controllerutil.RemoveFinalizer(&device, ciscoDeviceFinalizer)
@@ -386,6 +485,13 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		topology.RecordProjectionReconcile("projected")
 	} else if r.ManagedTopology {
 		topology.RecordProjectionReconcile("skipped")
+	}
+	// A reverse handoff uses an explicit Recreate barrier between the isolated
+	// proof worker and the namespace-shared compatibility worker. Do not let the
+	// ordinary Deployment reconciliation recreate the retiring identity while
+	// the barrier is draining its Deployment, ReplicaSets, and Pods.
+	if managed.HoldWorker {
+		return ctrl.Result{RequeueAfter: managed.RequeueAfter}, nil
 	}
 
 	// ── 4. Resolve projected gNOI trust and render device config YAML ───
@@ -529,8 +635,50 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// -- 5b. Ensure VK SA + RoleBinding exist in the device's namespace --
 	serviceAccount := r.serviceAccountForDevice(&device, managed)
 	managedWorker := managed.Managed && !managed.LegacyWorker
-	if err := r.ensureVKAccess(ctx, &device, serviceAccount, managedWorker, managed.LegacyWorker); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure VK access: %w", err)
+	var deferredNetworkAccessTransition *sharedWorkerAccessTransition
+	if managedWorker {
+		if err := r.ensureManagedSharedWorkerAccess(ctx, &device); err != nil {
+			var transition *sharedWorkerAccessTransition
+			if stderrors.As(err, &transition) {
+				logger.Info("waiting for shared worker access transition", "reason", transition.Error())
+				if r.Recorder != nil {
+					eventType, reason := corev1.EventTypeNormal, "SharedWorkerAccessTransition"
+					if len(transition.blockers) != 0 {
+						eventType, reason = corev1.EventTypeWarning, "SharedWorkerAccessTransitionBlocked"
+					}
+					r.Recorder.Eventf(&device, eventType, reason, "%s", transition.Error())
+				}
+				if len(transition.planes) == 1 &&
+					transition.planes[0] == managedprotocol.WorkerModeNetworkManagement {
+					// The functional identities are independent. Once app access has
+					// completed its own transition, restore its Deployment even while
+					// an active gNOI/config mutation safely fences network rotation.
+					// The network Deployment is left completely untouched below.
+					deferredNetworkAccessTransition = transition
+				} else {
+					return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
+				}
+			} else {
+				return ctrl.Result{}, fmt.Errorf("failed to ensure managed worker access: %w", err)
+			}
+		}
+	} else {
+		if err := r.ensureVKAccess(ctx, &device, serviceAccount, false,
+			managed.LegacyWorker && serviceAccount == topologyLegacyWorkerServiceAccountName(&device)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to ensure VK access: %w", err)
+		}
+		// Phase zero first replaces the release-wide legacy token with an exact
+		// UID-derived identity. Record that transition only after all generated
+		// RBAC is present and audited. The marker makes deletion/finalizer cleanup
+		// durable and lets a topology-disable restart recover this worker without
+		// falling back to the namespace-shared identity.
+		if r.ManagedTopology && !managed.Managed &&
+			device.Status.NodeIdentity == nil && device.Status.LegacyHandoff == nil &&
+			serviceAccount == topologyLegacyWorkerServiceAccountName(&device) {
+			if err := r.ensureIsolatedLegacyWorkerMarker(ctx, &device); err != nil {
+				return ctrl.Result{}, fmt.Errorf("record phase-zero isolated legacy worker: %w", err)
+			}
+		}
 	}
 
 	// ── 6. Reconcile the Deployment ─────────────────────────────────────
@@ -552,6 +700,13 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	worker, err := resolveDeviceWorkerConfig(device.Spec.Worker)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("worker configuration: %w", err)
+	}
+	appAccess, networkAccess := managedprotocol.WorkerAccessReadWrite, managedprotocol.WorkerAccessReadWrite
+	if managedWorker {
+		_, appAccess, _, networkAccess, _, err = r.managedWorkerProfiles()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	provisioning := xeGNOICertificateProvisioning(&device.Spec)
 	provisioningTrustEnabled := provisioning != nil && !gNOIDisabled()
@@ -581,14 +736,17 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 	provisioningWritesEnabled := provisioningTrustEnabled &&
 		provisioningSignerAvailable &&
-		writeClassGNOIEnabled()
+		writeClassGNOIEnabled() &&
+		(!managedWorker || networkAccess == managedprotocol.WorkerAccessReadWrite)
 	credentialSecretRV, credentialSecretErr := r.lookupCredentialResourceVersion(ctx, &device)
 	if credentialSecretErr != nil && r.ManagedTopology {
 		return ctrl.Result{}, credentialSecretErr
 	}
 	desiredWorkerRevision := ""
+	desiredNetworkWorkerRevision := ""
+	var networkTemplate *corev1.PodTemplateSpec
 
-	op, err = controllerutil.CreateOrUpdate(ctx, r.Client, deploy, func() error {
+	mutateAppDeployment := func() error {
 		previousWorkerRevision := deploy.Spec.Template.Annotations[managedprotocol.AnnotationWorkerConfigRevision]
 		// Immutable labels used as selector.
 		labels := perDeviceDeploymentLabels(device.Name)
@@ -713,7 +871,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// env values into the pod spec the controller creates.
 		podEnv := append([]corev1.EnvVar{}, credEnv...)
 		if managedWorker {
-			podEnv = append(podEnv, managedWorkerIdentityEnv(&device, managed.NodeName)...)
+			podEnv = append(podEnv, managedWorkerIdentityEnv(
+				&device, managed.NodeName,
+				"system:serviceaccount:"+device.Namespace+":"+r.appHostingServiceAccountName(),
+			)...)
 		}
 		if r.LeaseNamespace != "" {
 			podEnv = append(podEnv, corev1.EnvVar{Name: "CONFIG_LEASE_NAMESPACE", Value: r.LeaseNamespace})
@@ -871,8 +1032,30 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			})
 		}
 		if managedWorker {
+			// Split the fully rendered device-management template before removing
+			// network-only Secret projections from the app-hosting worker. Both
+			// planes retain device credentials because app lifecycle calls the device,
+			// but only the network plane receives gNOI trust/signer material.
+			networkTemplate = deploy.Spec.Template.DeepCopy()
+			networkTemplate.Labels = perDeviceNetworkDeploymentLabels(device.Name)
+			networkTemplate.Spec.ServiceAccountName = r.networkManagementServiceAccountName()
+			configureNetworkWorkerHealthProbes(networkTemplate)
+			setWorkerRuntimeContract(networkTemplate, managedprotocol.WorkerModeNetworkManagement,
+				networkAccess, "system:serviceaccount:"+device.Namespace+":"+r.networkManagementServiceAccountName())
+
+			removePodVolume(&deploy.Spec.Template, gnoiProvisioningVolumeName)
+			removePodVolume(&deploy.Spec.Template, gnoiTLSVolumeName)
+			setWorkerRuntimeContract(&deploy.Spec.Template, managedprotocol.WorkerModeAppHosting,
+				appAccess, "system:serviceaccount:"+device.Namespace+":"+r.appHostingServiceAccountName())
+
+			revisionEnv := []corev1.EnvVar{
+				{Name: managedprotocol.EnvCredentialSecretRevision, Value: credentialSecretRV},
+			}
 			deploy.Spec.Template.Spec.Containers[0].Env = append(
-				deploy.Spec.Template.Spec.Containers[0].Env,
+				deploy.Spec.Template.Spec.Containers[0].Env, revisionEnv...,
+			)
+			networkTemplate.Spec.Containers[0].Env = append(
+				networkTemplate.Spec.Containers[0].Env,
 				corev1.EnvVar{Name: managedprotocol.EnvCredentialSecretRevision, Value: credentialSecretRV},
 				corev1.EnvVar{Name: managedprotocol.EnvGNOITLSSecretRevision, Value: gnoiTLSState.resourceVersion},
 				corev1.EnvVar{Name: managedprotocol.EnvGNOIProvisioningRevision, Value: provisioningSecretRV},
@@ -899,22 +1082,154 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				deploy.Spec.Template.Spec.Containers[0].Env,
 				corev1.EnvVar{Name: managedprotocol.EnvWorkerRevision, Value: desiredWorkerRevision},
 			)
+
+			var networkRevisionErr error
+			desiredNetworkWorkerRevision, networkRevisionErr = managedWorkerPodTemplateRevision(networkTemplate)
+			if networkRevisionErr != nil {
+				return networkRevisionErr
+			}
+			if networkTemplate.Annotations == nil {
+				networkTemplate.Annotations = map[string]string{}
+			}
+			networkTemplate.Annotations[managedprotocol.AnnotationWorkerConfigRevision] = desiredNetworkWorkerRevision
+			networkTemplate.Spec.Containers[0].Env = append(
+				networkTemplate.Spec.Containers[0].Env,
+				corev1.EnvVar{Name: managedprotocol.EnvWorkerRevision, Value: desiredNetworkWorkerRevision},
+			)
 		}
 
 		return controllerutil.SetControllerReference(&device, deploy, r.Scheme)
-	})
+	}
+	appWorkerEnabled := !managedWorker || appAccess == managedprotocol.WorkerAccessReadWrite
+	if appWorkerEnabled {
+		op, err = controllerutil.CreateOrUpdate(ctx, r.Client, deploy, mutateAppDeployment)
+	} else {
+		// Render the common template in memory so the network worker remains
+		// available in app read-only/disabled mode, but do not persist an app
+		// Deployment that cannot safely run upstream Virtual Kubelet controllers.
+		err = mutateAppDeployment()
+		op = controllerutil.OperationResultNone
+		var stale appsv1.Deployment
+		key := types.NamespacedName{Namespace: device.Namespace, Name: device.Name + deploymentSuffix}
+		if getErr := r.reader().Get(ctx, key, &stale); getErr == nil {
+			if !metav1.IsControlledBy(&stale, &device) {
+				return ctrl.Result{}, fmt.Errorf("app worker Deployment %s is not controlled by this CiscoDevice", key)
+			}
+			foreground := metav1.DeletePropagationForeground
+			if deleteErr := r.Delete(ctx, &stale, &client.DeleteOptions{PropagationPolicy: &foreground}); deleteErr != nil && !errors.IsNotFound(deleteErr) {
+				return ctrl.Result{}, fmt.Errorf("delete disabled app worker Deployment %s: %w", key, deleteErr)
+			}
+		} else if !errors.IsNotFound(getErr) {
+			return ctrl.Result{}, fmt.Errorf("read disabled app worker Deployment %s: %w", key, getErr)
+		}
+	}
 	if err != nil {
 		var fence *managedWorkerRevisionFence
 		if stderrors.As(err, &fence) {
-			if err := r.fenceManagedWorkerRevision(ctx, &device, fence.desiredRevision); err != nil {
-				return ctrl.Result{}, err
+			var fenceErr error
+			if fence.network {
+				fenceErr = r.fenceManagedNetworkWorkerRevision(ctx, &device, fence.desiredRevision)
+			} else {
+				fenceErr = r.fenceManagedWorkerRevision(ctx, &device, fence.desiredRevision)
+			}
+			if fenceErr != nil {
+				return ctrl.Result{}, fenceErr
 			}
 			return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to reconcile Deployment: %w", err)
 	}
 	logger.Info("Deployment reconciled", "name", deploy.Name, "operation", op)
-	if err := r.updateGNOIConfigurationCondition(ctx, &device, deploy, desiredWorkerRevision, gnoiConfigurationErr); err != nil {
+	if deferredNetworkAccessTransition != nil {
+		// The app worker has now been reconciled against its freshly rotated
+		// identity. Return before reading, replacing, deleting, or status-fencing
+		// the network Deployment protected by the active mutation blocker.
+		return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
+	}
+
+	var networkDeploy *appsv1.Deployment
+	if managedWorker && networkAccess != managedprotocol.WorkerAccessDisabled {
+		if networkTemplate == nil || desiredNetworkWorkerRevision == "" {
+			return ctrl.Result{}, fmt.Errorf("managed network worker template is incomplete")
+		}
+		networkDeploy = &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID)),
+		}}
+		networkOp, networkErr := controllerutil.CreateOrUpdate(ctx, r.Client, networkDeploy, func() error {
+			previousRevision := networkDeploy.Spec.Template.Annotations[managedprotocol.AnnotationWorkerConfigRevision]
+			var replicas int32 = 1
+			networkDeploy.Spec.Replicas = &replicas
+			networkDeploy.Spec.Selector = &metav1.LabelSelector{MatchLabels: perDeviceNetworkDeploymentLabels(device.Name)}
+			networkDeploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
+			networkDeploy.Annotations = propagatedCorrelationAnnotations(networkDeploy.Annotations, device.Annotations, r.now())
+			if networkDeploy.Annotations == nil {
+				networkDeploy.Annotations = map[string]string{}
+			}
+			if provisioningWritesEnabled {
+				networkDeploy.Annotations[gnoiSignerMountedAnnotation] = "true"
+			} else {
+				delete(networkDeploy.Annotations, gnoiSignerMountedAnnotation)
+			}
+			if device.Spec.Driver == ciskov1.DeviceDriverXE && !gNOIDisabled() &&
+				(writeClassGNOIEnabled() || softwareUpgradeEnabled()) {
+				networkDeploy.Annotations[gnoiMutationWorkerAnnotation] = "true"
+			} else {
+				delete(networkDeploy.Annotations, gnoiMutationWorkerAnnotation)
+			}
+			networkDeploy.Spec.Template = *networkTemplate.DeepCopy()
+			if networkWorkerRevisionNeedsPreFence(networkDeploy.UID, previousRevision,
+				desiredNetworkWorkerRevision, device.Status.NetworkWorkerRevision) {
+				return &managedWorkerRevisionFence{desiredRevision: desiredNetworkWorkerRevision, network: true}
+			}
+			return controllerutil.SetControllerReference(&device, networkDeploy, r.Scheme)
+		})
+		if networkErr != nil {
+			var fence *managedWorkerRevisionFence
+			if stderrors.As(networkErr, &fence) {
+				if err := r.fenceManagedNetworkWorkerRevision(ctx, &device, fence.desiredRevision); err != nil {
+					return ctrl.Result{}, err
+				}
+				return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to reconcile network worker Deployment: %w", networkErr)
+		}
+		logger.Info("Network worker Deployment reconciled", "name", networkDeploy.Name, "operation", networkOp)
+	} else {
+		stale := &appsv1.Deployment{}
+		key := types.NamespacedName{Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID))}
+		if err := r.reader().Get(ctx, key, stale); err == nil {
+			if !metav1.IsControlledBy(stale, &device) {
+				return ctrl.Result{}, fmt.Errorf("network worker Deployment %s is not controlled by this CiscoDevice", key)
+			}
+			foreground := metav1.DeletePropagationForeground
+			if err := r.Delete(ctx, stale, &client.DeleteOptions{PropagationPolicy: &foreground}); err != nil && !errors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("delete inactive network worker Deployment %s: %w", key, err)
+			}
+		} else if !errors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("read inactive network worker Deployment %s: %w", key, err)
+		}
+	}
+	if managedWorker {
+		if err := r.cleanupDisabledSharedWorkerAccounts(ctx, &device, appAccess, networkAccess); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if managedWorker {
+		var appDeploy *appsv1.Deployment
+		if appWorkerEnabled {
+			appDeploy = deploy
+		}
+		if err := r.updateManagedWorkerStatuses(ctx, &device, appDeploy, desiredWorkerRevision,
+			networkDeploy, desiredNetworkWorkerRevision, gnoiConfigurationErr); err != nil {
+			return ctrl.Result{}, err
+		}
+		if appAccess == managedprotocol.WorkerAccessReadWrite {
+			if err := r.restoreManagedAppHostingCordon(ctx, &device); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else if err := r.updateGNOIConfigurationCondition(ctx, &device, deploy, desiredWorkerRevision, gnoiConfigurationErr); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -928,7 +1243,11 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// ── 7. Update CiscoDevice status ────────────────────────────────────
-	if err := r.updateStatus(ctx, &device, deploy); err != nil {
+	statusDeployment := deploy
+	if managedWorker && !appWorkerEnabled {
+		statusDeployment = networkDeploy
+	}
+	if err := r.updateStatus(ctx, &device, statusDeployment); err != nil {
 		return ctrl.Result{}, err
 	}
 	if r.ManagedTopology {
@@ -992,20 +1311,23 @@ func (r *CiscoDeviceReconciler) vkServiceAccountName() string {
 }
 
 func (r *CiscoDeviceReconciler) serviceAccountForDevice(device *ciskov1.CiscoDevice, topologyResult ...managedTopologyResult) string {
+	if len(topologyResult) > 0 && topologyResult[0].WorkerServiceAccount != "" {
+		return topologyResult[0].WorkerServiceAccount
+	}
 	if len(topologyResult) > 0 && topologyResult[0].LegacyWorker {
 		return topologyLegacyWorkerServiceAccountName(device)
 	}
-	// A reverse handoff deliberately retains its completed identity marker so
-	// disabling managed topology never falls back to the release-wide shared
-	// ServiceAccount on a later manager restart.
 	if device.Status.LegacyHandoff != nil {
+		if device.Status.LegacyHandoff.Phase == ciskov1.DeviceLegacyHandoffComplete {
+			return r.vkServiceAccountName()
+		}
 		return topologyLegacyWorkerServiceAccountName(device)
 	}
 	// NodeIdentity is a durable writer-handoff marker. Keep using the
 	// incarnation-bound identity during deletion or a fail-closed manager
 	// restart even when the feature flag was subsequently disabled.
 	if device.Status.NodeIdentity != nil {
-		return managedWorkerServiceAccountName(device)
+		return r.appHostingServiceAccountName()
 	}
 	if r.ManagedTopology {
 		return topologyLegacyWorkerServiceAccountName(device)
@@ -1045,14 +1367,24 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 	isolatedLegacy ...bool,
 ) error {
 	generatedLegacy := len(isolatedLegacy) > 0 && isolatedLegacy[0]
-	generated := managed || r.ManagedTopology || device.Status.LegacyHandoff != nil || generatedLegacy
+	sharedCompatibility := !managed && !generatedLegacy && saName == r.vkServiceAccountName() &&
+		(device.Status.LegacyHandoff == nil ||
+			device.Status.LegacyHandoff.Phase == ciskov1.DeviceLegacyHandoffSharedWriterPending ||
+			device.Status.LegacyHandoff.Phase == ciskov1.DeviceLegacyHandoffComplete)
+	generated := (managed || r.ManagedTopology || device.Status.LegacyHandoff != nil || generatedLegacy) && !sharedCompatibility
 	if generated {
+		if strings.TrimSpace(r.WorkerServiceAccountPolicyEpoch) == "" {
+			return fmt.Errorf("generated worker ServiceAccount policy epoch is empty")
+		}
 		expectedName := topologyLegacyWorkerServiceAccountName(device)
 		if managed {
 			expectedName = managedWorkerServiceAccountName(device)
 		}
 		if saName != expectedName {
 			return fmt.Errorf("generated worker ServiceAccount name %q does not match bound identity %q", saName, expectedName)
+		}
+		if err := r.enforceGeneratedWorkerNamespaceSafety(ctx, device, saName, managed); err != nil {
+			return fmt.Errorf("generated worker namespace safety audit: %w", err)
 		}
 	}
 	sa := &corev1.ServiceAccount{
@@ -1071,6 +1403,9 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 				if err := validateReservedWorkerAnnotations(sa.Annotations, expectedAnnotations); err != nil {
 					return fmt.Errorf("existing generated worker ServiceAccount binding is invalid: %w", err)
 				}
+				if sa.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] != r.WorkerServiceAccountPolicyEpoch {
+					return fmt.Errorf("existing generated worker ServiceAccount predates the verified reserved-account admission generation")
+				}
 			}
 			if sa.Annotations == nil {
 				sa.Annotations = map[string]string{}
@@ -1078,6 +1413,7 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 			for key, value := range expectedAnnotations {
 				sa.Annotations[key] = value
 			}
+			sa.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] = r.WorkerServiceAccountPolicyEpoch
 			return controllerutil.SetControllerReference(device, sa, r.Scheme)
 		}
 		return nil
@@ -1167,6 +1503,13 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 		return fmt.Errorf("ClusterRoleBinding %s: %w", crbName, err)
 	}
 	if generated {
+		// Close the create-time race with namespace RBAC and legacy token Secret
+		// changes by repeating the safety audit after all grants exist. A risk at
+		// this point revokes the generated identity before this reconcile can
+		// launch or retain its worker workload.
+		if err := r.enforceGeneratedWorkerNamespaceSafety(ctx, device, saName, managed); err != nil {
+			return fmt.Errorf("generated worker post-bind safety audit: %w", err)
+		}
 		if err := r.auditGeneratedWorkerBindings(ctx, device, saName, workerClusterRole); err != nil {
 			return err
 		}
@@ -1409,66 +1752,21 @@ func (r *CiscoDeviceReconciler) cleanupGeneratedWorkerAccess(
 	saName string,
 	managed bool,
 ) error {
-	expectedAnnotations := workerServiceAccountAnnotations(device, managed)
-	workerRole := vkSharedClusterRole
-	if managed {
-		workerRole = managedprotocol.ManagedWorkerClusterRole
+	// Revoke every independently exact canonical object in authority-first
+	// order. Additive or drifted objects remain visible for operator repair but
+	// cannot be used to pin an exact broad ClusterRoleBinding in place.
+	cleanupErr := r.quarantineGeneratedWorkerAccess(ctx, device, saName, managed, false)
+	remaining, err := r.generatedWorkerAccessInventory(ctx, device, saName, managed)
+	if err != nil {
+		err = fmt.Errorf("verify generated worker access revocation for CiscoDevice %s/%s account %q: %w",
+			device.Namespace, device.Name, saName, err)
+		return stderrors.Join(cleanupErr, err)
 	}
-
-	var sa corev1.ServiceAccount
-	saKey := types.NamespacedName{Namespace: device.Namespace, Name: saName}
-	if err := r.reader().Get(ctx, saKey, &sa); err != nil {
-		if !errors.IsNotFound(err) {
-			return fmt.Errorf("read generated worker ServiceAccount %s: %w", saKey, err)
-		}
-	} else if !managedServiceAccountOwnedByDevice(&sa, device) || !workerAnnotationsMatch(sa.Annotations, expectedAnnotations) {
-		return fmt.Errorf("refusing to clean generated worker access: ServiceAccount %s is not exactly owned by this CiscoDevice incarnation", saKey)
+	if remaining.count() != 0 {
+		err = fmt.Errorf("generated worker access remains after revocation")
+		return stderrors.Join(cleanupErr, err)
 	}
-
-	var rb rbacv1.RoleBinding
-	rbKey := types.NamespacedName{Namespace: device.Namespace, Name: saName}
-	if err := r.reader().Get(ctx, rbKey, &rb); err != nil {
-		if !errors.IsNotFound(err) {
-			return fmt.Errorf("read generated worker RoleBinding %s: %w", rbKey, err)
-		}
-	} else {
-		if err := validateGeneratedRoleBinding(&rb, device, saName); err != nil ||
-			!workerAnnotationsMatch(rb.Annotations, expectedAnnotations) || !managedServiceAccountOwnedByDeviceMeta(&rb.ObjectMeta, device) {
-			if err == nil {
-				err = fmt.Errorf("binding metadata is not exactly incarnation-bound")
-			}
-			return fmt.Errorf("refusing to delete generated worker RoleBinding %s: %w", rbKey, err)
-		}
-		if err := deleteWithUIDPrecondition(ctx, r.Client, &rb); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("delete generated worker RoleBinding %s: %w", rbKey, err)
-		}
-	}
-
-	crbKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, saName)}
-	var crb rbacv1.ClusterRoleBinding
-	if err := r.reader().Get(ctx, crbKey, &crb); err != nil {
-		if !errors.IsNotFound(err) {
-			return fmt.Errorf("read generated worker ClusterRoleBinding %s: %w", crbKey, err)
-		}
-	} else {
-		if err := validateGeneratedClusterRoleBinding(&crb, device, saName, workerRole); err != nil ||
-			!workerAnnotationsMatch(crb.Annotations, expectedAnnotations) {
-			if err == nil {
-				err = fmt.Errorf("binding metadata is not exactly incarnation-bound")
-			}
-			return fmt.Errorf("refusing to delete generated worker ClusterRoleBinding %s: %w", crbKey, err)
-		}
-		if err := deleteWithUIDPrecondition(ctx, r.Client, &crb); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("delete generated worker ClusterRoleBinding %s: %w", crbKey, err)
-		}
-	}
-
-	if sa.Name != "" {
-		if err := deleteWithUIDPrecondition(ctx, r.Client, &sa); err != nil && !errors.IsNotFound(err) {
-			return fmt.Errorf("delete generated worker ServiceAccount %s: %w", saKey, err)
-		}
-	}
-	return nil
+	return cleanupErr
 }
 
 func deleteWithUIDPrecondition(ctx context.Context, kubeClient client.Client, object client.Object) error {
@@ -1480,6 +1778,18 @@ func deleteWithUIDPrecondition(ctx context.Context, kubeClient client.Client, ob
 		return kubeClient.Delete(ctx, object)
 	}
 	return kubeClient.Delete(ctx, object, &client.DeleteOptions{Preconditions: &metav1.Preconditions{UID: &uid}})
+}
+
+func deleteForegroundWithUIDPrecondition(ctx context.Context, kubeClient client.Client, object client.Object) error {
+	foreground := metav1.DeletePropagationForeground
+	options := &client.DeleteOptions{PropagationPolicy: &foreground}
+	if uid := object.GetUID(); uid != "" {
+		options.Preconditions = &metav1.Preconditions{UID: &uid}
+	}
+	// Kubernetes always supplies the observed UID; fake.Client fixtures may
+	// omit it. Production therefore always carries a UID CAS together with
+	// foreground dependency cleanup.
+	return kubeClient.Delete(ctx, object, options)
 }
 
 func serviceAccountHasIdentity(sa *corev1.ServiceAccount) bool {
@@ -1548,6 +1858,71 @@ func perDeviceDeploymentLabels(deviceName string) map[string]string {
 	}
 }
 
+func perDeviceNetworkDeploymentLabels(deviceName string) map[string]string {
+	return map[string]string{
+		"app.kubernetes.io/name":       "cisco-vk-network",
+		"app.kubernetes.io/instance":   deviceName,
+		"app.kubernetes.io/managed-by": "ciscodevice-controller",
+	}
+}
+
+func setWorkerRuntimeContract(template *corev1.PodTemplateSpec, mode, access, username string) {
+	if template == nil || len(template.Spec.Containers) == 0 {
+		return
+	}
+	env := template.Spec.Containers[0].Env
+	for _, desired := range []corev1.EnvVar{
+		{Name: managedprotocol.EnvWorkerMode, Value: mode},
+		{Name: managedprotocol.EnvWorkerAccess, Value: access},
+		{Name: managedprotocol.EnvExpectedWorkerUsername, Value: username},
+	} {
+		env = slices.DeleteFunc(env, func(current corev1.EnvVar) bool { return current.Name == desired.Name })
+		env = append(env, desired)
+	}
+	template.Spec.Containers[0].Env = env
+}
+
+func configureNetworkWorkerHealthProbes(template *corev1.PodTemplateSpec) {
+	if template == nil || len(template.Spec.Containers) == 0 {
+		return
+	}
+	container := &template.Spec.Containers[0]
+	container.Ports = slices.DeleteFunc(container.Ports, func(port corev1.ContainerPort) bool {
+		return port.Name == "health"
+	})
+	container.Ports = append(container.Ports, corev1.ContainerPort{
+		Name: "health", ContainerPort: 8081, Protocol: corev1.ProtocolTCP,
+	})
+	httpProbe := func(path string, initialDelay, period int32) *corev1.Probe {
+		return &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{HTTPGet: &corev1.HTTPGetAction{
+				Path: path, Port: intstr.FromString("health"), Scheme: corev1.URISchemeHTTP,
+			}},
+			InitialDelaySeconds: initialDelay,
+			PeriodSeconds:       period,
+			TimeoutSeconds:      1,
+			FailureThreshold:    3,
+		}
+	}
+	container.ReadinessProbe = httpProbe("/readyz", 2, 5)
+	container.LivenessProbe = httpProbe("/healthz", 10, 10)
+}
+
+func removePodVolume(template *corev1.PodTemplateSpec, name string) {
+	if template == nil {
+		return
+	}
+	template.Spec.Volumes = slices.DeleteFunc(template.Spec.Volumes, func(volume corev1.Volume) bool {
+		return volume.Name == name
+	})
+	for i := range template.Spec.Containers {
+		template.Spec.Containers[i].VolumeMounts = slices.DeleteFunc(
+			template.Spec.Containers[i].VolumeMounts,
+			func(mount corev1.VolumeMount) bool { return mount.Name == name },
+		)
+	}
+}
+
 func perDeviceVKNodeAffinity() *corev1.Affinity {
 	return &corev1.Affinity{
 		NodeAffinity: &corev1.NodeAffinity{
@@ -1582,13 +1957,14 @@ func downwardAPIEnv() []corev1.EnvVar {
 	}
 }
 
-func managedWorkerIdentityEnv(device *ciskov1.CiscoDevice, nodeName string) []corev1.EnvVar {
+func managedWorkerIdentityEnv(device *ciskov1.CiscoDevice, nodeName, expectedUsername string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "CISCO_VK_MANAGED_TOPOLOGY", Value: "true"},
 		{Name: "CISCO_VK_DEVICE_NAMESPACE", Value: device.Namespace},
 		{Name: "CISCO_VK_DEVICE_NAME", Value: device.Name},
 		{Name: "CISCO_VK_DEVICE_UID", Value: string(device.UID)},
 		{Name: "CISCO_VK_NODE_NAME", Value: nodeName},
+		{Name: managedprotocol.EnvExpectedWorkerUsername, Value: expectedUsername},
 	}
 }
 
@@ -1840,6 +2216,16 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.mapSecretToCiscoDevices))
 	if r.ManagedTopology {
 		if err := mgr.GetFieldIndexer().IndexField(context.Background(), // ctxlint:allow manager field-index registration root
+			&corev1.Pod{}, podNodeNameIndex, func(object client.Object) []string {
+				pod, ok := object.(*corev1.Pod)
+				if !ok || pod.Spec.NodeName == "" {
+					return nil
+				}
+				return []string{pod.Spec.NodeName}
+			}); err != nil {
+			return fmt.Errorf("index Pods by assigned Node: %w", err)
+		}
+		if err := mgr.GetFieldIndexer().IndexField(context.Background(), // ctxlint:allow manager field-index registration root
 			&ciskov1.CiscoDevice{}, ciscoDevicePhysicalIdentityIndex, physicalIdentityIndexValues); err != nil {
 			return fmt.Errorf("index CiscoDevice physical identities: %w", err)
 		}
@@ -1849,10 +2235,35 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		builder = builder.
 			Watches(&ciskov1.CiscoDevice{}, handler.EnqueueRequestsFromMapFunc(r.mapPhysicalIdentityPeers)).
 			Watches(&corev1.Node{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNodeToCiscoDevice)).
+			Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedPodToCiscoDevice)).
 			Watches(&coordv1.Lease{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedMaintenanceToCiscoDevice)).
-			Watches(&opsv1alpha1.IOSXESoftwareUpgrade{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedMaintenanceToCiscoDevice))
+			Watches(&opsv1alpha1.IOSXESoftwareUpgrade{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedMaintenanceToCiscoDevice)).
+			Watches(&configv1alpha1.IOSXEConfig{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&configv1alpha1.NXOSConfig{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&configv1alpha1.IOSXETelemetry{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&configv1alpha1.IOSXEDiagnostic{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&configv1alpha1.IOSXEConfigApplyLog{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&configv1alpha1.IOSXEConfigRevision{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&opsv1alpha1.DeviceOperation{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&opsv1alpha1.IOSXEOperationalAction{}, handler.EnqueueRequestsFromMapFunc(r.mapManagedNetworkObjectToCiscoDevice)).
+			Watches(&rbacv1.RoleBinding{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespacedRBACToCiscoDevices)).
+			Watches(&rbacv1.Role{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespacedRBACToCiscoDevices)).
+			Watches(&rbacv1.ClusterRole{}, handler.EnqueueRequestsFromMapFunc(r.mapClusterRoleToCiscoDevices)).
+			Watches(&rbacv1.ClusterRoleBinding{}, handler.EnqueueRequestsFromMapFunc(r.mapClusterRoleBindingToCiscoDevices))
 	}
 	return builder.Complete(r)
+}
+
+func (r *CiscoDeviceReconciler) mapManagedNetworkObjectToCiscoDevice(_ context.Context,
+	object client.Object) []ctrl.Request {
+	name := managedNetworkObjectDeviceName(object)
+	if name == "" || object.GetNamespace() == "" {
+		return nil
+	}
+	return []ctrl.Request{{NamespacedName: types.NamespacedName{
+		Namespace: object.GetNamespace(),
+		Name:      name,
+	}}}
 }
 
 func (r *CiscoDeviceReconciler) mapManagedMaintenanceToCiscoDevice(_ context.Context, obj client.Object) []ctrl.Request {
@@ -1999,18 +2410,35 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceDeletionSafe(ctx context.Cont
 // idle. Reverse writer handoff uses this proof while its own handoff status is
 // necessarily in flight; deletion adds the stricter phase gate above.
 func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettled(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	return r.ensureManagedDeviceAuthoritiesSettledFor(ctx, device, false, "managed CiscoDevice deletion")
+}
+
+// ensureManagedDeviceAuthoritiesSettledForAccessTransition uses the same
+// durable authority proof as deletion, except that an absent canonical Lease
+// is idle. Deletion retries need the stricter proof that per-device authority
+// was already revoked before accepting an absent Lease; a profile transition
+// has not revoked the namespace-shared grants yet and must not deadlock a
+// never-started worker that has not created its Lease.
+func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledForAccessTransition(
+	ctx context.Context, device *ciskov1.CiscoDevice,
+) error {
+	return r.ensureManagedDeviceAuthoritiesSettledFor(ctx, device, true, "network-management access downgrade")
+}
+
+func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx context.Context,
+	device *ciskov1.CiscoDevice, missingLeaseIsIdle bool, operation string) error {
+	if lock := device.Status.TopologyLock; lock != nil {
+		return fmt.Errorf("%s is blocked by topology lock %q in state %q", operation, lock.ReservationID, lock.State)
+	}
+	if session := device.Status.MaintenanceSession; session != nil && session.Phase != ciskov1.DeviceMaintenanceSessionSettled {
+		return fmt.Errorf("%s is blocked by unresolved maintenance session %q in phase %q", operation, session.SessionToken, session.Phase)
+	}
 	bound := device.Status.NodeIdentity
 	if bound == nil {
 		return nil
 	}
 	if bound.DeviceUID != string(device.UID) || bound.NodeName == "" || bound.NodeUID == "" {
-		return fmt.Errorf("managed CiscoDevice deletion is blocked by an incomplete Node identity binding")
-	}
-	if lock := device.Status.TopologyLock; lock != nil {
-		return fmt.Errorf("managed CiscoDevice deletion is blocked by topology lock %q in state %q", lock.ReservationID, lock.State)
-	}
-	if session := device.Status.MaintenanceSession; session != nil && session.Phase != ciskov1.DeviceMaintenanceSessionSettled {
-		return fmt.Errorf("managed CiscoDevice deletion is blocked by unresolved maintenance session %q in phase %q", session.SessionToken, session.Phase)
+		return fmt.Errorf("%s is blocked by an incomplete Node identity binding", operation)
 	}
 
 	leaseNamespace := r.LeaseNamespace
@@ -2025,31 +2453,42 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettled(ctx contex
 	var lease coordv1.Lease
 	if err := r.reader().Get(ctx, leaseKey, &lease); err != nil {
 		if !errors.IsNotFound(err) {
-			return fmt.Errorf("read canonical mutation Lease %s before managed CiscoDevice deletion: %w", leaseKey, err)
+			return fmt.Errorf("read canonical mutation Lease %s before %s: %w", leaseKey, operation, err)
 		}
-		// A prior deletion attempt revokes both bindings before deleting the
-		// manager-owned Leases. Permit an idempotent retry only after that exact
-		// API authority is demonstrably gone; a missing Lease while either
-		// binding remains is not evidence that device mutation has settled.
-		revoked, verifyErr := r.managedWorkerAccessRevoked(ctx, device)
-		if verifyErr != nil {
-			return verifyErr
-		}
-		if !revoked {
-			return fmt.Errorf("managed CiscoDevice deletion requires its canonical mutation Lease %s", leaseKey)
+		if !missingLeaseIsIdle {
+			// A prior deletion attempt quiesces this device's worker Pods, clears
+			// their bound-token admission keys, and revokes any transitional
+			// per-device identity before deleting manager-owned Leases. A shared
+			// namespace role may legitimately remain for other devices, so the
+			// per-device Pod/object fence is the retry proof.
+			revoked, verifyErr := r.managedWorkerAccessRevoked(ctx, device)
+			if verifyErr != nil {
+				return verifyErr
+			}
+			cleared, clearErr := r.managedDeviceWorkerBindingsCleared(ctx, device)
+			if clearErr != nil {
+				return clearErr
+			}
+			if !revoked || !cleared {
+				return fmt.Errorf("%s requires its canonical mutation Lease %s", operation, leaseKey)
+			}
 		}
 	} else {
+		workerUsername := lease.Annotations[managedprotocol.AnnotationNetworkWorkerUsername]
+		if workerUsername == "" {
+			workerUsername = fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, managedWorkerServiceAccountName(device))
+		}
 		expectedAnnotations, expectedLabels := managedMutationLeaseMetadata(
 			device,
 			bound.NodeName,
 			bound.NodeUID,
-			fmt.Sprintf("system:serviceaccount:%s:%s", device.Namespace, managedWorkerServiceAccountName(device)),
+			workerUsername,
 		)
 		if err := validateManagedMutationLeaseMetadata(&lease, expectedAnnotations, expectedLabels); err != nil {
-			return fmt.Errorf("managed CiscoDevice deletion is blocked by invalid mutation Lease identity: %w", err)
+			return fmt.Errorf("%s is blocked by invalid mutation Lease identity: %w", operation, err)
 		}
 		if lease.Spec.HolderIdentity != nil && strings.TrimSpace(*lease.Spec.HolderIdentity) != "" {
-			return fmt.Errorf("managed CiscoDevice deletion is blocked while mutation Lease %s is held", leaseKey)
+			return fmt.Errorf("%s is blocked while mutation Lease %s is held", operation, leaseKey)
 		}
 		for _, annotation := range []string{
 			managedprotocol.AnnotationMaintenanceRequestVersion,
@@ -2061,14 +2500,13 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettled(ctx contex
 			managedprotocol.AnnotationMaintenanceControlRevision,
 		} {
 			if _, present := lease.Annotations[annotation]; present {
-				return fmt.Errorf("managed CiscoDevice deletion is blocked by unresolved mutation Lease request metadata")
+				return fmt.Errorf("%s is blocked by unresolved mutation Lease request metadata", operation)
 			}
 		}
 	}
-
 	var upgrades opsv1alpha1.IOSXESoftwareUpgradeList
 	if err := r.reader().List(ctx, &upgrades, client.InNamespace(device.Namespace)); err != nil {
-		return fmt.Errorf("list managed software upgrades before CiscoDevice deletion: %w", err)
+		return fmt.Errorf("list managed software upgrades before %s: %w", operation, err)
 	}
 	for i := range upgrades.Items {
 		upgrade := &upgrades.Items[i]
@@ -2082,35 +2520,35 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettled(ctx contex
 		}
 		admission := upgrade.Status.ManagerAdmission
 		if admission == nil || admission.DeviceUID != string(device.UID) {
-			return fmt.Errorf("managed CiscoDevice deletion is blocked by incomplete software-upgrade admission %s/%s", upgrade.Namespace, upgrade.Name)
+			return fmt.Errorf("%s is blocked by incomplete software-upgrade admission %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 		if admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled {
-			return fmt.Errorf("managed CiscoDevice deletion is blocked by unsettled software upgrade %s/%s", upgrade.Namespace, upgrade.Name)
+			return fmt.Errorf("%s is blocked by unsettled software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 	}
 
 	if r.TopologyPolicyNamespace == "" || r.TopologyPolicyName == "" {
-		return fmt.Errorf("managed CiscoDevice deletion cannot verify the rollout ledger without the topology policy identity")
+		return fmt.Errorf("%s cannot verify the rollout ledger without the topology policy identity", operation)
 	}
 	var policyCM corev1.ConfigMap
 	policyKey := types.NamespacedName{Namespace: r.TopologyPolicyNamespace, Name: r.TopologyPolicyName}
 	if err := r.reader().Get(ctx, policyKey, &policyCM); err != nil {
-		return fmt.Errorf("read topology policy before managed CiscoDevice deletion: %w", err)
+		return fmt.Errorf("read topology policy before %s: %w", operation, err)
 	}
 	policy, err := topologyrollout.ParseAdminPolicy(&policyCM)
 	if err != nil {
-		return fmt.Errorf("validate topology policy before managed CiscoDevice deletion: %w", err)
+		return fmt.Errorf("validate topology policy before %s: %w", operation, err)
 	}
 	_, ledger, err := (topologyrollout.Store{
 		Client: r.Client, APIReader: r.reader(),
 		Key: types.NamespacedName{Namespace: policy.Namespace, Name: policy.Config.LedgerName}, ExpectedUID: types.UID(policy.LedgerUID),
 	}).Read(ctx)
 	if err != nil {
-		return fmt.Errorf("read rollout ledger before managed CiscoDevice deletion: %w", err)
+		return fmt.Errorf("read rollout ledger before %s: %w", operation, err)
 	}
 	for _, reservation := range ledger.Reservations {
 		if reservation.DeviceUID == string(device.UID) {
-			return fmt.Errorf("managed CiscoDevice deletion is blocked by active rollout reservation %q", reservation.ID)
+			return fmt.Errorf("%s is blocked by active rollout reservation %q", operation, reservation.ID)
 		}
 	}
 	return nil
@@ -2153,7 +2591,8 @@ func (r *CiscoDeviceReconciler) deleteDeviceNode(ctx context.Context, device *ci
 			return fmt.Errorf("refusing Node deletion: CiscoDevice status binding is incomplete or stale")
 		}
 		name = bound.NodeName
-	} else if legacyHandoff != nil && legacyHandoff.Phase == ciskov1.DeviceLegacyHandoffComplete {
+	} else if legacyHandoff != nil && (legacyHandoff.Phase == ciskov1.DeviceLegacyHandoffSharedWriterPending ||
+		legacyHandoff.Phase == ciskov1.DeviceLegacyHandoffComplete) {
 		if legacyHandoff.DeviceUID != string(device.UID) || legacyHandoff.NodeName == "" || legacyHandoff.NodeUID == "" {
 			return fmt.Errorf("refusing Node deletion: completed legacy handoff binding is incomplete or stale")
 		}
@@ -2171,7 +2610,8 @@ func (r *CiscoDeviceReconciler) deleteDeviceNode(ctx context.Context, device *ci
 		if string(node.UID) != bound.NodeUID || !managedNodeMatchesDevice(node, device) || node.Annotations[managedprotocol.AnnotationNodeUID] != bound.NodeUID {
 			return fmt.Errorf("refusing Node deletion: %s now belongs to a different identity", name)
 		}
-	} else if legacyHandoff != nil && legacyHandoff.Phase == ciskov1.DeviceLegacyHandoffComplete {
+	} else if legacyHandoff != nil && (legacyHandoff.Phase == ciskov1.DeviceLegacyHandoffSharedWriterPending ||
+		legacyHandoff.Phase == ciskov1.DeviceLegacyHandoffComplete) {
 		if !legacyHandoffNodeMatches(node, legacyHandoff) {
 			return fmt.Errorf("refusing Node deletion: %s no longer matches the completed legacy handoff", name)
 		}
@@ -2804,12 +3244,17 @@ func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, 
 
 // mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
 // namespace that reference it through device credentials, generic gNOI TLS,
-// or the IOS-XE-only gNOI certificate-provisioning block.
+// or the IOS-XE-only gNOI certificate-provisioning block. A legacy token
+// Secret for either reserved shared account fans out to every device so the
+// controller revokes its grants immediately rather than waiting for polling.
 func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj client.Object) []ctrl.Request {
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return nil
 	}
+	legacySharedToken := r.ManagedTopology && secret.Type == corev1.SecretTypeServiceAccountToken &&
+		(secret.Annotations[corev1.ServiceAccountNameKey] == r.appHostingServiceAccountName() ||
+			secret.Annotations[corev1.ServiceAccountNameKey] == r.networkManagementServiceAccountName())
 	var devices ciskov1.CiscoDeviceList
 	if err := r.List(ctx, &devices, client.InNamespace(secret.Namespace)); err != nil {
 		log.FromContext(ctx).Error(err, "list CiscoDevices for referenced-secret mapping",
@@ -2824,7 +3269,7 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 		gnoiTLSMatch := gnoiTLSRef != nil && gnoiTLSRef.Name == secret.Name
 		provisioning := xeGNOICertificateProvisioning(&dev.Spec)
 		provisioningMatch := provisioning != nil && provisioning.SecretRef.Name == secret.Name
-		if !credentialMatch && !gnoiTLSMatch && !provisioningMatch {
+		if !legacySharedToken && !credentialMatch && !gnoiTLSMatch && !provisioningMatch {
 			continue
 		}
 		requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{
@@ -2850,12 +3295,22 @@ func (e *gnoiSecretReadError) Unwrap() error { return e.error }
 
 type managedWorkerRevisionFence struct {
 	desiredRevision string
+	network         bool
 }
 
 func managedWorkerRevisionNeedsPreFence(
 	deploymentUID types.UID,
 	previousRevision, desiredRevision string,
 	status *ciskov1.DeviceWorkerRevisionStatus,
+) bool {
+	return deploymentUID != "" && desiredRevision != "" && previousRevision != desiredRevision &&
+		(status == nil || status.DesiredRevision != desiredRevision)
+}
+
+func networkWorkerRevisionNeedsPreFence(
+	deploymentUID types.UID,
+	previousRevision, desiredRevision string,
+	status *ciskov1.DeviceNetworkWorkerRevisionStatus,
 ) bool {
 	return deploymentUID != "" && desiredRevision != "" && previousRevision != desiredRevision &&
 		(status == nil || status.DesiredRevision != desiredRevision)
@@ -2872,6 +3327,9 @@ func (r *CiscoDeviceReconciler) fenceManagedWorkerRevision(
 ) error {
 	if device == nil || desiredRevision == "" {
 		return fmt.Errorf("managed worker revision fence is incomplete")
+	}
+	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, true, false); err != nil {
+		return fmt.Errorf("clear prior app worker Pod binding before rollout: %w", err)
 	}
 	before := device.DeepCopy()
 	device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
@@ -2892,6 +3350,40 @@ func (r *CiscoDeviceReconciler) fenceManagedWorkerRevision(
 	}
 	if err := r.Status().Update(ctx, device); err != nil {
 		return fmt.Errorf("persist managed worker revision pre-rollout fence: %w", err)
+	}
+	return nil
+}
+
+func (r *CiscoDeviceReconciler) fenceManagedNetworkWorkerRevision(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	desiredRevision string,
+) error {
+	if device == nil || desiredRevision == "" {
+		return fmt.Errorf("managed network worker revision fence is incomplete")
+	}
+	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, false, true); err != nil {
+		return fmt.Errorf("clear prior network worker Pod binding before rollout: %w", err)
+	}
+	before := device.DeepCopy()
+	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+		DesiredRevision: desiredRevision,
+		ObservedAt:      metav1.NewTime(r.now()),
+	}
+	if err := r.applyCiscoDeviceConditionObserved(device, metav1.Condition{
+		Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+		Status:             metav1.ConditionFalse,
+		Reason:             "NetworkWorkerRolloutPending",
+		Message:            "managed network worker configuration changed; the old mutation worker is fenced before Deployment rollout",
+		ObservedGeneration: device.Generation,
+	}); err != nil {
+		return err
+	}
+	if statusesEqual(before.Status, device.Status) {
+		return nil
+	}
+	if err := r.Status().Update(ctx, device); err != nil {
+		return fmt.Errorf("persist managed network worker revision pre-rollout fence: %w", err)
 	}
 	return nil
 }

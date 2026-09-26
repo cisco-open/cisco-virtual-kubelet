@@ -18,8 +18,13 @@ limitations under the License.
 {{- $policyNamespace := include "cisco-virtual-kubelet.topologyPolicyNamespace" . }}
 {{- $policyName := include "cisco-virtual-kubelet.topologyPolicyName" . }}
 {{- $ledgerName := include "cisco-virtual-kubelet.topologyLedgerName" . }}
+{{- $appHostingServiceAccountName := include "cisco-virtual-kubelet.appHostingServiceAccountName" . }}
+{{- $networkManagementServiceAccountName := include "cisco-virtual-kubelet.networkManagementServiceAccountName" . }}
 {{- $policy := dict
       "version" "v1"
+      "appHostingServiceAccountName" $appHostingServiceAccountName
+      "networkManagementServiceAccountName" $networkManagementServiceAccountName
+      "configLeaseNamespace" .Values.config.leaseNamespace
       "fleetSelector" .Values.topology.policy.fleetSelector
       "requiredTopologyKeys" .Values.topology.policy.requiredTopologyKeys
       "projectedTopologyKeys" .Values.topology.policy.projectedTopologyKeys
@@ -46,7 +51,10 @@ metadata:
     helm.sh/resource-policy: keep
     topology.cisco.vk/managed-policy: "true"
     topology.cisco.vk/admission-policy-prefix: {{ include "cisco-virtual-kubelet.fullname" . | quote }}
-    topology.cisco.vk/admission-contract-version: "v1"
+    topology.cisco.vk/admission-contract-version: "v2"
+    topology.cisco.vk/app-hosting-service-account: {{ $appHostingServiceAccountName | quote }}
+    topology.cisco.vk/network-management-service-account: {{ $networkManagementServiceAccountName | quote }}
+    topology.cisco.vk/config-lease-namespace: {{ .Values.config.leaseNamespace | quote }}
 data:
   # The manager binds the live ledger ConfigMap UID in the protected
   # topology.cisco.vk/ledger-uid annotation after initializing the ledger.

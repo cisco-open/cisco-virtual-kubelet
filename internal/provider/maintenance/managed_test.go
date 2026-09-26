@@ -31,12 +31,27 @@ import (
 
 func managedCoordinatorFixture(t *testing.T) (*Coordinator, *ciskov1.CiscoDevice, *corev1.Node, *ops.IOSXESoftwareUpgrade, *coordv1.Lease) {
 	t.Helper()
+	const (
+		appUsername     = "system:serviceaccount:edge:cisco-vk-app-hosting"
+		networkUsername = "system:serviceaccount:edge:cisco-vk-network-management"
+		appPodName      = "switch-vk-abc123"
+		appPodUID       = "app-pod-uid"
+		networkPodName  = "switch-network-abc123"
+		networkPodUID   = "network-pod-uid"
+	)
 	device := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{Namespace: "edge", Name: "switch", UID: "device-uid", Generation: 1}}
 	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "separate-node", UID: "node-uid", Annotations: map[string]string{
 		managedprotocol.AnnotationManaged: "true", managedprotocol.AnnotationDeviceNamespace: device.Namespace,
 		managedprotocol.AnnotationDeviceName: device.Name, managedprotocol.AnnotationDeviceUID: string(device.UID),
 		managedprotocol.AnnotationNodeName: "separate-node", managedprotocol.AnnotationNodeUID: "node-uid",
-		managedprotocol.AnnotationWorkerUsername: "system:serviceaccount:edge:worker", managedprotocol.AnnotationWorkerProtocol: managedprotocol.Version,
+		managedprotocol.AnnotationWorkerUsername:        appUsername,
+		managedprotocol.AnnotationAppWorkerUsername:     appUsername,
+		managedprotocol.AnnotationAppWorkerPodName:      appPodName,
+		managedprotocol.AnnotationAppWorkerPodUID:       appPodUID,
+		managedprotocol.AnnotationNetworkWorkerUsername: networkUsername,
+		managedprotocol.AnnotationNetworkWorkerPodName:  networkPodName,
+		managedprotocol.AnnotationNetworkWorkerPodUID:   networkPodUID,
+		managedprotocol.AnnotationWorkerProtocol:        managedprotocol.Version,
 	}}}
 	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{DeviceUID: string(device.UID), NodeName: node.Name, NodeUID: string(node.UID)}
 	device.Status.Conditions = []metav1.Condition{{Type: ciskov1.CiscoDeviceConditionTopologyReady, Status: metav1.ConditionTrue, ObservedGeneration: 1, Reason: "Ready", LastTransitionTime: metav1.Now()}}
@@ -52,6 +67,7 @@ func managedCoordinatorFixture(t *testing.T) (*Coordinator, *ciskov1.CiscoDevice
 	for key, value := range node.Annotations {
 		annotations[key] = value
 	}
+	annotations[managedprotocol.AnnotationWorkerUsername] = networkUsername
 	annotations[managedprotocol.AnnotationLeasePurpose] = managedprotocol.LeasePurposeDeviceMutation
 	now := metav1.NewMicroTime(time.Now())
 	lease := &coordv1.Lease{ObjectMeta: metav1.ObjectMeta{Namespace: "leases", Name: engine.LeaseName(devicecoordination.DeviceKey(device.Namespace, device.Name), devicecoordination.MutationLeaseFamily), UID: "lease-uid", Annotations: annotations,
@@ -65,7 +81,12 @@ func managedCoordinatorFixture(t *testing.T) (*Coordinator, *ciskov1.CiscoDevice
 		}
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(device, up).WithObjects(device, node, up, lease).Build()
-	return &Coordinator{Client: c, Namespace: device.Namespace, DeviceName: device.Name, DeviceUID: string(device.UID), NodeName: node.Name, LeaseNamespace: lease.Namespace, ManagedTopology: true, MutationsEnabled: true}, device, node, up, lease
+	return &Coordinator{
+		Client: c, Namespace: device.Namespace, DeviceName: device.Name, DeviceUID: string(device.UID),
+		NodeName: node.Name, LeaseNamespace: lease.Namespace, ManagedTopology: true, MutationsEnabled: true,
+		WorkerMode: managedprotocol.WorkerModeNetworkManagement, ExpectedWorkerUsername: networkUsername,
+		WorkerPodName: networkPodName, WorkerPodUID: networkPodUID,
+	}, device, node, up, lease
 }
 
 func acknowledgement(request publishedRequest, c *Coordinator, node *corev1.Node) *ciskov1.DeviceMaintenanceSessionStatus {
@@ -108,7 +129,8 @@ func TestManagedMaintenanceAcknowledgementSurvivesJSONAndRestart(t *testing.T) {
 			t.Fatalf("persisted exact acknowledgement rejected: %v", err)
 		}
 		// A new process reuses the persisted token, not a process-local token.
-		c = &Coordinator{Client: c.Client, Namespace: c.Namespace, DeviceName: c.DeviceName, DeviceUID: c.DeviceUID, NodeName: c.NodeName, LeaseNamespace: c.LeaseNamespace, ManagedTopology: true}
+		c = &Coordinator{Client: c.Client, Namespace: c.Namespace, DeviceName: c.DeviceName, DeviceUID: c.DeviceUID, NodeName: c.NodeName, LeaseNamespace: c.LeaseNamespace, ManagedTopology: true,
+			WorkerMode: c.WorkerMode, ExpectedWorkerUsername: c.ExpectedWorkerUsername, WorkerPodName: c.WorkerPodName, WorkerPodUID: c.WorkerPodUID}
 	}
 	up.Status.ManagerControl.Revision++
 	if err := c.BeforeSoftwareUpgradeMutation(ctx, up); err == nil {
@@ -151,7 +173,20 @@ func TestManagedMaintenanceRejectsMismatchedAcknowledgements(t *testing.T) {
 }
 
 func TestManagedMaintenanceCannotRewriteForeignLeaseBinding(t *testing.T) {
-	for _, field := range []string{managedprotocol.AnnotationDeviceUID, managedprotocol.AnnotationNodeUID, managedprotocol.AnnotationWorkerUsername, managedprotocol.AnnotationWorkerProtocol, devicecoordination.RetainLeaseAnnotation, "holder", "expired", "acquire time", "transitions", "excess duration"} {
+	for _, field := range []string{
+		managedprotocol.AnnotationDeviceUID,
+		managedprotocol.AnnotationNodeUID,
+		managedprotocol.AnnotationWorkerUsername,
+		managedprotocol.AnnotationAppWorkerUsername,
+		managedprotocol.AnnotationAppWorkerPodName,
+		managedprotocol.AnnotationAppWorkerPodUID,
+		managedprotocol.AnnotationNetworkWorkerUsername,
+		managedprotocol.AnnotationNetworkWorkerPodName,
+		managedprotocol.AnnotationNetworkWorkerPodUID,
+		managedprotocol.AnnotationWorkerProtocol,
+		devicecoordination.RetainLeaseAnnotation,
+		"holder", "expired", "acquire time", "transitions", "excess duration",
+	} {
 		t.Run(field, func(t *testing.T) {
 			c, _, node, up, lease := managedCoordinatorFixture(t)
 			if err := c.Client.Get(context.Background(), client.ObjectKeyFromObject(lease), lease); err != nil {
@@ -291,6 +326,97 @@ func TestManagedOrdinaryWritesWaitForManagerSettlement(t *testing.T) {
 	}
 }
 
+func TestManagedMutationLeaseAcceptsExactFunctionalWorkerBindings(t *testing.T) {
+	for _, mode := range []string{
+		managedprotocol.WorkerModeAppHosting,
+		managedprotocol.WorkerModeNetworkManagement,
+	} {
+		t.Run(mode, func(t *testing.T) {
+			c, _, node, _, lease := managedCoordinatorFixture(t)
+			if mode == managedprotocol.WorkerModeAppHosting {
+				c.WorkerMode = mode
+				c.ExpectedWorkerUsername = node.Annotations[managedprotocol.AnnotationAppWorkerUsername]
+				c.WorkerPodName = node.Annotations[managedprotocol.AnnotationAppWorkerPodName]
+				c.WorkerPodUID = node.Annotations[managedprotocol.AnnotationAppWorkerPodUID]
+			}
+			if err := c.validateManagedNode(node); err != nil {
+				t.Fatalf("validateManagedNode() error = %v", err)
+			}
+			if err := c.validateManagedLeaseBinding(lease, node); err != nil {
+				t.Fatalf("validateManagedLeaseBinding() error = %v", err)
+			}
+		})
+	}
+}
+
+func TestManagedAppHostingRoutineWriteUsesAppBindingOnNetworkCanonicalLease(t *testing.T) {
+	c, _, node, up, lease := managedCoordinatorFixture(t)
+	c.WorkerMode = managedprotocol.WorkerModeAppHosting
+	c.ExpectedWorkerUsername = node.Annotations[managedprotocol.AnnotationAppWorkerUsername]
+	c.WorkerPodName = node.Annotations[managedprotocol.AnnotationAppWorkerPodName]
+	c.WorkerPodUID = node.Annotations[managedprotocol.AnnotationAppWorkerPodUID]
+	leaser := &engine.FamilyLeaser{Client: c.Client, Namespace: lease.Namespace}
+	if err := leaser.Release(context.Background(), devicecoordination.DeviceKey(c.Namespace, c.DeviceName),
+		devicecoordination.MutationLeaseFamily, mutationguard.UpgradeHolderIdentity(up)); err != nil {
+		t.Fatal(err)
+	}
+	_, finish, err := c.AcquireWrite(context.Background())
+	if err != nil {
+		t.Fatalf("AcquireWrite() error = %v", err)
+	}
+	finish(nil)
+}
+
+func TestManagedMutationLeaseRejectsCrossPlaneOrStalePodBinding(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(*Coordinator, *corev1.Node, *coordv1.Lease)
+	}{
+		{
+			name: "network coordinator using app identity",
+			change: func(c *Coordinator, node *corev1.Node, _ *coordv1.Lease) {
+				c.ExpectedWorkerUsername = node.Annotations[managedprotocol.AnnotationAppWorkerUsername]
+				c.WorkerPodName = node.Annotations[managedprotocol.AnnotationAppWorkerPodName]
+				c.WorkerPodUID = node.Annotations[managedprotocol.AnnotationAppWorkerPodUID]
+			},
+		},
+		{
+			name: "replacement network Pod not stamped",
+			change: func(c *Coordinator, _ *corev1.Node, _ *coordv1.Lease) {
+				c.WorkerPodUID = "replacement-pod-uid"
+			},
+		},
+		{
+			name: "lease carries stale app Pod",
+			change: func(_ *Coordinator, _ *corev1.Node, lease *coordv1.Lease) {
+				lease.Annotations[managedprotocol.AnnotationAppWorkerPodUID] = "stale-app-pod"
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, _, node, _, lease := managedCoordinatorFixture(t)
+			tc.change(c, node, lease)
+			if err := c.validateManagedNode(node); err != nil {
+				return
+			}
+			if err := c.validateManagedLeaseBinding(lease, node); err == nil {
+				t.Fatal("validateManagedLeaseBinding() succeeded for a mismatched functional worker binding")
+			}
+		})
+	}
+}
+
+func TestManagedSoftwareUpgradeRejectsAppHostingWorker(t *testing.T) {
+	c, _, node, up, _ := managedCoordinatorFixture(t)
+	c.WorkerMode = managedprotocol.WorkerModeAppHosting
+	c.ExpectedWorkerUsername = node.Annotations[managedprotocol.AnnotationAppWorkerUsername]
+	c.WorkerPodName = node.Annotations[managedprotocol.AnnotationAppWorkerPodName]
+	c.WorkerPodUID = node.Annotations[managedprotocol.AnnotationAppWorkerPodUID]
+	if err := c.BeforeSoftwareUpgradeMutation(context.Background(), up); err == nil || !strings.Contains(err.Error(), "network-management") {
+		t.Fatalf("BeforeSoftwareUpgradeMutation() error = %v, want functional-plane rejection", err)
+	}
+}
+
 func TestManagedOrdinaryWritesRequireReadyBoundTopology(t *testing.T) {
 	for name, change := range map[string]func(*ciskov1.CiscoDevice, *corev1.Node){
 		"condition absent":  func(d *ciskov1.CiscoDevice, _ *corev1.Node) { d.Status.Conditions = nil },
@@ -313,6 +439,9 @@ func TestManagedOrdinaryWritesRequireReadyBoundTopology(t *testing.T) {
 		},
 		"worker binding": func(_ *ciskov1.CiscoDevice, n *corev1.Node) {
 			n.Annotations[managedprotocol.AnnotationWorkerUsername] = "system:serviceaccount:edge:"
+		},
+		"network worker Pod binding": func(_ *ciskov1.CiscoDevice, n *corev1.Node) {
+			n.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] = "replacement"
 		},
 		"foreign settled session": func(d *ciskov1.CiscoDevice, n *corev1.Node) {
 			d.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{Phase: ciskov1.DeviceMaintenanceSessionSettled, DeviceUID: "replacement", NodeName: n.Name, NodeUID: string(n.UID)}

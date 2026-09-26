@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 // uidPrefix returns the leading 8 chars of a UID for use as a
@@ -111,6 +112,11 @@ func (r *Reconciler) writeToConfigMap(
 			sink.Namespace, diag.Namespace)
 	}
 	ns := diag.Namespace
+	managed := diag.Annotations[managedprotocol.AnnotationManaged] == "true"
+	if managed && !managedprotocol.NetworkObjectBindingComplete(diag.Annotations) {
+		return fmt.Errorf("managed diagnostic %s/%s has an incomplete network-object binding",
+			diag.Namespace, diag.Name)
+	}
 	// Include the diag UID in the ConfigMap name so two same-named
 	// CRs in different namespaces never collide on a shared sink
 	// namespace, and a delete-and-recreate cycle of the CR produces
@@ -120,6 +126,11 @@ func (r *Reconciler) writeToConfigMap(
 		sink.NamePrefix,
 		capture.CapturedAt.Format("20060102-150405"),
 		uidShort)
+	if managed {
+		name = managedprotocol.NetworkResultNamePrefix(
+			diag.Annotations[managedprotocol.AnnotationDeviceUID]) +
+			"u" + string(diag.UID) + "-" + capture.CapturedAt.Format("20060102-150405")
+	}
 
 	// Build data map: key = sanitised command, value = full output.
 	// Empty outputs and per-command errors land as data entries too
@@ -148,8 +159,9 @@ func (r *Reconciler) writeToConfigMap(
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: ns,
+			Name:        name,
+			Namespace:   ns,
+			Annotations: managedprotocol.CopyNetworkObjectBinding(diag.Annotations),
 			Labels: map[string]string{
 				configMapDiagnosticLabel:    diag.Name,
 				configMapDiagnosticUIDLabel: string(diag.UID),
@@ -197,13 +209,43 @@ func (r *Reconciler) writeToConfigMap(
 				ns, name,
 				existing.Labels[configMapDiagnosticUIDLabel], diag.UID)
 		}
+		if !diagnosticResultOwnedBy(&existing, diag) {
+			return fmt.Errorf("refusing to overwrite ConfigMap %s/%s: "+
+				"controller owner does not exactly match IOSXEDiagnostic %s (uid=%s)",
+				ns, name, diag.Name, diag.UID)
+		}
+		if managed && !managedprotocol.NetworkObjectBindingMatches(diag.Annotations, existing.Annotations) {
+			return fmt.Errorf("refusing to overwrite ConfigMap %s/%s: "+
+				"network-object binding does not match IOSXEDiagnostic %s (uid=%s)",
+				ns, name, diag.Name, diag.UID)
+		}
 		existing.Data = data
 		existing.Labels = cm.Labels
+		existing.Annotations = mergeNetworkObjectBinding(existing.Annotations, diag.Annotations)
 		if err := r.Client.Update(ctx, &existing); err != nil {
 			return fmt.Errorf("update ConfigMap %s/%s: %w", ns, name, err)
 		}
 	}
 	return nil
+}
+
+func mergeNetworkObjectBinding(destination, source map[string]string) map[string]string {
+	if destination == nil {
+		destination = map[string]string{}
+	}
+	for key, value := range managedprotocol.CopyNetworkObjectBinding(source) {
+		destination[key] = value
+	}
+	return destination
+}
+
+func diagnosticResultOwnedBy(cm *corev1.ConfigMap, diag *configv1alpha1.IOSXEDiagnostic) bool {
+	owner := metav1.GetControllerOf(cm)
+	return owner != nil &&
+		owner.APIVersion == configv1alpha1.GroupVersion.String() &&
+		owner.Kind == "IOSXEDiagnostic" &&
+		owner.Name == diag.Name &&
+		owner.UID == diag.UID
 }
 
 // pruneOldConfigMaps deletes oldest ConfigMaps for this CR when their
@@ -232,18 +274,37 @@ func (r *Reconciler) pruneOldConfigMaps(
 	); err != nil {
 		return fmt.Errorf("list ConfigMaps for diagnostic %q: %w", diag.Name, err)
 	}
-	if len(list.Items) <= maxResults {
+	managed := diag.Annotations[managedprotocol.AnnotationManaged] == "true"
+	if managed && !managedprotocol.NetworkObjectBindingComplete(diag.Annotations) {
+		return fmt.Errorf("managed diagnostic %s/%s has an incomplete network-object binding",
+			diag.Namespace, diag.Name)
+	}
+	owned := make([]corev1.ConfigMap, 0, len(list.Items))
+	for i := range list.Items {
+		cm := &list.Items[i]
+		if !diagnosticResultOwnedBy(cm, diag) {
+			continue
+		}
+		if managed && !managedprotocol.NetworkObjectBindingMatches(diag.Annotations, cm.Annotations) {
+			continue
+		}
+		owned = append(owned, *cm)
+	}
+	if len(owned) <= maxResults {
 		return nil
 	}
 
-	sort.SliceStable(list.Items, func(i, j int) bool {
-		return list.Items[i].Labels[configMapCaptureAtLabel] <
-			list.Items[j].Labels[configMapCaptureAtLabel]
+	sort.SliceStable(owned, func(i, j int) bool {
+		return owned[i].Labels[configMapCaptureAtLabel] <
+			owned[j].Labels[configMapCaptureAtLabel]
 	})
-	excess := len(list.Items) - maxResults
+	excess := len(owned) - maxResults
 	for i := 0; i < excess; i++ {
-		cm := list.Items[i]
-		if err := r.Client.Delete(ctx, &cm); err != nil && !apierrors.IsNotFound(err) {
+		cm := owned[i]
+		uid := cm.UID
+		if err := r.Client.Delete(ctx, &cm, &client.DeleteOptions{
+			Preconditions: &metav1.Preconditions{UID: &uid},
+		}); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("delete oldest ConfigMap %s/%s: %w", cm.Namespace, cm.Name, err)
 		}
 	}

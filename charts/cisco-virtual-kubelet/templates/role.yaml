@@ -35,6 +35,17 @@ rules:
   - delete
   - get
   - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - patch
   - watch
 - apiGroups:
   - ""
@@ -164,7 +175,15 @@ rules:
   - rbac.authorization.k8s.io
   resourceNames:
   - cisco-virtual-kubelet
+  - cisco-virtual-kubelet-app-hosting-device-read
+  - cisco-virtual-kubelet-app-hosting-read-only
+  - cisco-virtual-kubelet-app-hosting-read-write
   - cisco-virtual-kubelet-device
+  - cisco-virtual-kubelet-network-management-global-read
+  - cisco-virtual-kubelet-network-management-lease-read-only
+  - cisco-virtual-kubelet-network-management-lease-read-write
+  - cisco-virtual-kubelet-network-management-read-only
+  - cisco-virtual-kubelet-network-management-read-write
   resources:
   - clusterroles
   verbs:
@@ -177,6 +196,15 @@ rules:
   - clusterroles
   verbs:
   - bind
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - roles
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

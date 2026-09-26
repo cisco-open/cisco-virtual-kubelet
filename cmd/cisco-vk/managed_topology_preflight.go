@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	admissionv1 "k8s.io/api/admissionregistration/v1"
@@ -42,6 +43,7 @@ var managedTopologyCRDs = []schema.GroupVersionResource{
 
 var managedAdmissionPolicySuffixes = []string{
 	"managed-node",
+	"legacy-node-marker",
 	"managed-pod-status",
 	"managed-device",
 	"managed-rollout",
@@ -49,6 +51,22 @@ var managedAdmissionPolicySuffixes = []string{
 	"topology-policy",
 	"topology-ledger",
 	"managed-maintenance-lease",
+	"shared-pod-status",
+	"shared-pod-binding",
+	"shared-pod-delete",
+	"shared-node-status",
+	"shared-upgrade-leaf",
+	"shared-network-object",
+	"shared-network-result",
+	"shared-maintenance-lease",
+	"shared-worker-serviceaccount",
+	"generated-worker-serviceaccount",
+	"shared-worker-token",
+	"shared-worker-token-secret",
+	"shared-worker-deployment",
+	"shared-worker-replicaset",
+	"shared-worker-pod",
+	"shared-worker-pod-update",
 }
 
 type admissionContractExpectation struct {
@@ -62,6 +80,7 @@ type admissionContractExpectation struct {
 	validations       int
 	requiredFragments []string
 	coreTyped         bool
+	publishDigest     bool
 	digest            string
 }
 
@@ -69,9 +88,17 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"managed-node": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
-		matchConditions: []string{"managed-node"}, variables: []string{"manager", "oldManaged", "managerLegacyHandoff", "legacyHandoffMarkerPreserved"}, validations: 3, coreTyped: true,
-		requiredFragments: []string{"worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "legacy-handoff", "projected-keys", "managed-taints"},
-		digest:            "sha256:8e24dbd6f8dc833eba95e87096cf1daee03b41ff6180d591eaca526236ec7a19",
+		matchConditions: []string{"managed-node"}, variables: []string{"manager", "oldManaged", "managerLegacyHandoff", "managerReleasedLegacyNodeUpdate", "legacyHandoffMarkerPreserved", "managerFunctionalWorkerBinding"}, validations: 5, coreTyped: true,
+		requiredFragments: []string{"worker-username", "app-worker-username", "network-worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "managerReleasedLegacyNodeUpdate", "legacy-handoff", "oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==", "oldObject.metadata.uid", "topology.cisco.vk/uninitialized", "t.effect == 'NoSchedule'", "oldObject.spec.taints.filter", "projected-keys", "managed-taints"},
+		digest:            "sha256:5723ad3bab87a5f026eec5b4d6f6510060b16aae1e52ffedc713b0da59305049",
+	},
+	"legacy-node-marker": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
+		operations: []admissionv1.OperationType{admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
+		matchConditions: []string{"released-node"}, variables: []string{"manager"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"topology.cisco.vk/legacy-handoff", "oldObject.metadata.uid", "request.operation == 'UPDATE'", "request.userInfo.username"},
+		publishDigest:     true,
+		digest:            "sha256:02c0e65602ac0ebcc3d19b15bd7cbcd7c3840c081d72f7541efbafc394f2ee76",
 	},
 	"managed-pod-status": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},
@@ -84,9 +111,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		apiGroups: []string{"cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"ciscodevices", "ciscodevices/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		variables:         []string{"manager", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations"},
-		validations:       11,
-		requiredFragments: []string{"check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "healthObservation", "workerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "oldObject.status.legacyHandoff.phase == 'Complete'"},
-		digest:            "sha256:300d550a4c249960d787d10f7cb947c3d119c4530aa7063b87062251a9a8326d",
+		validations:       13,
+		requiredFragments: []string{"check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "SharedWriterPending", "healthObservation", "workerRevision", "networkWorkerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "cisco.vk/device-cleanup", "oldObject.status.legacyHandoff.phase == 'Complete'"},
+		digest:            "sha256:05df8322a113f3b4ec734bed0b19037abc81e47e6f695a6625286865d096cec3",
 	},
 	"managed-rollout": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},
@@ -100,34 +127,231 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions:   []string{"managed-leaf"},
-		variables:         []string{"manager", "oldClaims", "newClaims"},
+		variables:         []string{"manager", "oldClaims", "newClaims", "managerFunctionalWorkerBinding"},
 		validations:       7,
-		requiredFragments: []string{"worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:3339c1f7cf33800047dcfe1d759cae5c99ea8b152f69466aae36c72af8254b6d",
+		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
+		digest:            "sha256:bd275cc5a2485cfe806fba124186634189601904cbe69bc11cc541c1d64b51a1",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		matchConditions: []string{"chart-policy"}, variables: []string{"manager", "policyEditor"}, validations: 3, coreTyped: true,
-		requiredFragments: []string{"managed-policy", "admission-policy-prefix", "check('topology')", "ledger-uid", "request.namespace", "request.name"},
-		digest:            "sha256:c457d5c27b8839b1636a545b5348488eada7316bc1c95d0f2479101f91354c1e",
+		matchConditions: []string{"chart-policy"}, variables: []string{"manager", "objectName", "namespaceCleanup", "policyEditor"}, validations: 5, coreTyped: true,
+		requiredFragments: []string{"managed-policy", "admission-policy-prefix", "check('topology')", "ledger-uid", "request.namespace", "request.name", "oldObject.metadata.name", "namespace-controller", "app-hosting-service-account", "network-management-service-account", "config-lease-namespace"},
+		digest:            "sha256:62f1a1cb22497d1c6faae5e29d5e7b214b5ca91f398bf03d409f8aa7f8be501a",
 	},
 	"topology-ledger": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		matchConditions: []string{"chart-ledger"}, variables: []string{"manager", "breakglass"}, validations: 3, coreTyped: true,
-		requiredFragments: []string{"managed-ledger", "ledger.json", "check('manage-ledger')", "request.namespace", "request.name"},
-		digest:            "sha256:3f585012df3c122804d1f300f242eaa365073d30fb7cbd0c5444474ba59faaaf",
+		matchConditions: []string{"chart-ledger"}, variables: []string{"manager", "objectName", "namespaceCleanup", "breakglass"}, validations: 3, coreTyped: true,
+		requiredFragments: []string{"managed-ledger", "ledger.json", "check('manage-ledger')", "request.namespace", "request.name", "oldObject.metadata.name", "namespace-controller"},
+		digest:            "sha256:94a362600ac07f3e7f40b1f252b2284d73a52edf49e1da0d356f123be975e295",
 	},
 	"managed-maintenance-lease": {
 		apiGroups: []string{"coordination.k8s.io"}, apiVersions: []string{"v1"}, resources: []string{"leases"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"managed-maintenance-request"},
-		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "boundWorker", "holderChanged"},
+		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "managerRebind", "boundWorker", "holderChanged"},
 		validations:     8, coreTyped: true,
-		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "worker-username", "holderIdentity", "device-uid"},
-		digest:            "sha256:3a33ace5e0020e020d28947d70b0221e95459aa286f72110675e4406cd99f864",
+		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "worker-username", "app-worker-username", "network-worker-username", "holderIdentity", "device-uid"},
+		digest:            "sha256:95cccbd353f54e054d750907852f4bad4d2cb30cb28256b93647f5439532db96",
 	},
+	"shared-pod-status": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-app-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 2, coreTyped: true,
+		requiredFragments: []string{"app-worker-username", "app-worker-pod-name", "app-worker-pod-uid", "authentication.kubernetes.io/pod-uid", "object.spec == oldObject.spec"},
+		digest:            "sha256:024f68f192cad0323977779a564ce4267b3eba7f291a895980333d5ff2f24c77",
+	},
+	"shared-pod-binding": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods", "pods/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-binding"}, variables: []string{"manager", "oldBindings", "newBindings"}, validations: 3, coreTyped: true,
+		requiredFragments: []string{"app-worker-username", "app-worker-pod-name", "app-worker-pod-uid", "object.status == oldObject.status"},
+		digest:            "sha256:1432c323adbe9c3468a5ea3f2a8070394f25e7d3441f7806687f05437bf64122",
+	},
+	"shared-pod-delete": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods"},
+		operations: []admissionv1.OperationType{admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-app-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 2, coreTyped: true,
+		requiredFragments: []string{"preconditions.uid", "gracePeriodSeconds", "deletionTimestamp", "app-worker-pod-uid", "authentication.kubernetes.io/pod-name"},
+		digest:            "sha256:5f04c0132efb534843ef60505a6d66cd35b64c79ad00ccabc7a07bcffff84c45",
+	},
+	"shared-node-status": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes/status"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.ClusterScope,
+		matchConditions: []string{"shared-app-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"app-worker-username", "app-worker-pod-name", "app-worker-pod-uid", "authentication.kubernetes.io/pod-uid"},
+		digest:            "sha256:fec50e3f2c0c6c8c8b80c2d2c44acfce3fb76a897856f71492437222dac2ce3a",
+	},
+	"shared-upgrade-leaf": {
+		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-network-worker"}, variables: []string{"podUIDs", "podNames"}, validations: 1,
+		requiredFragments: []string{"network-worker-username", "network-worker-pod-name", "network-worker-pod-uid", "authentication.kubernetes.io/pod-uid"},
+		digest:            "sha256:9a7c87659af5873d78564e36727415fcecc0eb661c6d4f005b5146e6db72b226",
+	},
+	"shared-network-object": {
+		apiGroups: []string{"config.cisco.vk", "ops.cisco.vk"}, apiVersions: []string{"v1alpha1"},
+		resources:  []string{"iosxeconfigs", "iosxeconfigs/status", "nxosconfigs", "nxosconfigs/status", "iosxetelemetries", "iosxetelemetries/status", "iosxediagnostics", "iosxediagnostics/status", "iosxeconfigapplylogs", "iosxeconfigapplylogs/status", "iosxeconfigrevisions", "iosxeconfigrevisions/status", "deviceoperations", "deviceoperations/status", "iosxeoperationalactions", "iosxeoperationalactions/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"protected-network-object"}, variables: []string{"manager", "sharedWorker", "nativeGarbageCollector", "nativeNamespaceCleanup", "podUIDs", "podNames", "oldBindings", "newBindings", "boundObject", "oldBindingComplete"}, validations: 6,
+		requiredFragments: []string{"deviceRef.name", "device-uid", "network-worker-pod-name", "authentication.kubernetes.io/pod-uid", "-network-", "object.spec == oldObject.spec", "object.status == oldObject.status", "config.cisco.vk/lease-cleanup", "config.cisco.vk/telemetry-cleanup", "ops.cisco.vk/iosxeoperationalaction-finalizer", "iosxeconfigrevisions", "IOSXEConfigBundle", "blockOwnerDeletion", "system:serviceaccount:kube-system:generic-garbage-collector", "namespace-controller", "system:kube-controller-manager", "request.userInfo.groups", "request.options.preconditions.uid"},
+		digest:            "sha256:c6b349cbd00575e63d258635b6a118e8a042854e974dfaf9d3508e47dfd764b2",
+	},
+	"shared-network-result": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"protected-network-result"}, variables: []string{"manager", "sharedWorker", "nativeGarbageCollector", "nativeNamespaceCleanup", "podUIDs", "podNames", "oldBindings", "newBindings", "boundObject"}, validations: 9, coreTyped: true,
+		requiredFragments: []string{"device-uid", "network-worker-pod-name", "authentication.kubernetes.io/pod-name", "IOSXEDiagnostic", "DeviceOperation", "cisco.vk/diagnostic-uid", "object.data == oldObject.data", "result-u", "system:serviceaccount:kube-system:generic-garbage-collector", "namespace-controller", "system:kube-controller-manager", "request.userInfo.groups", "request.options.preconditions.uid"},
+		digest:            "sha256:3d52cef8e9700f0ce5551cc07d5df8435555688185a607582594d6c77755c986",
+	},
+	"shared-maintenance-lease": {
+		apiGroups: []string{"coordination.k8s.io"}, apiVersions: []string{"v1"}, resources: []string{"leases"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"shared-functional-worker"}, variables: []string{"podUIDs", "podNames", "appWorker", "networkWorker"}, validations: 2, coreTyped: true,
+		requiredFragments: []string{"node-heartbeat", "config-family", "device-mutation", "app-worker-pod-uid", "network-worker-pod-uid", "authentication.kubernetes.io/pod-name"},
+		digest:            "sha256:39bfaca691b5d90bcc743b1a522db3fcb69982b725f6f25911f2592714b06dd4",
+	},
+	"shared-worker-serviceaccount": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"serviceaccounts"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"request.name", "oldObject.metadata.name", "namespace-controller", "request.userInfo.username"},
+		digest:            "sha256:345ef258b702eda8a1f4f609dbbe53b43cf5a05fc4f4242c860a3e2b66145a21",
+	},
+	"generated-worker-serviceaccount": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"serviceaccounts"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"generated-worker-account"}, validations: 2, coreTyped: true,
+		requiredFragments: []string{"request.name", "oldObject.metadata.name", "namespace-controller", "request.userInfo.username", "cisco-vk-(managed|legacy)-", "worker-protocol", "CiscoDevice", "ownerReferences", "blockOwnerDeletion"},
+		digest:            "sha256:75937a46b672683cbec30b2c3fea101198520653f574e30b9c00fd78bd45b234",
+	},
+	"shared-worker-token": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"serviceaccounts/token"},
+		operations: []admissionv1.OperationType{admissionv1.Create}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"request.name", "system:node:", "system:authenticated", "system:nodes", "boundObjectRef", "Pod", "cisco-vk-(managed|legacy)-"},
+		digest:            "sha256:f971cf1df70c65cbb07bdc9ced73226d93068fa72fe3521178c53b829de0815d",
+	},
+	"shared-worker-token-secret": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"secrets"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-token-secret"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"kubernetes.io/service-account-token", "kubernetes.io/service-account.name", "request.operation == 'DELETE'", "cisco-vk-(managed|legacy)-"},
+		digest:            "sha256:a6cbb20a7cf07e5625e65fb0474acf666ab71246737b4516849b178026f49926",
+	},
+	"shared-worker-deployment": {
+		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"deployments", "deployments/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, variables: []string{"manager", "namespaceCleanup", "nativeDeploymentMetadata", "nativeDeploymentStatus"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"serviceAccountName", "namespace-controller", "!has(request.name)", "deployment-controller", "deployment.kubernetes.io/revision", "request.subResource == 'status'", "system:authenticated", "object.metadata.uid == oldObject.metadata.uid", "object.spec == oldObject.spec", "cisco-vk-(managed|legacy)-"},
+		digest:            "sha256:ae06685e7c3e5c3c73a793a1c46c9c85bee941a1b55fa32515dacf8a278ec76e",
+	},
+	"shared-worker-replicaset": {
+		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"replicasets", "replicasets/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"deployment-controller", "replicaset-controller", "namespace-controller", "!has(request.name)", "request.subResource == 'status'", "system:authenticated", "generic-garbage-collector", "request.options.preconditions.uid", "ownerReferences", "object.metadata.uid == oldObject.metadata.uid", "object.spec == oldObject.spec", "serviceAccountName", "cisco-vk-(managed|legacy)-"},
+		digest:            "sha256:df0956963538d2064b107cf47b62b15c9ccedaad66a5cfbd75f0b1a4ac64a7bc",
+	},
+	"shared-worker-pod": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"replicaset-controller", "namespace-controller", "!has(request.name)", "system:node:", "gracePeriodSeconds", "generic-garbage-collector", "request.options.preconditions.uid", "ownerReferences", "serviceAccountName", "cisco-vk-(managed|legacy)-"},
+		digest:            "sha256:dc91f95a71a2e37ac5f06486e11484fd8f9867850c3c5f84999593b550fca463",
+	},
+	"shared-worker-pod-update": {
+		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods", "pods/status", "pods/ephemeralcontainers", "pods/resize"},
+		operations: []admissionv1.OperationType{admissionv1.Update}, scope: admissionv1.NamespacedScope,
+		matchConditions: []string{"reserved-worker-account"}, variables: []string{"manager", "nativeKubeletStatus"}, validations: 1, coreTyped: true,
+		requiredFragments: []string{"serviceAccountName", "request.subResource == 'status'", "oldObject.spec.nodeName", "system:node:", "system:nodes", "system:authenticated", "object.metadata.annotations == oldObject.metadata.annotations", "object.spec == oldObject.spec", "cisco-vk-(managed|legacy)-"},
+		digest:            "sha256:2acc8b94cbbcbfd53302337ac571de3f7e2dc9f938791305a291b3694c011179",
+	},
+}
+
+type managedAdmissionContractVerification struct {
+	WorkerServiceAccountPolicyEpoch string
+}
+
+type workerServiceAccountAdmissionGeneration struct {
+	suffix            string
+	policyUID         types.UID
+	policyGeneration  int64
+	policySpecDigest  string
+	bindingUID        types.UID
+	bindingGeneration int64
+	bindingSpecDigest string
+}
+
+var workerServiceAccountPolicyEpochSuffixes = []string{
+	"shared-worker-serviceaccount",
+	"generated-worker-serviceaccount",
+	"shared-worker-token",
+	"shared-worker-token-secret",
+	"shared-worker-deployment",
+	"shared-worker-replicaset",
+	"shared-worker-pod",
+	"shared-worker-pod-update",
+}
+
+// deriveWorkerServiceAccountPolicyEpoch intentionally excludes
+// resourceVersion and all labels/annotations. It changes only when one of the
+// verified ownership, token-issuance, token-Secret, or workload policy/binding
+// incarnations changes, its Spec generation changes, or the binary's compiled
+// policy contract changes.
+func deriveWorkerServiceAccountPolicyEpoch(generations []workerServiceAccountAdmissionGeneration) (string, error) {
+	want := make(map[string]struct{}, len(workerServiceAccountPolicyEpochSuffixes))
+	for _, suffix := range workerServiceAccountPolicyEpochSuffixes {
+		want[suffix] = struct{}{}
+	}
+	if len(generations) != len(want) {
+		return "", fmt.Errorf("worker ServiceAccount admission epoch requires exactly %d verified policy/binding generations", len(want))
+	}
+	generations = append([]workerServiceAccountAdmissionGeneration(nil), generations...)
+	sort.Slice(generations, func(i, j int) bool { return generations[i].suffix < generations[j].suffix })
+	fields := []string{"worker-serviceaccount-policy-epoch-v1"}
+	for _, generation := range generations {
+		if _, ok := want[generation.suffix]; !ok {
+			return "", fmt.Errorf("unexpected worker ServiceAccount admission policy suffix %q", generation.suffix)
+		}
+		delete(want, generation.suffix)
+		if generation.policyUID == "" || generation.policyGeneration <= 0 || generation.policySpecDigest == "" ||
+			generation.bindingUID == "" || generation.bindingGeneration <= 0 || generation.bindingSpecDigest == "" {
+			return "", fmt.Errorf("worker ServiceAccount admission policy %q lacks an immutable UID, positive generation, or compiled Spec digest", generation.suffix)
+		}
+		fields = append(fields,
+			generation.suffix,
+			string(generation.policyUID), strconv.FormatInt(generation.policyGeneration, 10), generation.policySpecDigest,
+			string(generation.bindingUID), strconv.FormatInt(generation.bindingGeneration, 10), generation.bindingSpecDigest,
+		)
+	}
+	if len(want) != 0 {
+		return "", fmt.Errorf("worker ServiceAccount admission epoch is missing a required policy/binding generation")
+	}
+	digest := sha256.Sum256([]byte(strings.Join(fields, "\x00")))
+	return "sha256:" + hex.EncodeToString(digest[:]), nil
+}
+
+func contributesToWorkerServiceAccountPolicyEpoch(suffix string) bool {
+	for _, candidate := range workerServiceAccountPolicyEpochSuffixes {
+		if suffix == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func managedAdmissionBindingSpecDigest(binding *admissionv1.ValidatingAdmissionPolicyBinding) (string, error) {
+	if binding == nil {
+		return "", fmt.Errorf("compiled admission policy binding is nil")
+	}
+	encoded, err := json.Marshal(binding.Spec)
+	if err != nil {
+		return "", fmt.Errorf("encode compiled admission binding contract: %w", err)
+	}
+	digest := sha256.Sum256(encoded)
+	return "sha256:" + hex.EncodeToString(digest[:]), nil
 }
 
 // verifyManagedAdmissionContract refuses to start a managed-topology manager
@@ -140,16 +364,19 @@ func verifyManagedAdmissionContract(
 	prefix string,
 	policyKey types.NamespacedName,
 	ledgerName string,
-) error {
+	appHostingServiceAccount string,
+	networkManagementServiceAccount string,
+) (managedAdmissionContractVerification, error) {
+	var verification managedAdmissionContractVerification
 	if prefix == "" {
-		return fmt.Errorf("managed admission policy prefix is empty")
+		return verification, fmt.Errorf("managed admission policy prefix is empty")
 	}
 	if policyKey.Namespace == "" || policyKey.Name == "" || ledgerName == "" {
-		return fmt.Errorf("managed admission policy bindings are incomplete")
+		return verification, fmt.Errorf("managed admission policy bindings are incomplete")
 	}
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
-		return fmt.Errorf("create admission preflight client: %w", err)
+		return verification, fmt.Errorf("create admission preflight client: %w", err)
 	}
 	self, err := clientset.AuthenticationV1().SelfSubjectReviews().Create(
 		ctx,
@@ -157,77 +384,113 @@ func verifyManagedAdmissionContract(
 		metav1.CreateOptions{},
 	)
 	if err != nil {
-		return fmt.Errorf("resolve authenticated manager identity: %w", err)
+		return verification, fmt.Errorf("resolve authenticated manager identity: %w", err)
 	}
 	contractBindings := admissionContractBindings{
-		AdmissionPrefix: prefix,
-		ManagerUsername: self.Status.UserInfo.Username,
-		PolicyNamespace: policyKey.Namespace,
-		PolicyName:      policyKey.Name,
-		LedgerName:      ledgerName,
+		AdmissionPrefix:                 prefix,
+		ManagerUsername:                 self.Status.UserInfo.Username,
+		PolicyNamespace:                 policyKey.Namespace,
+		PolicyName:                      policyKey.Name,
+		LedgerName:                      ledgerName,
+		AppHostingServiceAccount:        appHostingServiceAccount,
+		NetworkManagementServiceAccount: networkManagementServiceAccount,
 	}
 	if err := contractBindings.validate(); err != nil {
-		return err
+		return verification, err
 	}
 	policies := clientset.AdmissionregistrationV1().ValidatingAdmissionPolicies()
 	policyBindings := clientset.AdmissionregistrationV1().ValidatingAdmissionPolicyBindings()
+	workerAccountGenerations := make([]workerServiceAccountAdmissionGeneration, 0,
+		len(workerServiceAccountPolicyEpochSuffixes))
 	for _, suffix := range managedAdmissionPolicySuffixes {
 		name := prefix + "-" + suffix
 		policy, err := policies.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("get required ValidatingAdmissionPolicy %q: %w", name, err)
+			return verification, fmt.Errorf("get required ValidatingAdmissionPolicy %q: %w", name, err)
 		}
 		expectation, ok := managedAdmissionExpectations[suffix]
 		if !ok {
-			return fmt.Errorf("no compiled admission expectation for %q", suffix)
+			return verification, fmt.Errorf("no compiled admission expectation for %q", suffix)
 		}
 		if err := validateManagedAdmissionPolicy(policy, expectation); err != nil {
-			return fmt.Errorf("ValidatingAdmissionPolicy %q: %w", name, err)
+			return verification, fmt.Errorf("ValidatingAdmissionPolicy %q: %w", name, err)
 		}
 		if err := validateManagedAdmissionPolicyDigest(policy, expectation, contractBindings); err != nil {
-			return fmt.Errorf("ValidatingAdmissionPolicy %q: %w", name, err)
+			return verification, fmt.Errorf("ValidatingAdmissionPolicy %q: %w", name, err)
 		}
 
 		binding, err := policyBindings.Get(ctx, name, metav1.GetOptions{})
 		if err != nil {
-			return fmt.Errorf("get required ValidatingAdmissionPolicyBinding %q: %w", name, err)
+			return verification, fmt.Errorf("get required ValidatingAdmissionPolicyBinding %q: %w", name, err)
 		}
 		if err := validateManagedAdmissionBinding(binding, name); err != nil {
-			return fmt.Errorf("ValidatingAdmissionPolicyBinding %q: %w", name, err)
+			return verification, fmt.Errorf("ValidatingAdmissionPolicyBinding %q: %w", name, err)
+		}
+		if expectation.publishDigest &&
+			binding.Annotations[managedprotocol.AnnotationAdmissionContractDigest] != expectation.digest {
+			return verification, fmt.Errorf("ValidatingAdmissionPolicyBinding %q: published contract digest does not match %s", name, expectation.digest)
+		}
+		if contributesToWorkerServiceAccountPolicyEpoch(suffix) {
+			bindingDigest, err := managedAdmissionBindingSpecDigest(binding)
+			if err != nil {
+				return verification, fmt.Errorf("ValidatingAdmissionPolicyBinding %q: %w", name, err)
+			}
+			workerAccountGenerations = append(workerAccountGenerations, workerServiceAccountAdmissionGeneration{
+				suffix: suffix, policyUID: policy.UID, policyGeneration: policy.Generation,
+				policySpecDigest: expectation.digest, bindingUID: binding.UID,
+				bindingGeneration: binding.Generation, bindingSpecDigest: bindingDigest,
+			})
 		}
 	}
-	return nil
+	verification.WorkerServiceAccountPolicyEpoch, err = deriveWorkerServiceAccountPolicyEpoch(workerAccountGenerations)
+	if err != nil {
+		return verification, err
+	}
+	return verification, nil
 }
 
 type admissionContractBindings struct {
-	AdmissionPrefix string
-	ManagerUsername string
-	PolicyNamespace string
-	PolicyName      string
-	LedgerName      string
+	AdmissionPrefix                 string
+	ManagerUsername                 string
+	PolicyNamespace                 string
+	PolicyName                      string
+	LedgerName                      string
+	AppHostingServiceAccount        string
+	NetworkManagementServiceAccount string
 }
 
 func (b admissionContractBindings) validate() error {
-	for name, value := range map[string]string{
-		"admission policy prefix":        b.AdmissionPrefix,
-		"authenticated manager username": b.ManagerUsername,
-		"policy namespace":               b.PolicyNamespace,
-		"policy name":                    b.PolicyName,
-		"ledger name":                    b.LedgerName,
-	} {
-		if strings.TrimSpace(value) == "" {
-			return fmt.Errorf("managed admission %s is empty", name)
+	bindings := []struct{ name, value string }{
+		{"admission policy prefix", b.AdmissionPrefix},
+		{"authenticated manager username", b.ManagerUsername},
+		{"policy namespace", b.PolicyNamespace},
+		{"policy name", b.PolicyName},
+		{"ledger name", b.LedgerName},
+		{"app-hosting ServiceAccount", b.AppHostingServiceAccount},
+		{"network-management ServiceAccount", b.NetworkManagementServiceAccount},
+	}
+	seen := make(map[string]string, len(bindings))
+	for _, binding := range bindings {
+		if strings.TrimSpace(binding.value) == "" {
+			return fmt.Errorf("managed admission %s is empty", binding.name)
 		}
+		if previous, found := seen[binding.value]; found {
+			return fmt.Errorf("managed admission contract bindings must be pairwise distinct: %s and %s both resolve to %q",
+				previous, binding.name, binding.value)
+		}
+		seen[binding.value] = binding.name
 	}
 	return nil
 }
 
 const (
-	contractAdmissionPrefixToken = "${CVK_ADMISSION_PREFIX}"
-	contractManagerToken         = "${CVK_MANAGER_USERNAME}"
-	contractPolicyNamespaceToken = "${CVK_POLICY_NAMESPACE}"
-	contractPolicyNameToken      = "${CVK_POLICY_NAME}"
-	contractLedgerNameToken      = "${CVK_LEDGER_NAME}"
+	contractAdmissionPrefixToken       = "${CVK_ADMISSION_PREFIX}"
+	contractManagerToken               = "${CVK_MANAGER_USERNAME}"
+	contractPolicyNamespaceToken       = "${CVK_POLICY_NAMESPACE}"
+	contractPolicyNameToken            = "${CVK_POLICY_NAME}"
+	contractLedgerNameToken            = "${CVK_LEDGER_NAME}"
+	contractAppServiceAccountToken     = "${CVK_APP_SERVICE_ACCOUNT}"
+	contractNetworkServiceAccountToken = "${CVK_NETWORK_SERVICE_ACCOUNT}"
 )
 
 func validateManagedAdmissionPolicyDigest(
@@ -244,6 +507,9 @@ func validateManagedAdmissionPolicyDigest(
 	}
 	if actual != expected.digest {
 		return fmt.Errorf("compiled contract digest is %s, want %s", actual, expected.digest)
+	}
+	if expected.publishDigest && policy.Annotations[managedprotocol.AnnotationAdmissionContractDigest] != expected.digest {
+		return fmt.Errorf("published contract digest does not match %s", expected.digest)
 	}
 	return nil
 }
@@ -283,15 +549,11 @@ func managedAdmissionPolicyDigest(
 		{bindings.PolicyNamespace, contractPolicyNamespaceToken},
 		{bindings.PolicyName, contractPolicyNameToken},
 		{bindings.LedgerName, contractLedgerNameToken},
+		{bindings.AppHostingServiceAccount, contractAppServiceAccountToken},
+		{bindings.NetworkManagementServiceAccount, contractNetworkServiceAccountToken},
 	}
-	sort.SliceStable(replacements, func(i, j int) bool {
-		return len(replacements[i].from) > len(replacements[j].from)
-	})
 	normalize := func(expression string) string {
-		for _, replacement := range replacements {
-			expression = strings.ReplaceAll(expression, replacement.from, replacement.to)
-		}
-		return expression
+		return normalizeManagedAdmissionCELLiterals(expression, replacements)
 	}
 	for i := range spec.MatchConditions {
 		spec.MatchConditions[i].Expression = normalize(spec.MatchConditions[i].Expression)
@@ -301,7 +563,6 @@ func managedAdmissionPolicyDigest(
 	}
 	for i := range spec.Validations {
 		spec.Validations[i].Expression = normalize(spec.Validations[i].Expression)
-		spec.Validations[i].Message = normalize(spec.Validations[i].Message)
 		spec.Validations[i].MessageExpression = normalize(spec.Validations[i].MessageExpression)
 	}
 	for i := range spec.AuditAnnotations {
@@ -313,6 +574,75 @@ func managedAdmissionPolicyDigest(
 	}
 	digest := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(digest[:]), nil
+}
+
+// normalizeManagedAdmissionCELLiterals canonicalizes only chart-bound CEL
+// string literals. A raw substring replacement is unsafe here: valid short
+// identities such as "managed" also occur inside fixed annotation keys and
+// would make the live chart fail its own compiled-contract preflight.
+//
+// Helm's quote function emits configurable identities as double-quoted CEL
+// literals. The two worker account names also occur as the complete suffix of
+// a single-quoted ServiceAccount username literal. Restrict replacements to
+// those exact forms so fixed single-quoted contract vocabulary remains part of
+// the digest.
+func normalizeManagedAdmissionCELLiterals(expression string, replacements []struct{ from, to string }) string {
+	type literalReplacement struct {
+		quote    byte
+		from, to string
+	}
+	literals := make([]literalReplacement, 0, len(replacements)+2)
+	for _, replacement := range replacements {
+		literals = append(literals, literalReplacement{quote: '"', from: replacement.from, to: replacement.to})
+	}
+	for _, replacement := range replacements[len(replacements)-2:] {
+		literals = append(literals, literalReplacement{
+			quote: '\'', from: ":" + replacement.from, to: ":" + replacement.to,
+		})
+	}
+
+	var normalized strings.Builder
+	normalized.Grow(len(expression))
+	for offset := 0; offset < len(expression); {
+		quote := expression[offset]
+		if quote != '\'' && quote != '"' {
+			normalized.WriteByte(expression[offset])
+			offset++
+			continue
+		}
+
+		end := offset + 1
+		for end < len(expression) {
+			if expression[end] == '\\' {
+				end += 2
+				continue
+			}
+			if expression[end] == quote {
+				break
+			}
+			end++
+		}
+		if end >= len(expression) {
+			// The API server rejects malformed CEL before this preflight runs.
+			// Preserve the tail verbatim so digest diagnostics still describe the
+			// object actually read rather than silently repairing it.
+			normalized.WriteString(expression[offset:])
+			break
+		}
+
+		literal := expression[offset+1 : end]
+		for _, replacement := range literals {
+			if quote == replacement.quote && literal == replacement.from {
+				literal = replacement.to
+				break
+			}
+		}
+		normalized.WriteByte(quote)
+		normalized.WriteString(literal)
+		normalized.WriteByte(quote)
+		offset = end + 1
+	}
+	return normalized.String()
 }
 
 func validateManagedAdmissionPolicy(policy *admissionv1.ValidatingAdmissionPolicy, expected admissionContractExpectation) error {

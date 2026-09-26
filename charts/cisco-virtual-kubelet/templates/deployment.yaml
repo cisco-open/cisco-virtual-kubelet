@@ -74,6 +74,14 @@ spec:
             {{- if .Values.topology.enabled }}
             - --enable-managed-topology
             {{- end }}
+            # Keep the exact split identities available during reverse
+            # handoff as well as steady-state managed topology. The manager
+            # stamps CISCO_VK_WORKER_MODE and CISCO_VK_WORKER_ACCESS onto the
+            # corresponding workers; these flags grant no authority alone.
+            - --app-hosting-service-account={{ include "cisco-virtual-kubelet.appHostingServiceAccountName" . }}
+            - --app-hosting-access-mode={{ .Values.topology.workerAccounts.appHosting.accessMode }}
+            - --network-management-service-account={{ include "cisco-virtual-kubelet.networkManagementServiceAccountName" . }}
+            - --network-management-access-mode={{ .Values.topology.workerAccounts.networkManagement.accessMode }}
             # Retain the policy identity while managed topology is disabled so
             # a live reverse handoff never loses its rollback coordinates.
             # These flags grant no authority by themselves.

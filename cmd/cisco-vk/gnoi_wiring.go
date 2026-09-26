@@ -95,14 +95,14 @@ func setupGNOIWithProvisioningDirectory(
 		opts.Password,
 		forceInsecure,
 		provisioningDirectory,
-		opts.EnableWriteClassGNOI,
+		opts.writeClassGNOIEnabled(),
 	)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("gNOI: resolve configuration: %w", err)
 	}
 	var signer gnoi.CertificateSigner
 	var signerErr error
-	if resolved.provisioningBundle != nil && opts.EnableWriteClassGNOI {
+	if resolved.provisioningBundle != nil && opts.writeClassGNOIEnabled() {
 		signer, signerErr = loadGNOILocalCertificateSigner(resolved.provisioningBundle, provisioningDirectory)
 	}
 
@@ -119,13 +119,13 @@ func setupGNOIWithProvisioningDirectory(
 		log.G(ctx).WithError(signerErr).Warn(
 			"gNOI ProvisionCertificate is unavailable because the local ca.key signer could not be loaded; base gNOI remains enabled",
 		)
-	} else if resolved.provisioningBundle != nil && signer != nil && opts.EnableWriteClassGNOI {
+	} else if resolved.provisioningBundle != nil && signer != nil && opts.writeClassGNOIEnabled() {
 		provisioner, err = gnoiruntime.NewProvisioner(provider, resolved.provisioningBundle, signer)
 		if err != nil {
 			provider.Close()
 			return nil, nil, nil, err
 		}
-	} else if resolved.provisioningBundle != nil && opts.EnableWriteClassGNOI {
+	} else if resolved.provisioningBundle != nil && opts.writeClassGNOIEnabled() {
 		log.G(ctx).Warnf("gNOI certificate provisioning is unavailable: %s is not mounted", gNOIProvisioningCAKeyFile)
 	}
 
