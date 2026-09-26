@@ -3,7 +3,8 @@
 # It uses only the in-tree Kubernetes Workload/PodGroup APIs and the default
 # kube-scheduler, but Kubernetes 1.37 ships them disabled by default. Enable
 # GenericWorkload and TopologyAwareWorkloadScheduling consistently on the API
-# server and scheduler, then verify the v1beta1 resources and Pod field exist:
+# server and scheduler, and explicitly enable scheduling.k8s.io/v1beta1 on the
+# API server. Then verify the v1beta1 resources and Pod field exist:
 #
 #   kubectl api-resources --api-group=scheduling.k8s.io
 #   kubectl explain podgroups.scheduling.k8s.io.spec.schedulingConstraints
@@ -37,10 +38,9 @@ metadata:
   name: edge-workers-0
   namespace: edge-workloads
 spec:
-  podGroupTemplateRef:
-    workload:
-      workloadName: edge-gang-policy
-      podGroupTemplateName: edge-workers
+  workloadRef:
+    workloadName: edge-gang-policy
+    templateName: edge-workers
   schedulingPolicy:
     gang:
       minCount: 2
