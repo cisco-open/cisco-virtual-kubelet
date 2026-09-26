@@ -150,10 +150,10 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		apiGroups: []string{"coordination.k8s.io"}, apiVersions: []string{"v1"}, resources: []string{"leases"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"managed-maintenance-request"},
-		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "boundWorker", "holderChanged"},
+		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "managerRebind", "boundWorker", "holderChanged"},
 		validations:     8, coreTyped: true,
 		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "worker-username", "app-worker-username", "network-worker-username", "holderIdentity", "device-uid"},
-		digest:            "sha256:2090af88ef9d276c25bedc9e4402dd06defd9419f7a99d1651441fbe54d75a8b",
+		digest:            "sha256:95cccbd353f54e054d750907852f4bad4d2cb30cb28256b93647f5439532db96",
 	},
 	"shared-pod-status": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},

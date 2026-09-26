@@ -180,7 +180,7 @@ func (r *CiscoDeviceReconciler) ensureManagedBoundLease(
 		return fmt.Errorf("read managed Lease %s: %w", key, err)
 	}
 	if existing.Annotations[managedprotocol.AnnotationManaged] == "true" {
-		if err := validateManagedBoundLeaseMetadata(&existing, desired.Annotations, desired.Labels, desired.OwnerReferences); err != nil {
+		if err := r.repairManagedLeaseBindings(ctx, &existing, desired.Annotations, desired.Labels, desired.OwnerReferences); err != nil {
 			return fmt.Errorf("managed Lease %s is unsafe to use: %w", key, err)
 		}
 		return nil
@@ -220,6 +220,38 @@ func (r *CiscoDeviceReconciler) ensureManagedBoundLease(
 		return fmt.Errorf("adopted managed Lease %s is unsafe to use: %w", key, err)
 	}
 	return nil
+}
+
+// Only worker bindings are mutable during Pod rotation. Device/Node ownership,
+// purpose, labels and the complete lock/request state remain unchanged.
+func (r *CiscoDeviceReconciler) repairManagedLeaseBindings(ctx context.Context, lease *coordv1.Lease,
+	annotations, labels map[string]string, owners []metav1.OwnerReference) error {
+	workerKeys := []string{
+		managedprotocol.AnnotationWorkerUsername,
+		managedprotocol.AnnotationAppWorkerUsername, managedprotocol.AnnotationAppWorkerPodName, managedprotocol.AnnotationAppWorkerPodUID,
+		managedprotocol.AnnotationNetworkWorkerUsername, managedprotocol.AnnotationNetworkWorkerPodName, managedprotocol.AnnotationNetworkWorkerPodUID,
+	}
+	immutable := make(map[string]string, len(annotations))
+	for key, value := range annotations {
+		if !slices.Contains(workerKeys, key) {
+			immutable[key] = value
+		}
+	}
+	if err := validateManagedBoundLeaseMetadata(lease, immutable, labels, owners); err != nil {
+		return err
+	}
+	before := lease.DeepCopy()
+	for _, key := range workerKeys {
+		if value, ok := annotations[key]; ok {
+			lease.Annotations[key] = value
+		} else {
+			delete(lease.Annotations, key)
+		}
+	}
+	if reflect.DeepEqual(before.Annotations, lease.Annotations) {
+		return nil
+	}
+	return r.Patch(ctx, lease, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{}))
 }
 
 func validateManagedBoundLeaseMetadata(

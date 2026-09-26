@@ -1375,6 +1375,22 @@ spec:
            !has(oldObject.spec.acquireTime) && !has(oldObject.spec.renewTime) &&
            !has(oldObject.spec.leaseTransitions) &&
            (!has(oldObject.metadata.ownerReferences) || oldObject.metadata.ownerReferences.size() == 0)) : false)
+    - name: managerRebind
+      expression: >-
+        variables.manager && request.operation == 'UPDATE' && oldObject != null && object != null &&
+        has(oldObject.metadata.annotations) && has(object.metadata.annotations) &&
+        'topology.cisco.vk/managed' in oldObject.metadata.annotations &&
+        oldObject.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
+        object.spec == oldObject.spec &&
+        object.metadata.uid == oldObject.metadata.uid &&
+        has(object.metadata.labels) == has(oldObject.metadata.labels) &&
+        (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+        has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
+        (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
+        has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
+        (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+        object.metadata.annotations.transformMap(k, v, !(k in ['topology.cisco.vk/worker-username', 'topology.cisco.vk/app-worker-username', 'topology.cisco.vk/app-worker-pod-name', 'topology.cisco.vk/app-worker-pod-uid', 'topology.cisco.vk/network-worker-username', 'topology.cisco.vk/network-worker-pod-name', 'topology.cisco.vk/network-worker-pod-uid']), v) ==
+        oldObject.metadata.annotations.transformMap(k, v, !(k in ['topology.cisco.vk/worker-username', 'topology.cisco.vk/app-worker-username', 'topology.cisco.vk/app-worker-pod-name', 'topology.cisco.vk/app-worker-pod-uid', 'topology.cisco.vk/network-worker-username', 'topology.cisco.vk/network-worker-pod-name', 'topology.cisco.vk/network-worker-pod-uid']), v)
     - name: boundWorker
       expression: >-
         request.operation == 'UPDATE' && oldObject != null && object != null &&
@@ -1397,10 +1413,10 @@ spec:
           object.spec.holderIdentity != oldObject.spec.holderIdentity))
   validations:
     - expression: >-
-        variables.managerCreate || variables.managerAdopt ||
+        variables.managerCreate || variables.managerAdopt || variables.managerRebind ||
         (variables.manager && request.operation == 'DELETE' && oldObject != null) ||
         variables.boundWorker
-      message: only the manager may create, safely adopt, or delete a managed Lease; its exact pre-bound worker may only update it
+      message: only the manager may create, safely adopt, rebind worker metadata, or delete a managed Lease; its exact pre-bound worker may only update lock state
     - expression: >-
         [request.operation == 'DELETE' ? oldObject : object].all(l,
           l != null && has(l.metadata.labels) &&
@@ -1438,17 +1454,23 @@ spec:
           (['topology.cisco.vk/app-worker-username',
             'topology.cisco.vk/app-worker-pod-name',
             'topology.cisco.vk/app-worker-pod-uid'].all(k, !(k in l.metadata.annotations)) ||
-           (l.metadata.annotations['topology.cisco.vk/app-worker-username'] ==
+           ('topology.cisco.vk/app-worker-username' in l.metadata.annotations &&
+            l.metadata.annotations['topology.cisco.vk/app-worker-username'] ==
               'system:serviceaccount:' + l.metadata.annotations['topology.cisco.vk/device-namespace'] + ':{{ $appServiceAccount }}' &&
-            l.metadata.annotations['topology.cisco.vk/app-worker-pod-name'] != '' &&
-            l.metadata.annotations['topology.cisco.vk/app-worker-pod-uid'] != '')) &&
+            (['topology.cisco.vk/app-worker-pod-name', 'topology.cisco.vk/app-worker-pod-uid'].all(k,
+               !(k in l.metadata.annotations)) ||
+             ['topology.cisco.vk/app-worker-pod-name', 'topology.cisco.vk/app-worker-pod-uid'].all(k,
+               k in l.metadata.annotations && l.metadata.annotations[k] != '')))) &&
           (['topology.cisco.vk/network-worker-username',
             'topology.cisco.vk/network-worker-pod-name',
             'topology.cisco.vk/network-worker-pod-uid'].all(k, !(k in l.metadata.annotations)) ||
-           (l.metadata.annotations['topology.cisco.vk/network-worker-username'] ==
+           ('topology.cisco.vk/network-worker-username' in l.metadata.annotations &&
+            l.metadata.annotations['topology.cisco.vk/network-worker-username'] ==
               'system:serviceaccount:' + l.metadata.annotations['topology.cisco.vk/device-namespace'] + ':{{ $networkServiceAccount }}' &&
-            l.metadata.annotations['topology.cisco.vk/network-worker-pod-name'] != '' &&
-            l.metadata.annotations['topology.cisco.vk/network-worker-pod-uid'] != '')) &&
+            (['topology.cisco.vk/network-worker-pod-name', 'topology.cisco.vk/network-worker-pod-uid'].all(k,
+               !(k in l.metadata.annotations)) ||
+             ['topology.cisco.vk/network-worker-pod-name', 'topology.cisco.vk/network-worker-pod-uid'].all(k,
+               k in l.metadata.annotations && l.metadata.annotations[k] != '')))) &&
           (!has(l.metadata.finalizers) || l.metadata.finalizers.size() == 0) &&
           !has(l.metadata.deletionTimestamp) &&
           (l.metadata.annotations['topology.cisco.vk/lease-purpose'] == 'node-heartbeat' ?

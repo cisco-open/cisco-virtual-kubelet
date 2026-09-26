@@ -254,6 +254,15 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 			err.Error(),
 		)
 	}
+	if err := r.repairManagedWorkerBindings(ctx, device); err != nil {
+		return r.failManagedTopology(ctx, device, result,
+			ciskov1.CiscoDeviceConditionTopologyConflict, "WorkerBindingRepairFailed", err.Error())
+	}
+	// Binding repair patches Node metadata through the uncached reader. Refresh
+	// this object before validating the maintenance fence or patching projection.
+	if err := r.reader().Get(ctx, client.ObjectKeyFromObject(node), node); err != nil {
+		return result, err
+	}
 	if err := r.ensureManagedWorkerLeases(ctx, device, node); err != nil {
 		return r.failManagedTopology(ctx, device, result,
 			ciskov1.CiscoDeviceConditionTopologyConflict,

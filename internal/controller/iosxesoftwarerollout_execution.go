@@ -73,14 +73,8 @@ func (r *IOSXESoftwareRolloutReconciler) SetupWithManager(mgr ctrl.Manager) erro
 		rolloutSourceSecretNameIndex, rolloutSourceSecretNameIndexValues); err != nil {
 		return fmt.Errorf("index rollout source Secret names: %w", err)
 	}
-	// The manager normally uses its uncached APIReader, for which spec.nodeName
-	// is a server-supported Pod field selector. Register the same index so a
-	// reconciler deliberately constructed with only the cached client retains
-	// identical fail-closed workload checks.
-	if err := indexer.IndexField(context.Background(), // ctxlint:allow manager field-index registration root
-		&corev1.Pod{}, rolloutPodNodeNameIndex, rolloutPodNodeNameIndexValues); err != nil {
-		return fmt.Errorf("index rollout Pod Node names: %w", err)
-	}
+	// spec.nodeName works with both the APIReader and the shared Pod index
+	// registered by CiscoDeviceReconciler. Duplicate registration is rejected.
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&opsv1alpha1.IOSXESoftwareRollout{}).

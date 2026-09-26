@@ -85,6 +85,22 @@ func TestCurrentWorkerPodIdentityDoesNotWaitForReadinessPreflight(t *testing.T) 
 	if current == nil || current.UID != pod.UID {
 		t.Fatalf("current preflight Pod = %#v, want UID %q", current, pod.UID)
 	}
+	identity, err := r.currentManagedWorkerIdentity(ctx, device, deployment.Name,
+		managedprotocol.AppHostingServiceAccount, perDeviceDeploymentLabels(device.Name))
+	if err != nil || identity == nil || identity.uid != string(pod.UID) {
+		t.Fatalf("pre-maintenance identity = %#v, error %v", identity, err)
+	}
+	// A current Pod must not authenticate an altered Deployment template.
+	changed := deployment.DeepCopy()
+	changed.Spec.Template.Spec.Containers[0].Image = "cisco-vk:tampered"
+	if err := r.Update(ctx, changed); err != nil {
+		t.Fatal(err)
+	}
+	identity, err = r.currentManagedWorkerIdentity(ctx, device, deployment.Name,
+		managedprotocol.AppHostingServiceAccount, perDeviceDeploymentLabels(device.Name))
+	if err != nil || identity != nil {
+		t.Fatalf("altered template identity = %#v, error %v", identity, err)
+	}
 	ready, err := soleReadyWorkerPod(ctx, r.Client, device, deployment,
 		perDeviceDeploymentLabels(device.Name), revision)
 	if err != nil {

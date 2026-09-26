@@ -94,7 +94,7 @@ func (r *CiscoDeviceReconciler) ensureManagedMutationLease(
 		return fmt.Errorf("read managed mutation Lease %s: %w", key, err)
 	}
 	if lease.Annotations[managedprotocol.AnnotationManaged] == "true" {
-		if err := validateManagedMutationLeaseMetadata(lease, desiredAnnotations, desiredLabels); err != nil {
+		if err := r.repairManagedLeaseBindings(ctx, lease, desiredAnnotations, desiredLabels, nil); err != nil {
 			return fmt.Errorf("managed mutation Lease %s is unsafe to use: %w", key, err)
 		}
 		return nil

@@ -1360,6 +1360,9 @@ if kubectl --context "$context" get iosxediagnostic root-kcm-cleanup-partial-bin
   exit 1
 fi
 
+# Exercise retained Lease bootstrap and rotation with actual bound tokens.
+source "$chart_dir/tests/managed-lease-rebind-checks.sh"
+
 # Namespace teardown exercises the DELETE-collection path while reserved
 # worker objects, a malformed historical partial binding, a top-level bound
 # network CR, and an orphaned bound result still exist. A missing request.name

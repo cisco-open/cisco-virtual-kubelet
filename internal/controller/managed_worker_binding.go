@@ -35,6 +35,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	configengine "github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
@@ -401,7 +402,7 @@ func (r *CiscoDeviceReconciler) reconcileManagedWorkerObjectBindings(ctx context
 			return fmt.Errorf("stamp managed Node worker Pod identities: %w", err)
 		}
 	}
-	if err := r.stampManagedLeases(ctx, device, &node, app, network, clearApp, clearNetwork); err != nil {
+	if err := r.stampManagedLeases(ctx, device, &node); err != nil {
 		return err
 	}
 	if err := r.stampManagedUpgradeLeaves(ctx, device, network, clearNetwork); err != nil {
@@ -522,13 +523,13 @@ func (r *CiscoDeviceReconciler) stampManagedUpgradeLeaves(ctx context.Context, d
 	return nil
 }
 
-func (r *CiscoDeviceReconciler) stampManagedLeases(ctx context.Context, device *ciskov1.CiscoDevice,
-	node *corev1.Node, app, network *managedWorkerPodIdentity, clearApp, clearNetwork bool) error {
+// stampManagedLeases repairs only existing canonical Leases. In particular,
+// deletion must not recreate Leases that teardown has already removed.
+func (r *CiscoDeviceReconciler) stampManagedLeases(ctx context.Context, device *ciskov1.CiscoDevice, node *corev1.Node) error {
+	deviceKey := devicecoordination.DeviceKey(device.Namespace, device.Name)
 	var leases coordv1.LeaseList
-	if err := r.reader().List(ctx, &leases, client.MatchingLabels{
-		"cisco.vk/device": devicecoordination.DeviceKey(device.Namespace, device.Name),
-	}); err != nil {
-		return fmt.Errorf("list managed Leases for worker Pod binding: %w", err)
+	if err := r.reader().List(ctx, &leases, client.MatchingLabels{"cisco.vk/device": deviceKey}); err != nil {
+		return err
 	}
 	for i := range leases.Items {
 		lease := &leases.Items[i]
@@ -537,22 +538,85 @@ func (r *CiscoDeviceReconciler) stampManagedLeases(ctx context.Context, device *
 			lease.Annotations[managedprotocol.AnnotationNodeUID] != string(node.UID) {
 			continue
 		}
-		before := lease.DeepCopy()
-		lease.Annotations = applyWorkerIdentityAnnotations(lease.Annotations, app, network, clearApp, clearNetwork)
 		purpose := lease.Annotations[managedprotocol.AnnotationLeasePurpose]
-		if purpose == managedprotocol.LeasePurposeNodeHeartbeat && app != nil {
-			lease.Annotations[managedprotocol.AnnotationWorkerUsername] = app.username
-		} else if purpose != managedprotocol.LeasePurposeNodeHeartbeat && network != nil {
-			lease.Annotations[managedprotocol.AnnotationWorkerUsername] = network.username
+		family := lease.Labels["cisco.vk/family"]
+		username := managedNetworkWorkerUsername(node)
+		namespace := r.LeaseNamespace
+		if namespace == "" {
+			namespace = device.Namespace
 		}
-		if reflect.DeepEqual(before.Annotations, lease.Annotations) {
-			continue
+		name := configengine.LeaseName(deviceKey, family)
+		var owners []metav1.OwnerReference
+		switch purpose {
+		case managedprotocol.LeasePurposeNodeHeartbeat:
+			namespace, name, family = corev1.NamespaceNodeLease, node.Name, managedNodeHeartbeatFamily
+			username = managedAppWorkerUsername(node)
+			owners = []metav1.OwnerReference{{APIVersion: "v1", Kind: "Node", Name: node.Name, UID: node.UID}}
+		case managedprotocol.LeasePurposeDeviceMutation:
+			family = devicecoordination.MutationLeaseFamily
+			name = configengine.LeaseName(deviceKey, family)
+		case managedprotocol.LeasePurposeConfigFamily:
+			if family == "" || family == managedNodeHeartbeatFamily || family == devicecoordination.MutationLeaseFamily {
+				return fmt.Errorf("invalid managed config Lease family %q", family)
+			}
+		default:
+			return fmt.Errorf("unknown managed Lease purpose %q", purpose)
 		}
-		if err := r.Patch(ctx, lease, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})); err != nil {
-			return fmt.Errorf("stamp managed Lease %s/%s worker Pod identities: %w", lease.Namespace, lease.Name, err)
+		if lease.Namespace != namespace || lease.Name != name {
+			return fmt.Errorf("managed Lease %s/%s does not match canonical purpose identity", lease.Namespace, lease.Name)
+		}
+		annotations := managedLeaseBindingAnnotations(device, node.Name, string(node.UID), username, purpose)
+		copyManagedWorkerBindingAnnotations(annotations, node.Annotations)
+		if err := r.repairManagedLeaseBindings(ctx, lease, annotations, managedLeaseLabels(deviceKey, family), owners); err != nil {
+			return fmt.Errorf("repair managed Lease %s/%s: %w", lease.Namespace, lease.Name, err)
 		}
 	}
 	return nil
+}
+
+// repairManagedWorkerBindings runs before maintenance validation. A pending leaf
+// or a restarted worker must not prevent the manager from repairing the exact
+// Pod binding that maintenance validation itself requires.
+func (r *CiscoDeviceReconciler) repairManagedWorkerBindings(ctx context.Context, device *ciskov1.CiscoDevice) error {
+	app, err := r.currentManagedWorkerIdentity(ctx, device, device.Name+deploymentSuffix,
+		r.appHostingServiceAccountName(), perDeviceDeploymentLabels(device.Name))
+	if err != nil {
+		return err
+	}
+	network, err := r.currentManagedWorkerIdentity(ctx, device, networkDeploymentName(device.Name, string(device.UID)),
+		r.networkManagementServiceAccountName(), perDeviceNetworkDeploymentLabels(device.Name))
+	if err != nil {
+		return err
+	}
+	return r.reconcileManagedWorkerObjectBindings(ctx, device, app, network, app == nil, network == nil)
+}
+
+func (r *CiscoDeviceReconciler) currentManagedWorkerIdentity(ctx context.Context, device *ciskov1.CiscoDevice,
+	name, serviceAccount string, labels map[string]string) (*managedWorkerPodIdentity, error) {
+	var deployment appsv1.Deployment
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: name}, &deployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	revision := deployment.Spec.Template.Annotations[managedprotocol.AnnotationWorkerConfigRevision]
+	if revision == "" || !metav1.IsControlledBy(&deployment, device) ||
+		deployment.Spec.Template.Spec.ServiceAccountName != serviceAccount {
+		return nil, nil
+	}
+	computed, err := managedWorkerPodTemplateRevision(&deployment.Spec.Template)
+	if err != nil {
+		return nil, err
+	}
+	if computed != revision {
+		return nil, nil
+	}
+	pod, err := soleCurrentWorkerPod(ctx, r.reader(), device, &deployment, labels, revision)
+	if err != nil {
+		return nil, err
+	}
+	return workerPodIdentity(device.Namespace, serviceAccount, pod), nil
 }
 
 func (r *CiscoDeviceReconciler) stampManagedWorkloadPods(ctx context.Context, device *ciskov1.CiscoDevice,

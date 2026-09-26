@@ -373,7 +373,8 @@ rules:
     verbs: ["get", "update", "patch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades"]
-    verbs: ["create"]
+    # Reconcile exact worker Pod bindings on retained leaves.
+    verbs: ["create", "update", "patch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades/status"]
     verbs: ["get", "update", "patch"]

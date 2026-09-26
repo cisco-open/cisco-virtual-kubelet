@@ -669,7 +669,7 @@ grep -A1 -F 'resources: ["iosxesoftwarerollouts/status"]' "$upgrade_manager_role
 grep -A1 -F 'resources: ["iosxesoftwareupgrades"]' "$upgrade_manager_role" | \
   grep -Fq 'verbs: ["get", "list", "watch"]'
 grep -A1 -F 'resources: ["iosxesoftwareupgrades"]' "$upgrade_manager_role" | \
-  grep -Fq 'verbs: ["create"]'
+  grep -Fq 'verbs: ["create", "update", "patch"]'
 grep -A1 -F 'resources: ["iosxesoftwareupgrades/status"]' "$upgrade_manager_role" | \
   grep -Fq 'verbs: ["get", "update", "patch"]'
 
