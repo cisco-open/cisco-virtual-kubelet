@@ -74,6 +74,20 @@ type CiscoKubernetesDeviceDriver interface {
 	GetGlobalOperationalData(ctx context.Context) (*common.AppHostingOperData, error)
 }
 
+// DrainPodInventoryProvider is an optional, explicit capability for destructive
+// workload drain. Unlike the compatibility-oriented ListPods method, this
+// method must return an error whenever any device inventory source is missing,
+// partial, or ambiguous, and every returned Pod must retain the exact,
+// globally unique Kubernetes Pod UID (not a transport-normalized derivative).
+// Namespace and name may be stable driver-derived placeholders when a device
+// lifecycle state no longer retains that metadata; consumers bind selected
+// workload identity by UID and still reject malformed or duplicate records. A
+// driver that does not implement this interface is not eligible for managed
+// drain.
+type DrainPodInventoryProvider interface {
+	ListPodsForDrain(ctx context.Context) ([]*v1.Pod, error)
+}
+
 // PodResourceListerSetter is implemented by drivers that must resolve pod
 // Secret or ConfigMap references after the initial DeployPod call. The
 // provider supplies its shared informer listers once at construction time;

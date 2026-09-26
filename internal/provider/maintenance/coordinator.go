@@ -13,7 +13,8 @@
 // limitations under the License.
 
 // Package maintenance coordinates ordinary device writes with disruptive
-// operations. Reads do not participate, and existing pods are never drained.
+// operations. Reads do not participate. Workload teardown is authorized only
+// by the separate, exact-session PDB-aware drain protocol.
 package maintenance
 
 import (
@@ -51,11 +52,16 @@ const (
 // mutation gate is disabled. Client must be uncached: Lease decisions and Node
 // patches must observe current API state, including another process's writes.
 type Coordinator struct {
-	Client         client.Client
-	Namespace      string
-	DeviceName     string
-	DeviceUID      string
-	NodeName       string
+	Client     client.Client
+	Namespace  string
+	DeviceName string
+	DeviceUID  string
+	NodeName   string
+	// WorkerRevision is this process's immutable managed worker configuration
+	// revision. Drain authorization binds it to the manager-authenticated ready
+	// worker proof and the live Node observation so a stale process cannot
+	// impersonate its replacement.
+	WorkerRevision string
 	LeaseNamespace string
 	// ManagedTopology replaces direct worker Node-spec writes with the
 	// durable Lease request / manager acknowledgement protocol.
@@ -73,6 +79,9 @@ type Coordinator struct {
 	MutationsEnabled bool
 
 	nodeMu sync.Mutex
+	// drainMu serializes deterministic same-holder Pod teardown callbacks. One
+	// completion must never release the canonical Lease underneath another.
+	drainMu sync.Mutex
 	// Private timing hooks keep cancellation and renewal tests deterministic.
 	leaseTTL      time.Duration
 	renewInterval time.Duration
@@ -162,6 +171,19 @@ func (c *Coordinator) AcquireWrite(ctx context.Context) (context.Context, func(e
 				return
 			case <-ticker.C:
 				renewCtx, renewCancel := context.WithTimeout(writeCtx, apiTimeout)
+				// Managed recovery is the only session phase that permits an
+				// ordinary write. Revalidate that narrow authority before extending
+				// the Lease so a revoked session, expired recovery deadline, stale
+				// worker, or changed topology binding cancels device work without
+				// mutating the durable fence. This is a no-op in standalone mode.
+				if authorityErr := c.checkManagedWriteSession(renewCtx); authorityErr != nil {
+					renewCancel()
+					log.G(ctx).WithError(authorityErr).Warn(
+						"device maintenance write authorization lost; cancelling before Lease renewal",
+					)
+					cancel()
+					return
+				}
 				renewed, renewErr := leaser.Acquire(renewCtx, key, devicecoordination.MutationLeaseFamily, identity)
 				renewCancel()
 				if renewErr != nil || !renewed.Owned {

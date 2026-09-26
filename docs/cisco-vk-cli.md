@@ -302,6 +302,7 @@ a stale Pod rejects a live generation mismatch before adapter setup.
 | `--health-probe-bind-address` | — | `:8081` | `/healthz` and `/readyz` probes. |
 | `--leader-elect` | — | `false` | Enable leader election for HA deployments. |
 | `--vk-image` | — | `ghcr.io/cisco/virtual-kubelet-cisco:latest` | Container image for per-device VK pods. |
+| `--vk-image-pull-policy` | — | image-tag default | Per-device VK image pull policy: `Always`, `IfNotPresent`, or `Never`; the default image ending in `:latest` resolves to `Always`. |
 | `--controller-worker-image` | — | `ghcr.io/cisco/virtual-kubelet-cisco:latest` | Adapter-bearing image for isolated `NetworkController` workers. Its registered descriptor must match the manager's descriptor digest. |
 | `--controller-worker-image-pull-policy` | — | `IfNotPresent` | Worker image pull policy: `Always`, `IfNotPresent`, or `Never`. |
 | `--vk-service-account` | — | `cisco-virtual-kubelet` | Service account injected into VK Deployments. |
@@ -321,11 +322,15 @@ passes explicit values with separate meanings:
   policy.
 - `vkImage` selects only per-device VK Deployments created for `CiscoDevice`.
   It does not select a network-controller worker image.
+- `vkImage.pullPolicy` becomes `--vk-image-pull-policy` for those per-device
+  Deployments.
 - The shared `image` is the fallback for both overrides. Its published default
   is `ghcr.io/cisco-open/cisco-virtual-kubelet:<chart-appVersion>`.
 
-When starting `cisco-vk manager` outside Helm, set both worker image flags and
-`--vk-image` explicitly for the runtime images and pull behavior you intend.
+When starting `cisco-vk manager` outside Helm, explicitly set `--vk-image`,
+`--vk-image-pull-policy`, `--controller-worker-image`, and
+`--controller-worker-image-pull-policy` for the runtime images and pull behavior
+you intend.
 The manager-generated network-controller worker does not currently propagate
 `imagePullSecrets`; use a registry the cluster can pull anonymously for this
 Alpha scaffold. Private-registry worker support requires a future explicit

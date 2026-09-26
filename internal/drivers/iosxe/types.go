@@ -101,11 +101,14 @@ type AppHostingSpec struct {
 
 // AppHostingStatus captures the last-observed device state and reconciler phase.
 type AppHostingStatus struct {
-	ObservedState  string    // Device oper state: "", "DEPLOYED", "ACTIVATED", "RUNNING", etc.
-	ConfigPresent  bool      // Whether config exists on the device
-	Phase          AppPhase  // Reconciler phase
-	Message        string    // Human-readable message for last transition
-	LastTransition time.Time // Timestamp of the last status change
+	ObservedState    string    // Device oper state: "", "DEPLOYED", "ACTIVATED", "RUNNING", etc.
+	ConfigPresent    bool      // Whether config exists on the device
+	Phase            AppPhase  // Reconciler phase
+	Message          string    // Human-readable message for last transition
+	LastTransition   time.Time // Timestamp of the last status change
+	PendingOperation string    // Accepted asynchronous RPC; observe state before any replay
+	PendingState     string    // Device state from which PendingOperation was submitted
+	PendingPresent   bool      // Whether the app existed when PendingOperation was submitted
 }
 
 // AppHostingConfig represents a complete IOS-XE AppHosting configuration for a single container,

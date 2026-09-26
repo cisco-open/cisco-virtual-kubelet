@@ -83,7 +83,12 @@ func NetworkResultNamePrefix(deviceUID string) string {
 }
 
 const (
-	Version                            = "rollout-v1"
+	AnnotationAppWorkerConfigRevision = "topology.cisco.vk/app-worker-config-revision"
+	Version                           = "rollout-v1"
+	// DrainProtocolVersion is deliberately distinct from the mutation grant
+	// protocol. Its presence opts an operation into the PDB-aware drain
+	// handshake; omission continues to mean the legacy rollout-v1 behavior.
+	DrainProtocolVersion               = "pdb-drain-v1"
 	AdmissionContractVersion           = "v2"
 	AnnotationAdmissionContractVersion = "topology.cisco.vk/admission-contract-version"
 	AnnotationAdmissionContractDigest  = "topology.cisco.vk/admission-contract-digest"
@@ -178,6 +183,16 @@ const (
 	WorkerAccessDisabled                       = "disabled"
 	ImageFamilyLabel                           = "operations.cisco.vk/image-family"
 	QualificationCohortLabel                   = "operations.cisco.vk/qualification-cohort"
+	AnnotationMaintenancePurpose               = "topology.cisco.vk/maintenance-purpose"
+	AnnotationDrainSession                     = "ops.cisco.vk/drain-session"
+	AnnotationDrainCordonOwner                 = "ops.cisco.vk/drain-cordon-owner"
+	AnnotationDrainTaintOwner                  = "ops.cisco.vk/drain-taint-owner"
+	AnnotationDrainCordonHold                  = "ops.cisco.vk/drain-cordon-hold"
+	DrainSafeLabel                             = "operations.cisco.vk/drain-safe"
+	DrainPodFinalizer                          = "ops.cisco.vk/iosxe-rollout-drain"
+	MaintenancePurposeWorkloadDrain            = "WorkloadDrain"
+	MaintenancePurposeSoftwareMutation         = "SoftwareMutation"
+	ManagedWorkerPodDeleteClusterRole          = "cisco-virtual-kubelet-managed-worker-pod-delete"
 
 	EnvManagedTopology          = "CISCO_VK_MANAGED_TOPOLOGY"
 	EnvDeviceNamespace          = "CISCO_VK_DEVICE_NAMESPACE"

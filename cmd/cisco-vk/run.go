@@ -92,6 +92,7 @@ const (
 	envNodeName        = managedprotocol.EnvNodeName
 	envManagedTopology = managedprotocol.EnvManagedTopology
 	envWorkerRevision  = managedprotocol.EnvWorkerRevision
+	envWorkerPodUID    = "POD_UID"
 	legacyEnvNodeName  = "VKUBELET_NODE_NAME"
 )
 
@@ -190,6 +191,7 @@ func resolveWorkerRuntimeIdentity(flagNodeName string, spec *ciskov1.DeviceSpec)
 			NodeName:        os.Getenv(envNodeName),
 			ManagedTopology: true,
 			WorkerRevision:  os.Getenv(envWorkerRevision),
+			WorkerPodUID:    os.Getenv(envWorkerPodUID),
 		}
 		for _, required := range []struct {
 			name  string
@@ -200,6 +202,7 @@ func resolveWorkerRuntimeIdentity(flagNodeName string, spec *ciskov1.DeviceSpec)
 			{name: envDeviceUID, value: identity.DeviceUID},
 			{name: envNodeName, value: identity.NodeName},
 			{name: envWorkerRevision, value: identity.WorkerRevision},
+			{name: envWorkerPodUID, value: identity.WorkerPodUID},
 		} {
 			if strings.TrimSpace(required.value) == "" {
 				return workerRuntimeIdentity{}, fmt.Errorf("managed topology identity requires non-empty %s", required.name)
@@ -269,6 +272,7 @@ func resolveWorkerRuntimeIdentity(flagNodeName string, spec *ciskov1.DeviceSpec)
 		DeviceName:      deviceName,
 		DeviceUID:       os.Getenv(envDeviceUID),
 		NodeName:        resolvedNodeName,
+		WorkerPodUID:    os.Getenv(envWorkerPodUID),
 	}
 	if err := identity.validate(); err != nil {
 		return workerRuntimeIdentity{}, err
@@ -514,6 +518,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	traceCorrelationCache := correlation.NewCache(0, 0, 0)
 	var appEventConsumer telemetrystate.AppEventConsumer
 	var devicePodLister func(context.Context) ([]*v1.Pod, error)
+	var drainDevicePodLister func(context.Context) ([]*v1.Pod, error)
 
 	handlerWrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if innerHandler != nil {
@@ -604,7 +609,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create device driver: %w", err)
 		}
-		devicePodLister = sharedDriver.ListPods
+		devicePodLister, drainDevicePodLister = devicePodInventoryListers(sharedDriver)
 
 		nodeHandler := provider.NewAppHostingNodeWithTopologyMode(ctx, identity.NodeName, &appCfg.Device, sharedDriver, projectionMode)
 		if identity.ManagedTopology {
@@ -696,6 +701,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		NodeName:                   identity.NodeName,
 		ManagedTopology:            identity.ManagedTopology,
 		WorkerRevision:             identity.WorkerRevision,
+		WorkerPodUID:               identity.WorkerPodUID,
 		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
 		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
 		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),
@@ -707,6 +713,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		CorrelationCache:           traceCorrelationCache,
 		Maintenance:                maintenanceCoordinator,
 		DevicePodLister:            devicePodLister,
+		DrainDevicePodLister:       drainDevicePodLister,
 	})); err != nil {
 		log.G(ctx).WithError(err).Warn("IOSXEConfig reconciler not started; continuing without declarative config")
 	}
@@ -789,7 +796,7 @@ func runNetworkManagementRuntime(
 	if err != nil {
 		return fmt.Errorf("configure device app inventory for network-management safety checks: %w", err)
 	}
-	opts.DevicePodLister = inventoryDriver.ListPods
+	opts.DevicePodLister, opts.DrainDevicePodLister = devicePodInventoryListers(inventoryDriver)
 	managerLifecycle := newConfigManagerLifecycle()
 	opts.ManagerLifecycle = managerLifecycle
 
@@ -806,6 +813,17 @@ func runNetworkManagementRuntime(
 	}
 	log.G(ctx).Info("Cisco Virtual Kubelet network-management runtime stopped")
 	return nil
+}
+
+// Both combined and network-only workers must preserve the driver's explicit
+// strict-inventory capability. Compatibility ListPods is never a drain fallback.
+func devicePodInventoryListers(driver drivers.CiscoKubernetesDeviceDriver) (
+	ordinary, strict func(context.Context) ([]*v1.Pod, error),
+) {
+	if inventory, ok := driver.(drivers.DrainPodInventoryProvider); ok {
+		strict = inventory.ListPodsForDrain
+	}
+	return driver.ListPods, strict
 }
 
 func managedWorkerInitialNode(node v1.Node) v1.Node {

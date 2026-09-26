@@ -19,12 +19,14 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,6 +39,7 @@ import (
 	configengine "github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
@@ -67,6 +70,16 @@ func TestManagedWorkersUseSharedFunctionalServiceAccounts(t *testing.T) {
 	}
 	if got := r.serviceAccountForDevice(device); got != r.appHostingServiceAccountName() {
 		t.Fatalf("durable managed app ServiceAccount=%q, want %q", got, r.appHostingServiceAccountName())
+	}
+}
+
+func TestManagedWorkerBindingRequiresAdmissionEpoch(t *testing.T) {
+	r := reconcilerFor(t)
+	r.WorkerServiceAccountPolicyEpoch = ""
+	device := newDevice("switch-preflight-gate", "edge")
+	device.UID = "device-uid"
+	if err := r.ensureManagedSharedWorkerAccess(context.Background(), device); err == nil {
+		t.Fatal("shared functional access accepted without verified admission epoch")
 	}
 }
 
@@ -739,6 +752,14 @@ func TestManagedWorkerServiceAccountCleanupIsUIDAndOwnerBound(t *testing.T) {
 			if !foreign && !apierrors.IsNotFound(getErr) {
 				t.Fatalf("owned ServiceAccount remains or lookup failed: %v", getErr)
 			}
+			if !foreign {
+				for _, binding := range generatedWorkerClusterRoleBindings(device.Namespace, saName, true) {
+					getErr := r.Get(ctx, types.NamespacedName{Name: binding.name}, &rbacv1.ClusterRoleBinding{})
+					if !apierrors.IsNotFound(getErr) {
+						t.Fatalf("owned ClusterRoleBinding %s remains or lookup failed: %v", binding.name, getErr)
+					}
+				}
+			}
 		})
 	}
 }
@@ -1009,6 +1030,365 @@ func TestPhaseZeroDeletionRevokesExactGeneratedAccessAndRejectsDrift(t *testing.
 			assertWorkerAccessAbsent(t, r.Client, device, serviceAccount)
 		})
 	}
+}
+
+func TestMaintenanceFenceRepairsOnlyManagedWorkerSubstrate(t *testing.T) {
+	t.Setenv(envCVKGNOIDisabled, "true")
+	ctx := context.Background()
+	device := newDevice("switch-fenced-worker", "edge")
+	device.UID = "device-uid"
+	device.Generation = 1
+	device.Spec.PhysicalIdentity = "serial-switch-fenced-worker"
+	device.Labels = map[string]string{
+		managedprotocol.AnnotationManaged:          "true",
+		topology.CiscoTopologyLabelPrefix + "site": "site-a",
+	}
+	node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{
+		Name: device.Name, UID: "node-uid",
+		Labels: map[string]string{topology.LabelType: topology.TypeVirtualKubelet},
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:         "true",
+			managedprotocol.AnnotationDeviceNamespace: device.Namespace,
+			managedprotocol.AnnotationDeviceName:      device.Name,
+			managedprotocol.AnnotationDeviceUID:       string(device.UID),
+			managedprotocol.AnnotationNodeName:        device.Name,
+			managedprotocol.AnnotationNodeUID:         "node-uid",
+			managedprotocol.AnnotationWorkerUsername:  "system:serviceaccount:" + device.Namespace + ":" + managedWorkerServiceAccountName(device),
+			managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
+		},
+	}, Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{
+		Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+	}}}}
+	policy, ledger := managedPolicyAndLedger(t, nil)
+	scheme := newTestScheme(t)
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&ciskov1.CiscoDevice{}, &corev1.Node{}, &opsv1alpha1.IOSXESoftwareUpgrade{}).
+		WithIndex(&ciskov1.CiscoDevice{}, ciscoDevicePhysicalIdentityIndex, physicalIdentityIndexValues).
+		WithIndex(&corev1.Pod{}, podNodeNameIndex, rolloutPodNodeNameIndexValues).
+		WithObjects(device, node, policy, ledger).Build()
+	for name, rules := range managedprotocol.WorkerClusterRoleContracts() {
+		if err := apiClient.Create(ctx, &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: name}, Rules: rules}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	r := &CiscoDeviceReconciler{
+		Client: leaseUIDAssigningClient{Client: apiClient}, APIReader: apiClient, Scheme: scheme,
+		Image: "cisco-vk:old", ManagedTopology: true,
+		TopologyPolicyNamespace: policy.Namespace, TopologyPolicyName: policy.Name,
+		WorkerServiceAccountPolicyEpoch: testWorkerServiceAccountPolicyEpoch,
+	}
+	request := reconcileRequest(device.Namespace, device.Name)
+	if _, err := r.Reconcile(ctx, request); err != nil {
+		t.Fatalf("initial Reconcile: %v", err)
+	}
+
+	deploymentKey := types.NamespacedName{Namespace: device.Namespace, Name: device.Name + deploymentSuffix}
+	var deployment appsv1.Deployment
+	if err := apiClient.Get(ctx, deploymentKey, &deployment); err != nil {
+		t.Fatal(err)
+	}
+	oldRevision := deployment.Spec.Template.Annotations[managedprotocol.AnnotationWorkerConfigRevision]
+	if oldRevision == "" || deployment.Spec.Template.Spec.Containers[0].Image != "cisco-vk:old" {
+		t.Fatalf("initial managed worker = %#v", deployment.Spec.Template)
+	}
+	// fake.Client does not assign server identities. Seed the immutable identity
+	// required by the production pre-rollout fence.
+	deployment.UID = "deployment-uid"
+	deployment.Generation = 1
+	if err := apiClient.Update(ctx, &deployment); err != nil {
+		t.Fatal(err)
+	}
+
+	var current ciskov1.CiscoDevice
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC().Truncate(time.Second)
+	startedAt := metav1.NewTime(now.Add(-5 * time.Minute))
+	token := "00000000-0000-4000-8000-000000000001"
+	planHash := "sha256:" + strings.Repeat("a", 64)
+	reservationID := "reservation"
+	acquisitionID := strings.Repeat("b", 32)
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "cancelled-upgrade", UID: "cancelled-upgrade-uid",
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:         "true",
+			managedprotocol.AnnotationDeviceNamespace: device.Namespace,
+			managedprotocol.AnnotationDeviceName:      device.Name,
+			managedprotocol.AnnotationDeviceUID:       string(device.UID),
+			managedprotocol.AnnotationNodeName:        node.Name,
+			managedprotocol.AnnotationNodeUID:         string(node.UID),
+			managedprotocol.AnnotationWorkerUsername:  "system:serviceaccount:" + device.Namespace + ":" + r.networkManagementServiceAccountName(),
+			managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
+			managedprotocol.AnnotationCampaignUID:     "campaign-uid",
+			managedprotocol.AnnotationPlanHash:        planHash,
+			managedprotocol.AnnotationLedgerUID:       "ledger-uid",
+			managedprotocol.AnnotationReservationID:   reservationID,
+		},
+	}}
+	leaf.Spec.DeviceRef.Name = device.Name
+	if err := apiClient.Create(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(leaf), leaf); err != nil {
+		t.Fatal(err)
+	}
+	currentRevision := int64(1)
+	leaf.Status = opsv1alpha1.IOSXESoftwareUpgradeStatus{
+		Phase:          opsv1alpha1.UpgradePhaseTransferring,
+		ExecutionModel: opsv1alpha1.UpgradeExecutionModelAtMostOnceV1,
+		ManagerAdmission: &opsv1alpha1.UpgradeManagerAdmissionStatus{
+			ProtocolVersion:  opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+			State:            opsv1alpha1.UpgradeManagerAdmissionRevoked,
+			RevocationReason: "CampaignCancelled", CampaignUID: "campaign-uid", PlanHash: planHash,
+			PolicyUID: "policy-uid", PolicyResourceVersion: "1", PolicyEpoch: 1,
+			LedgerUID: "ledger-uid", ReservationID: reservationID, TopologyLockID: acquisitionID,
+			LeafUID: string(leaf.UID), DeviceUID: string(device.UID), DeviceGeneration: current.Generation,
+			PhysicalIdentity: device.Spec.PhysicalIdentity, NodeUID: string(node.UID),
+			ControlRevision: &currentRevision, UpdatedAt: metav1.NewTime(now),
+		},
+		ManagerControl: &opsv1alpha1.UpgradeManagerControlStatus{
+			Revision: currentRevision, Cancel: true, UpdatedAt: metav1.NewTime(now), Reason: "CampaignCancelled",
+		},
+		ManagerDrain: &opsv1alpha1.UpgradeManagerDrainStatus{
+			ProtocolVersion: opsv1alpha1.ManagedDrainProtocolPDBV1,
+			State:           opsv1alpha1.UpgradeManagerDrainRecovering, SessionToken: token,
+			ReservationID: reservationID, PolicyEpoch: 1, ControlRevision: currentRevision,
+			NodeUID: string(node.UID), StartedAt: startedAt,
+			DrainDeadline:    metav1.NewTime(now.Add(30 * time.Minute)),
+			RecoveryDeadline: ptr.To(metav1.NewTime(now.Add(time.Hour))),
+			UpdatedAt:        metav1.NewTime(now),
+		},
+	}
+	if err := apiClient.Status().Update(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+
+	current.Status.Phase = "RecoverySentinel"
+	meta.SetStatusCondition(&current.Status.Conditions, metav1.Condition{
+		Type: ciskov1.CiscoDeviceConditionAggregatorOwning, Status: metav1.ConditionTrue,
+		Reason: "RecoverySentinel", Message: "must remain unchanged during worker-only recovery",
+		ObservedGeneration: current.Generation,
+	})
+	current.Status.TopologyLock = &ciskov1.DeviceTopologyLockStatus{
+		State: ciskov1.DeviceTopologyLockActive, PolicyEpoch: 1, AcquisitionID: acquisitionID,
+		CampaignNamespace: device.Namespace, CampaignName: "campaign", CampaignUID: "campaign-uid",
+		PlanHash: planHash, ReservationID: reservationID, DeviceUID: string(device.UID),
+		DeviceGeneration: current.Generation, NodeUID: string(node.UID),
+		ProjectionHash: current.Status.TopologyProjection.EffectiveLabelHash, AcquiredAt: metav1.NewTime(now.Add(-time.Hour)),
+	}
+	if err := apiClient.Status().Update(ctx, &current); err != nil {
+		t.Fatal(err)
+	}
+
+	leaseKey := types.NamespacedName{
+		Namespace: device.Namespace,
+		Name:      configengine.LeaseName(devicecoordination.DeviceKey(device.Namespace, device.Name), devicecoordination.MutationLeaseFamily),
+	}
+	var lease coordv1.Lease
+	if err := apiClient.Get(ctx, leaseKey, &lease); err != nil {
+		t.Fatal(err)
+	}
+	holder := mutationguard.UpgradeHolderIdentity(leaf)
+	lease.Spec = coordv1.LeaseSpec{
+		HolderIdentity: &holder, AcquireTime: ptr.To(metav1.NewMicroTime(now.Add(-time.Minute))),
+		RenewTime: ptr.To(metav1.NewMicroTime(now)), LeaseDurationSeconds: ptr.To[int32](3600),
+		LeaseTransitions: ptr.To[int32](1),
+	}
+	for key, value := range map[string]string{
+		managedprotocol.AnnotationMaintenanceRequestVersion:  managedprotocol.DrainProtocolVersion,
+		managedprotocol.AnnotationMaintenanceSessionToken:    token,
+		managedprotocol.AnnotationMaintenanceRequestedAt:     startedAt.Format(time.RFC3339Nano),
+		managedprotocol.AnnotationMaintenanceOperationNS:     leaf.Namespace,
+		managedprotocol.AnnotationMaintenanceOperationName:   leaf.Name,
+		managedprotocol.AnnotationMaintenanceOperationUID:    string(leaf.UID),
+		managedprotocol.AnnotationMaintenanceControlRevision: "0",
+		managedprotocol.AnnotationMaintenancePurpose:         managedprotocol.MaintenancePurposeSoftwareMutation,
+	} {
+		lease.Annotations[key] = value
+	}
+	if err := apiClient.Update(ctx, &lease); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	acknowledgedAt := metav1.NewTime(now.Add(-4 * time.Minute))
+	current.Status.MaintenanceSession = &ciskov1.DeviceMaintenanceSessionStatus{
+		Phase:           ciskov1.DeviceMaintenanceSessionActive,
+		ProtocolVersion: ciskov1.DeviceMaintenanceProtocolPDBDrainV1,
+		Purpose:         ciskov1.DeviceMaintenancePurposeSoftwareMutation, SessionToken: token,
+		Lease: ciskov1.DeviceMaintenanceLeaseReference{
+			DeviceMaintenanceObjectReference: ciskov1.DeviceMaintenanceObjectReference{
+				Namespace: lease.Namespace, Name: lease.Name, UID: string(lease.UID),
+			},
+			Holder: holder,
+		},
+		Operation: ciskov1.DeviceMaintenanceObjectReference{
+			Namespace: leaf.Namespace, Name: leaf.Name, UID: string(leaf.UID),
+		},
+		DeviceUID: string(device.UID), NodeName: node.Name, NodeUID: string(node.UID),
+		RequestedAt: startedAt, AcknowledgedAt: &acknowledgedAt, ControlRevision: 0,
+	}
+	if err := apiClient.Status().Update(ctx, &current); err != nil {
+		t.Fatal(err)
+	}
+	requestAnnotations := map[string]string{}
+	for _, key := range []string{
+		managedprotocol.AnnotationMaintenanceRequestVersion,
+		managedprotocol.AnnotationMaintenanceSessionToken,
+		managedprotocol.AnnotationMaintenanceRequestedAt,
+		managedprotocol.AnnotationMaintenanceOperationNS,
+		managedprotocol.AnnotationMaintenanceOperationName,
+		managedprotocol.AnnotationMaintenanceOperationUID,
+		managedprotocol.AnnotationMaintenanceControlRevision,
+		managedprotocol.AnnotationMaintenancePurpose,
+	} {
+		requestAnnotations[key] = lease.Annotations[key]
+	}
+	assertOldRequestRetained := func() {
+		t.Helper()
+		var retained coordv1.Lease
+		if err := apiClient.Get(ctx, leaseKey, &retained); err != nil {
+			t.Fatal(err)
+		}
+		if retained.Spec.HolderIdentity == nil || *retained.Spec.HolderIdentity != holder ||
+			string(retained.UID) != string(lease.UID) {
+			t.Fatalf("manager changed retained Lease identity: %#v", retained)
+		}
+		for key, want := range requestAnnotations {
+			if retained.Annotations[key] != want {
+				t.Fatalf("manager rewrote old request annotation %s=%q, want %q", key, retained.Annotations[key], want)
+			}
+		}
+	}
+
+	r.Image = "cisco-vk:new"
+	result, err := r.Reconcile(ctx, request)
+	if err != nil || result.RequeueAfter != topologyRequeueInterval {
+		t.Fatalf("pre-fence Reconcile = (%+v, %v), want managed maintenance fence", result, err)
+	}
+	if err := apiClient.Get(ctx, deploymentKey, &deployment); err != nil {
+		t.Fatal(err)
+	}
+	if deployment.Spec.Template.Spec.Containers[0].Image != "cisco-vk:old" {
+		t.Fatal("worker Deployment changed before the replacement revision was fenced")
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	if current.Status.WorkerRevision == nil || current.Status.WorkerRevision.DesiredRevision == oldRevision ||
+		current.Status.WorkerRevision.ObservedRevision != "" || current.Status.WorkerRevision.PodUID != "" {
+		t.Fatalf("replacement worker pre-fence = %#v", current.Status.WorkerRevision)
+	}
+	assertOldRequestRetained()
+	var guardedNode corev1.Node
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(node), &guardedNode); err != nil {
+		t.Fatal(err)
+	}
+	if !hasTaintIdentity(guardedNode.Spec.Taints, taintIdentity(topologyInitializationTaint())) {
+		t.Fatal("maintenance failure did not retain the scheduling guard")
+	}
+
+	result, err = r.Reconcile(ctx, request)
+	if err != nil || result.RequeueAfter != topologyRequeueInterval {
+		t.Fatalf("worker repair Reconcile = (%+v, %v), want managed maintenance fence", result, err)
+	}
+	if err := apiClient.Get(ctx, deploymentKey, &deployment); err != nil {
+		t.Fatal(err)
+	}
+	newRevision := deployment.Spec.Template.Annotations[managedprotocol.AnnotationWorkerConfigRevision]
+	if deployment.Spec.Template.Spec.Containers[0].Image != "cisco-vk:new" ||
+		newRevision == "" || newRevision == oldRevision {
+		t.Fatalf("guarded worker substrate did not rotate: image=%q revision=%q",
+			deployment.Spec.Template.Spec.Containers[0].Image, newRevision)
+	}
+	assertOldRequestRetained()
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	if current.Status.Phase != "RecoverySentinel" {
+		t.Fatalf("guarded recovery crossed into normal status reconciliation: phase=%q", current.Status.Phase)
+	}
+	aggregator := findCondition(current.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
+	if aggregator == nil || aggregator.Status != metav1.ConditionTrue || aggregator.Reason != "RecoverySentinel" {
+		t.Fatalf("guarded recovery changed aggregator handover status: %#v", aggregator)
+	}
+	conflict := findCondition(current.Status.Conditions, ciskov1.CiscoDeviceConditionTopologyConflict)
+	if conflict == nil || conflict.Status != metav1.ConditionTrue || conflict.Reason != "MaintenanceFenceFailed" {
+		t.Fatalf("maintenance topology failure = %#v", conflict)
+	}
+
+	// Complete only the Kubernetes-side replacement evidence. The rejected old
+	// request remains unchanged; the new worker receives identity, not mutation
+	// authority, and can now persist cancellation before releasing the Lease.
+	deployment.Status = appsv1.DeploymentStatus{
+		ObservedGeneration: deployment.Generation, Replicas: 1, UpdatedReplicas: 1,
+		ReadyReplicas: 1, AvailableReplicas: 1,
+	}
+	if err := apiClient.Status().Update(ctx, &deployment); err != nil {
+		t.Fatal(err)
+	}
+	replicaSet := &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "replacement-worker-rs", UID: "replacement-worker-rs-uid",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment", Name: deployment.Name,
+			UID: deployment.UID, Controller: ptr.To(true),
+		}},
+	}}
+	if err := apiClient.Create(ctx, replicaSet); err != nil {
+		t.Fatal(err)
+	}
+	startTime := metav1.NewTime(time.Now().UTC().Add(-time.Second))
+	pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "replacement-worker", UID: "replacement-worker-uid",
+		Labels:      perDeviceDeploymentLabels(device.Name),
+		Annotations: map[string]string{managedprotocol.AnnotationWorkerConfigRevision: newRevision},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "ReplicaSet", Name: replicaSet.Name,
+			UID: replicaSet.UID, Controller: ptr.To(true),
+		}},
+	}, Status: corev1.PodStatus{
+		StartTime:  &startTime,
+		Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}},
+	}}
+	if err := apiClient.Create(ctx, pod); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(node), &guardedNode); err != nil {
+		t.Fatal(err)
+	}
+	guardedNode.Annotations[managedprotocol.AnnotationWorkerObservedRevision] = newRevision
+	if err := apiClient.Update(ctx, &guardedNode); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(node), &guardedNode); err != nil {
+		t.Fatal(err)
+	}
+	guardedNode.Status.Conditions = append(guardedNode.Status.Conditions, corev1.NodeCondition{
+		Type:   corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition),
+		Status: corev1.ConditionTrue, Reason: managedprotocol.ManagedWorkerReadyReason,
+		LastHeartbeatTime: metav1.NewTime(time.Now().UTC()),
+	})
+	if err := apiClient.Status().Update(ctx, &guardedNode); err != nil {
+		t.Fatal(err)
+	}
+	result, err = r.Reconcile(ctx, request)
+	if err != nil || result.RequeueAfter != topologyRequeueInterval {
+		t.Fatalf("replacement proof Reconcile = (%+v, %v), want managed maintenance fence", result, err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	if current.Status.WorkerRevision == nil || current.Status.WorkerRevision.PodUID != string(pod.UID) ||
+		current.Status.WorkerRevision.DesiredRevision != newRevision ||
+		current.Status.WorkerRevision.ObservedRevision != newRevision {
+		t.Fatalf("replacement worker proof = %#v", current.Status.WorkerRevision)
+	}
+	assertOldRequestRetained()
 }
 
 func TestManagedWorkerLeasesArePrecreatedAndExactlyBound(t *testing.T) {

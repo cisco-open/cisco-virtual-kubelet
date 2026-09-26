@@ -17,6 +17,7 @@ package iosxe
 import (
 	"bytes"
 	"context"
+	"errors"
 	"strings"
 	"testing"
 
@@ -81,6 +82,155 @@ func TestPodDeletionTargetsDedupesSyntheticDiscoveredApps(t *testing.T) {
 	}
 	if len(got) != 2 {
 		t.Fatalf("got %d deletion targets, want 2: %#v", len(got), got)
+	}
+}
+
+func TestListPodsForDrainRejectsPartialOperationalInventory(t *testing.T) {
+	driver := newTestDriver(&fakeNetworkClient{getHook: func(_ string, result any) error {
+		switch result.(type) {
+		case *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData:
+			return nil
+		case *Cisco_IOS_XEAppHostingOper_AppHostingOperData:
+			return errors.New("operational inventory unavailable")
+		default:
+			t.Fatalf("unexpected GET result type %T", result)
+			return nil
+		}
+	}})
+
+	if pods, err := driver.ListPods(testCtx()); err != nil || len(pods) != 0 {
+		t.Fatalf("compatibility ListPods changed behavior: pods=%#v err=%v", pods, err)
+	}
+	if _, err := driver.ListPodsForDrain(testCtx()); err == nil ||
+		!strings.Contains(err.Error(), "complete operational app inventory") {
+		t.Fatalf("strict drain inventory error = %v", err)
+	}
+}
+
+func TestListPodsForDrainIncludesOperationalOnlyCVKApp(t *testing.T) {
+	pod := lifecycleTestPod()
+	appID := common.GenerateContainerAppIDs(pod)["alpha"]
+	driver := newTestDriver(&fakeNetworkClient{getHook: func(_ string, result any) error {
+		switch root := result.(type) {
+		case *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData:
+			return nil
+		case *Cisco_IOS_XEAppHostingOper_AppHostingOperData:
+			operApp := operDataWithState("RUNNING")
+			operApp.Name = &appID
+			root.App = map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App{
+				appID: operApp,
+			}
+			return nil
+		default:
+			t.Fatalf("unexpected GET result type %T", result)
+			return nil
+		}
+	}})
+	driver.config = &v1alpha1.DeviceSpec{Address: "192.0.2.10"}
+
+	pods, err := driver.ListPodsForDrain(testCtx())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(pods) != 1 || string(pods[0].UID) != string(pod.UID) {
+		t.Fatalf("operational-only app was not retained as workload evidence: %#v", pods)
+	}
+}
+
+func TestListPodsForDrainRejectsUnattributedApp(t *testing.T) {
+	appName := "operator-managed-app"
+	lineIndex := uint16(1)
+	runOpts := "--label " + common.LabelPodNamespace + "=default" +
+		" --label " + common.LabelPodName + "=spoofed" +
+		" --label " + common.LabelPodUID + "=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" +
+		" --label " + common.LabelContainerName + "=app"
+	driver := newTestDriver(&fakeNetworkClient{getHook: func(_ string, result any) error {
+		switch root := result.(type) {
+		case *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData:
+			root.Apps = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{
+				App: map[string]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{
+					appName: {
+						ApplicationName: &appName,
+						RunOptss: &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
+							RunOpts: map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
+								lineIndex: {LineIndex: &lineIndex, LineRunOpts: &runOpts},
+							},
+						},
+					},
+				},
+			}
+			return nil
+		case *Cisco_IOS_XEAppHostingOper_AppHostingOperData:
+			return nil
+		default:
+			t.Fatalf("unexpected GET result type %T", result)
+			return nil
+		}
+	}})
+
+	if _, err := driver.ListPodsForDrain(testCtx()); err == nil ||
+		!strings.Contains(err.Error(), "without CVK workload identity") {
+		t.Fatalf("strict drain inventory accepted unattributed app: %v", err)
+	}
+}
+
+func TestListPodsForDrainRejectsConflictingCVKIdentity(t *testing.T) {
+	pod := lifecycleTestPod()
+	appID := common.GenerateContainerAppIDs(pod)["alpha"]
+	lineIndex := uint16(1)
+	runOpts := "--label " + common.LabelPodNamespace + "=" + pod.Namespace +
+		" --label " + common.LabelPodName + "=" + pod.Name +
+		" --label " + common.LabelPodUID + "=11111111-2222-3333-4444-555555555555" +
+		" --label " + common.LabelContainerName + "=alpha"
+	driver := newTestDriver(&fakeNetworkClient{getHook: func(_ string, result any) error {
+		switch root := result.(type) {
+		case *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData:
+			root.Apps = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{
+				App: map[string]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{
+					appID: {
+						ApplicationName: &appID,
+						RunOptss: &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss{
+							RunOpts: map[uint16]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App_RunOptss_RunOpts{
+								lineIndex: {LineIndex: &lineIndex, LineRunOpts: &runOpts},
+							},
+						},
+					},
+				},
+			}
+			return nil
+		case *Cisco_IOS_XEAppHostingOper_AppHostingOperData:
+			return nil
+		default:
+			t.Fatalf("unexpected GET result type %T", result)
+			return nil
+		}
+	}})
+
+	if _, err := driver.ListPodsForDrain(testCtx()); err == nil ||
+		!strings.Contains(err.Error(), "disagrees with its workload labels") {
+		t.Fatalf("strict drain inventory accepted conflicting CVK identity: %v", err)
+	}
+}
+
+func TestListPodsForDrainRejectsMalformedConfigInventory(t *testing.T) {
+	driver := newTestDriver(&fakeNetworkClient{getHook: func(_ string, result any) error {
+		switch root := result.(type) {
+		case *Cisco_IOS_XEAppHostingCfg_AppHostingCfgData:
+			root.Apps = &Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps{
+				App: map[string]*Cisco_IOS_XEAppHostingCfg_AppHostingCfgData_Apps_App{"malformed": nil},
+			}
+			return nil
+		case *Cisco_IOS_XEAppHostingOper_AppHostingOperData:
+			return nil
+		default:
+			t.Fatalf("unexpected GET result type %T", result)
+			return nil
+		}
+	}})
+
+	if _, err := driver.ListPodsForDrain(testCtx()); err == nil ||
+		!strings.Contains(err.Error(), "without a stable name") {
+		t.Fatalf("strict drain inventory accepted malformed config entry: %v", err)
 	}
 }
 

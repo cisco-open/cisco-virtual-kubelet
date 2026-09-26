@@ -77,6 +77,14 @@ Falls back to .Values.image when vkImage.repository is empty.
 {{- end }}
 
 {{/*
+Resolve the per-device VK image pull policy.
+Falls back to .Values.image.pullPolicy when vkImage.pullPolicy is empty.
+*/}}
+{{- define "cisco-virtual-kubelet.vkImagePullPolicy" -}}
+{{- .Values.vkImage.pullPolicy | default .Values.image.pullPolicy }}
+{{- end }}
+
+{{/*
 Controller ServiceAccount name.
 */}}
 {{- define "cisco-virtual-kubelet.controllerServiceAccountName" -}}

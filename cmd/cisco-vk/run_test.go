@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -36,6 +37,49 @@ import (
 	clienttesting "k8s.io/client-go/testing"
 )
 
+type inventoryWiringDriver struct {
+	drivers.CiscoKubernetesDeviceDriver
+	pods []*v1.Pod
+}
+
+func (d *inventoryWiringDriver) ListPods(context.Context) ([]*v1.Pod, error) {
+	return d.pods, nil
+}
+
+type strictInventoryWiringDriver struct {
+	*inventoryWiringDriver
+	err error
+}
+
+func (d *strictInventoryWiringDriver) ListPodsForDrain(context.Context) ([]*v1.Pod, error) {
+	return nil, d.err
+}
+
+func TestDevicePodInventoryListersPreserveExplicitStrictCapability(t *testing.T) {
+	legacy := &inventoryWiringDriver{pods: []*v1.Pod{{ObjectMeta: metav1.ObjectMeta{UID: "compatibility-pod"}}}}
+	ordinary, strict := devicePodInventoryListers(legacy)
+	if ordinary == nil || strict != nil {
+		t.Fatal("legacy inventory must not be promoted to strict drain authority")
+	}
+	pods, err := ordinary(context.Background())
+	if err != nil || len(pods) != 1 || pods[0].UID != "compatibility-pod" {
+		t.Fatalf("ordinary inventory changed: pods=%v err=%v", pods, err)
+	}
+	partial := errors.New("incomplete device inventory")
+	driver := &strictInventoryWiringDriver{inventoryWiringDriver: legacy, err: partial}
+	ordinary, strict = devicePodInventoryListers(driver)
+	if ordinary == nil || strict == nil {
+		t.Fatal("strict-capable driver lost an inventory reader")
+	}
+	if _, err := strict(context.Background()); !errors.Is(err, partial) {
+		t.Fatalf("strict inventory error was hidden or fell back to compatibility inventory: %v", err)
+	}
+	driver.err = nil
+	if pods, err := strict(context.Background()); err != nil || len(pods) != 0 {
+		t.Fatalf("complete empty strict inventory was not preserved: pods=%v err=%v", pods, err)
+	}
+}
+
 func clearWorkerIdentityEnv(t *testing.T) {
 	t.Helper()
 	for _, name := range []string{
@@ -45,6 +89,7 @@ func clearWorkerIdentityEnv(t *testing.T) {
 		envNodeName,
 		envManagedTopology,
 		envWorkerRevision,
+		envWorkerPodUID,
 		legacyEnvNodeName,
 		"POD_NAMESPACE",
 	} {
@@ -404,6 +449,7 @@ func TestResolveWorkerRuntimeIdentityManaged(t *testing.T) {
 		t.Setenv(envDeviceUID, "22c81400-85ea-4ca8-91ee-07a7c7bd531c")
 		t.Setenv(envNodeName, "cvk-edge-node-01")
 		t.Setenv(envWorkerRevision, "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+		t.Setenv(envWorkerPodUID, "worker-pod-uid")
 		t.Setenv("POD_NAMESPACE", "edge")
 	}
 
@@ -419,7 +465,7 @@ func TestResolveWorkerRuntimeIdentityManaged(t *testing.T) {
 		}
 	})
 
-	for _, missing := range []string{envDeviceNamespace, envDeviceName, envDeviceUID, envNodeName, envWorkerRevision} {
+	for _, missing := range []string{envDeviceNamespace, envDeviceName, envDeviceUID, envNodeName, envWorkerRevision, envWorkerPodUID} {
 		t.Run("missing "+missing, func(t *testing.T) {
 			setComplete(t)
 			t.Setenv(missing, "")

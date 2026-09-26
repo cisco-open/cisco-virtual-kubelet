@@ -400,6 +400,7 @@ func clearMaintenanceRequest(lease *coordv1.Lease) {
 		managedprotocol.AnnotationMaintenanceOperationName,
 		managedprotocol.AnnotationMaintenanceOperationUID,
 		managedprotocol.AnnotationMaintenanceControlRevision,
+		managedprotocol.AnnotationMaintenancePurpose,
 	} {
 		delete(lease.Annotations, key)
 	}

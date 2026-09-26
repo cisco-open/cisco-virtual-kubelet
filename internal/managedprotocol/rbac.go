@@ -45,7 +45,8 @@ func WorkerClusterRoleContracts() map[string][]rbacv1.PolicyRule {
 		},
 		AppHostingDeviceReadClusterRole: {
 			policyRule([]string{"cisco.vk"}, []string{"ciscodevices"}, "get"),
-			policyRule([]string{"ops.cisco.vk"}, []string{"iosxesoftwareupgrades", "iosxeoperationalactions"}, "list"),
+			policyRule([]string{"ops.cisco.vk"}, []string{"iosxesoftwareupgrades", "iosxeoperationalactions"}, "get", "list", "watch"),
+			policyRule([]string{"ops.cisco.vk"}, []string{"iosxesoftwareupgrades/status"}, "get", "update", "patch"),
 		},
 		NetworkManagementGlobalReadClusterRole: {
 			policyRule([]string{""}, []string{"nodes"}, "get"),

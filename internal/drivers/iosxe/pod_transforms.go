@@ -84,7 +84,7 @@ func isSafeIOSXEPackagePathSegment(segment string) bool {
 	return true
 }
 
-// getPackageTimeout reads the RUNNING-wait timeout from a pod annotation.
+// getPackageTimeout reads the per-status lifecycle wait timeout from a pod annotation.
 // Accepts Go duration strings (e.g. "3m", "180s") and bare integer seconds (e.g. "180").
 // Returns defaultPackageTimeout on any parse failure; clamps to [min, max].
 func getPackageTimeout(pod *v1.Pod) time.Duration {
@@ -303,9 +303,9 @@ func (d *XEDriver) ConvertPodToAppConfigs(pod *v1.Pod) ([]AppHostingConfig, erro
 		// Set app to start automatically
 		// When DockerResource is enabled, we need two-phase deployment:
 		// Phase 1: Deploy with Start=false (to avoid 409 conflict)
-		// Phase 2: Update to Start=true after deployment
+		// Phase 2: use the explicit activate/start lifecycle after deployment.
 		if hasDockerResource {
-			// Start with false - will be updated to true after deployment
+			// Start=false prevents IOS-XE from racing DockerResource configuration.
 			gapp.Start = ygot.Bool(false)
 		} else {
 			// Normal single-phase deployment

@@ -41,6 +41,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -222,6 +223,9 @@ type CiscoDeviceReconciler struct {
 	APIReader client.Reader
 	// Image overrides the VK container image (defaults to DefaultImage).
 	Image string
+	// ImagePullPolicy controls pulls for per-device VK pods. Empty uses the
+	// Kubernetes tag-based default for Image.
+	ImagePullPolicy corev1.PullPolicy
 	// ServiceAccount is the name of the service account for VK pods (defaults to DefaultServiceAccount).
 	ServiceAccount string
 	// Managed topology separates Kubernetes authority by functional plane. The
@@ -477,11 +481,15 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	managed, err := r.reconcileManagedTopology(ctx, &device)
-	if err != nil {
+	var maintenanceFenceErr *managedMaintenanceFenceError
+	maintenanceRecovery := stderrors.As(err, &maintenanceFenceErr)
+	if err != nil && !maintenanceRecovery {
 		topology.RecordProjectionReconcile("error")
 		return ctrl.Result{RequeueAfter: topologyRequeueInterval}, err
 	}
-	if managed.Managed {
+	if maintenanceRecovery {
+		topology.RecordProjectionReconcile("maintenance-fenced")
+	} else if managed.Managed {
 		topology.RecordProjectionReconcile("projected")
 	} else if r.ManagedTopology {
 		topology.RecordProjectionReconcile("skipped")
@@ -682,8 +690,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// ── 6. Reconcile the Deployment ─────────────────────────────────────
-	if err := r.clearAggregatorHandoverConditions(ctx, &device); err != nil {
-		return ctrl.Result{}, err
+	if !maintenanceRecovery {
+		if err := r.clearAggregatorHandoverConditions(ctx, &device); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	deploy := &appsv1.Deployment{
@@ -696,6 +706,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	image := r.Image
 	if image == "" {
 		image = DefaultImage
+	}
+	imagePullPolicy := r.ImagePullPolicy
+	if imagePullPolicy == "" {
+		imagePullPolicy = defaultImagePullPolicy(image)
 	}
 	worker, err := resolveDeviceWorkerConfig(device.Spec.Worker)
 	if err != nil {
@@ -782,7 +796,13 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if r.ManagedTopology || managed.Managed || managed.LegacyWorker || signerMayBeResident || mutationWorkerMayBeRunning {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 		} else {
-			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}
+			deploy.Spec.Strategy = appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: ptr.To(intstr.FromString("25%")),
+					MaxSurge:       ptr.To(intstr.FromString("25%")),
+				},
+			}
 		}
 
 		annos := map[string]string{
@@ -908,11 +928,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			},
 			Containers: []corev1.Container{
 				{
-					Name:      "cisco-vk",
-					Image:     image,
-					Args:      vkContainerArgs(managedOrLegacyNodeName(&device, managed), device.Spec.LogLevel),
-					Env:       podEnv,
-					Resources: workerResourceRequirements(worker.Resources),
+					Name:            "cisco-vk",
+					Image:           image,
+					ImagePullPolicy: imagePullPolicy,
+					Args:            vkContainerArgs(managedOrLegacyNodeName(&device, managed), device.Spec.LogLevel),
+					Env:             podEnv,
+					Resources:       workerResourceRequirements(worker.Resources),
 					SecurityContext: &corev1.SecurityContext{
 						AllowPrivilegeEscalation: ptr.To(false),
 						Capabilities: &corev1.Capabilities{
@@ -1031,6 +1052,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				}},
 			})
 		}
+		// Deployment PodTemplates are defaulted by the API server on write. Keep
+		// the desired object in that same explicit form before CreateOrUpdate
+		// compares it and before managed mode content-addresses it. Otherwise the
+		// controller continuously removes API defaults and the live template can
+		// never reproduce its injected worker revision.
+		applyVKPodTemplateDefaults(&deploy.Spec.Template)
 		if managedWorker {
 			// Split the fully rendered device-management template before removing
 			// network-only Secret projections from the app-hosting worker. Both
@@ -1060,6 +1087,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				corev1.EnvVar{Name: managedprotocol.EnvGNOITLSSecretRevision, Value: gnoiTLSState.resourceVersion},
 				corev1.EnvVar{Name: managedprotocol.EnvGNOIProvisioningRevision, Value: provisioningSecretRV},
 			)
+			// Normalize after splitting: the network account and probes differ from
+			// the copied app template and must match API-server defaults before apply.
+			applyVKPodTemplateDefaults(&deploy.Spec.Template)
+			applyVKPodTemplateDefaults(networkTemplate)
 			var revisionErr error
 			desiredWorkerRevision, revisionErr = managedWorkerPodTemplateRevision(&deploy.Spec.Template)
 			if revisionErr != nil {
@@ -1232,6 +1263,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else if err := r.updateGNOIConfigurationCondition(ctx, &device, deploy, desiredWorkerRevision, gnoiConfigurationErr); err != nil {
 		return ctrl.Result{}, err
 	}
+	if maintenanceRecovery {
+		// The guarded recovery lane ends here. In particular, do not reconcile
+		// device-side config prerequisites, retire any worker authority, or report
+		// normal readiness while the maintenance request remains invalid.
+		return ctrl.Result{RequeueAfter: topologyRequeueInterval}, nil
+	}
 
 	// ── 6b. Reconcile the owned IOSXEConfig (configPrereqs) ─────────────
 	done, err := r.reconcileConfigPrereqs(ctx, &device)
@@ -1351,6 +1388,22 @@ func vkAccessClusterRoleBindingName(namespace, saName string) string {
 		raw = strings.TrimRight(raw[:maxRaw], "-")
 	}
 	return prefix + raw + suffix
+}
+
+type generatedWorkerClusterRoleBinding struct {
+	name string
+	role string
+}
+
+func generatedWorkerClusterRoleBindings(namespace, saName string, managed bool) []generatedWorkerClusterRoleBinding {
+	bindings := []generatedWorkerClusterRoleBinding{{
+		name: vkAccessClusterRoleBindingName(namespace, saName),
+		role: vkSharedClusterRole,
+	}}
+	if managed {
+		bindings[0].role = managedprotocol.ManagedWorkerClusterRole
+	}
+	return bindings
 }
 
 // ensureVKAccess provisions the access bits the chart cannot: a ServiceAccount
@@ -2380,6 +2433,7 @@ func managedWorkerPodTemplateRevision(template *corev1.PodTemplateSpec) (string,
 		return "", fmt.Errorf("managed worker PodTemplate is nil")
 	}
 	canonical := template.DeepCopy()
+	applyVKPodTemplateDefaults(canonical)
 	delete(canonical.Annotations, managedprotocol.AnnotationWorkerConfigRevision)
 	for i := range canonical.Spec.Containers {
 		canonical.Spec.Containers[i].Env = slices.DeleteFunc(
@@ -2393,6 +2447,126 @@ func managedWorkerPodTemplateRevision(template *corev1.PodTemplateSpec) (string,
 	}
 	digest := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(digest[:]), nil
+}
+
+// applyVKPodTemplateDefaults mirrors the stable defaults the Kubernetes API
+// applies to Deployment PodTemplates used by per-device workers. The manager
+// both reconciles and hashes this explicit representation, so an admission
+// round trip cannot create perpetual updates or invalidate worker evidence.
+func applyVKPodTemplateDefaults(template *corev1.PodTemplateSpec) {
+	if template == nil {
+		return
+	}
+	spec := &template.Spec
+	if spec.RestartPolicy == "" {
+		spec.RestartPolicy = corev1.RestartPolicyAlways
+	}
+	if spec.DNSPolicy == "" {
+		spec.DNSPolicy = corev1.DNSClusterFirst
+	}
+	if spec.SchedulerName == "" {
+		spec.SchedulerName = corev1.DefaultSchedulerName
+	}
+	if spec.TerminationGracePeriodSeconds == nil {
+		spec.TerminationGracePeriodSeconds = ptr.To[int64](30)
+	}
+	if spec.ServiceAccountName == "" {
+		spec.ServiceAccountName = spec.DeprecatedServiceAccount
+	}
+	spec.DeprecatedServiceAccount = spec.ServiceAccountName
+	if spec.SecurityContext == nil {
+		spec.SecurityContext = &corev1.PodSecurityContext{}
+	}
+
+	defaultContainer := func(container *corev1.Container) {
+		if container.ImagePullPolicy == "" {
+			container.ImagePullPolicy = defaultImagePullPolicy(container.Image)
+		}
+		if container.TerminationMessagePath == "" {
+			container.TerminationMessagePath = corev1.TerminationMessagePathDefault
+		}
+		if container.TerminationMessagePolicy == "" {
+			container.TerminationMessagePolicy = corev1.TerminationMessageReadFile
+		}
+		for i := range container.Env {
+			fieldRef := container.Env[i].ValueFrom
+			if fieldRef != nil && fieldRef.FieldRef != nil && fieldRef.FieldRef.APIVersion == "" {
+				fieldRef.FieldRef.APIVersion = "v1"
+			}
+		}
+		for _, probe := range []*corev1.Probe{container.ReadinessProbe, container.LivenessProbe, container.StartupProbe} {
+			if probe == nil {
+				continue
+			}
+			if probe.TimeoutSeconds == 0 {
+				probe.TimeoutSeconds = 1
+			}
+			if probe.PeriodSeconds == 0 {
+				probe.PeriodSeconds = 10
+			}
+			if probe.SuccessThreshold == 0 {
+				probe.SuccessThreshold = 1
+			}
+			if probe.FailureThreshold == 0 {
+				probe.FailureThreshold = 3
+			}
+		}
+		defaultResourceList(container.Resources.Limits)
+		defaultResourceList(container.Resources.Requests)
+	}
+	for i := range spec.InitContainers {
+		defaultContainer(&spec.InitContainers[i])
+	}
+	for i := range spec.Containers {
+		defaultContainer(&spec.Containers[i])
+	}
+	for i := range spec.EphemeralContainers {
+		defaultResourceList(spec.EphemeralContainers[i].Resources.Limits)
+		defaultResourceList(spec.EphemeralContainers[i].Resources.Requests)
+	}
+	defaultResourceList(spec.Overhead)
+
+	for i := range spec.Volumes {
+		volume := &spec.Volumes[i]
+		switch {
+		case volume.ConfigMap != nil && volume.ConfigMap.DefaultMode == nil:
+			volume.ConfigMap.DefaultMode = ptr.To(corev1.ConfigMapVolumeSourceDefaultMode)
+		case volume.Secret != nil && volume.Secret.DefaultMode == nil:
+			volume.Secret.DefaultMode = ptr.To(corev1.SecretVolumeSourceDefaultMode)
+		case volume.Projected != nil && volume.Projected.DefaultMode == nil:
+			volume.Projected.DefaultMode = ptr.To(corev1.ProjectedVolumeSourceDefaultMode)
+		case volume.DownwardAPI != nil && volume.DownwardAPI.DefaultMode == nil:
+			volume.DownwardAPI.DefaultMode = ptr.To(corev1.DownwardAPIVolumeSourceDefaultMode)
+		}
+	}
+}
+
+func defaultResourceList(resources corev1.ResourceList) {
+	for name, quantity := range resources {
+		quantity.RoundUp(resource.Milli)
+		resources[name] = quantity
+	}
+}
+
+func defaultImagePullPolicy(image string) corev1.PullPolicy {
+	name := image
+	hasDigest := false
+	if index := strings.LastIndex(name, "@"); index >= 0 {
+		name = name[:index]
+		hasDigest = true
+	}
+	lastSlash := strings.LastIndex(name, "/")
+	lastColon := strings.LastIndex(name, ":")
+	if lastColon > lastSlash {
+		if name[lastColon+1:] == "latest" {
+			return corev1.PullAlways
+		}
+		return corev1.PullIfNotPresent
+	}
+	if !hasDigest {
+		return corev1.PullAlways
+	}
+	return corev1.PullIfNotPresent
 }
 
 // ensureManagedDeviceDeletionSafe keeps the identity-bound Node and worker
@@ -2554,8 +2728,8 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 	return nil
 }
 
-// managedWorkerAccessRevoked verifies the two controller-generated bindings
-// which grant a per-device worker API authority are absent. It intentionally
+// managedWorkerAccessRevoked verifies all controller-generated bindings which
+// grant a per-device worker API authority are absent. It intentionally
 // uses the uncached reader: this check is the sole proof that a retry after
 // canonical Lease cleanup cannot be driven by the former worker identity.
 func (r *CiscoDeviceReconciler) managedWorkerAccessRevoked(ctx context.Context, device *ciskov1.CiscoDevice) (bool, error) {
@@ -2568,12 +2742,14 @@ func (r *CiscoDeviceReconciler) managedWorkerAccessRevoked(ctx context.Context, 
 		return false, fmt.Errorf("verify managed worker RoleBinding revocation %s: %w", roleBindingKey, err)
 	}
 
-	var clusterRoleBinding rbacv1.ClusterRoleBinding
-	clusterRoleBindingKey := types.NamespacedName{Name: vkAccessClusterRoleBindingName(device.Namespace, saName)}
-	if err := r.reader().Get(ctx, clusterRoleBindingKey, &clusterRoleBinding); err == nil {
-		return false, nil
-	} else if !errors.IsNotFound(err) {
-		return false, fmt.Errorf("verify managed worker ClusterRoleBinding revocation %s: %w", clusterRoleBindingKey, err)
+	for _, binding := range generatedWorkerClusterRoleBindings(device.Namespace, saName, true) {
+		var clusterRoleBinding rbacv1.ClusterRoleBinding
+		clusterRoleBindingKey := types.NamespacedName{Name: binding.name}
+		if err := r.reader().Get(ctx, clusterRoleBindingKey, &clusterRoleBinding); err == nil {
+			return false, nil
+		} else if !errors.IsNotFound(err) {
+			return false, fmt.Errorf("verify managed worker ClusterRoleBinding revocation %s: %w", clusterRoleBindingKey, err)
+		}
 	}
 	return true, nil
 }

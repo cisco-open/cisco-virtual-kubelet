@@ -501,6 +501,378 @@ func TestSettleFailsClosedWithoutOutcomeAndHealthEvidence(t *testing.T) {
 	}
 }
 
+func TestDrainReservationLifecycleUsesSessionBoundCAS(t *testing.T) {
+	const (
+		reservationID = "reservation-a"
+		childUID      = "child-uid"
+		sessionToken  = "11111111-1111-4111-8111-111111111111"
+	)
+	policy := testPolicy()
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	request := testRequest(reservationID, target)
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err != nil {
+		t.Fatal(err)
+	}
+	if err := BindChild(ledger, reservationID, childUID); err != nil {
+		t.Fatal(err)
+	}
+
+	startedAt := time.Date(2026, time.September, 12, 10, 0, 0, 123, time.UTC)
+	if err := BeginDrain(ledger, reservationID, "other-ledger", childUID, sessionToken, 1, startedAt); !errors.Is(err, ErrLedgerIdentity) {
+		t.Fatalf("BeginDrain(wrong ledger) = %v, want ErrLedgerIdentity", err)
+	}
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, "not-a-uuid", 1, startedAt); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("BeginDrain(invalid token) = %v, want ErrInvalidTransition", err)
+	}
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 1, startedAt); err != nil {
+		t.Fatalf("BeginDrain() error = %v", err)
+	}
+	reservation := ledger.Reservations[reservationID]
+	if reservation.State != ReservationDraining || reservation.DrainSessionToken != sessionToken || reservation.DrainStartedAt == "" {
+		t.Fatalf("BeginDrain() reservation = %+v", reservation)
+	}
+	if err := Grant(ledger, reservationID, ledger.UID, childUID, 1); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("generic Grant(drain) = %v, want ErrInvalidTransition", err)
+	}
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 2, startedAt); err != nil {
+		t.Fatalf("idempotent newer BeginDrain() = %v", err)
+	}
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 1, startedAt); !errors.Is(err, ErrStaleControlRevision) {
+		t.Fatalf("stale BeginDrain() = %v, want ErrStaleControlRevision", err)
+	}
+
+	completedAt := startedAt.Add(2 * time.Minute)
+	if err := PromoteDrain(ledger, reservationID, ledger.UID, childUID, "22222222-2222-4222-8222-222222222222", 2, completedAt); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("PromoteDrain(wrong token) = %v, want ErrInvalidTransition", err)
+	}
+	if err := PromoteDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 2, completedAt); err != nil {
+		t.Fatalf("PromoteDrain() error = %v", err)
+	}
+	if err := PromoteDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 3, completedAt); err != nil {
+		t.Fatalf("idempotent newer PromoteDrain() = %v", err)
+	}
+	reservation = ledger.Reservations[reservationID]
+	if reservation.State != ReservationGranted || reservation.DrainCompletedAt == "" || reservation.ControlRevision != 3 {
+		t.Fatalf("PromoteDrain() reservation = %+v", reservation)
+	}
+
+	encoded, err := Encode(ledger, DefaultMaxSerializedBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := Decode(encoded, ledger.UID)
+	if err != nil {
+		t.Fatalf("Decode(drain ledger) error = %v", err)
+	}
+	if got := decoded.Reservations[reservationID]; got.DrainSessionToken != sessionToken || got.State != ReservationGranted {
+		t.Fatalf("decoded drain reservation = %+v", got)
+	}
+}
+
+func TestLegacyLedgerDecoderFailsClosedForEveryDrainRecord(t *testing.T) {
+	const (
+		reservationID = "reservation-a"
+		childUID      = "child-uid"
+		sessionToken  = "11111111-1111-4111-8111-111111111111"
+	)
+	type legacyReservation struct {
+		ReservationRequest
+		ChildUID string           `json:"childUID,omitempty"`
+		State    ReservationState `json:"state"`
+	}
+	type legacyReleaseFence struct {
+		ReservationID  string `json:"reservationID"`
+		PolicyEpoch    int64  `json:"policyEpoch"`
+		TopologyLockID string `json:"topologyLockID"`
+	}
+	type legacyLedger struct {
+		Version          string                       `json:"version"`
+		UID              string                       `json:"uid"`
+		Reservations     map[string]legacyReservation `json:"reservations"`
+		LastReleaseFence *legacyReleaseFence          `json:"lastReleaseFence,omitempty"`
+	}
+	assertRejected := func(stage string, ledger *Ledger) {
+		t.Helper()
+		data, err := Encode(ledger, DefaultMaxSerializedBytes)
+		if err != nil {
+			t.Fatalf("encode %s drain ledger: %v", stage, err)
+		}
+		decoder := json.NewDecoder(strings.NewReader(string(data)))
+		decoder.DisallowUnknownFields()
+		var old legacyLedger
+		if err := decoder.Decode(&old); err == nil {
+			t.Fatalf("legacy decoder accepted %s drain ledger", stage)
+		}
+	}
+
+	policy := testPolicy()
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	request := testRequest(reservationID, target)
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err != nil {
+		t.Fatal(err)
+	}
+	if err := BindChild(ledger, reservationID, childUID); err != nil {
+		t.Fatal(err)
+	}
+	startedAt := time.Date(2026, time.September, 12, 10, 0, 0, 0, time.UTC)
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 1, startedAt); err != nil {
+		t.Fatal(err)
+	}
+	assertRejected("draining", ledger)
+	if err := PromoteDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 1, startedAt.Add(time.Minute)); err != nil {
+		t.Fatal(err)
+	}
+	assertRejected("promoted", ledger)
+	if err := RevokeDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 2); err != nil {
+		t.Fatal(err)
+	}
+	assertRejected("revoked", ledger)
+	if err := SettleDrainedReservation(ledger, reservationID, ledger.UID, request.TopologyLockID,
+		childUID, sessionToken, request.PolicyEpoch, true, true, true); err != nil {
+		t.Fatal(err)
+	}
+	assertRejected("settled release-fence", ledger)
+}
+
+func TestBeginDrainAcceptsNeutralControlRevision(t *testing.T) {
+	const (
+		reservationID = "reservation-neutral"
+		childUID      = "child-uid"
+		sessionToken  = "11111111-1111-4111-8111-111111111111"
+	)
+	policy := testPolicy()
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	request := testRequest(reservationID, target)
+	request.ControlRevision = 0
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err != nil {
+		t.Fatal(err)
+	}
+	if err := BindChild(ledger, reservationID, childUID); err != nil {
+		t.Fatal(err)
+	}
+	startedAt := time.Date(2026, time.September, 12, 10, 0, 0, 0, time.UTC)
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 0, startedAt); err != nil {
+		t.Fatalf("BeginDrain(controlRevision=0) error = %v", err)
+	}
+	reservation := ledger.Reservations[reservationID]
+	if reservation.State != ReservationDraining || reservation.ControlRevision != 0 ||
+		reservation.DrainSessionToken != sessionToken {
+		t.Fatalf("neutral-control drain reservation = %+v", reservation)
+	}
+}
+
+func TestDrainProvenanceCannotUseGenericCleanup(t *testing.T) {
+	const (
+		reservationID = "reservation-a"
+		childUID      = "child-uid"
+		sessionToken  = "11111111-1111-4111-8111-111111111111"
+	)
+	policy := testPolicy()
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	request := testRequest(reservationID, target)
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err != nil {
+		t.Fatal(err)
+	}
+	if err := BindChild(ledger, reservationID, childUID); err != nil {
+		t.Fatal(err)
+	}
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 1, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	assertGenericCleanupRejected := func(t *testing.T) {
+		t.Helper()
+		reservation := ledger.Reservations[reservationID]
+		if err := RevokeUnclaimedAtEpoch(ledger, reservationID, request.TopologyLockID, childUID,
+			reservation.ControlRevision, request.PolicyEpoch); !errors.Is(err, ErrInvalidTransition) {
+			t.Fatalf("RevokeUnclaimedAtEpoch(drain) = %v, want ErrInvalidTransition", err)
+		}
+		if err := ReleaseUnclaimedAtEpoch(ledger, reservationID, request.TopologyLockID, childUID,
+			reservation.ControlRevision, request.PolicyEpoch); !errors.Is(err, ErrInvalidTransition) {
+			t.Fatalf("ReleaseUnclaimedAtEpoch(drain) = %v, want ErrInvalidTransition", err)
+		}
+		if err := Settle(ledger, reservationID, request.TopologyLockID, childUID,
+			request.PolicyEpoch, true, true); !errors.Is(err, ErrInvalidTransition) {
+			t.Fatalf("Settle(drain) = %v, want ErrInvalidTransition", err)
+		}
+	}
+	assertGenericCleanupRejected(t)
+	if err := Revoke(ledger, reservationID, 2); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("generic Revoke(drain) = %v, want ErrInvalidTransition", err)
+	}
+	if err := RevokeDrain(ledger, reservationID, "wrong-ledger", childUID, sessionToken, 2); !errors.Is(err, ErrLedgerIdentity) {
+		t.Fatalf("RevokeDrain(wrong ledger) = %v, want ErrLedgerIdentity", err)
+	}
+	if err := RevokeDrain(ledger, reservationID, ledger.UID, childUID,
+		"22222222-2222-4222-8222-222222222222", 2); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("RevokeDrain(wrong token) = %v, want ErrInvalidTransition", err)
+	}
+	if err := RevokeDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got := ledger.Reservations[reservationID]; got.State != ReservationRevoked || got.DrainSessionToken != sessionToken {
+		t.Fatalf("Revoke() lost drain provenance: %+v", got)
+	}
+	assertGenericCleanupRejected(t)
+}
+
+func TestGenericGrantRejectsPromotedDrainProvenance(t *testing.T) {
+	const (
+		reservationID = "reservation-a"
+		childUID      = "child-uid"
+		sessionToken  = "11111111-1111-4111-8111-111111111111"
+	)
+	policy := testPolicy()
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	request := testRequest(reservationID, target)
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err != nil {
+		t.Fatal(err)
+	}
+	if err := BindChild(ledger, reservationID, childUID); err != nil {
+		t.Fatal(err)
+	}
+	startedAt := time.Now().UTC()
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 1, startedAt); err != nil {
+		t.Fatal(err)
+	}
+	if err := PromoteDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 2,
+		startedAt.Add(time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := Grant(ledger, reservationID, ledger.UID, childUID, 3); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("generic Grant(promoted drain) = %v, want ErrInvalidTransition", err)
+	}
+}
+
+func TestSettleDrainedReservationRequiresRecoveryEvidenceAndPersistsFence(t *testing.T) {
+	const (
+		reservationID = "reservation-a"
+		childUID      = "child-uid"
+		sessionToken  = "11111111-1111-4111-8111-111111111111"
+	)
+	policy := testPolicy()
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	request := testRequest(reservationID, target)
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err != nil {
+		t.Fatal(err)
+	}
+	if err := BindChild(ledger, reservationID, childUID); err != nil {
+		t.Fatal(err)
+	}
+	if err := BeginDrain(ledger, reservationID, ledger.UID, childUID, sessionToken, 1, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, evidence := range [][3]bool{{false, true, true}, {true, false, true}, {true, true, false}} {
+		if err := SettleDrainedReservation(ledger, reservationID, ledger.UID, request.TopologyLockID,
+			childUID, sessionToken, request.PolicyEpoch, evidence[0], evidence[1], evidence[2]); !errors.Is(err, ErrInvalidTransition) {
+			t.Fatalf("SettleDrainedReservation(evidence=%v) = %v, want ErrInvalidTransition", evidence, err)
+		}
+	}
+	if err := SettleDrainedReservation(ledger, reservationID, ledger.UID, request.TopologyLockID,
+		childUID, "22222222-2222-4222-8222-222222222222", request.PolicyEpoch, true, true, true); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("SettleDrainedReservation(wrong token) = %v, want ErrInvalidTransition", err)
+	}
+	if err := SettleDrainedReservation(ledger, reservationID, ledger.UID, request.TopologyLockID,
+		childUID, sessionToken, request.PolicyEpoch, true, true, true); err != nil {
+		t.Fatalf("SettleDrainedReservation() error = %v", err)
+	}
+	if len(ledger.Reservations) != 0 || ledger.LastReleaseFence == nil ||
+		ledger.LastReleaseFence.DrainSessionToken != sessionToken || ledger.LastReleaseFence.DrainChildUID != childUID {
+		t.Fatalf("drain settlement fence = %+v reservations=%+v", ledger.LastReleaseFence, ledger.Reservations)
+	}
+	if err := SettleDrainedReservation(ledger, reservationID, ledger.UID, request.TopologyLockID,
+		childUID, sessionToken, request.PolicyEpoch, true, true, true); err != nil {
+		t.Fatalf("idempotent drain settlement = %v", err)
+	}
+	if err := Settle(ledger, reservationID, request.TopologyLockID, childUID,
+		request.PolicyEpoch, true, true); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("generic settlement replaced drain fence: %v", err)
+	}
+	if err := ReleaseUnclaimedAtEpoch(ledger, reservationID, request.TopologyLockID, childUID,
+		1, request.PolicyEpoch); !errors.Is(err, ErrInvalidTransition) {
+		t.Fatalf("generic release replaced drain fence: %v", err)
+	}
+}
+
+func TestSettleDrainedReservationRecordsFenceBeforeBeginDrain(t *testing.T) {
+	const (
+		reservationID = "reservation-a"
+		childUID      = "child-uid"
+		sessionToken  = "11111111-1111-4111-8111-111111111111"
+	)
+	policy := testPolicy()
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	request := testRequest(reservationID, target)
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err != nil {
+		t.Fatal(err)
+	}
+	if err := BindChild(ledger, reservationID, childUID); err != nil {
+		t.Fatal(err)
+	}
+	if err := SettleDrainedReservation(ledger, reservationID, ledger.UID, request.TopologyLockID,
+		childUID, sessionToken, request.PolicyEpoch, true, true, true); err != nil {
+		t.Fatalf("settle pre-authority drain intent: %v", err)
+	}
+	if len(ledger.Reservations) != 0 || ledger.LastReleaseFence == nil ||
+		ledger.LastReleaseFence.DrainSessionToken != sessionToken ||
+		ledger.LastReleaseFence.DrainChildUID != childUID {
+		t.Fatalf("pre-authority drain release fence = %+v reservations=%+v", ledger.LastReleaseFence, ledger.Reservations)
+	}
+	if err := SettleDrainedReservation(ledger, reservationID, ledger.UID, request.TopologyLockID,
+		childUID, sessionToken, request.PolicyEpoch, true, true, true); err != nil {
+		t.Fatalf("idempotent pre-authority drain settlement: %v", err)
+	}
+}
+
+func TestDecodeRejectsMalformedDrainProvenance(t *testing.T) {
+	const validToken = "11111111-1111-4111-8111-111111111111"
+	validStart := time.Date(2026, time.September, 12, 10, 0, 0, 0, time.UTC).Format(time.RFC3339Nano)
+	validCompletion := time.Date(2026, time.September, 12, 10, 1, 0, 0, time.UTC).Format(time.RFC3339Nano)
+	tests := map[string]func(*Reservation){
+		"draining without token": func(r *Reservation) {
+			r.State, r.DrainStartedAt = ReservationDraining, validStart
+		},
+		"bound with provenance": func(r *Reservation) {
+			r.DrainSessionToken, r.DrainStartedAt = validToken, validStart
+		},
+		"granted without completion": func(r *Reservation) {
+			r.State, r.DrainSessionToken, r.DrainStartedAt = ReservationGranted, validToken, validStart
+		},
+		"draining with completion": func(r *Reservation) {
+			r.State, r.DrainSessionToken, r.DrainStartedAt, r.DrainCompletedAt = ReservationDraining, validToken, validStart, validCompletion
+		},
+		"noncanonical timestamp": func(r *Reservation) {
+			r.State, r.DrainSessionToken, r.DrainStartedAt = ReservationDraining, validToken, "2026-09-12T12:00:00+02:00"
+		},
+		"non-v4 token": func(r *Reservation) {
+			r.State, r.DrainSessionToken, r.DrainStartedAt = ReservationDraining, "11111111-1111-1111-8111-111111111111", validStart
+		},
+	}
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			ledger := persistedLedgerFixture()
+			reservation := ledger.Reservations["reservation-a"]
+			mutate(&reservation)
+			ledger.Reservations["reservation-a"] = reservation
+			data, err := json.Marshal(ledger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Decode(data, ledger.UID); !errors.Is(err, ErrLedgerIdentity) {
+				t.Fatalf("Decode() = %v, want ErrLedgerIdentity", err)
+			}
+		})
+	}
+}
+
 func TestLedgerIdentityAndSizeLimits(t *testing.T) {
 	ledger := testLedger(t)
 	encoded, err := Encode(ledger, 0)

@@ -46,6 +46,7 @@ type managedWorkerPodIdentity struct {
 	username string
 	name     string
 	uid      string
+	revision string
 }
 
 func managedAppWorkerUsername(node *corev1.Node) string {
@@ -80,6 +81,7 @@ func workerPodIdentity(namespace, serviceAccount string, pod *corev1.Pod) *manag
 		username: "system:serviceaccount:" + namespace + ":" + serviceAccount,
 		name:     pod.Name,
 		uid:      string(pod.UID),
+		revision: pod.Annotations[managedprotocol.AnnotationWorkerConfigRevision],
 	}
 }
 
@@ -405,7 +407,7 @@ func (r *CiscoDeviceReconciler) reconcileManagedWorkerObjectBindings(ctx context
 	if err := r.stampManagedLeases(ctx, device, &node); err != nil {
 		return err
 	}
-	if err := r.stampManagedUpgradeLeaves(ctx, device, network, clearNetwork); err != nil {
+	if err := r.stampManagedUpgradeLeaves(ctx, device, app, network, clearApp, clearNetwork); err != nil {
 		return err
 	}
 	if err := r.stampManagedNetworkObjects(ctx, device, network, clearNetwork); err != nil {
@@ -496,7 +498,7 @@ func (r *CiscoDeviceReconciler) stampManagedNetworkObjects(ctx context.Context,
 }
 
 func (r *CiscoDeviceReconciler) stampManagedUpgradeLeaves(ctx context.Context, device *ciskov1.CiscoDevice,
-	network *managedWorkerPodIdentity, clearNetwork bool) error {
+	app, network *managedWorkerPodIdentity, clearApp, clearNetwork bool) error {
 	var leaves opsv1alpha1.IOSXESoftwareUpgradeList
 	if err := r.reader().List(ctx, &leaves, client.InNamespace(device.Namespace)); err != nil {
 		return fmt.Errorf("list managed software-upgrade leaves for worker Pod binding: %w", err)
@@ -509,7 +511,14 @@ func (r *CiscoDeviceReconciler) stampManagedUpgradeLeaves(ctx context.Context, d
 			continue
 		}
 		before := leaf.DeepCopy()
-		leaf.Annotations = applyWorkerIdentityAnnotations(leaf.Annotations, nil, network, false, clearNetwork)
+		primaryUsername := leaf.Annotations[managedprotocol.AnnotationWorkerUsername]
+		leaf.Annotations = applyWorkerIdentityAnnotations(leaf.Annotations, app, network, clearApp, clearNetwork)
+		leaf.Annotations[managedprotocol.AnnotationWorkerUsername] = primaryUsername
+		if app.complete() && app.revision != "" {
+			leaf.Annotations[managedprotocol.AnnotationAppWorkerConfigRevision] = app.revision
+		} else if clearApp {
+			delete(leaf.Annotations, managedprotocol.AnnotationAppWorkerConfigRevision)
+		}
 		if network != nil {
 			leaf.Annotations[managedprotocol.AnnotationWorkerUsername] = network.username
 		}

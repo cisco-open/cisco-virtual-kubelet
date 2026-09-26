@@ -1,0 +1,72 @@
+# Development-preview example. Do not apply it until managed topology, secure
+# IOS-XE gNOI, the workload, its PDB, and the target image have been qualified
+# in the intended lab. Administrator policy must separately enable workload
+# drain for edge-workloads. requestedBy must exactly match the authenticated
+# API user; replace every image, digest, version, and canary placeholder.
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareRollout
+metadata:
+  name: cat9k-17-18-4-drain
+  namespace: network-devices
+spec:
+  plan:
+    requestedBy: system:serviceaccount:network-devices:cvk-rollout-planner
+    requestedAt: "2026-01-01T00:00:00Z"
+    targets:
+      selector:
+        matchLabels:
+          topology.cisco.vk/managed: "true"
+          operations.cisco.vk/image-family: cat9k
+      allowAll: false
+      maxTargets: 20
+    image:
+      # Lowercase SHA-256 of the exact image bytes.
+      sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      imageFamily: cat9k
+      sources:
+        - name: berlin-mirror
+          deviceSelector:
+            matchLabels:
+              distribution.cisco.vk/cache-domain: berlin
+          priority: 10
+          url: https://software.berlin.example.com/cat9k_iosxe.17.18.04.SPA.bin
+        - name: global
+          priority: 100
+          url: https://software.example.com/cat9k_iosxe.17.18.04.SPA.bin
+    targetVersion: 17.18.4
+    strategy: Reload
+    rollbackOnFailure: true
+    installTimeoutSeconds: 7200
+    rebootTimeoutSeconds: 3600
+    canaries:
+      # Add one same-named entry with an explicit target for every distinct
+      # operations.cisco.vk/qualification-cohort value in the frozen plan.
+      - name: c9300
+        devices: [c9k-a]
+    pauseAfterCanary: true
+    budgets:
+      maxConcurrentTransfers: 1
+      maxUnavailable: 1
+      domains:
+        - topologyKey: distribution.cisco.vk/cache-domain
+          maxConcurrentTransfers: 1
+        - topologyKey: operations.cisco.vk/redundancy-domain
+          maxUnavailable: 1
+    workloads:
+      # Drain is not a general kubectl drain. Every active target Pod must be
+      # drain-safe, ReplicaSet-backed, portable, and protected by exactly one
+      # current healthy PDB. Any ineligible, foreign, or new Pod blocks
+      # promotion.
+      policy: Drain
+      drain:
+        # Must be a subset of topology.policy.workloadDrain.allowedNamespaces.
+        namespaces: [edge-workloads]
+        timeoutSeconds: 900
+        maxPods: 8
+        maxTerminationGraceSeconds: 120
+    health:
+      maxObservationAgeSeconds: 300
+      canarySoakSeconds: 600
+      waveSoakSeconds: 300
+  control:
+    revision: 0

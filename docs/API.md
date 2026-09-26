@@ -132,6 +132,12 @@ Live oper-data can report the following values in `application-state`:
 
 The reconciler drives transitions via the lifecycle RPCs. See [Architecture → App lifecycle state machine](ARCHITECTURE.md#app-lifecycle-state-machine) for the full state diagram.
 
+IOS-XE lifecycle RPCs return free-form text even with HTTP 2xx. CVK accepts
+only the complete success form for the requested operation, app ID, package,
+and target state. Explicit rejection fails closed. Unrecognized or empty text
+is treated as mutation-ambiguous and reconciled from oper-data before replay;
+device response text is not copied into logs or status.
+
 ### Package policy
 
 The oper-data also exposes `pkg-policy`. Values:
@@ -147,7 +153,7 @@ The reconciler treats `iox-pkg-policy-invalid` as a fatal install blocker only w
 1. `spec.allowUnsignedApps = false` (the default), **and**
 2. A confirming install notification has been received from the device.
 
-When `spec.allowUnsignedApps = true`, CVK also disables device-level signing via RESTCONF on first connect (see [Configuration → App packaging](CONFIGURATION.md#app-packaging)).
+When `spec.allowUnsignedApps = true`, CVK writes the persistent signing control and requests the matching IOS-XE runtime change through RESTCONF on connect. A warning means unsigned packages are still expected to fail; confirm the effective state with `show app-hosting infra` rather than relying only on the configuration datastore (see [Configuration → App packaging](CONFIGURATION.md#app-packaging)).
 
 The kubelet-exposed pod `status.reason` for this case is **`PackagePolicyInvalid`**.
 

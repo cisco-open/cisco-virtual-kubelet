@@ -225,7 +225,7 @@ The `logLevel` field is passed to the VK pod as the `--log-level` flag on the co
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `allowUnsignedApps` | bool | `false` | When `true`, CVK performs two actions: **(1)** on first connect it PUTs `Cisco-IOS-XE-app-hosting-cfg:app-hosting-cfg-data/controls` with `sign-verification: false`, disabling the device-level package signature check; **(2)** the reconciler treats `iox-pkg-policy-invalid` during `INSTALLING` as a transient signal rather than a fatal error. Enable for unsigned packages (custom builds or test images). If the device-side PUT fails, a warning is logged and installs may still be blocked by device policy. See [Troubleshooting → PackagePolicyInvalid](troubleshooting.md#packagepolicyinvalid-false-positives). |
+| `allowUnsignedApps` | bool | `false` | When `true`, CVK performs two actions: **(1)** on connect it writes the persistent IOS-XE `sign-verification: false` control and invokes the app-hosting runtime verification-disable RPC; **(2)** the reconciler treats `iox-pkg-policy-invalid` during `INSTALLING` as a transient signal rather than a fatal error. Both device operations must be accepted before unsigned installs can work. Enable only for unsigned custom or test packages; production packages should remain signed. If the platform refuses the runtime change, CVK logs a warning and unsigned installs remain blocked even when the configuration datastore reads `false`. See [Troubleshooting → PackagePolicyInvalid](troubleshooting.md#packagepolicyinvalid-false-positives). |
 
 ### OpenTelemetry topology
 
@@ -366,7 +366,7 @@ Two optional annotations tune the copy fallback behaviour:
 | Annotation | Default | Description |
 |---|---|---|
 | `cisco.io/apphost-package-dest` | `flash:/virtual-kubelet/<app-id>.tar` | On-device flash path where the image is copied. Must use an IOS-XE filesystem prefix (`flash:`, `bootflash:`, `harddisk:`, `usb:`, `nvram:`); each path segment may contain only ASCII letters, digits, `-`, `.`, `_`, or `~`. |
-| `cisco.io/apphost-package-timeout` | `180s` (3 min) | How long to wait for the app to reach `RUNNING`. Accepts Go duration strings (`3m`, `300s`) or bare seconds (`180`). Clamped to [10s, 30m]. |
+| `cisco.io/apphost-package-timeout` | `180s` (3 min) | Per-status wait limit for each app-hosting lifecycle transition (for example, `DEPLOYED`, `ACTIVATED`, then `RUNNING`); a multi-stage install can therefore take more than this value overall. Accepts Go duration strings (`3m`, `300s`) or bare seconds (`180`). Clamped to [10s, 30m]. |
 
 ```yaml
 metadata:
