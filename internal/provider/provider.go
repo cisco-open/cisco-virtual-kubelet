@@ -297,6 +297,14 @@ func (p *AppHostingProvider) pollAndNotifyAllPods(ctx context.Context) {
 			}).Debug("PodNotifier poll: status refresh skipped")
 			continue
 		}
+		// A callback is not an acknowledgement: VK can reject its write or
+		// overwrite it with ProviderFailed after a transient sync error. Retry
+		// the authoritative phase until the informer observes it, even when
+		// the device has not changed. Ignore timestamps/server bookkeeping.
+		if statusPod != nil && (pod.Status.Phase != statusPod.Status.Phase ||
+			pod.Status.Reason != statusPod.Status.Reason || pod.Status.Message != statusPod.Status.Message) {
+			p.forgetLastNotified(pod.UID)
+		}
 		if p.shouldNotifyPodStatus(statusPod) {
 			cb(statusPod.DeepCopy())
 		}
