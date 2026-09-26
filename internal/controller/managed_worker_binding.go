@@ -631,7 +631,21 @@ func (r *CiscoDeviceReconciler) stampManagedWorkloadPods(ctx context.Context, de
 			continue
 		}
 		before := pod.DeepCopy()
-		pod.Annotations = applyWorkerIdentityAnnotations(pod.Annotations, app, nil, clearApp, false)
+		if clearApp {
+			// Unlike Node/Lease bootstrap identities, workload bindings are
+			// either complete or absent. A username-only remnant is rejected
+			// by admission and would prevent rolling a worker with live Pods.
+			delete(pod.Annotations, managedprotocol.AnnotationAppWorkerUsername)
+			delete(pod.Annotations, managedprotocol.AnnotationAppWorkerPodName)
+			delete(pod.Annotations, managedprotocol.AnnotationAppWorkerPodUID)
+		} else if app != nil && app.complete() {
+			if pod.Annotations == nil {
+				pod.Annotations = map[string]string{}
+			}
+			pod.Annotations[managedprotocol.AnnotationAppWorkerUsername] = app.username
+			pod.Annotations[managedprotocol.AnnotationAppWorkerPodName] = app.name
+			pod.Annotations[managedprotocol.AnnotationAppWorkerPodUID] = app.uid
+		}
 		if reflect.DeepEqual(before.Annotations, pod.Annotations) {
 			continue
 		}
