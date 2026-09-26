@@ -1540,7 +1540,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentReadyWorkerRevision(
 	}
 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
 		Namespace: device.Namespace,
-		Name:      networkDeploymentName(device.Name, string(device.UID)),
+		Name:      networkDeploymentName(string(device.UID)),
 	}}
 	fresh, ready, err := observeManagedNetworkWorkerRevision(
 		ctx, r.reader(), r.now(), device, deployment, status.DesiredRevision,

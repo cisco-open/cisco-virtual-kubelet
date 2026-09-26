@@ -387,6 +387,7 @@ func TestManagedFunctionalAccountRejectsLegacyTokenSecret(t *testing.T) {
 func TestManagedFunctionalAccountsRotateAtReservedPolicyEpoch(t *testing.T) {
 	ctx := context.Background()
 	device := managedAccessDevice("switch-shared-epoch")
+	priorNetworkName := fmt.Sprintf("n%d-%s-u%s%s", len(device.Name), device.Name, device.UID, networkDeploymentSuffix)
 	r := reconcilerFor(t, device)
 	r.ManagedTopology = true
 	r.WorkerServiceAccountPolicyEpoch = "sha256:old-policy-and-binding-generation"
@@ -409,6 +410,9 @@ func TestManagedFunctionalAccountsRotateAtReservedPolicyEpoch(t *testing.T) {
 		{managedprotocol.WorkerModeNetworkManagement, r.networkManagementServiceAccountName()},
 	} {
 		deployment, _, _ := managedWorkerObjects(device, worker.plane, worker.account)
+		if worker.plane == managedprotocol.WorkerModeNetworkManagement {
+			deployment.Name = priorNetworkName
+		}
 		if err := r.Create(ctx, deployment); err != nil {
 			t.Fatal(err)
 		}
@@ -451,7 +455,7 @@ func TestManagedFunctionalAccountsRotateAtReservedPolicyEpoch(t *testing.T) {
 	}
 	for _, name := range []string{
 		device.Name + deploymentSuffix,
-		networkDeploymentName(device.Name, string(device.UID)),
+		priorNetworkName,
 	} {
 		if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: name}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
 			t.Fatalf("old shared worker Deployment %s survived epoch rotation: %v", name, err)
@@ -503,6 +507,7 @@ func TestManagedFunctionalAccountPolicyEpochWaitsForNetworkMutations(t *testing.
 		t.Fatal(err)
 	}
 	networkDeployment, _, _ := managedWorkerObjects(device, managedprotocol.WorkerModeNetworkManagement, networkAccount)
+	networkDeployment.Name = fmt.Sprintf("n%d-%s-u%s%s", len(device.Name), device.Name, device.UID, networkDeploymentSuffix)
 	if err := r.Create(ctx, networkDeployment); err != nil {
 		t.Fatal(err)
 	}
@@ -620,7 +625,7 @@ func TestManagedReconcileRestoresAppWorkerWhileNetworkEpochRotationIsBlocked(t *
 		}
 	}
 	networkKey := types.NamespacedName{
-		Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID)),
+		Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID)),
 	}
 	var networkBefore appsv1.Deployment
 	if err := r.Get(ctx, networkKey, &networkBefore); err != nil {
@@ -1106,7 +1111,7 @@ func TestManagedFunctionalAccountEscalationDrainsOldBoundTokens(t *testing.T) {
 	account := r.networkManagementServiceAccountName()
 	labels := perDeviceNetworkDeploymentLabels(device.Name)
 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
-		Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID)), UID: "network-deployment-uid",
+		Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID)), UID: "network-deployment-uid",
 		OwnerReferences: []metav1.OwnerReference{
 			*metav1.NewControllerRef(device, ciskov1.GroupVersion.WithKind("CiscoDevice")),
 		},
@@ -1187,7 +1192,7 @@ func managedWorkerObjects(device *ciskov1.CiscoDevice, plane, account string) (*
 	deploymentName := device.Name + deploymentSuffix
 	labels := perDeviceDeploymentLabels(device.Name)
 	if plane == managedprotocol.WorkerModeNetworkManagement {
-		deploymentName = networkDeploymentName(device.Name, string(device.UID))
+		deploymentName = networkDeploymentName(string(device.UID))
 		labels = perDeviceNetworkDeploymentLabels(device.Name)
 	}
 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
@@ -1518,7 +1523,7 @@ func TestManagedAccessTransitionRejectsForeignReservedAccountDeployment(t *testi
 	}
 	account := r.networkManagementServiceAccountName()
 	foreign := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
-		Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID)), UID: "foreign-uid",
+		Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID)), UID: "foreign-uid",
 	}, Spec: appsv1.DeploymentSpec{
 		Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"foreign": "true"}},
 		Template: corev1.PodTemplateSpec{ObjectMeta: metav1.ObjectMeta{

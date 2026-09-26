@@ -832,7 +832,7 @@ func TestManagedReconcileAlwaysUsesRecreateStrategy(t *testing.T) {
 		t.Fatal("managed reconcile did not provision the shared app-hosting ServiceAccount")
 	}
 	var networkDeployment appsv1.Deployment
-	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: networkDeploymentName(device.Name, string(device.UID))}, &networkDeployment); err != nil {
+	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID))}, &networkDeployment); err != nil {
 		t.Fatal(err)
 	}
 	if networkDeployment.Spec.Strategy.Type != appsv1.RecreateDeploymentStrategyType {
@@ -1663,7 +1663,7 @@ func TestTopologyDisabledManagedDeletionPreservesSharedWorkerAccessForPeers(t *t
 			for _, owner := range []*ciskov1.CiscoDevice{device, peer} {
 				for _, worker := range []struct{ name, account string }{
 					{owner.Name + deploymentSuffix, r.appHostingServiceAccountName()},
-					{networkDeploymentName(owner.Name, string(owner.UID)), r.networkManagementServiceAccountName()},
+					{networkDeploymentName(string(owner.UID)), r.networkManagementServiceAccountName()},
 				} {
 					if err := r.Create(ctx, workerDeployment(owner, worker.name, worker.account)); err != nil {
 						t.Fatal(err)
@@ -1728,7 +1728,7 @@ func TestTopologyDisabledManagedDeletionPreservesSharedWorkerAccessForPeers(t *t
 			}
 			for _, names := range [][2]string{
 				{device.Name + deploymentSuffix, peer.Name + deploymentSuffix},
-				{networkDeploymentName(device.Name, string(device.UID)), networkDeploymentName(peer.Name, string(peer.UID))},
+				{networkDeploymentName(string(device.UID)), networkDeploymentName(string(peer.UID))},
 			} {
 				if err := r.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: names[0]}, &appsv1.Deployment{}); !apierrors.IsNotFound(err) {
 					t.Fatalf("deleted device worker %s remains: %v", names[0], err)

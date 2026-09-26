@@ -639,8 +639,7 @@ spec:
          variables.podNames[0] ==
            variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-pod-name'] &&
          variables.podNames[0].startsWith(
-           'n' + string(variables.boundObject.spec.deviceRef.name.size()) + '-' +
-           variables.boundObject.spec.deviceRef.name + '-u' +
+           'u' +
            variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'] + '-network-'))
       message: shared network-management mutation requires its exact device-derived, manager-bound Pod
     - expression: >-
@@ -903,8 +902,7 @@ spec:
          variables.podNames[0] ==
            variables.boundObject.metadata.annotations['topology.cisco.vk/network-worker-pod-name'] &&
          variables.podNames[0].startsWith(
-           'n' + string(variables.boundObject.metadata.annotations['topology.cisco.vk/device-name'].size()) + '-' +
-           variables.boundObject.metadata.annotations['topology.cisco.vk/device-name'] + '-u' +
+           'u' +
            variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'] + '-network-') &&
          (request.operation != 'CREATE' || variables.boundObject.metadata.name.startsWith(
            'u' + variables.boundObject.metadata.annotations['topology.cisco.vk/device-uid'] + '-result-')) &&
@@ -976,8 +974,7 @@ spec:
          variables.oldBindings['topology.cisco.vk/network-worker-username'] ==
            'system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}' &&
          variables.oldBindings['topology.cisco.vk/network-worker-pod-name'].startsWith(
-           'n' + string(variables.oldBindings['topology.cisco.vk/device-name'].size()) + '-' +
-           variables.oldBindings['topology.cisco.vk/device-name'] + '-u' +
+           'u' +
            variables.oldBindings['topology.cisco.vk/device-uid'] + '-network-') &&
          variables.oldBindings['topology.cisco.vk/network-worker-pod-uid'] != '' &&
          (!has(oldObject.metadata.finalizers) || oldObject.metadata.finalizers.size() == 0) &&
