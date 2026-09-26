@@ -96,7 +96,7 @@ func newManagedWorkerNameScope(devices []ciskov1.CiscoDevice, current *ciskov1.C
 		// Native generated Pod names keep at most 58 prefix bytes. Auditing
 		// only the untruncated Deployment name misses exact-name grants.
 		if len(name)+1 > 58 {
-			prefixes = append(prefixes, (name+"-")[:58])
+			prefixes = append(prefixes, (name + "-")[:58])
 		}
 	}
 	sort.Strings(prefixes)
