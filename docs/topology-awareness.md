@@ -301,6 +301,16 @@ ownership annotations. The chart fails closed if that lookup is denied, if
 more than one owned policy is found, or if its coordinates or admission prefix
 do not match the current release.
 
+Treat controller/chart changes to fixed RBAC or admission contracts as a
+maintenance window: settle all campaigns, maintenance sessions and mutation
+Leases first. An older manager cannot recognize a newly changed fixed-role
+contract and intentionally quarantines mismatched authority. Worker accounts
+and Pods can therefore rotate, with temporary virtual-Node `NotReady` status;
+this is not a zero-downtime control-plane upgrade guarantee. Keep admission
+enabled and wait for native garbage collection and exact worker rebinding.
+Previously denied garbage-collection requests may take several minutes to
+retry; do not remove finalizers or replace retained Leases to accelerate them.
+
 Do not use `helm upgrade --force`. The policy and ledger are identity-bound by
 their Kubernetes UIDs. Replacement is intentionally treated as a safety
 failure, not as an empty new fleet.
