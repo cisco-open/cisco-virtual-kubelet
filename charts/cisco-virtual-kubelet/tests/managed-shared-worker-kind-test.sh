@@ -1381,6 +1381,8 @@ fi
 
 # Exercise retained Lease bootstrap and rotation with actual bound tokens.
 source "$chart_dir/tests/managed-lease-rebind-checks.sh"
+source "$chart_dir/tests/managed-native-node-checks.sh"
+source "$chart_dir/tests/managed-foreground-cleanup-checks.sh"
 
 # Namespace teardown exercises the DELETE-collection path while reserved
 # worker objects, a malformed historical partial binding, a top-level bound

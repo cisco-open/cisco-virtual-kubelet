@@ -1015,12 +1015,24 @@ The manager can delete a reserved worker Pod only with its exact UID as a
 precondition. Admission denies its direct deletion of ordinary application
 Pods, including when a UID is supplied; quarantine does not grant a workload
 deletion or PodDisruptionBudget bypass.
+Native garbage collection can remove only its `foregroundDeletion` finalizer
+from already-deleting reserved worker objects, preserving spec, status,
+bindings and unrelated finalizers. This permits a foreground worker-identity
+rotation to finish without administrator finalizer repair.
 Generated-account compromise uses the same authority-first rule inside the
 device namespace: every RoleBinding with the exact UID-derived account subject
 is removed regardless of its name, role, or mutable metadata before the owned
 ServiceAccount UID is deleted. Foreign or arbitrary cluster-wide bindings stay
 inside the explicit cluster-admin trust boundary and keep reconciliation
 failed closed for operator review.
+
+Native Kubernetes node lifecycle reconciliation remains enabled: the exact
+node-controller identity can mark silent Nodes `Unknown`, reconcile built-in
+health taints, and synchronize the deprecated OS/architecture label aliases.
+It cannot publish healthy readiness, rewrite projected topology or worker
+bindings, remove CVK maintenance guards, change capacity, or clear a cordon.
+This keeps stale virtual Nodes out of ordinary scheduling without assigning
+CVK identity authority to a native controller.
 
 The manager pre-creates purpose-bound heartbeat, config-family, and mutation
 Leases. App read-write and network read-write may update only the Lease scopes

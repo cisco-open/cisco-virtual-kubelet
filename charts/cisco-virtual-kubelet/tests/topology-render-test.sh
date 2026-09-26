@@ -282,7 +282,7 @@ assert_policy_shape() {
 # Keep Helm's exact CEL contract shape synchronized with the manager startup
 # preflight. Any new, removed, or reordered trust-boundary expression requires
 # an explicit contract-version decision in both places.
-assert_policy_shape managed-node 1 6 5
+assert_policy_shape managed-node 1 7 5
 assert_policy_shape legacy-node-marker 1 1 1
 assert_policy_shape managed-pod-status 1 2 3
 assert_policy_shape managed-device 0 5 13
