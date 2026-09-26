@@ -2833,8 +2833,11 @@ if helm upgrade "$release_name" "$chart_dir" \
   echo "Helm accepted replacement topology policy/ledger coordinates" >&2
   exit 1
 fi
-grep -Fq 'refusing to bootstrap new topology policy' \
-  "$scratch_dir/topology-coordinate-change-negative.txt"
+grep -Eq 'refusing to bootstrap new topology policy|policy coordinates are immutable after bootstrap' \
+  "$scratch_dir/topology-coordinate-change-negative.txt" || {
+  cat "$scratch_dir/topology-coordinate-change-negative.txt" >&2
+  exit 1
+}
 if kubectl get configmap "$renamed_policy" "$renamed_ledger" \
     --namespace "$system_namespace" >/dev/null 2>&1; then
   echo "rejected coordinate change created replacement topology state" >&2
