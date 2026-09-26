@@ -456,6 +456,62 @@ func TestPodNotifierPollSuppressesUnchangedPodStatus(t *testing.T) {
 	}
 }
 
+func TestPodNotifierRepublishesMetadataWithoutDeviceStateChange(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("binding-refresh", "55555555-5555-4555-8555-555555555555")
+	lister, indexer := podListerWithIndexer(t, pod)
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
+	provider, err := NewAppHostingProvider(ctx, &ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: lister}, driver, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seen []*v1.Pod
+	setNotifyFuncForTest(provider, func(pod *v1.Pod) { seen = append(seen, pod) })
+	provider.pollAndNotifyAllPods(ctx)
+	for _, mutate := range []func(*v1.Pod){
+		func(p *v1.Pod) {
+			p.Annotations = map[string]string{"topology.cisco.vk/app-worker-pod-uid": "current-worker"}
+		},
+		func(p *v1.Pod) { p.Labels = map[string]string{"operations.cisco.vk/drain-safe": "true"} },
+		func(p *v1.Pod) { p.Finalizers = []string{"operations.cisco.vk/managed-drain"} },
+		func(p *v1.Pod) {
+			p.OwnerReferences = []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "owner", UID: "owner-uid"}}
+		},
+	} {
+		pod = pod.DeepCopy()
+		mutate(pod)
+		if err := indexer.Update(pod); err != nil {
+			t.Fatal(err)
+		}
+		before := len(seen)
+		provider.pollAndNotifyAllPods(ctx)
+		if len(seen) != before+1 {
+			t.Fatal("unchanged device status suppressed updated Pod metadata")
+		}
+		provider.pollAndNotifyAllPods(ctx)
+		if len(seen) != before+1 {
+			t.Fatal("unchanged metadata caused repeated notification")
+		}
+	}
+	if got := seen[len(seen)-1].Annotations["topology.cisco.vk/app-worker-pod-uid"]; got != "current-worker" {
+		t.Fatalf("callback retained stale worker binding: %q", got)
+	}
+	// A successful status write advances server bookkeeping. It must not
+	// trigger an endless notification/UpdateStatus feedback loop.
+	pod = pod.DeepCopy()
+	pod.ResourceVersion = "12345"
+	pod.ManagedFields = []metav1.ManagedFieldsEntry{{Manager: "status-writer"}}
+	if err := indexer.Update(pod); err != nil {
+		t.Fatal(err)
+	}
+	before := len(seen)
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != before {
+		t.Fatal("server bookkeeping triggered another status notification")
+	}
+}
+
 func TestPodNotifierPollEmitsOnGenuineStateChange(t *testing.T) {
 	ctx := context.Background()
 	pod := notifierPod("state-change", "22222222-2222-2222-2222-222222222222")
