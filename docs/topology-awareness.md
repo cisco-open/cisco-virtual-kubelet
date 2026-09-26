@@ -989,9 +989,11 @@ PDB/ReplicaSet/Deployment access. A separate non-retained execution Role grants
 only `pods/eviction` create while every feature gate remains active. Neither
 contains a Pod `delete` verb. A fail-closed admission policy confines Pod
 updates to the exact drain-session annotation/finalizer pair and globally
-rejects direct Pod DELETE by the manager identity; it is not permission to
+rejects direct workload Pod DELETE by the manager identity; it is not permission to
 alter Pod spec, labels, owners, or unrelated metadata. CVK has no force-delete
-path and never bypasses a PDB.
+path for application workloads and never bypasses a PDB. The separate topology
+manager role permits exact-UID deletion of reserved worker Pods for security
+quarantine only; native admission denies ordinary application Pod deletion.
 
 After applying the live Helm change that removes a namespace from drain policy
 (or disables drain), and after every drain that used it is `Settled`, verify
