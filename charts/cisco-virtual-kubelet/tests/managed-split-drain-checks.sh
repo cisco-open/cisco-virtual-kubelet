@@ -72,12 +72,20 @@ expect_denied "app worker cannot change network acknowledgement" "managed upgrad
 kubectl --context "$context" --as="$manager_username" annotate iosxesoftwareupgrade "$drain_leaf" -n "$worker_namespace" topology.cisco.vk/app-worker-pod-uid=replacement --overwrite >/dev/null
 expect_denied "old app Pod cannot publish inventory after rotation" "exact manager-bound worker Pod name and UID" \
   kubectl --kubeconfig "$bound_kubeconfig" patch iosxesoftwareupgrade "$drain_leaf" --subresource=status --type=merge -p '{"status":{"workerDrain":{"inventoryRevision":2,"inventoryObservedAt":"2026-01-01T00:00:03Z","updatedAt":"2026-01-01T00:00:03Z"}}}'
+# Dispose only this synthetic leaf through the admitted manager identity.
+# Production manager RBAC deliberately does not grant leaf DELETE.
+kubectl --context "$context" create role split-drain-fixture-cleanup -n "$worker_namespace" \
+  --verb=delete --resource=iosxesoftwareupgrades.ops.cisco.vk --resource-name="$drain_leaf" >/dev/null
+kubectl --context "$context" create rolebinding split-drain-fixture-cleanup -n "$worker_namespace" \
+  --role=split-drain-fixture-cleanup --user="$manager_username" >/dev/null
+kubectl --context "$context" --as="$manager_username" delete iosxesoftwareupgrade "$drain_leaf" -n "$worker_namespace" >/dev/null
+
 # A replacement app worker must be bound even while the workload is protected.
 kubectl --context "$context" --as="$manager_username" patch pod "$ordinary_pod" -n "$worker_namespace" --type=merge \
   -p "{\"metadata\":{\"annotations\":{\"ops.cisco.vk/drain-session\":\"$drain_session\"},\"finalizers\":[\"ops.cisco.vk/iosxe-rollout-drain\"]}}" >/dev/null
 kubectl --context "$context" --as="$manager_username" annotate pod "$ordinary_pod" -n "$worker_namespace" \
   topology.cisco.vk/app-worker-pod-uid=replacement --overwrite >/dev/null
-expect_denied "protected Pod still rejects unrelated manager edits" "only its exact drain protection" \
+expect_denied "protected Pod still rejects unrelated manager edits" "drain protection" \
   kubectl --context "$context" --as="$manager_username" label pod "$ordinary_pod" -n "$worker_namespace" unrelated=forbidden
 kubectl --context "$context" --as="$manager_username" patch pod "$ordinary_pod" -n "$worker_namespace" --type=merge \
   -p '{"metadata":{"annotations":{"ops.cisco.vk/drain-session":null},"finalizers":[]}}' >/dev/null

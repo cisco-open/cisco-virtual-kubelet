@@ -186,6 +186,13 @@ cleanup() {
   # manager fixture uses a deliberately unavailable image. Force Pods only in
   # these disposable namespaces so neither can strand teardown.
   for namespace in "$device_namespace" "$system_namespace"; do
+    # Admission has already been removed from this disposable cluster. An
+    # interrupted negative test can leave its synthetic Pod drain-protected;
+    # there is deliberately no running manager to complete that fixture.
+    for pod in $(kubectl get pods --namespace "$namespace" -o name 2>/dev/null); do
+      kubectl patch "$pod" --namespace "$namespace" --type=merge \
+        -p '{"metadata":{"finalizers":[]}}' >/dev/null 2>&1 || cleanup_status=1
+    done
     kubectl delete pods --all --namespace "$namespace" \
       --force --grace-period=0 --ignore-not-found --wait=false \
       >/dev/null 2>&1 || true
@@ -372,7 +379,9 @@ helm upgrade "$release_name" "$chart_dir" \
   --set controller.leaderElect=true \
   --set rbac.profile=strict \
   --set topology.workerAccounts.networkManagement.accessMode=readWrite \
-  --set gnoi.enableSoftwareUpgrade=true >/dev/null
+  --set gnoi.enableSoftwareUpgrade=true \
+  --set topology.policy.workloadDrain.enabled=true \
+  --set-json "topology.policy.workloadDrain.allowedNamespaces=[\"${device_namespace}\"]" >/dev/null
 restored_observed=""
 for _ in $(seq 1 60); do
   restored_generation="$(kubectl get validatingadmissionpolicy \
@@ -1140,7 +1149,7 @@ if kubectl patch --as="$manager_username" pod cvk-worker-own \
   echo "topology manager changed unrelated protected Pod metadata" >&2
   exit 1
 fi
-grep -Eq 'may change only its exact drain marker|denied the request|failed expression' \
+grep -Eq 'may change only its exact drain protection|denied the request|failed expression' \
   "$scratch_dir/drain-pod-manager-scope-negative.txt"
 kubectl patch --as="$manager_username" pod cvk-worker-own \
   --namespace "$device_namespace" --type=merge \
@@ -2775,6 +2784,7 @@ helm upgrade "$release_name" "$chart_dir" \
   --set topology.enabled=true \
   --set controller.leaderElect=true \
   --set rbac.profile=strict \
+  --set topology.workerAccounts.networkManagement.accessMode=readWrite \
   --set gnoi.enableSoftwareUpgrade=true \
   --set topology.policy.workloadDrain.enabled=true \
   --set-json "topology.policy.workloadDrain.allowedNamespaces=[\"${device_namespace}\"]" \
