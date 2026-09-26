@@ -620,7 +620,7 @@ grep -A1 -F 'resources: ["iosxeoperationalactions/status"]' "$network_rw_role" |
 manager_role="$scratch_dir/manager-role.yaml"
 sed -n '/name: cvk-cisco-virtual-kubelet-managed-topology-manager/,/^---$/p' "$managed_render" >"$manager_role"
 grep -A1 -F 'resources: ["iosxesoftwareupgrades"]' "$manager_role" | \
-  grep -Fq 'verbs: ["get", "list", "watch"]'
+  grep -Fq 'verbs: ["get", "list", "watch", "update", "patch"]'
 if grep -Fq 'resources: ["iosxesoftwarerollouts"]' "$manager_role" || \
    grep -Fq 'resources: ["iosxesoftwareupgrades/status"]' "$manager_role" || \
    grep -A1 -F 'resources: ["iosxesoftwareupgrades"]' "$manager_role" | \
@@ -667,9 +667,9 @@ grep -A1 -F 'resources: ["iosxesoftwarerollouts"]' "$upgrade_manager_role" | \
 grep -A1 -F 'resources: ["iosxesoftwarerollouts/status"]' "$upgrade_manager_role" | \
   grep -Fq 'verbs: ["get", "update", "patch"]'
 grep -A1 -F 'resources: ["iosxesoftwareupgrades"]' "$upgrade_manager_role" | \
-  grep -Fq 'verbs: ["get", "list", "watch"]'
+  grep -Fq 'verbs: ["get", "list", "watch", "update", "patch"]'
 grep -A1 -F 'resources: ["iosxesoftwareupgrades"]' "$upgrade_manager_role" | \
-  grep -Fq 'verbs: ["create", "update", "patch"]'
+  grep -Fq 'verbs: ["create"]'
 grep -A1 -F 'resources: ["iosxesoftwareupgrades/status"]' "$upgrade_manager_role" | \
   grep -Fq 'verbs: ["get", "update", "patch"]'
 
