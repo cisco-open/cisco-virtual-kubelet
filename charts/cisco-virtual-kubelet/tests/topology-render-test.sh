@@ -267,7 +267,7 @@ assert_policy_shape managed-pod-status 1 2 3
 assert_policy_shape managed-device 0 5 13
 assert_policy_shape managed-rollout 0 1 6
 assert_policy_shape managed-upgrade-leaf 1 4 7
-assert_policy_shape managed-maintenance-lease 1 10 8
+assert_policy_shape managed-maintenance-lease 1 11 8
 assert_policy_shape topology-policy 1 4 5
 assert_policy_shape topology-ledger 1 4 3
 
@@ -275,7 +275,7 @@ grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-maintenance-lease' "$managed_r
 grep -Fq 'validationActions: [Deny]' "$managed_render"
 grep -Fq "request.userInfo.username == \"system:serviceaccount:cisco-vk-system:cisco-virtual-kubelet-controller\"" "$managed_render"
 grep -Fq "variables.managerCreate || variables.managerAdopt ||" "$managed_render"
-grep -Fq "only the manager may create, safely adopt, or delete a managed Lease" "$managed_render"
+grep -Fq "only the manager may create, safely adopt, rebind worker metadata, or delete a managed Lease" "$managed_render"
 grep -Fq "!has(oldObject.spec.leaseDurationSeconds)" "$managed_render"
 grep -Fq "object.spec.leaseDurationSeconds <= 697200" "$managed_render"
 grep -Fq "object.spec.leaseTransitions == variables.oldTransitions + 1" "$managed_render"
