@@ -1391,6 +1391,9 @@ spec:
            oldObject.spec.template.spec.serviceAccountName.matches(
              {{ $generatedWorkerServiceAccountPattern | quote }})))
   variables:
+    - name: nativeForegroundCleanup
+      expression: >-
+        {{- include "cisco-virtual-kubelet.nativeForegroundCleanup" . | nindent 8 }}
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
     - name: namespaceCleanup
@@ -1446,6 +1449,7 @@ spec:
         object.spec == oldObject.spec
   validations:
     - expression: >-
+        variables.nativeForegroundCleanup ||
         variables.manager || variables.namespaceCleanup ||
         variables.nativeDeploymentMetadata || variables.nativeDeploymentStatus
       message: only the topology manager, exact native Deployment controller, or namespace cleanup may mutate a Deployment that uses a reserved worker account
@@ -1494,8 +1498,13 @@ spec:
              [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
            oldObject.spec.template.spec.serviceAccountName.matches(
              {{ $generatedWorkerServiceAccountPattern | quote }})))
+  variables:
+    - name: nativeForegroundCleanup
+      expression: >-
+        {{- include "cisco-virtual-kubelet.nativeForegroundCleanup" . | nindent 8 }}
   validations:
     - expression: >-
+        variables.nativeForegroundCleanup ||
         (request.operation == 'UPDATE' && request.subResource == 'status' &&
          object != null && oldObject != null &&
          request.userInfo.groups.exists(g, g == 'system:authenticated') &&
@@ -1713,6 +1722,9 @@ spec:
            oldObject.spec.serviceAccountName.matches(
              {{ $generatedWorkerServiceAccountPattern | quote }})))
   variables:
+    - name: nativeForegroundCleanup
+      expression: >-
+        {{- include "cisco-virtual-kubelet.nativeForegroundCleanup" . | nindent 8 }}
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
     - name: nativeKubeletStatus
@@ -1735,7 +1747,7 @@ spec:
         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
         object.spec == oldObject.spec
   validations:
-    - expression: variables.manager || variables.nativeKubeletStatus
+    - expression: variables.manager || variables.nativeKubeletStatus || variables.nativeForegroundCleanup
       message: a reserved worker Pod is immutable except for status written by its exact authenticated node
 ---
 apiVersion: admissionregistration.k8s.io/v1

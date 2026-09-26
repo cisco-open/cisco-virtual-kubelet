@@ -72,6 +72,9 @@ spec:
           t.key == 'topology.cisco.vk/uninitialized' &&
           t.effect == 'NoSchedule'))
   variables:
+    - name: nativeNodeLifecycle
+      expression: >-
+        {{- include "cisco-virtual-kubelet.nativeNodeLifecycle" . | nindent 8 }}
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
     - name: oldManaged
@@ -179,7 +182,7 @@ spec:
           'system:serviceaccount:' + object.metadata.annotations['topology.cisco.vk/device-namespace'] + ':{{ $networkServiceAccount }}'
   validations:
     - expression: >-
-        variables.manager ||
+        variables.manager || variables.nativeNodeLifecycle ||
         (request.userInfo.username.matches(
            '^system:serviceaccount:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?:cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$') &&
         (request.operation == 'DELETE' ? oldObject != null : object != null) &&
@@ -223,7 +226,7 @@ spec:
         object.spec == oldObject.spec)
       message: managed Nodes are manager/bound-worker owned; a legacy worker may mutate only its exact unmarked Node and must preserve its handoff marker
     - expression: >-
-        variables.managerLegacyHandoff ||
+        variables.nativeNodeLifecycle || variables.managerLegacyHandoff ||
         variables.managerReleasedLegacyNodeUpdate ||
         (request.userInfo.username.matches(
           '^system:serviceaccount:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?:cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$') ?
