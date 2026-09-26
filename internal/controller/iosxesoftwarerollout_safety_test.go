@@ -751,8 +751,11 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	rollout := &opsv1alpha1.IOSXESoftwareRollout{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "campaign", UID: types.UID("campaign-uid")},
 		Spec: opsv1alpha1.IOSXESoftwareRolloutSpec{Plan: opsv1alpha1.IOSXESoftwareRolloutPlan{
-			Source: opsv1alpha1.IOSXESoftwareRolloutSourceSpec{ImageFamily: "cat9k"},
+			Image: opsv1alpha1.IOSXESoftwareRolloutImageSpec{ImageFamily: "cat9k"},
 		}},
+	}
+	frozenSource := opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
+		Name: "global", URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
 	}
 	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{
 		AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
@@ -760,7 +763,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 		RequiredTopologyKeys:                []string{topologyKey}, ProjectedTopologyKeys: []string{topologyKey},
 	}}
 
-	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, "canary", now); err == nil ||
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
 		!strings.Contains(err.Error(), "managed worker handoff") {
 		t.Fatalf("freezeTarget() error = %v, want incomplete worker handoff rejection", err)
 	}
@@ -783,7 +786,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 			break
 		}
 	}
-	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, "canary", now); err == nil ||
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
 		!strings.Contains(err.Error(), "has no producer observation time") {
 		t.Fatalf("freezeTarget() without explicit gNOI producer observation error = %v", err)
 	}
@@ -791,7 +794,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 		ciskov1.CiscoDeviceConditionGNOIConfigurationReady); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, "canary", now); err != nil {
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err != nil {
 		t.Fatalf("freezeTarget() after worker handoff error = %v", err)
 	}
 
@@ -803,7 +806,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	if err := apiClient.Status().Update(context.Background(), &current); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, "canary", now); err == nil ||
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
 		!strings.Contains(err.Error(), "does not match declared authority") {
 		t.Fatalf("freezeTarget() forged NodeInfo error = %v", err)
 	}
@@ -824,7 +827,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, "canary", now); err == nil ||
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
 		!strings.Contains(err.Error(), "health observation is stale") {
 		t.Fatalf("freezeTarget() stale error = %v, want stale managed-health rejection", err)
 	}
@@ -844,7 +847,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	if err := apiClient.Update(context.Background(), &current); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, "canary", now); err == nil ||
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
 		!strings.Contains(err.Error(), "initialization guard") {
 		t.Fatalf("freezeTarget() taint error = %v, want initialization-guard rejection", err)
 	}
@@ -1323,9 +1326,15 @@ func TestReconcileFencesPublishedGrantBeforeParsingChangedPolicy(t *testing.T) {
 
 func TestSourceIdentityChangeFencesUnclaimedGrant(t *testing.T) {
 	target := policyFenceTarget("device-a", "device-uid-a", "leaf-a")
+	target.Source = opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
+		Name: "lab-sftp", URL: "sftp://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+		SecretName: "image-source", SecretUID: "source-uid",
+	}
 	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
-	rollout.Status.FrozenPlan.Source.SecretName = "image-source"
-	rollout.Status.FrozenPlan.Source.SecretUID = "source-uid"
+	rollout.Spec.Plan.Image.Sources[0] = opsv1alpha1.IOSXESoftwareRolloutSourceSpec{
+		Name: "lab-sftp", Priority: 100, URL: target.Source.URL,
+		URLSecretRef: &corev1.LocalObjectReference{Name: target.Source.SecretName},
+	}
 	leaf := policyFenceLeaf(rollout, target, "leaf-uid-a")
 	ledgerCM := policyFenceLedger(t, rollout, []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target},
 		map[string]types.UID{target.DeviceUID: leaf.UID}, topologyrollout.ReservationGranted)
@@ -1378,7 +1387,7 @@ func TestSourceIdentityChangeFencesUnclaimedGrant(t *testing.T) {
 	}
 }
 
-func TestFreezeSourceBindsSecretUIDAndEndpointAuthorization(t *testing.T) {
+func TestFreezeSourceBindsCampaignDigestSecretUIDAndEndpointAuthorization(t *testing.T) {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "lab", Name: "image-source", UID: types.UID("source-uid"), ResourceVersion: "10",
@@ -1400,18 +1409,26 @@ func TestFreezeSourceBindsSecretUIDAndEndpointAuthorization(t *testing.T) {
 	rollout := &opsv1alpha1.IOSXESoftwareRollout{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "lab"},
 		Spec: opsv1alpha1.IOSXESoftwareRolloutSpec{Plan: opsv1alpha1.IOSXESoftwareRolloutPlan{
-			Source: opsv1alpha1.IOSXESoftwareRolloutSourceSpec{
-				URL: "sftp://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
-				URLSecretRef: &corev1.LocalObjectReference{Name: secret.Name},
+			Image: opsv1alpha1.IOSXESoftwareRolloutImageSpec{
+				SHA256: strings.Repeat("a", 64), ImageFamily: "cat9k",
+				Sources: []opsv1alpha1.IOSXESoftwareRolloutSourceSpec{{
+					Name: "lab-sftp", Priority: 100, URL: "sftp://images.example.test/cat9k.bin",
+					URLSecretRef: &corev1.LocalObjectReference{Name: secret.Name},
+				}},
 			},
 		}},
 	}
-	snapshot, err := reconciler.freezeSource(context.Background(), rollout)
+	snapshot, err := reconciler.freezeSource(
+		context.Background(), rollout.Namespace, rollout.Spec.Plan.Image, rollout.Spec.Plan.Image.Sources[0],
+	)
 	if err != nil {
 		t.Fatalf("freezeSource() error = %v", err)
 	}
 	if snapshot.SecretName != secret.Name || snapshot.SecretUID != string(secret.UID) {
 		t.Fatalf("freezeSource() identity = %+v, want name/UID", snapshot)
+	}
+	if snapshot.SHA256 != rollout.Spec.Plan.Image.SHA256 {
+		t.Fatalf("freezeSource() SHA256 = %q, want campaign digest %q", snapshot.SHA256, rollout.Spec.Plan.Image.SHA256)
 	}
 	encoded, err := json.Marshal(snapshot)
 	if err != nil {
@@ -1423,11 +1440,12 @@ func TestFreezeSourceBindsSecretUIDAndEndpointAuthorization(t *testing.T) {
 }
 
 func TestVerifyFrozenSourceAllowsSameUIDCredentialRotation(t *testing.T) {
-	rollout := policyFenceRollout(nil)
-	rollout.Status.FrozenPlan.Source = opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
-		URL: "sftp://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+	target := policyFenceTarget("device-a", "device-uid-a", "leaf-a")
+	target.Source = opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
+		Name: "lab-sftp", Priority: 100, URL: "sftp://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
 		SecretName: "image-source", SecretUID: "source-uid",
 	}
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 		Namespace: rollout.Namespace, Name: "image-source", UID: types.UID("source-uid"), ResourceVersion: "11",
 		Labels: map[string]string{"cisco.vk/purpose": "software-image-source"},
@@ -1458,11 +1476,12 @@ func TestVerifyFrozenSourceRejectsSecretReplacementOrEndpointChange(t *testing.T
 		{name: "changed endpoint", uid: "source-uid", host: "other.example.test", want: "endpoint authorization changed"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			rollout := policyFenceRollout(nil)
-			rollout.Status.FrozenPlan.Source = opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
-				URL: "sftp://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+			target := policyFenceTarget("device-a", "device-uid-a", "leaf-a")
+			target.Source = opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
+				Name: "lab-sftp", Priority: 100, URL: "sftp://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
 				SecretName: "image-source", SecretUID: "source-uid",
 			}
+			rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
 			secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
 				Namespace: rollout.Namespace, Name: "image-source", UID: test.uid,
 				Labels: map[string]string{"cisco.vk/purpose": "software-image-source"},
@@ -1622,7 +1641,11 @@ func policyFenceTarget(deviceName, deviceUID, childName string) opsv1alpha1.IOSX
 		DeviceName: deviceName, DeviceUID: deviceUID, DeviceGeneration: 1,
 		PhysicalIdentity: "serial-" + deviceName,
 		NodeName:         deviceName, NodeUID: "node-uid-" + deviceName, Driver: string(ciskov1.DeviceDriverXE),
-		ImageFamily: "cat9k", QualificationCohort: "c9300", WorkerProtocolVersion: managedprotocol.Version,
+		ImageFamily: "cat9k",
+		Source: opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
+			Name: "global", Priority: 100, URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+		},
+		QualificationCohort: "c9300", WorkerProtocolVersion: managedprotocol.Version,
 		ProjectionHash: "sha256:" + strings.Repeat("a", 64),
 		Topology:       []opsv1alpha1.IOSXESoftwareRolloutTopologyValue{{Key: "topology.cisco.vk/site", Value: "site-a"}},
 		ChildName:      childName,
@@ -1634,8 +1657,11 @@ func policyFenceRollout(targets []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget)
 		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "campaign", UID: "campaign-uid"},
 		Spec: opsv1alpha1.IOSXESoftwareRolloutSpec{
 			Plan: opsv1alpha1.IOSXESoftwareRolloutPlan{
-				Source: opsv1alpha1.IOSXESoftwareRolloutSourceSpec{
-					URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64), ImageFamily: "cat9k",
+				Image: opsv1alpha1.IOSXESoftwareRolloutImageSpec{
+					SHA256: strings.Repeat("a", 64), ImageFamily: "cat9k",
+					Sources: []opsv1alpha1.IOSXESoftwareRolloutSourceSpec{{
+						Name: "global", Priority: 100, URL: "https://images.example.test/cat9k.bin",
+					}},
 				},
 				TargetVersion: "17.18.4", Strategy: opsv1alpha1.IOSXESoftwareRolloutStrategyReload,
 			},
@@ -1652,7 +1678,6 @@ func policyFenceRollout(targets []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget)
 					LedgerNamespace: "cvk-system", LedgerName: "topology-ledger", LedgerUID: "ledger-uid",
 					MaxActiveReservations: 256, MaxLedgerSizeBytes: 256 * 1024,
 				},
-				Source:  opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64)},
 				Targets: targets,
 			},
 		},

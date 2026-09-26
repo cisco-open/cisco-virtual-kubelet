@@ -105,10 +105,10 @@ type IOSXESoftwareRolloutPlan struct {
 	// +kubebuilder:validation:Required
 	Targets IOSXESoftwareRolloutTargetSpec `json:"targets"`
 
-	// Source is the one artifact source supported by the Phase 2 MVP. Mirror
-	// selection and prefetch are deliberately not represented by this API.
+	// Image pins one artifact identity and provides a bounded set of named,
+	// topology-selectable endpoints that must all serve those exact bytes.
 	// +kubebuilder:validation:Required
-	Source IOSXESoftwareRolloutSourceSpec `json:"source"`
+	Image IOSXESoftwareRolloutImageSpec `json:"image"`
 
 	// TargetVersion is the IOS-XE version accepted by the existing leaf API.
 	// +kubebuilder:validation:Required
@@ -300,24 +300,14 @@ type IOSXESoftwareRolloutCanaryCohort struct {
 	Devices []string `json:"devices"`
 }
 
-// IOSXESoftwareRolloutSourceSpec is the singular Phase 2 artifact source.
-// HTTPS relies on verified TLS. SFTP credentials and verified known-host data
-// come from an endpoint-bound Secret. Redirects and URL credentials are not
-// represented and must remain disabled by the resolver.
+// IOSXESoftwareRolloutImageSpec defines one campaign-wide content identity and
+// the existing operator-provided endpoints from which a target worker may
+// retrieve it. Exactly one endpoint must be a catch-all; a matching scoped
+// endpoint takes precedence over that fallback.
 //
-// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.urlSecretRef.name.size() > 0",message="urlSecretRef.name must not be empty"
-// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.urlSecretRef.name.size() <= 253",message="urlSecretRef.name must contain at most 253 characters"
-// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.url.startsWith('sftp://')",message="urlSecretRef is supported only for sftp sources in the Phase 2 API"
-// +kubebuilder:validation:XValidation:rule="!self.url.startsWith('sftp://') || has(self.urlSecretRef)",message="sftp sources require an endpoint-bound urlSecretRef"
-type IOSXESoftwareRolloutSourceSpec struct {
-	// URL is one HTTPS or SFTP image URI with no user information, query, or
-	// fragment. Runtime endpoint and resolved-address policy remains mandatory.
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:MaxLength=2048
-	// +kubebuilder:validation:Pattern=`^(https|sftp)://[^/?#@]+/[^?#]+$`
-	URL string `json:"url"`
-
-	// SHA256 pins identical content throughout the campaign.
+// +kubebuilder:validation:XValidation:rule="self.sources.filter(s, !has(s.deviceSelector) || (!(has(s.deviceSelector.matchLabels) && s.deviceSelector.matchLabels.size() > 0) && !(has(s.deviceSelector.matchExpressions) && s.deviceSelector.matchExpressions.size() > 0))).size() == 1",message="exactly one image source must be an unscoped catch-all"
+type IOSXESoftwareRolloutImageSpec struct {
+	// SHA256 pins identical content for every endpoint and target.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	SHA256 string `json:"sha256"`
@@ -326,9 +316,58 @@ type IOSXESoftwareRolloutSourceSpec struct {
 	// planner must still prove every target is compatible before approval.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9][A-Za-z0-9._-]*$`
 	ImageFamily string `json:"imageFamily"`
+
+	// Sources is a bounded set of named existing artifact endpoints. Scoped
+	// selectors may use only administrator-required topology keys. Lowest
+	// numeric priority wins; equal-priority matches are rejected by planning.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=16
+	// +listType=map
+	// +listMapKey=name
+	Sources []IOSXESoftwareRolloutSourceSpec `json:"sources"`
+}
+
+// IOSXESoftwareRolloutSourceSpec is one named artifact endpoint. HTTPS relies
+// on verified TLS. SFTP credentials and verified known-host data come from an
+// endpoint-bound Secret. Redirects and URL credentials are not represented and
+// must remain disabled by the resolver.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.urlSecretRef.name.size() > 0",message="urlSecretRef.name must not be empty"
+// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.urlSecretRef.name.size() <= 253",message="urlSecretRef.name must contain at most 253 characters"
+// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.url.startsWith('sftp://')",message="urlSecretRef is supported only for sftp sources in the managed rollout API"
+// +kubebuilder:validation:XValidation:rule="!self.url.startsWith('sftp://') || has(self.urlSecretRef)",message="sftp sources require an endpoint-bound urlSecretRef"
+type IOSXESoftwareRolloutSourceSpec struct {
+	// Name is the stable, low-cardinality endpoint identity reported in the
+	// frozen target status. It must be unique within image.sources.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// DeviceSelector optionally scopes this endpoint to CiscoDevice labels.
+	// Omitted or empty is the one required catch-all fallback. The manager
+	// rejects selector keys outside administrator requiredTopologyKeys.
+	// +kubebuilder:validation:Optional
+	DeviceSelector *IOSXESoftwareRolloutLabelSelector `json:"deviceSelector,omitempty"`
+
+	// Priority orders matching scoped endpoints; the lowest value wins. The
+	// catch-all is considered only when no scoped endpoint matches.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=10000
+	Priority int32 `json:"priority"`
+
+	// URL is one HTTPS or SFTP image URI with no user information, query, or
+	// fragment. Runtime endpoint and resolved-address policy remains mandatory.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=2048
+	// +kubebuilder:validation:Pattern=`^(https|sftp)://[^/?#@]+/[^?#]+$`
+	URL string `json:"url"`
 
 	// URLSecretRef references an endpoint-bound Secret in this namespace.
 	// +kubebuilder:validation:Optional
@@ -646,10 +685,6 @@ type IOSXESoftwareRolloutFrozenPlanStatus struct {
 	// +kubebuilder:validation:Required
 	Policy IOSXESoftwareRolloutPolicySnapshot `json:"policy"`
 
-	// Source is the endpoint- and Secret-identity-bound source snapshot.
-	// +kubebuilder:validation:Required
-	Source IOSXESoftwareRolloutSourceSnapshot `json:"source"`
-
 	// Targets contains the complete immutable target/topology snapshot.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
@@ -771,20 +806,33 @@ type IOSXESoftwareRolloutPolicySnapshot struct {
 	MaxLedgerSizeBytes int32 `json:"maxLedgerSizeBytes"`
 }
 
-// IOSXESoftwareRolloutSourceSnapshot freezes the concrete singular endpoint,
-// digest, and optional endpoint-bound Secret incarnation. Credential and
-// known-host material may rotate in place; its endpoint authorization is
+// IOSXESoftwareRolloutSourceSnapshot freezes one concrete selected endpoint,
+// digest, priority, and optional endpoint-bound Secret incarnation. Credential
+// and known-host material may rotate in place; endpoint authorization is
 // revalidated against URL whenever the source is admitted or used.
 //
 // +kubebuilder:validation:XValidation:rule="self.url.startsWith('sftp://') ? (has(self.secretName) && has(self.secretUID)) : (!has(self.secretName) && !has(self.secretUID))",message="sftp snapshots require an exact Secret incarnation; HTTPS snapshots must not carry deferred HTTP credentials"
 type IOSXESoftwareRolloutSourceSnapshot struct {
+	// Name is the selected source's stable identity.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Name string `json:"name"`
+
+	// Priority is the selected endpoint priority from the immutable plan.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=10000
+	Priority int32 `json:"priority"`
+
 	// URL is copied from the immutable plan after canonical validation.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MaxLength=2048
 	// +kubebuilder:validation:Pattern=`^(https|sftp)://[^/?#@]+/[^?#]+$`
 	URL string `json:"url"`
 
-	// SHA256 is the pinned lowercase digest.
+	// SHA256 is the campaign-wide pinned lowercase digest.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^[a-f0-9]{64}$`
 	SHA256 string `json:"sha256"`
@@ -869,8 +917,13 @@ type IOSXESoftwareRolloutPlannedTarget struct {
 	// ImageFamily is the target capability family validated against the source.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=64
+	// +kubebuilder:validation:MaxLength=63
 	ImageFamily string `json:"imageFamily"`
+
+	// Source is the exact endpoint and Secret incarnation selected for this
+	// target from the immutable campaign-wide image source set.
+	// +kubebuilder:validation:Required
+	Source IOSXESoftwareRolloutSourceSnapshot `json:"source"`
 
 	// QualificationCohort is the protected operator-declared hardware and
 	// lifecycle-capability cohort that this exact image must qualify. Every

@@ -683,6 +683,7 @@ if grep -Fq 'topology.cisco.vk/source-secret-resource-version' "$managed_render"
   echo "managed leaf pinned a Secret resourceVersion instead of permitting same-UID rotation" >&2
   exit 1
 fi
+grep -Fq "k.startsWith('distribution.cisco.vk/')" "$managed_render"
 
 # A fresh managed render has no legacy third account or binding. The manager
 # creates the two functional accounts only in namespaces that host workers.
@@ -916,6 +917,8 @@ grep -Fq 'gnoi.enableWriteClass=false' "$repo_root/docs/topology-awareness.md"
 grep -Fq 'IOSXEOperationalAction' "$repo_root/charts/cisco-virtual-kubelet/README.md"
 grep -Fq 'operations.cisco.vk/qualification-cohort: c9300' \
   "$repo_root/examples/topology/devices-and-workload.yaml"
+grep -Fq 'distribution.cisco.vk/cache-domain: berlin' \
+  "$repo_root/examples/topology/devices-and-workload.yaml"
 grep -Fq 'kind: PodDisruptionBudget' \
   "$repo_root/examples/topology/devices-and-workload.yaml"
 grep -Fq 'Phase 2 uses' \
@@ -927,6 +930,9 @@ grep -Fq 'cisco.vk/device-maintenance=gnoi:NoSchedule' \
 grep -Fq 'do not yet prove production packet' \
   "$repo_root/docs/topology-awareness.md"
 grep -Fq 'name: c9300' "$repo_root/examples/topology/iosxe-software-rollout.yaml"
+grep -Fq 'name: berlin-mirror' "$repo_root/examples/topology/iosxe-software-rollout.yaml"
+grep -Fq 'name: global' "$repo_root/examples/topology/iosxe-software-rollout.yaml"
+grep -Fq 'Exactly one unscoped catch-all' "$repo_root/docs/topology-awareness.md"
 grep -Fq 'every qualification cohort' "$repo_root/docs/topology-awareness.md"
 
 # Generated schemas are part of the rollout safety contract and Helm never
@@ -1052,6 +1058,16 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set-json 'topology.policy.requiredTopologyKeys=["operations.cisco.vk/upgrade-ring"]' \
     --set-json 'topology.policy.projectedTopologyKeys=["operations.cisco.vk/upgrade-ring"]' >"$error_output" 2>&1; then
   echo "operational risk key rendered as a scheduler-visible Node projection" >&2
+  exit 1
+fi
+grep -Fq '/topology/policy/projectedTopologyKeys/0' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.requiredTopologyKeys=["distribution.cisco.vk/cache-domain"]' \
+    --set-json 'topology.policy.projectedTopologyKeys=["distribution.cisco.vk/cache-domain"]' >"$error_output" 2>&1; then
+  echo "artifact distribution key rendered as a scheduler-visible Node projection" >&2
   exit 1
 fi
 grep -Fq '/topology/policy/projectedTopologyKeys/0' "$error_output"
