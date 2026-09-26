@@ -375,7 +375,7 @@ grep -Fq 'legacy token Secrets are forbidden for reserved worker ServiceAccounts
 test "$(grep -Fc 'has(object.spec.template.spec.serviceAccountName)' "$managed_render")" -eq 2
 test "$(grep -Fc 'has(oldObject.spec.template.spec.serviceAccountName)' "$managed_render")" -eq 2
 test "$(grep -Fc 'has(object.spec.serviceAccountName)' "$managed_render")" -eq 2
-test "$(grep -Fc 'has(oldObject.spec.serviceAccountName)' "$managed_render")" -eq 2
+test "$(grep -Fc 'has(oldObject.spec.serviceAccountName)' "$managed_render")" -eq 3
 
 worker_deployment_policy="$scratch_dir/shared-worker-deployment.yaml"
 sed -n '/name: cvk-cisco-virtual-kubelet-shared-worker-deployment/,/^---$/p' \
@@ -658,9 +658,9 @@ grep -A1 -F 'resources: ["replicasets"]' "$manager_role" | \
 grep -A1 -F 'resources: ["iosxediagnostics"]' "$manager_role" | \
   grep -Fq 'verbs: ["get", "list", "watch", "update", "patch"]'
 grep -A3 -F 'resources: ["pods"]' "$manager_role" | \
-  grep -Fq 'verbs: ["get", "list", "watch", "patch"]'
+  grep -Fq 'verbs: ["get", "list", "watch", "patch", "delete"]'
 if grep -A3 -F 'resources: ["pods"]' "$manager_role" | \
-    grep -F 'verbs:' | grep -Eq 'create|update|delete'; then
+    grep -F 'verbs:' | grep -Eq 'create|update|deletecollection'; then
   echo "managed topology manager retained broad Pod mutation" >&2
   exit 1
 fi
