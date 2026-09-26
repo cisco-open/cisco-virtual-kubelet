@@ -987,6 +987,10 @@ terminates every workload using that account. Foreign objects that merely
 collide with a reserved name are retained and reported. Direct API reads
 repeat the binding audit after access is installed; a grant racing the initial
 audit triggers the same synchronous quarantine before reconcile returns.
+The manager can delete a reserved worker Pod only with its exact UID as a
+precondition. Admission denies its direct deletion of ordinary application
+Pods, including when a UID is supplied; quarantine does not grant a workload
+deletion or PodDisruptionBudget bypass.
 Generated-account compromise uses the same authority-first rule inside the
 device namespace: every RoleBinding with the exact UID-derived account subject
 is removed regardless of its name, role, or mutable metadata before the owned

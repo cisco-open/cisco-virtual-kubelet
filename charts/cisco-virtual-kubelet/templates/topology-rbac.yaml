@@ -339,9 +339,9 @@ rules:
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: [""]
     resources: ["pods"]
-    # Patch writes only the protected worker-Pod binding annotations consumed
-    # by admission; the manager has no Pod create/update/delete authority.
-    verbs: ["get", "list", "watch", "patch"]
+    # Admission restricts patch to worker bindings and delete to exact-UID
+    # reserved worker Pods for quarantine. Ordinary workload deletion is denied.
+    verbs: ["get", "list", "watch", "patch", "delete"]
   # ReplicaSet authority exists only for the topology migration bridge. The
   # manager inventories legacy consumers and deletes an exact, owner-verified,
   # zero-replica ReplicaSet before retiring the former shared worker identity.
