@@ -348,11 +348,11 @@ rules:
   - apiGroups: ["apps"]
     resources: ["replicasets"]
     verbs: ["get", "list", "watch", "delete"]
-  # Retained leaves remain readable after the mutation gate is disabled so the
-  # CiscoDevice controller can continue fencing an unsettled operation.
+  # Retained leaves still need exact worker identity repair when new upgrades
+  # are disabled. Admission confines this to manager-authored metadata.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "update", "patch"]
   # Stamp the protected device/Pod envelope on every mutable network API. The
   # base controller role already covers config, telemetry, apply-log, and
   # revision objects used outside managed topology.
@@ -371,10 +371,9 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwarerollouts/status"]
     verbs: ["get", "update", "patch"]
-  # Reconcile exact worker Pod bindings on retained leaves.
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades"]
-    verbs: ["create", "update", "patch"]
+    verbs: ["create"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades/status"]
     verbs: ["get", "update", "patch"]
