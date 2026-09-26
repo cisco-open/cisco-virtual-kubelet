@@ -2822,6 +2822,7 @@ if helm upgrade "$release_name" "$chart_dir" \
     --set topology.enabled=true \
     --set controller.leaderElect=true \
     --set rbac.profile=strict \
+    --set topology.workerAccounts.networkManagement.accessMode=readWrite \
     --set gnoi.enableSoftwareUpgrade=true \
     --set "fullnameOverride=${release_name}-renamed" \
     --set topology.policy.workloadDrain.enabled=true \
@@ -2881,6 +2882,7 @@ if helm upgrade "$release_name" "$chart_dir" \
     --set topology.enabled=false \
     --set controller.leaderElect=true \
     --set rbac.profile=strict \
+    --set topology.workerAccounts.networkManagement.accessMode=readWrite \
     --set gnoi.enableSoftwareUpgrade=true \
     >"$scratch_dir/topology-disable-incomplete.txt" 2>&1; then
   echo "Helm disabled managed topology before reverse handoff completed" >&2
@@ -3154,6 +3156,7 @@ if helm upgrade "$release_name" "$chart_dir" \
     --set topology.enabled=false \
     --set controller.leaderElect=true \
     --set rbac.profile=strict \
+    --set topology.workerAccounts.networkManagement.accessMode=readWrite \
     --set gnoi.enableSoftwareUpgrade=true \
     >"$scratch_dir/topology-disable-isolated-marker.txt" 2>&1; then
   echo "Helm disabled managed topology while an isolated worker marker remained" >&2
@@ -3246,6 +3249,7 @@ helm upgrade "$release_name" "$chart_dir" \
   --set topology.enabled=false \
   --set controller.leaderElect=true \
   --set rbac.profile=strict \
+  --set topology.workerAccounts.networkManagement.accessMode=readWrite \
   --set gnoi.enableSoftwareUpgrade=true >/dev/null
 if kubectl get clusterrolebinding cisco-virtual-kubelet >/dev/null 2>&1 || \
    kubectl get rolebinding cisco-virtual-kubelet-device \
