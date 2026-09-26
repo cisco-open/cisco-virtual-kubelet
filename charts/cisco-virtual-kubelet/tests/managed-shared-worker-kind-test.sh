@@ -499,6 +499,15 @@ delete_raw_with_uid() {
 EOF
 }
 
+manager_pod_delete_dry_run() {
+  local pod="$1"
+  local preconditions="$2"
+  kubectl --context "$context" --as="$manager_username" delete \
+    --raw="/api/v1/namespaces/${worker_namespace}/pods/${pod}" -f - <<EOF
+{"apiVersion":"meta.k8s.io/v1","kind":"DeleteOptions","dryRun":["All"],"preconditions":${preconditions}}
+EOF
+}
+
 delete_raw_with_uid_as_gc() {
   local resource_path="$1"
   local uid="$2"
@@ -703,6 +712,16 @@ ordinary_pod="$(kubectl --context "$context" get pod \
   --namespace "$worker_namespace" --selector=app=ordinary \
   -o jsonpath='{.items[0].metadata.name}')"
 test -n "$ordinary_pod"
+manager_pod_delete_dry_run "$reserved_pod" "{\"uid\":\"${reserved_pod_uid}\"}" >/dev/null
+expect_denied 'manager quarantine delete requires a UID' 'shared-worker-pod' \
+  manager_pod_delete_dry_run "$reserved_pod" '{}'
+# The API server rejects a stale UID before evaluating admission.
+expect_denied 'manager quarantine delete rejects a stale UID' 'UID in the precondition' \
+  manager_pod_delete_dry_run "$reserved_pod" '{"uid":"stale-worker-uid"}'
+ordinary_pod_uid="$(kubectl --context "$context" get pod "$ordinary_pod" \
+  --namespace "$worker_namespace" -o jsonpath='{.metadata.uid}')"
+expect_denied 'manager cannot directly delete an ordinary workload Pod' 'shared-worker-pod' \
+  manager_pod_delete_dry_run "$ordinary_pod" "{\"uid\":\"${ordinary_pod_uid}\"}"
 ordinary_replicaset="$(kubectl --context "$context" get replicaset \
   --namespace "$worker_namespace" --selector=app=ordinary \
   -o jsonpath='{.items[0].metadata.name}')"

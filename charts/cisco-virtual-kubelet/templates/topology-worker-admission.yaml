@@ -1592,6 +1592,7 @@ spec:
   matchConditions:
     - name: reserved-worker-account
       expression: >-
+        (request.operation == 'DELETE' && request.userInfo.username == {{ $manager | quote }}) ||
         (object != null && has(object.spec.serviceAccountName) &&
           (object.spec.serviceAccountName in
              [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
@@ -1622,7 +1623,16 @@ spec:
               request.userInfo.groups.exists(g, g == 'system:serviceaccounts') &&
               request.userInfo.groups.exists(g, g == 'system:serviceaccounts:kube-system')) ||
              request.userInfo.username == 'system:kube-controller-manager')) ||
-          request.userInfo.username == {{ $manager | quote }} ||
+          (request.userInfo.username == {{ $manager | quote }} &&
+           oldObject != null && has(oldObject.spec.serviceAccountName) &&
+           (oldObject.spec.serviceAccountName in
+              [{{ $appServiceAccount | quote }}, {{ $networkServiceAccount | quote }}] ||
+            oldObject.spec.serviceAccountName.matches(
+              {{ $generatedWorkerServiceAccountPattern | quote }})) &&
+           has(request.name) && request.name != '' &&
+           request.options != null && has(request.options.preconditions) &&
+           has(request.options.preconditions.uid) &&
+           string(request.options.preconditions.uid) == string(oldObject.metadata.uid)) ||
           (oldObject != null && has(oldObject.metadata.ownerReferences) &&
            oldObject.metadata.ownerReferences.size() == 1 &&
            oldObject.metadata.ownerReferences[0].apiVersion == 'apps/v1' &&

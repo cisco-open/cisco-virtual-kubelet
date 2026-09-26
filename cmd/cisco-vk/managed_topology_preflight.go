@@ -277,7 +277,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"reserved-worker-account"}, validations: 1, coreTyped: true,
 		requiredFragments: []string{"replicaset-controller", "namespace-controller", "!has(request.name)", "system:node:", "gracePeriodSeconds", "generic-garbage-collector", "request.options.preconditions.uid", "ownerReferences", "serviceAccountName", "cisco-vk-(managed|legacy)-"},
-		digest:            "sha256:dc91f95a71a2e37ac5f06486e11484fd8f9867850c3c5f84999593b550fca463",
+		digest:            "sha256:30c1032a48f7453f0953c5e2d92ef2d386ba2a5cbf7148e42f634a28bb193e33",
 	},
 	"shared-worker-pod-update": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods", "pods/status", "pods/ephemeralcontainers", "pods/resize"},
