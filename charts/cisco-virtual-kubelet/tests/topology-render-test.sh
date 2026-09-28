@@ -315,7 +315,9 @@ grep -Fq 'cisco-vk-managed-' "$scratch_dir/managed-pod-delete-policy.yaml"
 grep -Fq 'cisco-vk-legacy-' "$scratch_dir/managed-pod-delete-policy.yaml"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-managed-drain-pod' "$managed_render"
 sed -n '/name: cvk-cisco-virtual-kubelet-managed-drain-pod/,/^---$/p' \
-  "$managed_render" | grep -Fq 'operations: ["CREATE", "UPDATE", "DELETE"]'
+  "$managed_render" >"$scratch_dir/managed-drain-pod-policy.yaml"
+grep -Fq 'operations: ["CREATE", "UPDATE", "DELETE"]' \
+  "$scratch_dir/managed-drain-pod-policy.yaml"
 grep -Fq 'validationActions: [Deny]' "$managed_render"
 grep -Fq "request.userInfo.username == \"system:serviceaccount:cisco-vk-system:cisco-virtual-kubelet-controller\"" "$managed_render"
 grep -Fq "variables.managerCreate || variables.managerAdopt ||" "$managed_render"
