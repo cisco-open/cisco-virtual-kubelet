@@ -2859,7 +2859,7 @@ test "$(kubectl get configmap "$ledger_name" --namespace "$system_namespace" \
 # ledger is no longer in its current release manifest; if it does submit an
 # update, admission independently rejects emptying the live ledger.
 if helm rollback "$release_name" "$bootstrap_topology_revision" \
-    --namespace "$system_namespace" --server-side=false \
+    --namespace "$system_namespace" \
     >"$scratch_dir/bootstrap-rollback-negative.txt" 2>&1; then
   echo "Helm accepted rollback to an empty-ledger bootstrap revision" >&2
   exit 1
