@@ -2864,7 +2864,7 @@ if helm rollback "$release_name" "$bootstrap_topology_revision" \
   echo "Helm accepted rollback to an empty-ledger bootstrap revision" >&2
   exit 1
 fi
-if ! grep -Eq 'original object ConfigMap.*topology-ledger.*not found|ledger-uid must be absent at creation|existing topology ledger cannot be emptied|denied the request|failed expression' \
+if ! grep -Eq 'original object ConfigMap.*topology-ledger.*not found|no ConfigMap with the name.*topology-ledger.*found|ledger-uid must be absent at creation|existing topology ledger cannot be emptied|denied the request|failed expression' \
     "$scratch_dir/bootstrap-rollback-negative.txt"; then
   echo "Helm rollback failed for an unexpected reason:" >&2
   sed -n '1,120p' "$scratch_dir/bootstrap-rollback-negative.txt" >&2
