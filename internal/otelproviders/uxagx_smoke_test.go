@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 )
 
@@ -66,7 +67,7 @@ func TestLiveOTLPSmoke(t *testing.T) {
 	rec.SetTimestamp(time.Now())
 	rec.SetSeverity(log.SeverityInfo)
 	rec.SetSeverityText("INFO")
-	rec.SetBody(log.StringValue("hello from cisco-vk otlp smoke test"))
+	rec.SetBody(attribute.StringValue("hello from cisco-vk otlp smoke test"))
 	logger.Emit(ctx, rec)
 	t.Logf("emitted log record")
 
