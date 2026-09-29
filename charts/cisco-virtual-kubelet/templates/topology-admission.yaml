@@ -721,6 +721,42 @@ spec:
   variables:
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
+    - name: networkWorker
+      expression: >-
+        request.userInfo.username == ('system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}')
+    # The network worker may publish only the healthObservation.network
+    # subtree on the status subresource. Every manager-owned field must remain
+    # byte-for-byte unchanged; this keeps telemetry publication separate from
+    # all device identity, topology, rollout, and lifecycle state.
+    - name: networkObservationOnly
+      expression: >-
+        has(request.subResource) && request.subResource == 'status' &&
+        variables.networkWorker && oldObject != null && has(oldObject.status) &&
+        has(oldObject.status.nodeIdentity) && object != null && has(object.status) &&
+        ((has(object.status.nodeIdentity) == has(oldObject.status.nodeIdentity)) &&
+         (!has(object.status.nodeIdentity) || object.status.nodeIdentity == oldObject.status.nodeIdentity) &&
+         ((has(object.status.topologyProjection) == has(oldObject.status.topologyProjection)) &&
+          (!has(object.status.topologyProjection) || object.status.topologyProjection == oldObject.status.topologyProjection)) &&
+         ((has(object.status.workerRevision) == has(oldObject.status.workerRevision)) &&
+          (!has(object.status.workerRevision) || object.status.workerRevision == oldObject.status.workerRevision)) &&
+         ((has(object.status.networkWorkerRevision) == has(oldObject.status.networkWorkerRevision)) &&
+          (!has(object.status.networkWorkerRevision) || object.status.networkWorkerRevision == oldObject.status.networkWorkerRevision)) &&
+         ((has(object.status.legacyHandoff) == has(oldObject.status.legacyHandoff)) &&
+          (!has(object.status.legacyHandoff) || object.status.legacyHandoff == oldObject.status.legacyHandoff)) &&
+         ((has(object.status.topologyLock) == has(oldObject.status.topologyLock)) &&
+          (!has(object.status.topologyLock) || object.status.topologyLock == oldObject.status.topologyLock)) &&
+         ((has(object.status.maintenanceSession) == has(oldObject.status.maintenanceSession)) &&
+          (!has(object.status.maintenanceSession) || object.status.maintenanceSession == oldObject.status.maintenanceSession)) &&
+         ((has(object.status.conditions) == has(oldObject.status.conditions)) &&
+          (!has(object.status.conditions) || object.status.conditions == oldObject.status.conditions)) &&
+         ((has(object.status.workerCapabilities) == has(oldObject.status.workerCapabilities)) &&
+          (!has(object.status.workerCapabilities) || object.status.workerCapabilities == oldObject.status.workerCapabilities)) &&
+         ((has(object.status.netAsCode) == has(oldObject.status.netAsCode)) &&
+          (!has(object.status.netAsCode) || object.status.netAsCode == oldObject.status.netAsCode)) &&
+         ((has(object.status.healthObservation) == has(oldObject.status.healthObservation)) &&
+          (!has(object.status.healthObservation) || object.status.healthObservation == oldObject.status.healthObservation)) &&
+         object.status.phase == oldObject.status.phase &&
+         object.status.workerTopology == oldObject.status.workerTopology)
     - name: newProtectedLabels
       expression: >-
         object != null && has(object.metadata.labels) ?
