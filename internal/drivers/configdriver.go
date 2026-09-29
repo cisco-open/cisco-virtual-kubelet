@@ -33,6 +33,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
@@ -42,6 +43,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 )
 
 // ConfigDriverContext bundles the platform-specific knobs the
@@ -190,6 +192,13 @@ func (c *ConfigDriverContext) IsRetryableDeviceVersionError(err error) bool {
 // Kubernetes Secrets.
 type ConfigDriverFactory func(ctx context.Context, spec *v1alpha1.DeviceSpec, password string, opts ConfigDriverOptions) (*ConfigDriverContext, error)
 
+// ConfigLeaseFamiliesFunc returns the closed set of config families whose
+// coordination Leases a per-device worker may write. Managed topology uses
+// this registration to pre-create identity-bound Leases before the worker is
+// authorized; new drivers therefore declare the capability beside their
+// ConfigDriverFactory rather than teaching the common controller their schema.
+type ConfigLeaseFamiliesFunc func() []string
+
 // ConfigDriverOptions carries call-site parameters that are not
 // part of the device spec — typically a SessionLock to share with
 // the apphosting driver, or factory-level timeouts.
@@ -204,15 +213,19 @@ type ConfigDriverOptions struct {
 var (
 	configDriverRegistryMu sync.RWMutex
 	configDriverRegistry   = map[v1alpha1.DeviceDriver]ConfigDriverFactory{}
+	configLeaseFamilies    = map[v1alpha1.DeviceDriver]ConfigLeaseFamiliesFunc{}
 )
 
 // RegisterConfigDriver installs a ConfigDriverFactory for kind.
 // Intended for init() in a platform package alongside the apphosting
 // Register call. Same duplicate-registration panic policy as the
 // apphosting registry.
-func RegisterConfigDriver(kind v1alpha1.DeviceDriver, factory ConfigDriverFactory) {
+func RegisterConfigDriver(kind v1alpha1.DeviceDriver, factory ConfigDriverFactory, leaseFamilies ...ConfigLeaseFamiliesFunc) {
 	if factory == nil {
 		panic(fmt.Sprintf("drivers.RegisterConfigDriver: nil factory for %q", kind))
+	}
+	if len(leaseFamilies) > 1 || len(leaseFamilies) == 1 && leaseFamilies[0] == nil {
+		panic(fmt.Sprintf("drivers.RegisterConfigDriver: invalid lease-family registration for %q", kind))
 	}
 	configDriverRegistryMu.Lock()
 	defer configDriverRegistryMu.Unlock()
@@ -220,6 +233,36 @@ func RegisterConfigDriver(kind v1alpha1.DeviceDriver, factory ConfigDriverFactor
 		panic(fmt.Sprintf("drivers.RegisterConfigDriver: duplicate registration for %q", kind))
 	}
 	configDriverRegistry[kind] = factory
+	if len(leaseFamilies) == 1 {
+		configLeaseFamilies[kind] = leaseFamilies[0]
+	}
+}
+
+// ConfigLeaseFamilies returns a validated, sorted snapshot of a driver's
+// declared family set. Empty is valid for a config driver that does not use
+// per-family Leases. Invalid or duplicate declarations fail closed because a
+// managed worker must never be granted a partially understood write surface.
+func ConfigLeaseFamilies(kind v1alpha1.DeviceDriver) ([]string, error) {
+	configDriverRegistryMu.RLock()
+	familiesFn := configLeaseFamilies[kind]
+	configDriverRegistryMu.RUnlock()
+	if familiesFn == nil {
+		return nil, nil
+	}
+	families := append([]string(nil), familiesFn()...)
+	sort.Strings(families)
+	for i, family := range families {
+		if family == "" || strings.TrimSpace(family) != family {
+			return nil, fmt.Errorf("config driver %q declared an empty or whitespace-padded lease family", kind)
+		}
+		if problems := utilvalidation.IsValidLabelValue(family); len(problems) > 0 {
+			return nil, fmt.Errorf("config driver %q lease family %q is not a valid Kubernetes label value: %s", kind, family, strings.Join(problems, "; "))
+		}
+		if i > 0 && family == families[i-1] {
+			return nil, fmt.Errorf("config driver %q declared duplicate lease family %q", kind, family)
+		}
+	}
+	return families, nil
 }
 
 // NewConfigDriver looks up and invokes the factory registered for

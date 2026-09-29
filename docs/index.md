@@ -75,6 +75,10 @@ Kubernetes API
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
   behind explicit RBAC and runtime gates.
+- **Managed topology and fleet rollout admission** - opt-in manager-owned Node
+  identity and protected topology labels for the default scheduler, plus
+  bounded IOS-XE campaigns across independent failure domains. This path uses
+  native Kubernetes admission/RBAC and no third-party scheduler or operator.
 - **Observability built in** - Prometheus metrics for device CPU, memory,
   storage, and interfaces; OpenTelemetry topology traces with CDP, OSPF, and
   hosted-app context; node annotations carrying router ID, hostname, and
@@ -84,6 +88,10 @@ Kubernetes API
 - **Flexible networking** - DHCP or static allocation across VirtualPortGroup,
   AppGigabitEthernet, and Management interfaces. Pod IP discovery uses device
   operational data first and ARP as a fallback.
+
+For the topology ownership model, scheduler examples, rollout workflow,
+security boundary, and deferred roadmap, see
+[Managed topology and topology-aware IOS-XE rollouts](topology-awareness.md).
 
 ## Status
 

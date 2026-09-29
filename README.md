@@ -20,6 +20,7 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 - **Software Lifecycle** *(Beta)* — stream verified images with gNOI or register IOS-XE device files through RESTCONF, then activate and verify through the `IOSXESoftwareUpgrade` CRD
 - **Device Operations** *(Beta)* — run auditable `show` commands and read-only gNOI probes from Kubernetes via `DeviceOperation` CRD
 - **Secure IOS-XE gNOI** *(Beta)* — use verified TLS, IOS-XE secure-password metadata, and opt-in CSR-based OS-service certificate provisioning
+- **Managed Topology and Fleet Rollouts** *(opt-in)* — project protected inventory labels for native kube-scheduler affinity/spread and admit bounded IOS-XE campaigns across failure domains, without a third-party scheduler or operator
 - **IOS-XE Telemetry** *(Beta)* — declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces
 - **Topology Observability** *(Beta)* — emit CDP/OSPF topology and hosted-app traces to any OTLP-compatible backend
 - **Health Monitoring** — continuous node health checks, kubelet metrics (`/stats/summary`, `/metrics/resource`), and device annotations
@@ -33,6 +34,8 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 - Cisco Nexus switches (NX-OS) *(Beta)*
 
 See [Production Readiness](docs/production-readiness.md) for the current NX-OS runtime-parity scope and hardening roadmap.
+See [Managed Topology and Rollouts](docs/topology-awareness.md) before enabling
+the Kubernetes 1.35+ manager-owned Node and IOS-XE campaign trust boundary.
 
 ## Architecture
 
@@ -99,18 +102,28 @@ cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.9.2 \
 ### Upgrade from an earlier release
 
 Helm does not upgrade files under `crds/`. Pull the new chart and apply its
-CRDs **before** `helm upgrade`:
+CRDs **before** `helm upgrade`. Back up the live definitions and review the
+server-side diff before the explicit ownership handoff from Helm:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
   --version 2026.9.2 --untar
-kubectl apply --server-side -f cisco-virtual-kubelet/crds/
+kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
+  > cvk-crds-before-upgrade.yaml
+kubectl diff --server-side --force-conflicts \
+  --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
+kubectl apply --server-side --force-conflicts \
+  --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
   crd/networkcontrollers.cisco.vk \
   crd/networkcontrollerconfigs.config.cisco.vk
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
   --version 2026.9.2 --namespace cvk-system
 ```
+
+`kubectl diff` returns status 1 when differences exist. The force flag applies
+only to the exact reviewed CVK CRD files; see the operations runbook before
+using it in production.
 
 See the [operations runbook](docs/operations.md#upgrading-crds). If the two new
 controller CRDs are absent, CVK preserves existing device reconcilers but

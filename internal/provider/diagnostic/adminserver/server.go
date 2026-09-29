@@ -36,6 +36,7 @@ import (
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,9 +108,12 @@ type Server struct {
 	// may have observed the new object.
 	OperationReader    client.Reader
 	OperationNamespace string
-	OperationTimeout   time.Duration
-	OperationPoll      time.Duration
-	OperationTTL       int32
+	// OperationAnnotations is the manager-issued device/Pod binding copied to
+	// transient DeviceOperations created by the shared network worker.
+	OperationAnnotations map[string]string
+	OperationTimeout     time.Duration
+	OperationPoll        time.Duration
+	OperationTTL         int32
 
 	// TelemetrySource, if set, backs the GET /telemetry/health
 	// endpoint. cmd/cisco-vk plumbs the IOSXETelemetryReconciler's snapshot
@@ -319,8 +323,9 @@ func (s *Server) handleExecViaOperation(w http.ResponseWriter, r *http.Request, 
 	name := fmt.Sprintf("exec-%s-%s", dnsLabel(s.DeviceName), utilrand.String(8))
 	op := &opsv1alpha1.DeviceOperation{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
+			Namespace:   namespace,
+			Name:        name,
+			Annotations: managedprotocol.CopyNetworkObjectBinding(s.OperationAnnotations),
 			Labels: map[string]string{
 				"ops.cisco.vk/source": "adminserver",
 			},

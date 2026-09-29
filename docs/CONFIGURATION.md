@@ -167,11 +167,17 @@ overrides remain documented in the [CLI reference](cisco-vk-cli.md#additional-en
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `podCIDR` | string | — | CIDR range the VK allocates from when DHCP is off. The VK hands out addresses sequentially from this range to each new container. |
-| `labels` | map[string]string | `{}` | Extra labels applied to the virtual node |
-| `taints` | []v1.Taint | `[]` | Extra taints applied to the virtual node |
+| `labels` | map[string]string | `{}` | Legacy extra Node labels. In managed topology, non-topology values remain compatible, but topology values must agree with protected `metadata.labels` and the administrator projection allowlist. |
+| `taints` | []v1.Taint | `[]` | Extra Node taints. In managed topology the manager, not the worker, owns the projected/static taint set. |
 | `maxPods` | int32 | `16` | Maximum pods the device can host |
-| `region` | string | — | Populates `topology.kubernetes.io/region` on the node |
-| `zone` | string | — | Populates `topology.kubernetes.io/zone` on the node |
+| `region` | string | — | Legacy region source. In managed topology, authoritative `metadata.labels["topology.kubernetes.io/region"]` must be present and this value may only agree with it. |
+| `zone` | string | — | Legacy zone source. In managed topology, authoritative `metadata.labels["topology.kubernetes.io/zone"]` must be present and this value may only agree with it. |
+
+For scheduling and fleet rollouts, use protected `CiscoDevice.metadata.labels`
+and the opt-in administrator policy described in
+[Managed topology and topology-aware IOS-XE rollouts](topology-awareness.md).
+Only region, zone, and allowlisted `topology.cisco.vk/*` keys reach Nodes;
+`operations.cisco.vk/*` labels remain rollout-only risk data.
 
 ### Resource limits
 

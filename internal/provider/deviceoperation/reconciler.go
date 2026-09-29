@@ -41,6 +41,7 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
@@ -543,10 +544,21 @@ func (r *Reconciler) backPacketCaptureArtifacts(
 			Name:      artifactConfigMapName(op),
 		},
 	}
+	var ownershipErr *operationArtifactError
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
+		if cm.ResourceVersion != "" {
+			ownershipErr = artifactConfigMapOwnershipError(cm, op)
+			if ownershipErr != nil {
+				return ownershipErr
+			}
+		}
 		cm.Data = data
+		cm.Annotations = mergeNetworkObjectBinding(cm.Annotations, op.Annotations)
 		return controllerutil.SetControllerReference(op, cm, r.Scheme)
 	}); err != nil {
+		if ownershipErr != nil {
+			return outputs, nil, ownershipErr
+		}
 		return outputs, nil, &operationArtifactError{
 			reason:  "ArtifactWriteFailed",
 			message: fmt.Sprintf("write packet-capture artifact ConfigMap: %v", err),
@@ -570,6 +582,14 @@ func (r *Reconciler) assertArtifactConfigMapOwned(
 	ctx context.Context,
 	op *opsv1alpha1.DeviceOperation,
 ) *operationArtifactError {
+	managed := op.Annotations[managedprotocol.AnnotationManaged] == "true"
+	if managed && !managedprotocol.NetworkObjectBindingComplete(op.Annotations) {
+		return &operationArtifactError{
+			reason: "ArtifactBindingMismatch",
+			message: fmt.Sprintf("managed DeviceOperation %s/%s has an incomplete network-object binding",
+				op.Namespace, op.Name),
+		}
+	}
 	if r.Reader == nil && r.Client == nil {
 		return nil
 	}
@@ -591,7 +611,14 @@ func (r *Reconciler) assertArtifactConfigMapOwned(
 			message: fmt.Sprintf("inspect existing artifact ConfigMap: %v", err),
 		}
 	}
-	owner := metav1.GetControllerOf(&existing)
+	return artifactConfigMapOwnershipError(&existing, op)
+}
+
+func artifactConfigMapOwnershipError(
+	existing *corev1.ConfigMap,
+	op *opsv1alpha1.DeviceOperation,
+) *operationArtifactError {
+	owner := metav1.GetControllerOf(existing)
 	if owner == nil {
 		return &operationArtifactError{
 			reason: "ArtifactExistsUnowned",
@@ -599,11 +626,20 @@ func (r *Reconciler) assertArtifactConfigMapOwned(
 				existing.Namespace, existing.Name),
 		}
 	}
-	if owner.UID != op.UID {
+	if owner.APIVersion != opsv1alpha1.GroupVersion.String() ||
+		owner.Kind != "DeviceOperation" || owner.Name != op.Name || owner.UID != op.UID {
 		return &operationArtifactError{
 			reason: "ArtifactExistsForeignOwner",
 			message: fmt.Sprintf("ConfigMap %s/%s is controller-owned by %s/%s (uid=%s), not by this DeviceOperation (uid=%s)",
 				existing.Namespace, existing.Name, owner.Kind, owner.Name, owner.UID, op.UID),
+		}
+	}
+	if op.Annotations[managedprotocol.AnnotationManaged] == "true" &&
+		!managedprotocol.NetworkObjectBindingMatches(op.Annotations, existing.Annotations) {
+		return &operationArtifactError{
+			reason: "ArtifactBindingMismatch",
+			message: fmt.Sprintf("ConfigMap %s/%s network-object binding does not match DeviceOperation %s (uid=%s)",
+				existing.Namespace, existing.Name, op.Name, op.UID),
 		}
 	}
 	return nil
@@ -705,7 +741,14 @@ func (r *Reconciler) enforceTotalInlineBudget(
 			Name:      artifactConfigMapName(op),
 		},
 	}
+	var ownershipErr *operationArtifactError
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, cm, func() error {
+		if cm.ResourceVersion != "" {
+			ownershipErr = artifactConfigMapOwnershipError(cm, op)
+			if ownershipErr != nil {
+				return ownershipErr
+			}
+		}
 		if cm.Data == nil {
 			cm.Data = map[string]string{}
 		}
@@ -714,14 +757,28 @@ func (r *Reconciler) enforceTotalInlineBudget(
 		for k, v := range data {
 			cm.Data[k] = v
 		}
+		cm.Annotations = mergeNetworkObjectBinding(cm.Annotations, op.Annotations)
 		return controllerutil.SetControllerReference(op, cm, r.Scheme)
 	}); err != nil {
+		if ownershipErr != nil {
+			return nil, ownershipErr
+		}
 		return nil, &operationArtifactError{
 			reason:  "ArtifactWriteFailed",
 			message: fmt.Sprintf("write operation artifact ConfigMap: %v", err),
 		}
 	}
 	return uris, nil
+}
+
+func mergeNetworkObjectBinding(destination, source map[string]string) map[string]string {
+	if destination == nil {
+		destination = map[string]string{}
+	}
+	for key, value := range managedprotocol.CopyNetworkObjectBinding(source) {
+		destination[key] = value
+	}
+	return destination
 }
 
 func totalInline(outputs []opsv1alpha1.DeviceOperationOutput) int {
@@ -733,7 +790,12 @@ func totalInline(outputs []opsv1alpha1.DeviceOperationOutput) int {
 }
 
 func artifactConfigMapName(op *opsv1alpha1.DeviceOperation) string {
-	return op.Name + "-output"
+	name := op.Name + "-output"
+	if op.Annotations[managedprotocol.AnnotationManaged] == "true" {
+		return managedprotocol.NetworkResultNamePrefix(
+			op.Annotations[managedprotocol.AnnotationDeviceUID]) + "u" + string(op.UID) + "-output"
+	}
+	return name
 }
 
 func truncatePreviewWithFooter(s string, maxBytes int, footer string) string {
@@ -759,7 +821,10 @@ func (r *Reconciler) handleTTL(ctx context.Context, op *opsv1alpha1.DeviceOperat
 	if now.Before(expireAt) {
 		return reconcile.Result{RequeueAfter: expireAt.Sub(now)}, nil
 	}
-	if err := r.Client.Delete(ctx, op); err != nil && !apierrors.IsNotFound(err) {
+	uid := op.UID
+	if err := r.Client.Delete(ctx, op, &client.DeleteOptions{
+		Preconditions: &metav1.Preconditions{UID: &uid},
+	}); err != nil && !apierrors.IsNotFound(err) {
 		return reconcile.Result{}, fmt.Errorf("delete expired DeviceOperation: %w", err)
 	}
 	r.event(op, corev1.EventTypeNormal, "Expired", "deleted DeviceOperation after ttlSecondsAfterFinished")

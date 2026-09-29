@@ -1,0 +1,53 @@
+# This example must be submitted as the identity in requestedBy, or edited so
+# requestedBy exactly matches the authenticated API user. Replace the source,
+# digest, image family, version, and canary names with qualified values. Every
+# target must carry operations.cisco.vk/qualification-cohort, and each distinct
+# cohort value must have a same-named entry with at least one explicit canary.
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareRollout
+metadata:
+  name: cat9k-17-18-4
+  namespace: network-devices
+spec:
+  plan:
+    requestedBy: system:serviceaccount:network-devices:cvk-rollout-planner
+    requestedAt: "2026-01-01T00:00:00Z"
+    targets:
+      selector:
+        matchLabels:
+          topology.cisco.vk/managed: "true"
+          operations.cisco.vk/image-family: cat9k
+      allowAll: false
+      maxTargets: 20
+    source:
+      url: https://software.example.com/cat9k_iosxe.17.18.04.SPA.bin
+      # Lowercase SHA-256 of the exact image bytes; never reuse this placeholder.
+      sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      imageFamily: cat9k
+    targetVersion: 17.18.4
+    strategy: Reload
+    rollbackOnFailure: true
+    installTimeoutSeconds: 7200
+    rebootTimeoutSeconds: 3600
+    canaries:
+      # c9k-a carries operations.cisco.vk/qualification-cohort=c9300 in
+      # devices-and-workload.yaml. Add one entry per distinct target cohort.
+      - name: c9300
+        devices: [c9k-a]
+    pauseAfterCanary: true
+    budgets:
+      maxConcurrentTransfers: 1
+      maxUnavailable: 1
+      domains:
+        - topologyKey: topology.cisco.vk/site
+          maxConcurrentTransfers: 1
+        - topologyKey: operations.cisco.vk/redundancy-domain
+          maxUnavailable: 1
+    workloads:
+      policy: BlockIfRunning
+    health:
+      maxObservationAgeSeconds: 300
+      canarySoakSeconds: 600
+      waveSoakSeconds: 300
+  control:
+    revision: 0

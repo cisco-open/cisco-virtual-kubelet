@@ -41,6 +41,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/validation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/writers"
 	iosxewriters "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/writers"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/semconv"
 	"go.opentelemetry.io/otel"
@@ -1648,8 +1649,9 @@ func (r *ConfigReconciler) appendConfigRevision(
 	now := metav1.Now()
 	rev := &configv1alpha1.IOSXEConfigRevision{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: cr.Namespace,
-			Name:      revisionName(cr, hash),
+			Namespace:   cr.Namespace,
+			Name:        revisionName(cr, hash),
+			Annotations: managedprotocol.CopyNetworkObjectBinding(cr.Annotations),
 			Labels: map[string]string{
 				revisionSourceNameLabel: cr.Name,
 				revisionSourceUIDLabel:  string(cr.UID),
@@ -1775,7 +1777,10 @@ func (r *ConfigReconciler) gcConfigRevisions(ctx context.Context, cr *configv1al
 	})
 	for i := 0; i < len(list.Items)-limit; i++ {
 		item := list.Items[i]
-		if err := r.Client.Delete(ctx, &item); err != nil && !apierrors.IsNotFound(err) {
+		uid := item.UID
+		if err := r.Client.Delete(ctx, &item, &client.DeleteOptions{
+			Preconditions: &metav1.Preconditions{UID: &uid},
+		}); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("delete old revision %s/%s: %w", item.Namespace, item.Name, err)
 		}
 	}

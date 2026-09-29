@@ -425,6 +425,7 @@ func TestProviderDeleteSuppressesNotifierDeleteRecoveryWhileInFlight(t *testing.
 func TestPodNotifierPollSuppressesUnchangedPodStatus(t *testing.T) {
 	ctx := context.Background()
 	pod := notifierPod("unchanged", "11111111-1111-1111-1111-111111111111")
+	pod.Status = notifierPodStatus(v1.PodRunning, true)
 	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
 	provider, err := NewAppHostingProvider(ctx,
 		&ciskov1.DeviceSpec{},
@@ -453,6 +454,107 @@ func TestPodNotifierPollSuppressesUnchangedPodStatus(t *testing.T) {
 	}
 	if got := podStatusNotificationsSuppressedMetric(t) - before; got != 1 {
 		t.Fatalf("suppressed counter delta=%v want 1", got)
+	}
+}
+
+func TestPodNotifierRepublishesMetadataWithoutDeviceStateChange(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("binding-refresh", "55555555-5555-4555-8555-555555555555")
+	pod.Status = notifierPodStatus(v1.PodRunning, true)
+	lister, indexer := podListerWithIndexer(t, pod)
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
+	provider, err := NewAppHostingProvider(ctx, &ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: lister}, driver, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seen []*v1.Pod
+	setNotifyFuncForTest(provider, func(pod *v1.Pod) { seen = append(seen, pod) })
+	provider.pollAndNotifyAllPods(ctx)
+	for _, mutate := range []func(*v1.Pod){
+		func(p *v1.Pod) {
+			p.Annotations = map[string]string{"topology.cisco.vk/app-worker-pod-uid": "current-worker"}
+		},
+		func(p *v1.Pod) { p.Labels = map[string]string{"operations.cisco.vk/drain-safe": "true"} },
+		func(p *v1.Pod) { p.Finalizers = []string{"operations.cisco.vk/managed-drain"} },
+		func(p *v1.Pod) {
+			p.OwnerReferences = []metav1.OwnerReference{{APIVersion: "apps/v1", Kind: "ReplicaSet", Name: "owner", UID: "owner-uid"}}
+		},
+	} {
+		pod = pod.DeepCopy()
+		mutate(pod)
+		if err := indexer.Update(pod); err != nil {
+			t.Fatal(err)
+		}
+		before := len(seen)
+		provider.pollAndNotifyAllPods(ctx)
+		if len(seen) != before+1 {
+			t.Fatal("unchanged device status suppressed updated Pod metadata")
+		}
+		provider.pollAndNotifyAllPods(ctx)
+		if len(seen) != before+1 {
+			t.Fatal("unchanged metadata caused repeated notification")
+		}
+	}
+	if got := seen[len(seen)-1].Annotations["topology.cisco.vk/app-worker-pod-uid"]; got != "current-worker" {
+		t.Fatalf("callback retained stale worker binding: %q", got)
+	}
+	// A successful status write advances server bookkeeping. It must not
+	// trigger an endless notification/UpdateStatus feedback loop.
+	pod = pod.DeepCopy()
+	pod.ResourceVersion = "12345"
+	pod.ManagedFields = []metav1.ManagedFieldsEntry{{Manager: "status-writer"}}
+	if err := indexer.Update(pod); err != nil {
+		t.Fatal(err)
+	}
+	before := len(seen)
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != before {
+		t.Fatal("server bookkeeping triggered another status notification")
+	}
+}
+
+func TestPodNotifierRetriesUnacknowledgedPhaseAndRecoversProviderFailure(t *testing.T) {
+	ctx := context.Background()
+	pod := notifierPod("status-retry", "66666666-6666-4666-8666-666666666666")
+	lister, indexer := podListerWithIndexer(t, pod)
+	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
+	provider, err := NewAppHostingProvider(ctx, &ciskov1.DeviceSpec{},
+		nodeutil.ProviderConfig{Pods: lister}, driver, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var seen []*v1.Pod
+	setNotifyFuncForTest(provider, func(p *v1.Pod) { seen = append(seen, p) })
+	provider.pollAndNotifyAllPods(ctx)
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != 2 {
+		t.Fatal("unacknowledged status was suppressed")
+	}
+	if err := indexer.Update(seen[len(seen)-1].DeepCopy()); err != nil {
+		t.Fatal(err)
+	}
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != 2 {
+		t.Fatal("acknowledged status caused an update loop")
+	}
+	failed := seen[len(seen)-1].DeepCopy()
+	failed.Status.Phase = v1.PodPending
+	failed.Status.Reason = "ProviderFailed"
+	failed.Status.Message = "managed device topology is not ready"
+	if err := indexer.Update(failed); err != nil {
+		t.Fatal(err)
+	}
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != 3 || seen[2].Status.Phase != v1.PodRunning || seen[2].Status.Reason != "" {
+		t.Fatal("unchanged healthy device state did not recover transient provider error")
+	}
+	if err := indexer.Update(seen[2].DeepCopy()); err != nil {
+		t.Fatal(err)
+	}
+	provider.pollAndNotifyAllPods(ctx)
+	if len(seen) != 3 {
+		t.Fatal("recovered status caused an update loop")
 	}
 }
 
@@ -497,6 +599,8 @@ func TestPodNotifierGCDropsDeletedPodFingerprints(t *testing.T) {
 	ctx := context.Background()
 	podA := notifierPod("pod-a", "33333333-3333-3333-3333-333333333333")
 	podB := notifierPod("pod-b", "44444444-4444-4444-4444-444444444444")
+	podA.Status = notifierPodStatus(v1.PodRunning, true)
+	podB.Status = notifierPodStatus(v1.PodRunning, true)
 	lister, indexer := podListerWithIndexer(t, podA, podB)
 	driver := &notifierDriver{status: notifierPodStatus(v1.PodRunning, true)}
 	provider, err := NewAppHostingProvider(ctx,

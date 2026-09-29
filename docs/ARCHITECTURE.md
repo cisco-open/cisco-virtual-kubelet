@@ -115,12 +115,18 @@ Implements `node.NodeProvider` for node registration, heartbeat, and status.
 - `NotifyNodeStatus(cb)` — fires the callback whenever node status changes (labels, annotations, capacity, conditions)
 - `ForceStatusUpdate()` — called after every pod lifecycle event so resource accounting stays fresh
 
-The node's `Labels` include standard topology (`topology.kubernetes.io/zone` and
-`topology.kubernetes.io/region`) plus `type=virtual-kubelet`. The default
-topology label is platform-aware (`cisco-iosxe`, `cisco-nxos`, `cisco-iosxr`,
-or `openconfig`) and can be overridden per `CiscoDevice`. Node **annotations**
-are populated dynamically on every status sync from the driver's
-`TopologyProvider` data — see [Observability → Node annotations](observability.md#node-annotations).
+The node's labels include the CVK identity and `type=virtual-kubelet`.
+Standalone compatibility mode preserves the historical platform-family
+fallback for otherwise-unknown region/zone values. Opt-in managed topology
+does not invent placement facts: the manager projects only administrator
+allowlisted `CiscoDevice.metadata.labels`, while the per-device worker writes
+Node status only. The default scheduler consumes those labels through native
+affinity and topology-spread constraints. See
+[Managed topology and topology-aware IOS-XE rollouts](topology-awareness.md).
+
+Node **annotations** populated from driver observations remain advisory
+telemetry; CDP/OSPF observations never rewrite declared scheduler
+topology. See [Observability → Node annotations](observability.md#node-annotations).
 
 Conditions published:
 

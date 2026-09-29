@@ -37,7 +37,7 @@ func init() {
 			return NewAppHostingDriver(ctx, spec)
 		})
 
-	drivers.RegisterConfigDriver(v1alpha1.DeviceDriverNXOS, buildNXOSConfigDriverContext)
+	drivers.RegisterConfigDriver(v1alpha1.DeviceDriverNXOS, buildNXOSConfigDriverContext, nxoswriters.Families)
 }
 
 func buildNXOSConfigDriverContext(

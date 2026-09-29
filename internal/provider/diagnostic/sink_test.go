@@ -21,6 +21,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,7 +29,25 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
+
+type recordingDiagnosticDeleteClient struct {
+	client.Client
+	preconditionUIDs []types.UID
+}
+
+func (c *recordingDiagnosticDeleteClient) Delete(
+	ctx context.Context,
+	obj client.Object,
+	opts ...client.DeleteOption,
+) error {
+	options := (&client.DeleteOptions{}).ApplyOptions(opts)
+	if options.Preconditions != nil && options.Preconditions.UID != nil {
+		c.preconditionUIDs = append(c.preconditionUIDs, *options.Preconditions.UID)
+	}
+	return c.Client.Delete(ctx, obj, opts...)
+}
 
 func TestSanitiseCommandKey(t *testing.T) {
 	cases := map[string]string{
@@ -350,6 +369,129 @@ func TestReconcileConfigMapSinkRefusesUIDMismatch(t *testing.T) {
 	}
 	if got.Data["existing"] != "do-not-overwrite" {
 		t.Errorf("pre-existing data was overwritten: %+v", got.Data)
+	}
+}
+
+func TestManagedConfigMapSinkRefusesCrossDeviceBinding(t *testing.T) {
+	const diagUID = "11111111-1111-4111-8111-111111111111"
+	capturedAt := metav1.NewTime(time.Date(2026, 9, 25, 12, 0, 0, 0, time.UTC))
+	d := newDiag("managed-diag", func(d *configv1alpha1.IOSXEDiagnostic) {
+		d.UID = types.UID(diagUID)
+		d.Annotations = testManagedDiagnosticBinding("switch-b", "device-b-uid")
+		d.Spec.OutputSink = &configv1alpha1.DiagnosticOutputSink{
+			ConfigMapRef: &configv1alpha1.DiagnosticConfigMapSink{},
+		}
+	})
+	name := managedprotocol.NetworkResultNamePrefix("device-b-uid") +
+		"u" + diagUID + "-" + capturedAt.Format("20060102-150405")
+	controller := true
+	preexisting := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   d.Namespace,
+			Name:        name,
+			Annotations: testManagedDiagnosticBinding("switch-a", "device-a-uid"),
+			Labels: map[string]string{
+				configMapDiagnosticLabel:    d.Name,
+				configMapDiagnosticUIDLabel: string(d.UID),
+				configMapCaptureAtLabel:     capturedAt.Format("20060102-150405"),
+			},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: configv1alpha1.GroupVersion.String(),
+				Kind:       "IOSXEDiagnostic",
+				Name:       d.Name,
+				UID:        d.UID,
+				Controller: &controller,
+			}},
+		},
+		Data: map[string]string{"existing": "must-remain"},
+	}
+	r := newReconciler(t, nil, d, preexisting)
+	capture := &configv1alpha1.DiagnosticCapture{
+		CapturedAt: capturedAt,
+		Commands: []configv1alpha1.CommandOutput{{
+			Command: "show version",
+			Output:  "new-output",
+		}},
+	}
+
+	err := r.writeToConfigMap(context.Background(), d, capture)
+	if err == nil || !strings.Contains(err.Error(), "binding does not match") {
+		t.Fatalf("writeToConfigMap error=%v, want binding mismatch", err)
+	}
+	var got corev1.ConfigMap
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(preexisting), &got); err != nil {
+		t.Fatalf("get pre-existing ConfigMap: %v", err)
+	}
+	if got.Data["existing"] != "must-remain" {
+		t.Fatalf("cross-device ConfigMap was overwritten: data=%#v", got.Data)
+	}
+}
+
+func TestManagedConfigMapPruneRequiresOwnerBindingAndUIDPrecondition(t *testing.T) {
+	const diagUID = "22222222-2222-4222-8222-222222222222"
+	maxResults := int32(1)
+	d := newDiag("managed-prune", func(d *configv1alpha1.IOSXEDiagnostic) {
+		d.UID = types.UID(diagUID)
+		d.Annotations = testManagedDiagnosticBinding("switch-b", "device-b-uid")
+		d.Spec.Retention = &configv1alpha1.DiagnosticRetention{MaxResults: maxResults}
+	})
+	controller := true
+	result := func(name, capturedAt, uid string, annotations map[string]string) *corev1.ConfigMap {
+		return &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+			Namespace:   d.Namespace,
+			Name:        name,
+			UID:         types.UID(uid),
+			Annotations: annotations,
+			Labels: map[string]string{
+				configMapDiagnosticLabel:    d.Name,
+				configMapDiagnosticUIDLabel: string(d.UID),
+				configMapCaptureAtLabel:     capturedAt,
+			},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: configv1alpha1.GroupVersion.String(),
+				Kind:       "IOSXEDiagnostic",
+				Name:       d.Name,
+				UID:        d.UID,
+				Controller: &controller,
+			}},
+		}}
+	}
+	oldest := result("oldest", "20260925-120000", "oldest-result-uid", d.Annotations)
+	newest := result("newest", "20260925-120001", "newest-result-uid", d.Annotations)
+	foreign := result("foreign", "20260925-110000", "foreign-result-uid",
+		testManagedDiagnosticBinding("switch-a", "device-a-uid"))
+	r := newReconciler(t, nil, d, oldest, newest, foreign)
+	recording := &recordingDiagnosticDeleteClient{Client: r.Client}
+	r.Client = recording
+
+	if err := r.pruneOldConfigMaps(context.Background(), d); err != nil {
+		t.Fatalf("pruneOldConfigMaps: %v", err)
+	}
+	var got corev1.ConfigMap
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(oldest), &got); !apierrors.IsNotFound(err) {
+		t.Fatalf("oldest matching result still exists or unexpected error: %v", err)
+	}
+	for _, preserved := range []*corev1.ConfigMap{newest, foreign} {
+		if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(preserved), &got); err != nil {
+			t.Fatalf("preserved result %q: %v", preserved.Name, err)
+		}
+	}
+	if len(recording.preconditionUIDs) != 1 ||
+		recording.preconditionUIDs[0] != oldest.UID {
+		t.Fatalf("delete UID preconditions=%v, want [%s]",
+			recording.preconditionUIDs, oldest.UID)
+	}
+}
+
+func testManagedDiagnosticBinding(deviceName, deviceUID string) map[string]string {
+	return map[string]string{
+		managedprotocol.AnnotationManaged:               "true",
+		managedprotocol.AnnotationDeviceNamespace:       "ns",
+		managedprotocol.AnnotationDeviceName:            deviceName,
+		managedprotocol.AnnotationDeviceUID:             deviceUID,
+		managedprotocol.AnnotationNetworkWorkerUsername: "system:serviceaccount:ns:network",
+		managedprotocol.AnnotationNetworkWorkerPodName:  deviceName + "-network-pod",
+		managedprotocol.AnnotationNetworkWorkerPodUID:   deviceUID + "-pod",
 	}
 }
 
