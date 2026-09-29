@@ -128,10 +128,10 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"managed-device": {
 		apiGroups: []string{"cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"ciscodevices", "ciscodevices/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		variables:         []string{"manager", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations", "newDrainCordonHold", "oldDrainCordonHold"},
+		variables:         []string{"manager", "networkWorker", "networkObservationOnly", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations", "newDrainCordonHold", "oldDrainCordonHold"},
 		validations:       14,
-		requiredFragments: []string{"drain-cordon-hold", "check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "SharedWriterPending", "healthObservation", "workerRevision", "networkWorkerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "cisco.vk/device-cleanup", "oldObject.status.legacyHandoff.phase == 'Complete'"},
-		digest:            "sha256:351c7b22f077b3fe1b345ee0407680ec9b730d26bc5fbe8ac9ae63c016698777",
+		requiredFragments: []string{"drain-cordon-hold", "check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "SharedWriterPending", "healthObservation", "networkObservationOnly", "workerRevision", "networkWorkerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "cisco.vk/device-cleanup", "oldObject.status.legacyHandoff.phase == 'Complete'"},
+		digest:            "sha256:bb4565ca7f9420e497f79f3c0198b2faca56e29f59c4d3bb9eb48336aca63df3",
 	},
 	"managed-rollout": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},
