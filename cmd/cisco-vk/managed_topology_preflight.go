@@ -131,7 +131,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		variables:         []string{"manager", "networkWorker", "networkObservationOnly", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations", "newDrainCordonHold", "oldDrainCordonHold"},
 		validations:       14,
 		requiredFragments: []string{"drain-cordon-hold", "check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "SharedWriterPending", "healthObservation", "networkObservationOnly", "workerRevision", "networkWorkerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "cisco.vk/device-cleanup", "oldObject.status.legacyHandoff.phase == 'Complete'"},
-		digest:            "sha256:bb4565ca7f9420e497f79f3c0198b2faca56e29f59c4d3bb9eb48336aca63df3",
+		digest:            "sha256:3d984340ebced288717ef9cf8c2b0ae8edf2af6cf4e82f27c5441d685d3f635c",
 	},
 	"managed-rollout": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},

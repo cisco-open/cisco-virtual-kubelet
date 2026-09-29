@@ -715,7 +715,11 @@ spec:
          ((has(object.status.netAsCode) == has(oldObject.status.netAsCode)) &&
           (!has(object.status.netAsCode) || object.status.netAsCode == oldObject.status.netAsCode)) &&
          ((has(object.status.healthObservation) == has(oldObject.status.healthObservation)) &&
-          (!has(object.status.healthObservation) || object.status.healthObservation == oldObject.status.healthObservation)) &&
+          (!has(object.status.healthObservation) ||
+           (object.status.healthObservation.observedAt == oldObject.status.healthObservation.observedAt &&
+            object.status.healthObservation.nodeReadyHeartbeatTime == oldObject.status.healthObservation.nodeReadyHeartbeatTime &&
+            object.status.healthObservation.deviceConditionsHash == oldObject.status.healthObservation.deviceConditionsHash &&
+            object.status.healthObservation.conditionObservations == oldObject.status.healthObservation.conditionObservations))) &&
          object.status.phase == oldObject.status.phase &&
          object.status.workerTopology == oldObject.status.workerTopology)
     - name: newProtectedLabels
