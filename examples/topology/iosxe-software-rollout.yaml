@@ -1,5 +1,5 @@
 # This example must be submitted as the identity in requestedBy, or edited so
-# requestedBy exactly matches the authenticated API user. Replace the source,
+# requestedBy exactly matches the authenticated API user. Replace the sources,
 # digest, image family, version, and canary names with qualified values. Every
 # target must carry operations.cisco.vk/qualification-cohort, and each distinct
 # cohort value must have a same-named entry with at least one explicit canary.
@@ -19,11 +19,24 @@ spec:
           operations.cisco.vk/image-family: cat9k
       allowAll: false
       maxTargets: 20
-    source:
-      url: https://software.example.com/cat9k_iosxe.17.18.04.SPA.bin
+    image:
       # Lowercase SHA-256 of the exact image bytes; never reuse this placeholder.
       sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       imageFamily: cat9k
+      sources:
+        # Scoped mirrors are matched against protected CiscoDevice labels.
+        # Lowest priority wins. Equal-priority matches fail planning.
+        - name: berlin-mirror
+          deviceSelector:
+            matchLabels:
+              distribution.cisco.vk/cache-domain: berlin
+          priority: 10
+          url: https://software.berlin.example.com/cat9k_iosxe.17.18.04.SPA.bin
+        # Exactly one unscoped catch-all is required and is used only when no
+        # scoped source matches. Every endpoint must serve the pinned digest.
+        - name: global
+          priority: 100
+          url: https://software.example.com/cat9k_iosxe.17.18.04.SPA.bin
     targetVersion: 17.18.4
     strategy: Reload
     rollbackOnFailure: true
@@ -39,7 +52,7 @@ spec:
       maxConcurrentTransfers: 1
       maxUnavailable: 1
       domains:
-        - topologyKey: topology.cisco.vk/site
+        - topologyKey: distribution.cisco.vk/cache-domain
           maxConcurrentTransfers: 1
         - topologyKey: operations.cisco.vk/redundancy-domain
           maxUnavailable: 1

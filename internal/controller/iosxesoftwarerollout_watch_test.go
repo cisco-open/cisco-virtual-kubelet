@@ -31,6 +31,23 @@ import (
 
 func TestRolloutDependencyIndexesScopeReconciliations(t *testing.T) {
 	first := indexedRollout("lab-a", "rollout-a", "edge-a", "node-a", "source-a")
+	first.Status.FrozenPlan.Targets = append(first.Status.FrozenPlan.Targets,
+		opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+			DeviceName: "edge-b",
+			NodeName:   "node-b",
+			Source:     opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{SecretName: "source-b"},
+		},
+		opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+			DeviceName: "edge-c",
+			NodeName:   "node-c",
+			Source:     opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{SecretName: "source-a"},
+		},
+		opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+			DeviceName: "edge-d",
+			NodeName:   "node-d",
+			Source:     opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{},
+		},
+	)
 	second := indexedRollout("lab-b", "rollout-b", "edge-a", "node-a", "source-a")
 	unplanned := &opsv1alpha1.IOSXESoftwareRollout{ObjectMeta: metav1.ObjectMeta{Namespace: "lab-a", Name: "unplanned"}}
 
@@ -52,10 +69,16 @@ func TestRolloutDependencyIndexesScopeReconciliations(t *testing.T) {
 		reconciler.rolloutRequestsByField(context.Background(), "lab-a", rolloutSourceSecretNameIndex, "source-a"),
 		"lab-a/rollout-a")
 	assertRolloutRequests(t,
+		reconciler.rolloutRequestsByField(context.Background(), "lab-a", rolloutSourceSecretNameIndex, "source-b"),
+		"lab-a/rollout-a")
+	assertRolloutRequests(t,
 		reconciler.rolloutRequestsByField(context.Background(), "", rolloutTargetNodeNameIndex, "node-a"),
 		"lab-a/rollout-a", "lab-b/rollout-b")
 	if requests := reconciler.rolloutRequestsByField(context.Background(), "lab-a", rolloutTargetDeviceNameIndex, ""); len(requests) != 0 {
 		t.Fatalf("empty index value returned requests: %#v", requests)
+	}
+	if got := rolloutSourceSecretNameIndexValues(first); len(got) != 2 || got[0] != "source-a" || got[1] != "source-b" {
+		t.Fatalf("source Secret index values = %v, want sorted unique [source-a source-b]", got)
 	}
 }
 
@@ -100,8 +123,11 @@ func indexedRollout(namespace, name, deviceName, nodeName, secretName string) *o
 		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name},
 		Status: opsv1alpha1.IOSXESoftwareRolloutStatus{
 			FrozenPlan: &opsv1alpha1.IOSXESoftwareRolloutFrozenPlanStatus{
-				Source:  opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{SecretName: secretName},
-				Targets: []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{{DeviceName: deviceName, NodeName: nodeName}},
+				Targets: []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{{
+					DeviceName: deviceName,
+					NodeName:   nodeName,
+					Source:     opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{SecretName: secretName},
+				}},
 			},
 		},
 	}

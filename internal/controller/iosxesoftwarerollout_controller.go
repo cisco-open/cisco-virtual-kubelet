@@ -36,6 +36,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -298,7 +299,7 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 	if err != nil {
 		return nil, nil, err
 	}
-	source, err := r.freezeSource(ctx, rollout)
+	sources, err := r.freezeSources(ctx, rollout, policy)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -316,7 +317,11 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 		if !policy.Selector.Matches(labels.Set(device.Labels)) {
 			return nil, nil, fmt.Errorf("target %s is outside the administrator managed fleet", device.Name)
 		}
-		target, err := r.freezeTarget(ctx, rollout, device, policy, cohorts[device.Name], now)
+		source, err := selectFrozenSource(sources, labels.Set(device.Labels))
+		if err != nil {
+			return nil, nil, fmt.Errorf("target %s image source: %w", device.Name, err)
+		}
+		target, err := r.freezeTarget(ctx, rollout, device, policy, source, cohorts[device.Name], now)
 		if err != nil {
 			return nil, nil, fmt.Errorf("target %s: %w", device.Name, err)
 		}
@@ -337,16 +342,21 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 
 	frozen := &opsv1alpha1.IOSXESoftwareRolloutFrozenPlanStatus{
 		CreatedAt: metav1.NewTime(now), CampaignGeneration: rollout.Generation,
-		Policy: policySnapshot, Source: source, Targets: planned,
+		Policy: policySnapshot, Targets: planned,
 	}
 	canonical := struct {
 		CampaignUID string                                          `json:"campaignUID"`
 		Generation  int64                                           `json:"generation"`
 		Plan        opsv1alpha1.IOSXESoftwareRolloutPlan            `json:"plan"`
 		Policy      opsv1alpha1.IOSXESoftwareRolloutPolicySnapshot  `json:"policy"`
-		Source      opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot  `json:"source"`
 		Targets     []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget `json:"targets"`
-	}{string(rollout.UID), rollout.Generation, rollout.Spec.Plan, policySnapshot, source, planned}
+	}{
+		CampaignUID: string(rollout.UID),
+		Generation:  rollout.Generation,
+		Plan:        rollout.Spec.Plan,
+		Policy:      policySnapshot,
+		Targets:     planned,
+	}
 	encoded, err := json.Marshal(canonical)
 	if err != nil {
 		return nil, nil, fmt.Errorf("encode frozen plan: %w", err)
@@ -360,22 +370,185 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 	return frozen, summaries, nil
 }
 
-func (r *IOSXESoftwareRolloutReconciler) freezeSource(ctx context.Context, rollout *opsv1alpha1.IOSXESoftwareRollout) (opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot, error) {
-	source := rollout.Spec.Plan.Source
-	parsed, err := url.Parse(source.URL)
-	if err != nil || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.Hostname() == "" {
-		return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, fmt.Errorf("source URL must be an absolute credential-free URL without query or fragment")
+type rolloutSourceCandidate struct {
+	spec     opsv1alpha1.IOSXESoftwareRolloutSourceSpec
+	selector labels.Selector
+	catchAll bool
+}
+
+type frozenRolloutSource struct {
+	rolloutSourceCandidate
+	snapshot opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot
+}
+
+func (r *IOSXESoftwareRolloutReconciler) freezeSources(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	policy *topologyrollout.ParsedAdminPolicy,
+) ([]frozenRolloutSource, error) {
+	if rollout == nil || policy == nil {
+		return nil, fmt.Errorf("image source planning inputs are incomplete")
 	}
-	if parsed.Scheme != "https" && parsed.Scheme != "sftp" {
-		return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, fmt.Errorf("source scheme %q is not supported", parsed.Scheme)
+	image := rollout.Spec.Plan.Image
+	candidates, err := compileRolloutSources(image, policy.Config.RequiredTopologyKeys)
+	if err != nil {
+		return nil, err
 	}
-	snapshot := opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{URL: source.URL, SHA256: source.SHA256}
+	result := make([]frozenRolloutSource, 0, len(candidates))
+	for i := range candidates {
+		candidate := candidates[i]
+		snapshot, err := r.freezeSource(ctx, rollout.Namespace, image, candidate.spec)
+		if err != nil {
+			return nil, fmt.Errorf("image source %q: %w", candidate.spec.Name, err)
+		}
+		result = append(result, frozenRolloutSource{rolloutSourceCandidate: candidate, snapshot: snapshot})
+	}
+	return result, nil
+}
+
+func compileRolloutSources(
+	image opsv1alpha1.IOSXESoftwareRolloutImageSpec,
+	requiredTopologyKeys []string,
+) ([]rolloutSourceCandidate, error) {
+	if len(image.SHA256) != 64 || strings.ToLower(image.SHA256) != image.SHA256 {
+		return nil, fmt.Errorf("image SHA256 must be 64 lowercase hexadecimal characters")
+	}
+	if _, err := hex.DecodeString(image.SHA256); err != nil {
+		return nil, fmt.Errorf("image SHA256 must be 64 lowercase hexadecimal characters")
+	}
+	if image.ImageFamily == "" {
+		return nil, fmt.Errorf("image family is required")
+	}
+	if problems := utilvalidation.IsValidLabelValue(image.ImageFamily); len(problems) > 0 {
+		return nil, fmt.Errorf("image family %q is invalid: %s", image.ImageFamily, strings.Join(problems, "; "))
+	}
+	if len(image.Sources) == 0 || len(image.Sources) > 16 {
+		return nil, fmt.Errorf("image sources must contain between 1 and 16 entries")
+	}
+	requiredKeys := make(map[string]struct{}, len(requiredTopologyKeys))
+	for _, key := range requiredTopologyKeys {
+		requiredKeys[key] = struct{}{}
+	}
+	seenNames := make(map[string]struct{}, len(image.Sources))
+	result := make([]rolloutSourceCandidate, 0, len(image.Sources))
+	catchAllCount := 0
+	for i := range image.Sources {
+		source := image.Sources[i]
+		if problems := utilvalidation.IsDNS1123Label(source.Name); len(problems) > 0 {
+			return nil, fmt.Errorf("image source %d has invalid name %q: %s", i, source.Name, strings.Join(problems, "; "))
+		}
+		if _, duplicate := seenNames[source.Name]; duplicate {
+			return nil, fmt.Errorf("image source name %q is duplicated", source.Name)
+		}
+		seenNames[source.Name] = struct{}{}
+		if source.Priority < 0 || source.Priority > 10000 {
+			return nil, fmt.Errorf("image source %q priority must be between 0 and 10000", source.Name)
+		}
+		selectorSpec := metav1.LabelSelector{}
+		if source.DeviceSelector != nil {
+			selectorSpec = source.DeviceSelector.AsLabelSelector()
+			for _, key := range rolloutSourceSelectorKeys(*source.DeviceSelector) {
+				if _, allowed := requiredKeys[key]; !allowed {
+					return nil, fmt.Errorf("image source %q selector key %q is not an administrator-required topology key", source.Name, key)
+				}
+			}
+		}
+		selector, err := metav1.LabelSelectorAsSelector(&selectorSpec)
+		if err != nil {
+			return nil, fmt.Errorf("image source %q selector: %w", source.Name, err)
+		}
+		catchAll := selector.Empty()
+		if catchAll {
+			catchAllCount++
+		}
+		result = append(result, rolloutSourceCandidate{spec: source, selector: selector, catchAll: catchAll})
+	}
+	if catchAllCount != 1 {
+		return nil, fmt.Errorf("image sources require exactly one unscoped catch-all; found %d", catchAllCount)
+	}
+	return result, nil
+}
+
+func rolloutSourceSelectorKeys(selector opsv1alpha1.IOSXESoftwareRolloutLabelSelector) []string {
+	keys := make(map[string]struct{}, len(selector.MatchLabels)+len(selector.MatchExpressions))
+	for key := range selector.MatchLabels {
+		keys[key] = struct{}{}
+	}
+	for i := range selector.MatchExpressions {
+		keys[selector.MatchExpressions[i].Key] = struct{}{}
+	}
+	result := make([]string, 0, len(keys))
+	for key := range keys {
+		result = append(result, key)
+	}
+	sort.Strings(result)
+	return result
+}
+
+func selectFrozenSource(sources []frozenRolloutSource, deviceLabels labels.Set) (opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot, error) {
+	candidates := make([]rolloutSourceCandidate, len(sources))
+	for i := range sources {
+		candidates[i] = sources[i].rolloutSourceCandidate
+	}
+	selected, err := selectRolloutSourceIndex(candidates, deviceLabels)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, err
+	}
+	return sources[selected].snapshot, nil
+}
+
+func selectRolloutSourceIndex(sources []rolloutSourceCandidate, deviceLabels labels.Set) (int, error) {
+	fallback := -1
+	selected := -1
+	priorities := make(map[int32]string, len(sources))
+	for i := range sources {
+		source := &sources[i]
+		if source.catchAll {
+			if fallback >= 0 {
+				return -1, fmt.Errorf("multiple catch-all sources are configured")
+			}
+			fallback = i
+			continue
+		}
+		if !source.selector.Matches(deviceLabels) {
+			continue
+		}
+		if prior, duplicate := priorities[source.spec.Priority]; duplicate {
+			return -1, fmt.Errorf("matching sources %q and %q have equal priority %d", prior, source.spec.Name, source.spec.Priority)
+		}
+		priorities[source.spec.Priority] = source.spec.Name
+		if selected < 0 || source.spec.Priority < sources[selected].spec.Priority {
+			selected = i
+		}
+	}
+	if selected >= 0 {
+		return selected, nil
+	}
+	if fallback < 0 {
+		return -1, fmt.Errorf("no matching source and no catch-all source")
+	}
+	return fallback, nil
+}
+
+func (r *IOSXESoftwareRolloutReconciler) freezeSource(
+	ctx context.Context,
+	namespace string,
+	image opsv1alpha1.IOSXESoftwareRolloutImageSpec,
+	source opsv1alpha1.IOSXESoftwareRolloutSourceSpec,
+) (opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot, error) {
+	parsed, err := parseRolloutSourceURL(source.URL)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, err
+	}
+	snapshot := opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{
+		Name: source.Name, Priority: source.Priority, URL: source.URL, SHA256: image.SHA256,
+	}
 	if parsed.Scheme == "sftp" {
 		if source.URLSecretRef == nil || source.URLSecretRef.Name == "" {
 			return snapshot, fmt.Errorf("SFTP source requires an endpoint-bound Secret")
 		}
 		var secret corev1.Secret
-		if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: source.URLSecretRef.Name}, &secret); err != nil {
+		if err := r.reader().Get(ctx, types.NamespacedName{Namespace: namespace, Name: source.URLSecretRef.Name}, &secret); err != nil {
 			return snapshot, fmt.Errorf("read source Secret: %w", err)
 		}
 		if secret.UID == "" {
@@ -392,11 +565,27 @@ func (r *IOSXESoftwareRolloutReconciler) freezeSource(ctx context.Context, rollo
 	return snapshot, nil
 }
 
+func parseRolloutSourceURL(rawURL string) (*url.URL, error) {
+	if len(rawURL) == 0 || len(rawURL) > 2048 {
+		return nil, fmt.Errorf("source URL length is invalid")
+	}
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.User != nil || parsed.RawQuery != "" || parsed.ForceQuery || parsed.Fragment != "" ||
+		parsed.Hostname() == "" || parsed.Path == "" || parsed.Path == "/" {
+		return nil, fmt.Errorf("source URL must be an absolute credential-free image URL without query or fragment")
+	}
+	if parsed.Scheme != "https" && parsed.Scheme != "sftp" {
+		return nil, fmt.Errorf("source scheme %q is not supported", parsed.Scheme)
+	}
+	return parsed, nil
+}
+
 func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	ctx context.Context,
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
 	device *ciskov1.CiscoDevice,
 	policy *topologyrollout.ParsedAdminPolicy,
+	source opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot,
 	cohort string,
 	now time.Time,
 ) (opsv1alpha1.IOSXESoftwareRolloutPlannedTarget, error) {
@@ -468,8 +657,8 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
-	if device.Labels[managedprotocol.ImageFamilyLabel] != rollout.Spec.Plan.Source.ImageFamily {
-		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("%s must equal source imageFamily %q", managedprotocol.ImageFamilyLabel, rollout.Spec.Plan.Source.ImageFamily)
+	if device.Labels[managedprotocol.ImageFamilyLabel] != rollout.Spec.Plan.Image.ImageFamily {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("%s must equal imageFamily %q", managedprotocol.ImageFamilyLabel, rollout.Spec.Plan.Image.ImageFamily)
 	}
 	qualificationCohort := strings.TrimSpace(device.Labels[managedprotocol.QualificationCohortLabel])
 	if qualificationCohort == "" {
@@ -492,7 +681,7 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		DeviceName: device.Name, DeviceUID: string(device.UID), DeviceGeneration: device.Generation,
 		PhysicalIdentity: physicalID,
 		NodeName:         identity.NodeName, NodeUID: identity.NodeUID, Driver: string(device.Spec.Driver),
-		ImageFamily: rollout.Spec.Plan.Source.ImageFamily, QualificationCohort: qualificationCohort,
+		ImageFamily: rollout.Spec.Plan.Image.ImageFamily, Source: source, QualificationCohort: qualificationCohort,
 		WorkerProtocolVersion: managedprotocol.Version,
 		ProjectionHash:        device.Status.TopologyProjection.EffectiveLabelHash, Topology: topologyValues,
 		CanaryCohort: cohort, Wave: wave, ChildName: rolloutChildName(rollout, device),
