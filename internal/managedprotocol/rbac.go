@@ -78,6 +78,7 @@ func WorkerClusterRoleContracts() map[string][]rbacv1.PolicyRule {
 		},
 		NetworkManagementReadWriteClusterRole: {
 			policyRule([]string{"cisco.vk"}, []string{"ciscodevices"}, "get", "list", "watch"),
+			policyRule([]string{"cisco.vk"}, []string{"ciscodevices/status"}, "get", "update", "patch"),
 			policyRule([]string{"config.cisco.vk"}, []string{"iosxedevicegroupconfigs", "iosxeinterfacegroupconfigs", "iosxetemplates"}, "get", "list", "watch"),
 			policyRule([]string{"config.cisco.vk"}, []string{"iosxeconfigs", "nxosconfigs", "iosxetelemetries", "iosxediagnostics"}, "get", "list", "watch", "update", "patch"),
 			policyRule([]string{"config.cisco.vk"}, []string{"iosxeconfigs/status", "nxosconfigs/status", "iosxetelemetries/status", "iosxediagnostics/status"}, "get", "update", "patch"),
