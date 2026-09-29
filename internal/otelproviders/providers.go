@@ -511,7 +511,7 @@ func logPayloadBytes(records []sdklog.Record) int {
 	for i := range records {
 		record := records[i]
 		size += len(record.EventName()) + len(record.SeverityText()) + len(record.Body().String()) + 64
-		record.WalkAttributes(func(kv otellog.KeyValue) bool {
+		record.WalkAttributes(func(kv attribute.KeyValue) bool {
 			size += len(kv.Key) + len(kv.Value.String())
 			return true
 		})
