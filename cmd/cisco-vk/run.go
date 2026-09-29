@@ -797,6 +797,12 @@ func runNetworkManagementRuntime(
 		return fmt.Errorf("configure device app inventory for network-management safety checks: %w", err)
 	}
 	opts.DevicePodLister, opts.DrainDevicePodLister = devicePodInventoryListers(inventoryDriver)
+	if topologyProvider, ok := inventoryDriver.(drivers.TopologyProvider); ok {
+		// The dedicated network worker already owns this driver connection for
+		// read-only inventory checks. Reuse it for the bounded observation
+		// publisher; no app-hosting worker or extra ServiceAccount is involved.
+		opts.NetworkObservationProvider = topologyProvider
+	}
 	managerLifecycle := newConfigManagerLifecycle()
 	opts.ManagerLifecycle = managerLifecycle
 

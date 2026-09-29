@@ -684,11 +684,15 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 	rollback := rollout.Spec.Plan.RollbackOnFailure == nil || *rollout.Spec.Plan.RollbackOnFailure
 	// Materialize deprecated compatibility defaults so the generated spec
 	// remains exactly equal after an API-server round trip.
+	strategy := opsv1alpha1.UpgradeStrategyReload
+	if rollout.Spec.Plan.Strategy == opsv1alpha1.IOSXESoftwareRolloutStrategyNoReboot {
+		strategy = opsv1alpha1.UpgradeStrategyNoReboot
+	}
 	return opsv1alpha1.IOSXESoftwareUpgradeSpec{
 		DeviceRef:             configv1alpha1.DeviceRef{Name: target.DeviceName},
 		ImageSource:           imageSource,
 		TargetVersion:         rollout.Spec.Plan.TargetVersion,
-		Strategy:              opsv1alpha1.UpgradeStrategyReload,
+		Strategy:              strategy,
 		RollbackOnFailure:     &rollback,
 		MaintenanceWindow:     rollout.Spec.Plan.MaintenanceWindow.DeepCopy(),
 		ResumePolicy:          "Retry",

@@ -48,6 +48,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
 
@@ -669,6 +670,12 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
+	if networkPolicy := rollout.Spec.Plan.Health.Network; networkPolicy != nil && networkPolicy.Enabled {
+		decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalID, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
+		if !decision.Allowed {
+			return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("network health gate %s: %s", decision.Reason, decision.Message)
+		}
+	}
 	if device.Labels[managedprotocol.ImageFamilyLabel] != rollout.Spec.Plan.Image.ImageFamily {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("%s must equal imageFamily %q", managedprotocol.ImageFamilyLabel, rollout.Spec.Plan.Image.ImageFamily)
 	}
@@ -698,6 +705,57 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		ProjectionHash:        device.Status.TopologyProjection.EffectiveLabelHash, Topology: topologyValues,
 		CanaryCohort: cohort, Wave: wave, ChildName: rolloutChildName(rollout, device),
 	}, nil
+}
+
+func evaluateNetworkHealth(
+	health *ciskov1.DeviceHealthObservationStatus,
+	physicalIdentity string,
+	now time.Time,
+	maxAge time.Duration,
+	policy *opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec,
+) topologyhealth.Decision {
+	if health == nil || health.Network == nil {
+		return topologyhealth.Decision{Reason: "EvidenceMissing", Message: "network worker has not published an observation"}
+	}
+	observation := topologyhealth.Observation{
+		ObservedAt:         health.Network.ObservedAt.Time,
+		Complete:           health.Network.Complete,
+		UnknownReason:      health.Network.UnknownReason,
+		ProducerRevision:   health.Network.ProducerRevision,
+		DeviceIdentityHash: health.Network.DeviceIdentityHash,
+	}
+	for _, item := range health.Network.Interfaces {
+		var headroom *float64
+		if item.HeadroomPercent != nil {
+			value := float64(*item.HeadroomPercent)
+			headroom = &value
+		}
+		observation.Interfaces = append(observation.Interfaces, topologyhealth.InterfaceObservation{
+			Name: item.Name, OperUp: item.OperUp, HeadroomPct: headroom,
+		})
+	}
+	for _, item := range health.Network.Neighbors {
+		observation.Neighbors = append(observation.Neighbors, topologyhealth.NeighborObservation{
+			ID: item.ID, State: item.State, Source: item.Source,
+		})
+	}
+	var minimumHeadroom *float64
+	if policy.MinimumHeadroomPercent != nil {
+		value := float64(*policy.MinimumHeadroomPercent)
+		minimumHeadroom = &value
+	}
+	return topologyhealth.Evaluate(now, observation, topologyhealth.Policy{
+		MaxAge: maxAge, RequiredInterfaces: policy.RequiredInterfaces,
+		RequiredNeighbors: policy.RequiredNeighbors, RequireInterfacesUp: policy.RequireInterfacesUp,
+		RequireNeighborsFull: policy.RequireNeighborsFull, MinimumHeadroomPercent: minimumHeadroom,
+		RequireCompleteEvidence:    policy.RequireCompleteEvidence,
+		ExpectedDeviceIdentityHash: identityHashForPhysicalID(physicalIdentity),
+	})
+}
+
+func identityHashForPhysicalID(physicalIdentity string) string {
+	digest := sha256.Sum256([]byte(physicalIdentity))
+	return "sha256:" + hex.EncodeToString(digest[:])
 }
 
 func hasTopologyInitializationGuard(node *corev1.Node) bool {

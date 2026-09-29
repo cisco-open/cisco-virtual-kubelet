@@ -46,6 +46,7 @@ nav:
 - Getting Started: 'getting-started.md'
 - Architecture: 'ARCHITECTURE.md'
 - Managed Topology and Rollouts: 'topology-awareness.md'
+- Topology Roadmap: 'topology-roadmap.md'
 - Network Controller Extensions: 'controller-extension-guide.md'
 - CLI Reference: 'cisco-vk-cli.md'
 - Configuration:

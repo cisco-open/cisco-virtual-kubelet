@@ -251,6 +251,11 @@ rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
+  # The network worker may publish only its bounded status observation. The
+  # admission policy below rejects every other status-field mutation.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices/status"]
+    verbs: ["get", "update", "patch"]
   - apiGroups: ["config.cisco.vk"]
     resources:
       - iosxedevicegroupconfigs

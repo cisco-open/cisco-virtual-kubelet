@@ -116,10 +116,14 @@ type IOSXESoftwareRolloutPlan struct {
 	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)+([a-z])?$`
 	TargetVersion string `json:"targetVersion"`
 
-	// Strategy is Reload for the Phase 2 MVP. ISSU and NoReboot do not expose
-	// the durable stage/activate boundary required by this campaign contract.
+	// Strategy controls the leaf activation behavior. Reload preserves the
+	// existing combined install/activate flow. NoReboot is an explicitly
+	// qualified preparation mode: the leaf records a staged-for-next-boot
+	// receipt and never performs a reboot. It remains terminal until a future
+	// activation-approval protocol is added; it does not silently authorize a
+	// later activation.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=Reload
+	// +kubebuilder:validation:Enum=Reload;NoReboot
 	// +kubebuilder:default=Reload
 	Strategy IOSXESoftwareRolloutStrategy `json:"strategy,omitempty"`
 
@@ -184,11 +188,12 @@ type IOSXESoftwareRolloutPlan struct {
 
 // IOSXESoftwareRolloutStrategy is intentionally IOS-XE- and MVP-specific.
 //
-// +kubebuilder:validation:Enum=Reload
+// +kubebuilder:validation:Enum=Reload;NoReboot
 type IOSXESoftwareRolloutStrategy string
 
 const (
-	IOSXESoftwareRolloutStrategyReload IOSXESoftwareRolloutStrategy = "Reload"
+	IOSXESoftwareRolloutStrategyReload   IOSXESoftwareRolloutStrategy = "Reload"
+	IOSXESoftwareRolloutStrategyNoReboot IOSXESoftwareRolloutStrategy = "NoReboot"
 )
 
 // IOSXESoftwareRolloutLabelSelector preserves the Kubernetes LabelSelector
@@ -525,6 +530,39 @@ type IOSXESoftwareRolloutHealthSpec struct {
 	// +kubebuilder:validation:Maximum=604800
 	// +kubebuilder:default=300
 	WaveSoakSeconds int32 `json:"waveSoakSeconds,omitempty"`
+
+	// Network enables explicit network-management evidence gates. It is nil by
+	// default so existing rollout objects retain their current behavior.
+	// +kubebuilder:validation:Optional
+	Network *IOSXESoftwareRolloutNetworkHealthSpec `json:"network,omitempty"`
+}
+
+// IOSXESoftwareRolloutNetworkHealthSpec selects bounded, read-only evidence
+// required before a target can enter device-disruptive work. The manager must
+// have a current DeviceHealthObservationStatus.Network for every target when
+// this gate is enabled.
+type IOSXESoftwareRolloutNetworkHealthSpec struct {
+	// +kubebuilder:validation:Required
+	Enabled bool `json:"enabled"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	RequireCompleteEvidence bool `json:"requireCompleteEvidence,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	// +listType=set
+	RequiredInterfaces []string `json:"requiredInterfaces,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	// +listType=set
+	RequiredNeighbors []string `json:"requiredNeighbors,omitempty"`
+	// +kubebuilder:validation:Optional
+	RequireInterfacesUp bool `json:"requireInterfacesUp,omitempty"`
+	// +kubebuilder:validation:Optional
+	RequireNeighborsFull bool `json:"requireNeighborsFull,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	MinimumHeadroomPercent *int32 `json:"minimumHeadroomPercent,omitempty"`
 }
 
 // IOSXESoftwareRolloutApproval is append-only authorization for one exact

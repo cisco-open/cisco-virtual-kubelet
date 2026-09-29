@@ -607,6 +607,86 @@ type DeviceHealthObservationStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	ConditionObservations []DeviceConditionObservationStatus `json:"conditionObservations,omitempty"`
+
+	// Network is an optional bounded observation from the network-management
+	// worker. It is evidence only; rollout admission applies its own freshness
+	// and policy checks and never treats an absent observation as healthy.
+	// +kubebuilder:validation:Optional
+	Network *DeviceNetworkObservationStatus `json:"network,omitempty"`
+}
+
+// DeviceNetworkObservationStatus is a compact, manager-authenticated summary
+// of topology and path-health evidence. Full device output stays in telemetry
+// or diagnostic result sinks; status carries only the bounded inputs needed by
+// an explicitly opted-in rollout gate.
+//
+// +kubebuilder:validation:XValidation:rule="self.complete || has(self.unknownReason)",message="incomplete network evidence requires an unknown reason"
+type DeviceNetworkObservationStatus struct {
+	// ObservedAt is the worker collection time, validated by the manager.
+	// +kubebuilder:validation:Required
+	ObservedAt metav1.Time `json:"observedAt"`
+
+	// Complete is false when any required source was unavailable or partial.
+	// +kubebuilder:validation:Required
+	Complete bool `json:"complete"`
+
+	// UnknownReason explains why Complete is false without including device
+	// output or credentials.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=256
+	UnknownReason string `json:"unknownReason,omitempty"`
+
+	// ProducerRevision identifies the current network worker incarnation.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	ProducerRevision string `json:"producerRevision"`
+
+	// DeviceIdentityHash binds the observation to the manager's physical-device
+	// identity without copying raw inventory into status.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	DeviceIdentityHash string `json:"deviceIdentityHash"`
+
+	// Interfaces and Neighbors are bounded and sorted by the manager before
+	// persistence. Duplicate identities are rejected during validation.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=64
+	// +listType=map
+	// +listMapKey=name
+	Interfaces []DeviceNetworkInterfaceObservation `json:"interfaces,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=64
+	// +listType=map
+	// +listMapKey=id
+	Neighbors []DeviceNetworkNeighborObservation `json:"neighbors,omitempty"`
+}
+
+type DeviceNetworkInterfaceObservation struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	Name string `json:"name"`
+	// +kubebuilder:validation:Required
+	OperUp bool `json:"operUp"`
+	// HeadroomPercent is omitted when the driver cannot provide a trustworthy
+	// sample; zero is therefore a real measured value, not Unknown.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	HeadroomPercent *int32 `json:"headroomPercent,omitempty"`
+}
+
+type DeviceNetworkNeighborObservation struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	ID string `json:"id"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=32
+	State string `json:"state"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=32
+	Source string `json:"source,omitempty"`
 }
 
 // DeviceWorkerRevisionStatus is manager-authenticated evidence that the

@@ -54,6 +54,7 @@ import (
 
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
@@ -130,6 +131,9 @@ type configReconcilerOptions struct {
 	// DrainDevicePodLister is present only when the platform driver can prove a
 	// complete inventory for destructive drain. It must fail on partial reads.
 	DrainDevicePodLister func(context.Context) ([]*corev1.Pod, error)
+	// NetworkObservationProvider is supplied only by the network-management
+	// worker. App-hosting workers never receive this status-write capability.
+	NetworkObservationProvider drivers.TopologyProvider
 	// ManagerLifecycle is set only by a dedicated network-management worker.
 	// It gates Pod readiness on cache/controller startup and turns an unexpected
 	// controller-runtime manager exit into a process failure. The standalone
@@ -704,6 +708,11 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	}
 	if err := telemetryReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("telemetry SetupWithManager: %w", err)
+	}
+	if opts.ManagedTopology && !opts.ReadOnly && opts.NetworkObservationProvider != nil {
+		go provider.RunNetworkObservationPublisher(ctx, mgr.GetClient(), client.ObjectKey{
+			Namespace: opts.DeviceNamespace, Name: deviceName,
+		}, types.UID(opts.DeviceUID), opts.Spec.PhysicalIdentity, opts.WorkerRevision, opts.NetworkObservationProvider)
 	}
 
 	// Diagnostics-RFC Phase C: HTTP admin endpoint for ad-hoc

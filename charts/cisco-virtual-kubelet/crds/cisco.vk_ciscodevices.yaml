@@ -853,6 +853,97 @@ spec:
                       including their status, reason, generation, transition time, and message.
                     pattern: ^sha256:[a-f0-9]{64}$
                     type: string
+                  network:
+                    description: |-
+                      Network is an optional bounded observation from the network-management
+                      worker. It is evidence only; rollout admission applies its own freshness
+                      and policy checks and never treats an absent observation as healthy.
+                    properties:
+                      complete:
+                        description: Complete is false when any required source was
+                          unavailable or partial.
+                        type: boolean
+                      deviceIdentityHash:
+                        description: |-
+                          DeviceIdentityHash binds the observation to the manager's physical-device
+                          identity without copying raw inventory into status.
+                        pattern: ^sha256:[a-f0-9]{64}$
+                        type: string
+                      interfaces:
+                        description: |-
+                          Interfaces and Neighbors are bounded and sorted by the manager before
+                          persistence. Duplicate identities are rejected during validation.
+                        items:
+                          properties:
+                            headroomPercent:
+                              description: |-
+                                HeadroomPercent is omitted when the driver cannot provide a trustworthy
+                                sample; zero is therefore a real measured value, not Unknown.
+                              format: int32
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                            name:
+                              maxLength: 128
+                              type: string
+                            operUp:
+                              type: boolean
+                          required:
+                          - name
+                          - operUp
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      neighbors:
+                        items:
+                          properties:
+                            id:
+                              maxLength: 128
+                              type: string
+                            source:
+                              maxLength: 32
+                              type: string
+                            state:
+                              maxLength: 32
+                              type: string
+                          required:
+                          - id
+                          - state
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - id
+                        x-kubernetes-list-type: map
+                      observedAt:
+                        description: ObservedAt is the worker collection time, validated
+                          by the manager.
+                        format: date-time
+                        type: string
+                      producerRevision:
+                        description: ProducerRevision identifies the current network
+                          worker incarnation.
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                      unknownReason:
+                        description: |-
+                          UnknownReason explains why Complete is false without including device
+                          output or credentials.
+                        maxLength: 256
+                        type: string
+                    required:
+                    - complete
+                    - deviceIdentityHash
+                    - observedAt
+                    - producerRevision
+                    type: object
+                    x-kubernetes-validations:
+                    - message: incomplete network evidence requires an unknown reason
+                      rule: self.complete || has(self.unknownReason)
                   nodeReadyHeartbeatTime:
                     description: |-
                       NodeReadyHeartbeatTime is the bound worker's Ready heartbeat in the

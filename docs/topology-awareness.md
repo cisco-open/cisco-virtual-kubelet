@@ -1738,6 +1738,38 @@ switches are not evidence of real multi-site fault tolerance.
 
 ## Deferred roadmap and limitations
 
+The [remaining implementation roadmap](topology-roadmap.md) maps these gaps
+to PR slices, ownership boundaries, dependencies and qualification gates. This
+branch adds the first T1/T2 bounded-evidence slice and an explicit NoReboot
+preparation mapping; it does not claim a discovered graph, hitless activation,
+or independent stage/approval/activate semantics.
+
+To opt into the network gate, require complete evidence and name the exact
+interfaces and adjacencies that must be healthy:
+
+```yaml
+spec:
+  plan:
+    strategy: Reload # or NoReboot for preparation-only behavior
+    health:
+      network:
+        enabled: true
+        requireCompleteEvidence: true
+        requiredInterfaces: [GigabitEthernet1/0/1]
+        requiredNeighbors: [core-a]
+        requireInterfacesUp: true
+        requireNeighborsFull: true
+```
+
+The network-management worker publishes only a bounded summary under
+`CiscoDevice.status.healthObservation.network`; it does not publish raw CLI,
+credentials, or arbitrary topology. The manager verifies freshness, source
+completeness, physical-identity binding, duplicate-free evidence and the
+requested interface/neighbor checks immediately before admission. Missing or
+stale evidence blocks the rollout with a reason such as `EvidenceStale`,
+`AlternatePathUnavailable`, or `DeviceIdentityMismatch`. The gate is nil by
+default, so existing campaigns retain their behavior.
+
 The following are intentionally not implemented in the current phases:
 
 - durable prefetch, shared/PVC cache, independent transfer-only admission, or

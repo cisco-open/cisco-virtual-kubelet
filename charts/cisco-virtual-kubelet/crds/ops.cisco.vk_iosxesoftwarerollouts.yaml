@@ -278,6 +278,40 @@ spec:
                         maximum: 86400
                         minimum: 30
                         type: integer
+                      network:
+                        description: |-
+                          Network enables explicit network-management evidence gates. It is nil by
+                          default so existing rollout objects retain their current behavior.
+                        properties:
+                          enabled:
+                            type: boolean
+                          minimumHeadroomPercent:
+                            format: int32
+                            maximum: 100
+                            minimum: 0
+                            type: integer
+                          requireCompleteEvidence:
+                            default: true
+                            type: boolean
+                          requireInterfacesUp:
+                            type: boolean
+                          requireNeighborsFull:
+                            type: boolean
+                          requiredInterfaces:
+                            items:
+                              type: string
+                            maxItems: 32
+                            type: array
+                            x-kubernetes-list-type: set
+                          requiredNeighbors:
+                            items:
+                              type: string
+                            maxItems: 32
+                            type: array
+                            x-kubernetes-list-type: set
+                        required:
+                        - enabled
+                        type: object
                       waveSoakSeconds:
                         default: 300
                         description: |-
@@ -523,12 +557,14 @@ spec:
                     allOf:
                     - enum:
                       - Reload
+                      - NoReboot
                     - enum:
                       - Reload
+                      - NoReboot
                     default: Reload
                     description: |-
-                      Strategy is Reload for the Phase 2 MVP. ISSU and NoReboot do not expose
-                      the durable stage/activate boundary required by this campaign contract.
+                      Strategy controls activation. Reload performs the existing combined flow;
+                      NoReboot records qualified preparation without rebooting.
                     type: string
                   targetVersion:
                     description: TargetVersion is the IOS-XE version accepted by the
