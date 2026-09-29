@@ -19,6 +19,19 @@ this review. This plan reconstructs the remaining scope from the checked-in
 [October release scope](releases/v2026.10.0.md), and the implementation. It
 supersedes neither the current runtime contract nor release qualification.
 
+### Execution status for this branch
+
+| Slice | Status at `dec4bc69` | Evidence or boundary |
+| --- | --- | --- |
+| T0 | Read-only baseline complete; lifecycle qualification blocked | Capability and health evidence is retained in `/tmp/cvk-tas-extentions-physical-evidence/`; no image mutation was attempted because the cohort had only the running 17.18.02 image available for this run. |
+| T1 | Complete for bounded IOS-XE observations | Fresh, complete interface/CDP summaries were published for `198.51.100.100`, `.101`, and `.103`; secure gNOI `OS.Verify` and five read-only CLI probes succeeded. |
+| T2 | Implemented and negatively qualified for the current gate set | A live rollout requiring the down `GigabitEthernet1/0/24` was rejected before an upgrade leaf was created. The broader redundant-path, congestion and critical-service matrix remains unqualified. |
+| T3–T10 | Not complete | These slices require new durable APIs, lifecycle/cache/graph/scale implementations and their own physical or platform qualification. They are intentionally not represented as enabled behavior in this branch. |
+
+This distinction is deliberate: a healthy observation stream and a passing
+API dry run do not prove safe image staging, activation, hitless forwarding,
+cache recovery, workload relocation, or cross-platform lifecycle support.
+
 ## 1. Baseline and remaining scope
 
 | Area | Implemented at this baseline | Remaining work |
