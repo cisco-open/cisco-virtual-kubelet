@@ -140,11 +140,15 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 		}
 		return ctrl.Result{RequeueAfter: time.Second}, nil
 	}
-	// Successful and cancelled campaigns have no retained safety work left.
-	// Preserve their immutable audit result across later policy or source
-	// changes; deletion still runs through the finalizer path above.
+	// Successful and cancelled campaigns have no admission work left. Preserve
+	// their immutable audit result across later policy or source changes, while
+	// replaying the narrow exact-Pod cleanup needed to repair a stale Preparing
+	// writer. Deletion still runs through the finalizer path above.
 	if rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded ||
 		rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled {
+		if err := r.reconcileTerminalDrainProtection(ctx, &rollout); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 	// Pause and cancellation are claim fences, so propagate them before any
@@ -152,7 +156,8 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 	// image Secret). Settlement can wait for those dependencies; revocation of
 	// future device mutations cannot.
 	if rollout.Status.FrozenPlan != nil && (rollout.Spec.Control.Pause || rollout.Spec.Control.Cancel) {
-		if err := r.propagateControl(ctx, &rollout, rollout.Spec.Control.Pause, rollout.Spec.Control.Cancel, now); err != nil {
+		if err := r.propagateControl(ctx, &rollout,
+			rollout.Spec.Control.Pause && !rollout.Spec.Control.Cancel, rollout.Spec.Control.Cancel, now); err != nil {
 			return ctrl.Result{}, err
 		}
 		if rollout.Spec.Control.Cancel {
@@ -222,6 +227,13 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 		return result, err
 	}
 
+	// Cancellation is terminal and does not require approval of executable
+	// intent. The pre-dependency fence above has already denied every future
+	// claim; finish reservation and retained-leaf settlement before the ordinary
+	// approval gate can return the campaign to AwaitingApproval.
+	if rollout.Spec.Control.Cancel {
+		return r.reconcileCancellation(ctx, &rollout, policy, now)
+	}
 	if rollout.Spec.Approval == nil {
 		return r.updateRolloutSummary(ctx, &rollout, opsv1alpha1.IOSXESoftwareRolloutPhaseAwaitingApproval,
 			"waiting for approval of "+rollout.Status.FrozenPlan.Hash, now)
@@ -238,9 +250,6 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
-	if rollout.Spec.Control.Cancel {
-		return r.reconcileCancellation(ctx, &rollout, policy, now)
-	}
 	if rollout.Spec.Control.Pause {
 		if err := r.propagateControl(ctx, &rollout, true, false, now); err != nil {
 			return ctrl.Result{}, err
@@ -264,6 +273,9 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 	if control.Revision != 0 || control.Pause || control.Cancel || control.RequestedBy != "" ||
 		control.RequestedAt != nil || control.Reason != "" {
 		return nil, nil, fmt.Errorf("a rollout must be created with neutral control revision zero before planning")
+	}
+	if err := policy.ValidateWorkloadPolicy(rollout.Spec.Plan.Workloads); err != nil {
+		return nil, nil, fmt.Errorf("workload policy: %w", err)
 	}
 	selectorSpec := rollout.Spec.Plan.Targets.Selector.AsLabelSelector()
 	selector, err := metav1.LabelSelectorAsSelector(&selectorSpec)
@@ -867,7 +879,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		return r.failRollout(ctx, rollout, "PolicyChangedIncompatibly", err.Error(), false)
 	}
 	if err := r.verifyFrozenSource(ctx, rollout); err != nil {
-		return r.reconcileSourceChanged(ctx, rollout, err.Error(), now)
+		return r.reconcileSourceChanged(ctx, rollout, currentPolicy, err.Error(), now)
 	}
 
 	children, err := r.rolloutChildren(ctx, rollout)
@@ -888,7 +900,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		// failures at each claim, and every manager admission path does the same,
 		// so a crash anywhere in this multi-object fence cannot authorize a new
 		// device mutation.
-		if err := r.ensureFailureFences(ctx, rollout, children, now); err != nil {
+		if err := r.ensureFailureFences(ctx, rollout, currentPolicy, children, now); err != nil {
 			return ctrl.Result{RequeueAfter: rolloutPollInterval}, err
 		}
 		children, err = r.rolloutChildren(ctx, rollout)
@@ -953,7 +965,8 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 			leaf.Status.ManagerAdmission.PolicyEpoch < effectivePolicy.Epoch && len(leaf.Status.ManagedMutationClaims) == 0 {
 			if err := r.rearmPolicyEpochLeaf(ctx, rollout, currentPolicy, effectivePolicy, target, &leaf, now); err != nil {
 				if errors.Is(err, topologyrollout.ErrBudgetExceeded) || errors.Is(err, topologyrollout.ErrTargetUnavailable) ||
-					errors.Is(err, errWorkloadsRunning) || errors.Is(err, topologyrollout.ErrStaleControlRevision) {
+					errors.Is(err, errWorkloadsRunning) || errors.Is(err, errDrainSafetyBlocked) ||
+					errors.Is(err, topologyrollout.ErrStaleControlRevision) {
 					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
 						"PolicyEpochRearmBlocked", err.Error(), now)
 					progressionBlocked = true
@@ -964,6 +977,31 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetWaitingForAdmission,
 					"PolicyEpochRearmed", "reservation rebound; waiting for worker acknowledgement of the new policy epoch", now)
 				rearmedPolicyLeaf = true
+			}
+			allTargetsSettled = false
+			if target.CanaryCohort != "" {
+				allCanariesSettled = false
+			}
+		} else if !terminalLeafPhase(leaf.Status.Phase) && leaf.Status.ManagerDrain != nil &&
+			(leaf.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainRecovering ||
+				leaf.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainSettled) {
+			settled, gateReason, gateMessage, settleErr := r.trySettleDrainedLeaf(
+				ctx, rollout, currentPolicy, target, &leaf, summary, now,
+			)
+			if settleErr != nil {
+				return ctrl.Result{}, settleErr
+			}
+			if settled {
+				hasFailure = true
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetFailed,
+					"DrainAborted", "workload drain recovered without granting a device mutation", now)
+			} else if gateReason == "HealthyPostMutationSoak" {
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetSoaking, gateReason, gateMessage, now)
+				hasSoaking = true
+				progressionBlocked = true
+			} else {
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, gateReason, gateMessage, now)
+				progressionBlocked = true
 			}
 			allTargetsSettled = false
 			if target.CanaryCohort != "" {
@@ -1003,12 +1041,17 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 			if leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionPending && !terminalFailurePresent {
 				granted, grantErr := r.tryGrantLeaf(ctx, rollout, currentPolicy, effectivePolicy, target, &leaf, now)
 				if grantErr != nil {
-					return ctrl.Result{}, grantErr
+					if !errors.Is(grantErr, errDrainSafetyBlocked) {
+						return ctrl.Result{}, grantErr
+					}
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+						"DrainSafetyBlocked", grantErr.Error(), now)
+					progressionBlocked = true
 				}
-				if granted {
+				if grantErr == nil && granted {
 					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetAdmitted, "ReservationGranted", "worker acknowledged the managed protocol and admission was granted", now)
 					hasRunning = true
-				} else {
+				} else if grantErr == nil {
 					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetWaitingForAdmission, "WorkerProtocolPending", "waiting for worker protocol acknowledgement", now)
 				}
 			} else {
@@ -1061,7 +1104,8 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 			continue
 		}
 		if err := r.admitTarget(ctx, rollout, currentPolicy, effectivePolicy, target, now); err != nil {
-			if errors.Is(err, topologyrollout.ErrBudgetExceeded) || errors.Is(err, topologyrollout.ErrTargetUnavailable) || errors.Is(err, errWorkloadsRunning) {
+			if errors.Is(err, topologyrollout.ErrBudgetExceeded) || errors.Is(err, topologyrollout.ErrTargetUnavailable) ||
+				errors.Is(err, errWorkloadsRunning) || errors.Is(err, errDrainSafetyBlocked) {
 				summary := summaries[target.DeviceUID]
 				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, "AdmissionBlocked", err.Error(), now)
 				summaries[target.DeviceUID] = summary

@@ -498,8 +498,13 @@ Each account is bound to exactly one profile; read-only and read-write roles
 are never additive. `disabled` omits that plane. The network profile is
 RoleBound in its tenant namespace and, when configured, the dedicated Lease
 namespace. App read-write also receives an implementation-only namespaced
-read role for its exact CiscoDevice and maintenance-risk scan; those reads are
-not placed in its cluster-bound profile. A separate non-selectable network
+support role for its exact CiscoDevice and maintenance-risk scan. For PDB drain,
+this namespaced role also permits upgrade status patches; native admission
+restricts the exact Pod-bound app identity to `workerDrain` inventory only.
+It cannot change gNOI phase, network acknowledgement, mutation claims, or
+manager grants. Inventory carries the app revision and Pod UID separately
+from the network worker's revision, so a restart invalidates previous clean
+evidence. These CRD permissions are not placed in its cluster-bound profile. A separate non-selectable network
 cluster-read role supplies only `IOSXEConfigDefaults`, Node/Pod observations
 needed to fence maintenance, and no tenant CRD read. Its only create verb is
 `SelfSubjectReview`, used to verify the caller's Pod-bound token; it cannot

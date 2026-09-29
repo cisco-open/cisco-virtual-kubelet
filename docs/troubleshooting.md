@@ -131,10 +131,10 @@ spec:
 
 This does two things:
 
-1. **Device-side** — CVK PUTs `app-hosting-cfg-data/controls` with `sign-verification: false` on first connect, disabling the IOS-XE package signature check. Equivalent to `no app-hosting signed-verification`.
+1. **Device-side** — on connect, CVK writes `app-hosting-cfg-data/controls` with `sign-verification: false`, then invokes the app-hosting runtime verification-disable RPC. IOS-XE can accept the persistent datastore write while refusing the runtime change, so CVK requires both operations to succeed.
 2. **Reconciler-side** — treats `iox-pkg-policy-invalid` during `INSTALLING` as a transient (non-fatal) signal.
 
-If the device-side PUT fails (e.g. platform does not support the YANG leaf, or insufficient privilege), CVK logs a warning and the device policy may still block unsigned installs.
+If either device operation fails (for example because the platform does not support runtime changes from its current storage mode, or the account lacks privilege), CVK logs `failed to disable sign-verification`. Confirm the effective state with `show app-hosting infra`; the RESTCONF configuration value alone is not proof that enforcement changed. Resolve the device prerequisite or use a signed package before retrying the Pod. Do not disable signing merely to bypass an unexpected package-verification failure.
 
 If you want signing enforced:
 

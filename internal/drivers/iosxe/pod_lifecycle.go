@@ -23,6 +23,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/google/uuid"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -202,7 +203,7 @@ func (d *XEDriver) GetPodContainers(ctx context.Context, pod *v1.Pod) (map[strin
 
 	// Filter apps by pod UID and extract container names
 	for _, app := range apps {
-		if app.ApplicationName == nil {
+		if app == nil || app.ApplicationName == nil || strings.TrimSpace(*app.ApplicationName) == "" {
 			continue
 		}
 
@@ -638,6 +639,17 @@ func podDeletionTargets(ctx context.Context, pod *v1.Pod, discoveredContainers m
 // ListPods discovers all pods currently running on the device by analyzing app configurations.
 // It reconstructs skeleton pods from the device state including namespace, name, UID, and container status.
 func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
+	return d.listPods(ctx, false)
+}
+
+// ListPodsForDrain is the strict inventory capability used as destructive
+// drain evidence. IOS XE can expose an app only through operational state while
+// its configuration endpoint is empty, so both sources must succeed here.
+func (d *XEDriver) ListPodsForDrain(ctx context.Context) ([]*v1.Pod, error) {
+	return d.listPods(ctx, true)
+}
+
+func (d *XEDriver) listPods(ctx context.Context, requireComplete bool) ([]*v1.Pod, error) {
 	log.G(ctx).Info("ListPods: discovering pods from device")
 
 	// Get all apps from the device (config endpoint)
@@ -649,6 +661,9 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	// Fetch operational data for all apps
 	allAppOperData, err := d.GetAppOperationalData(ctx)
 	if err != nil {
+		if requireComplete {
+			return nil, fmt.Errorf("failed to list complete operational app inventory: %w", err)
+		}
 		log.G(ctx).Warnf("Failed to fetch app operational data: %v", err)
 		// Continue without operational data
 		allAppOperData = make(map[string]*Cisco_IOS_XEAppHostingOper_AppHostingOperData_App)
@@ -657,8 +672,12 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	// Build a set of app names already known from the config endpoint
 	configAppNames := make(map[string]bool, len(apps))
 	for _, app := range apps {
-		if app.ApplicationName != nil {
-			configAppNames[*app.ApplicationName] = true
+		if app != nil && app.ApplicationName != nil && strings.TrimSpace(*app.ApplicationName) != "" {
+			name := *app.ApplicationName
+			if requireComplete && configAppNames[name] {
+				return nil, fmt.Errorf("complete app inventory contains duplicate app name %q", name)
+			}
+			configAppNames[name] = true
 		}
 	}
 
@@ -671,6 +690,9 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 			continue // already discovered via config
 		}
 		if !common.IsCVKManagedApp(appName) {
+			if requireComplete {
+				return nil, fmt.Errorf("complete app inventory contains an app without CVK workload identity")
+			}
 			continue // not a CVK-managed app
 		}
 		log.G(ctx).Infof("App %s found in oper data but not config data; adding to discovery", appName)
@@ -689,11 +711,26 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 	podGroups := make(map[string]*podDiscoveryInfo)
 
 	for _, app := range apps {
-		if app.ApplicationName == nil {
+		if app == nil || app.ApplicationName == nil || strings.TrimSpace(*app.ApplicationName) == "" {
+			if requireComplete {
+				return nil, fmt.Errorf("complete app inventory contains an app without a stable name")
+			}
 			continue
 		}
 
 		appName := *app.ApplicationName
+		appIndex, appUID, appIsCVK := common.ParseCVKAppName(appName)
+		if requireComplete && !appIsCVK {
+			return nil, fmt.Errorf("complete app inventory contains an app without CVK workload identity")
+		}
+		canonicalAppUID := appUID
+		if requireComplete && appIsCVK {
+			parsed, err := uuid.Parse(appUID)
+			if err != nil {
+				return nil, fmt.Errorf("complete app inventory contains an invalid CVK workload UID")
+			}
+			canonicalAppUID = parsed.String()
+		}
 
 		// Extract pod metadata from RunOpts labels
 		var podNamespace, podName, podUID, containerName string
@@ -711,24 +748,40 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 		} else {
 			log.G(ctx).Debugf("Discovery: App %s has no RunOptss", appName)
 		}
+		if requireComplete && podUID != "" && strings.ReplaceAll(podUID, "-", "") != appUID {
+			return nil, fmt.Errorf("complete app inventory contains CVK app identity that disagrees with its workload labels")
+		}
+		if requireComplete {
+			// The app name is the only IOS XE identity that survives every
+			// lifecycle state. Reconstruct a stable Kubernetes-shaped identity
+			// from it so a config-only/oper-only remnant cannot evade an exact
+			// selected-UID comparison merely by losing its RunOpts labels.
+			podUID = canonicalAppUID
+			podNamespace = "default"
+			podName = "cvk-" + appUID
+		}
 
 		// If RunOpts labels are missing (e.g. app is in DEPLOYED state and
 		// runtime labels haven't materialised yet), fall back to parsing the
 		// CVK naming convention to identify CVK-managed apps.  This ensures
 		// orphaned apps stuck mid-lifecycle are still discovered and cleaned up.
 		if podUID == "" || podName == "" || containerName == "" {
-			idx, uid, isCVK := common.ParseCVKAppName(appName)
-			if !isCVK {
+			if !appIsCVK {
+				if requireComplete {
+					return nil, fmt.Errorf("complete app inventory contains an app without CVK workload identity")
+				}
 				log.G(ctx).Debugf("Skipping app %s: not CVK-managed and missing pod metadata", appName)
 				continue
 			}
 			log.G(ctx).Infof("App %s matches CVK naming convention but has no RunOpts labels; using app name to derive metadata", appName)
-			podUID = uid
-			podName = appName // use the app name as a synthetic pod name
+			podUID = canonicalAppUID
+			if !requireComplete {
+				podName = appName // preserve the compatibility discovery shape
+			}
 			if podNamespace == "" {
 				podNamespace = "default"
 			}
-			containerName = fmt.Sprintf("container-%d", idx)
+			containerName = fmt.Sprintf("container-%d", appIndex)
 		}
 
 		// Group by pod UID
@@ -739,8 +792,13 @@ func (d *XEDriver) ListPods(ctx context.Context) ([]*v1.Pod, error) {
 				uid:        podUID,
 				containers: make(map[string]string),
 			}
+		} else if requireComplete && (podGroups[podUID].namespace != podNamespace || podGroups[podUID].name != podName) {
+			return nil, fmt.Errorf("complete app inventory contains conflicting metadata for one workload UID")
 		}
 
+		if prior, exists := podGroups[podUID].containers[containerName]; requireComplete && exists && prior != appName {
+			return nil, fmt.Errorf("complete app inventory contains conflicting apps for one workload container")
+		}
 		podGroups[podUID].containers[containerName] = appName
 	}
 

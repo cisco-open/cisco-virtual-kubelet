@@ -93,6 +93,7 @@ type configReconcilerOptions struct {
 	NodeName                 string
 	ManagedTopology          bool
 	WorkerRevision           string
+	WorkerPodUID             string
 	CredentialSecretRevision string
 	GNOITLSSecretRevision    string
 	GNOIProvisioningRevision string
@@ -126,6 +127,9 @@ type configReconcilerOptions struct {
 	// DevicePodLister is the app-hosting driver's live device inventory. Managed
 	// BlockIfRunning claims fail closed when this final check is unavailable.
 	DevicePodLister func(context.Context) ([]*corev1.Pod, error)
+	// DrainDevicePodLister is present only when the platform driver can prove a
+	// complete inventory for destructive drain. It must fail on partial reads.
+	DrainDevicePodLister func(context.Context) ([]*corev1.Pod, error)
 	// ManagerLifecycle is set only by a dedicated network-management worker.
 	// It gates Pod readiness on cache/controller startup and turns an unexpected
 	// controller-runtime manager exit into a process failure. The standalone
@@ -397,7 +401,12 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// then have distinct lease holders and cannot both renew the
 	// same lease. Empty POD_UID falls back to the CR-only identity
 	// (preserves test/local-run behaviour).
-	runtimeID := os.Getenv("POD_UID")
+	runtimeID := opts.WorkerPodUID
+	if runtimeID == "" {
+		// Preserve direct standalone callers; managed startup validates and
+		// passes the downward-API Pod UID explicitly.
+		runtimeID = os.Getenv(envWorkerPodUID)
+	}
 
 	// Wave 6A — bridge the notify channel into a controller-runtime
 	// event stream. The Reconciler's SetupWithManager registers a
@@ -584,8 +593,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			// Source credentials and endpoint authorization are a security
 			// boundary. Resolve them through the uncached reader so an in-place
 			// Secret revocation cannot be hidden behind informer lag.
-			ImageResolver:   softwareupgrade.NewDefaultImageResolver(mgr.GetAPIReader(), nil),
-			DevicePodLister: opts.DevicePodLister,
+			ImageResolver:        softwareupgrade.NewDefaultImageResolver(mgr.GetAPIReader(), nil),
+			DevicePodLister:      opts.DevicePodLister,
+			DrainDevicePodLister: opts.DrainDevicePodLister,
 			MutationLeaser: &engine.FamilyLeaser{
 				Client:          mgr.GetClient(),
 				Namespace:       leaseNamespace,

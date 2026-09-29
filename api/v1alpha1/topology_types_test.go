@@ -137,6 +137,36 @@ func TestCiscoDeviceOmittedNodeNameRemainsOmitted(t *testing.T) {
 	}
 }
 
+func TestMaintenanceSessionProtocolOmissionIsBackwardCompatible(t *testing.T) {
+	legacy := DeviceMaintenanceSessionStatus{
+		Phase:        DeviceMaintenanceSessionActive,
+		SessionToken: "session-token-0001",
+	}
+	raw, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(raw), "protocolVersion") || strings.Contains(string(raw), "purpose") {
+		t.Fatalf("legacy maintenance session gained drain fields: %s", raw)
+	}
+
+	drain := DeviceMaintenanceSessionStatus{
+		Phase:           DeviceMaintenanceSessionRecovering,
+		ProtocolVersion: DeviceMaintenanceProtocolPDBDrainV1,
+		Purpose:         DeviceMaintenancePurposeWorkloadDrain,
+		SessionToken:    "11111111-1111-4111-8111-111111111111",
+	}
+	raw, err = json.Marshal(drain)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{`"phase":"Recovering"`, `"protocolVersion":"pdb-drain-v1"`, `"purpose":"WorkloadDrain"`} {
+		if !strings.Contains(string(raw), field) {
+			t.Fatalf("drain session Marshal() = %s, missing %s", raw, field)
+		}
+	}
+}
+
 func TestDeviceWorkerRevisionPendingFenceOmitsUnprovenRuntimeIdentity(t *testing.T) {
 	status := DeviceWorkerRevisionStatus{
 		DesiredRevision: "sha256:" + strings.Repeat("a", 64),

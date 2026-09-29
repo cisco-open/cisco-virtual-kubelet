@@ -57,6 +57,9 @@ spec:
         - topologyKey: operations.cisco.vk/redundancy-domain
           maxUnavailable: 1
     workloads:
+      # Default non-destructive policy. For the separately gated development
+      # drain path, start from iosxe-software-rollout-drain.yaml instead of
+      # editing an already planned campaign.
       policy: BlockIfRunning
     health:
       maxObservationAgeSeconds: 300

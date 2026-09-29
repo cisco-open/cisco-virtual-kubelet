@@ -83,6 +83,16 @@ func TestRolloutLeafAnnotationsPropagateOnlyValidatedCorrelation(t *testing.T) {
 	}
 }
 
+func TestExpectedLeafSpecIncludesAPIServerDefaults(t *testing.T) {
+	target := policyFenceTarget("edge-a", "device-uid", "campaign-edge-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+
+	got := expectedLeafSpec(rollout, target)
+	if got.ResumePolicy != "Retry" || got.MaxRetries != 3 {
+		t.Fatalf("expected leaf retry defaults = (%q, %d), want (Retry, 3)", got.ResumePolicy, got.MaxRetries)
+	}
+}
+
 func TestCampaignStatusPatchRejectsStaleResourceVersion(t *testing.T) {
 	scheme := runtime.NewScheme()
 	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
@@ -705,7 +715,10 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 		Status: corev1.NodeStatus{
 			NodeInfo: corev1.NodeSystemInfo{MachineID: "serial-a", SystemUUID: "serial-a"},
 			Conditions: []corev1.NodeCondition{
-				{Type: corev1.NodeReady, Status: corev1.ConditionTrue, LastHeartbeatTime: metav1.NewTime(now)},
+				{
+					Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+					LastHeartbeatTime: metav1.NewTime(now), LastTransitionTime: metav1.NewTime(now.Add(-time.Minute)),
+				},
 				{
 					Type: corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition), Status: corev1.ConditionTrue,
 					Reason: managedprotocol.ManagedWorkerReadyReason, LastHeartbeatTime: metav1.NewTime(now),
@@ -817,6 +830,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	}
 
 	current.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(now.Add(-10 * time.Minute))
+	current.Status.Conditions[0].LastTransitionTime = metav1.NewTime(now.Add(-11 * time.Minute))
 	if err := apiClient.Status().Update(context.Background(), &current); err != nil {
 		t.Fatal(err)
 	}
@@ -1006,6 +1020,159 @@ func TestContinuousHealthySoakStartsFromObservedHealthyTransition(t *testing.T) 
 	summary.Reason = "PostMutationHealthGate"
 	if _, started := continuousHealthySoakDeadline(summary, completion, 10*time.Minute); started {
 		t.Fatal("unhealthy gate incorrectly retained the earlier healthy soak interval")
+	}
+}
+
+func TestCurrentFleetMembersHeartbeatSkewPreservesPersistedSoak(t *testing.T) {
+	const siteKey = "topology.cisco.vk/site"
+	ctx := context.Background()
+	snapshotHeartbeat := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
+	liveHeartbeat := snapshotHeartbeat.Add(2 * time.Minute)
+	target := policyFenceTarget("device-a", "device-uid", "leaf-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Status.Targets = []opsv1alpha1.IOSXESoftwareRolloutTargetStatus{{
+		DeviceName: target.DeviceName, DeviceUID: target.DeviceUID, LeafName: target.ChildName,
+		Phase: opsv1alpha1.IOSXESoftwareRolloutTargetSoaking, Reason: "HealthyPostMutationSoak",
+		LastTransitionTime: metav1.NewTime(snapshotHeartbeat),
+	}}
+	leaf := policyFenceLeaf(rollout, target, "leaf-uid")
+
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: rollout.Namespace, Name: target.DeviceName, UID: types.UID(target.DeviceUID), Generation: 1,
+			Labels: map[string]string{siteKey: "site-a"},
+		},
+		Spec: ciskov1.DeviceSpec{PhysicalIdentity: target.PhysicalIdentity},
+		Status: ciskov1.DeviceStatus{
+			Phase: "Ready",
+			NodeIdentity: &ciskov1.DeviceNodeIdentityStatus{
+				NodeName: target.NodeName, NodeUID: target.NodeUID, DeviceUID: target.DeviceUID,
+				PhysicalIdentity: target.PhysicalIdentity,
+			},
+			TopologyProjection: &ciskov1.DeviceTopologyProjectionStatus{
+				EffectiveLabelHash: "sha256:" + strings.Repeat("a", 64), SourceResourceVersion: "1",
+				LastSuccessfulTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+			},
+		},
+	}
+	conditionTypes := []string{
+		ciskov1.CiscoDeviceConditionNodeIdentityReady,
+		ciskov1.CiscoDeviceConditionTopologyReady,
+		ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+	}
+	for _, conditionType := range conditionTypes {
+		device.Status.Conditions = append(device.Status.Conditions, metav1.Condition{
+			Type: conditionType, Status: metav1.ConditionTrue, ObservedGeneration: device.Generation,
+			Reason: "Verified", LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+		})
+	}
+	node := &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: target.NodeName, UID: types.UID(target.NodeUID), Labels: map[string]string{siteKey: "site-a"},
+			Annotations: map[string]string{
+				managedprotocol.AnnotationManaged:         "true",
+				managedprotocol.AnnotationDeviceNamespace: device.Namespace,
+				managedprotocol.AnnotationDeviceName:      device.Name,
+				managedprotocol.AnnotationDeviceUID:       string(device.UID),
+				managedprotocol.AnnotationNodeUID:         target.NodeUID,
+				managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
+				managedprotocol.AnnotationWorkerUsername:  "system:serviceaccount:lab:cvk-device-a",
+			},
+		},
+		Status: corev1.NodeStatus{
+			NodeInfo: corev1.NodeSystemInfo{MachineID: target.PhysicalIdentity, SystemUUID: target.PhysicalIdentity},
+			Conditions: []corev1.NodeCondition{
+				{
+					Type: corev1.NodeReady, Status: corev1.ConditionTrue,
+					LastHeartbeatTime:  metav1.NewTime(snapshotHeartbeat),
+					LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+				},
+				{
+					Type:   corev1.NodeConditionType(managedprotocol.ManagedWorkerReadyCondition),
+					Status: corev1.ConditionTrue, Reason: managedprotocol.ManagedWorkerReadyReason,
+					LastHeartbeatTime:  metav1.NewTime(snapshotHeartbeat),
+					LastTransitionTime: metav1.NewTime(snapshotHeartbeat.Add(-time.Minute)),
+				},
+			},
+		},
+	}
+	if err := refreshManagedHealthObservation(device, node, snapshotHeartbeat, conditionTypes...); err != nil {
+		t.Fatal(err)
+	}
+	node.Status.Conditions[0].LastHeartbeatTime = metav1.NewTime(liveHeartbeat)
+
+	scheme := drainTestScheme(t)
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&corev1.Node{}, &opsv1alpha1.IOSXESoftwareRollout{}).
+		WithObjects(device, node, rollout).Build()
+	now := liveHeartbeat
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{
+		Selector: labels.Everything(),
+		Config: topologyrollout.AdminPolicyConfig{
+			RequiredTopologyKeys: []string{siteKey}, ProjectedTopologyKeys: []string{siteKey},
+		},
+	}
+	effectivePolicy := topologyrollout.Policy{
+		DomainBudgets: map[string]int{siteKey: 1}, DomainTransferBudgets: map[string]int{siteKey: 1},
+		RequiredHealthFreshBy: snapshotHeartbeat.Add(-time.Second),
+	}
+	members, _, err := reconciler.currentFleetMembers(ctx, rollout, policy, effectivePolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(members) != 1 || !members[0].HealthKnown || !members[0].Healthy ||
+		!members[0].HealthObserved.Equal(snapshotHeartbeat) {
+		t.Fatalf("heartbeat-only skew fleet member = %#v, want healthy observation at %s", members, snapshotHeartbeat)
+	}
+
+	var persisted opsv1alpha1.IOSXESoftwareRollout
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(rollout), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if err := reconciler.persistDrainRecoveryGate(ctx, &persisted, target, leaf,
+		"HealthyPostMutationSoak", "still healthy", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(rollout), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	summary := indexTargetSummaries(persisted.Status.Targets)[target.DeviceUID]
+	if !summary.LastTransitionTime.Time.Equal(snapshotHeartbeat) {
+		t.Fatalf("heartbeat-only skew moved persisted soak start to %s", summary.LastTransitionTime)
+	}
+
+	var liveNode corev1.Node
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(node), &liveNode); err != nil {
+		t.Fatal(err)
+	}
+	now = snapshotHeartbeat.Add(3 * time.Minute)
+	ready := nodeReadyCondition(&liveNode)
+	ready.LastHeartbeatTime = metav1.NewTime(now)
+	ready.LastTransitionTime = metav1.NewTime(now)
+	if err := apiClient.Status().Update(ctx, &liveNode); err != nil {
+		t.Fatal(err)
+	}
+	members, _, err = reconciler.currentFleetMembers(ctx, &persisted, policy, effectivePolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(members) != 1 || members[0].HealthKnown || members[0].Healthy || !members[0].HealthObserved.IsZero() {
+		t.Fatalf("post-snapshot Ready transition fleet member = %#v, want unknown and unhealthy", members)
+	}
+	if err := reconciler.persistDrainRecoveryGate(ctx, &persisted, target, leaf,
+		"PostMutationHealthGate", "Ready transitioned after the authenticated snapshot", now); err != nil {
+		t.Fatal(err)
+	}
+	if err := apiClient.Get(ctx, client.ObjectKeyFromObject(rollout), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	summary = indexTargetSummaries(persisted.Status.Targets)[target.DeviceUID]
+	if summary.Phase != opsv1alpha1.IOSXESoftwareRolloutTargetBlocked ||
+		summary.Reason != "PostMutationHealthGate" || !summary.LastTransitionTime.Time.Equal(now) {
+		t.Fatalf("real Ready transition did not reset persisted soak: %#v", summary)
 	}
 }
 
@@ -1353,7 +1520,7 @@ func TestSourceIdentityChangeFencesUnclaimedGrant(t *testing.T) {
 		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareRollout{}, &opsv1alpha1.IOSXESoftwareUpgrade{}).
 		WithObjects(rollout, leaf, ledgerCM).Build()
 	reconciler := &IOSXESoftwareRolloutReconciler{Client: apiClient, APIReader: apiClient}
-	result, err := reconciler.reconcileSourceChanged(context.Background(), rollout,
+	result, err := reconciler.reconcileSourceChanged(context.Background(), rollout, nil,
 		"source Secret incarnation changed", time.Now().UTC())
 	if err != nil {
 		t.Fatalf("reconcileSourceChanged() error = %v", err)
@@ -1592,6 +1759,150 @@ func TestRolloutControlStatusTreatsSettledCancellationTombstoneAsEffective(t *te
 	status := reconciler.rolloutControlStatus(context.Background(), rollout)
 	if status.CancellationPending || !status.Cancelled || status.EffectiveRevision != rollout.Spec.Control.Revision {
 		t.Fatalf("settled cancellation status = %#v", status)
+	}
+}
+
+func TestReconcileCancelsFrozenPlanWithoutApproval(t *testing.T) {
+	now := time.Date(2026, 9, 19, 18, 0, 0, 0, time.UTC)
+	target := policyFenceTarget("device-a", "device-uid-a", "leaf-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Finalizers = []string{rolloutSafetyFinalizer}
+	rollout.Spec.Approval = nil
+	requestedAt := metav1.NewTime(now.Add(-time.Minute))
+	rollout.Spec.Control = opsv1alpha1.IOSXESoftwareRolloutControl{
+		Revision: 1, Pause: true, Cancel: true, RequestedBy: "operator", RequestedAt: &requestedAt,
+	}
+	rollout.Status.Phase = opsv1alpha1.IOSXESoftwareRolloutPhaseAwaitingApproval
+	rollout.Status.Targets = []opsv1alpha1.IOSXESoftwareRolloutTargetStatus{{
+		DeviceName: target.DeviceName, DeviceUID: target.DeviceUID, LeafName: target.ChildName,
+		Phase: opsv1alpha1.IOSXESoftwareRolloutTargetPlanned, LastTransitionTime: metav1.NewTime(now.Add(-2 * time.Minute)),
+	}}
+
+	policyConfig := topologyrollout.AdminPolicyConfig{
+		AppHostingServiceAccountName:        managedprotocol.AppHostingServiceAccount,
+		NetworkManagementServiceAccountName: managedprotocol.NetworkManagementServiceAccount,
+		Version:                             topologyrollout.PolicyVersion,
+		FleetSelector: metav1.LabelSelector{MatchLabels: map[string]string{
+			"topology.cisco.vk/managed": "true",
+		}},
+		RequiredTopologyKeys:         []string{"topology.cisco.vk/site"},
+		GlobalMaxConcurrentTransfers: 1,
+		GlobalMaxUnavailable:         1,
+		DomainMaxConcurrentTransfers: map[string]int{"topology.cisco.vk/site": 1},
+		DomainMaxUnavailable:         map[string]int{"topology.cisco.vk/site": 1},
+		HealthFreshnessSeconds:       300,
+		MaxCampaignTargets:           100,
+		MaxActiveReservations:        256,
+		MaxLedgerBytes:               topologyrollout.DefaultMaxSerializedBytes,
+		LedgerName:                   rollout.Status.FrozenPlan.Policy.LedgerName,
+	}
+	policyJSON, err := topologyrollout.CanonicalPolicyJSON(policyConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policyCM := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{
+		Namespace: rollout.Status.FrozenPlan.Policy.Namespace,
+		Name:      rollout.Status.FrozenPlan.Policy.Name,
+		UID:       types.UID(rollout.Status.FrozenPlan.Policy.UID), ResourceVersion: "10",
+		Annotations: map[string]string{
+			topologyrollout.PolicyManagedAnnotation:        "true",
+			topologyrollout.ConfigLeaseNamespaceAnnotation: "",
+			topologyrollout.AdmissionPrefixAnnotation:      "cvk-topology",
+			topologyrollout.LedgerUIDAnnotation:            rollout.Status.FrozenPlan.Policy.LedgerUID,
+		},
+	}, Data: map[string]string{topologyrollout.PolicyDataKey: policyJSON}}
+	parsedPolicy, err := topologyrollout.ParseAdminPolicy(policyCM)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policySnapshot, err := freezePolicy(parsedPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rollout.Status.FrozenPlan.Policy = policySnapshot
+	rollout.Status.EffectivePolicy = &opsv1alpha1.IOSXESoftwareRolloutEffectivePolicyStatus{
+		Epoch: 1, Policy: policySnapshot, UpdatedAt: metav1.NewTime(now.Add(-2 * time.Minute)),
+	}
+	ledgerCM := policyFenceLedger(t, rollout, nil, nil, topologyrollout.ReservationReserved)
+	device := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{
+		Namespace: rollout.Namespace, Name: target.DeviceName, UID: types.UID(target.DeviceUID), Generation: target.DeviceGeneration,
+	}}
+
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	if err := ciskov1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareRollout{}, &opsv1alpha1.IOSXESoftwareUpgrade{}, &ciskov1.CiscoDevice{}).
+		WithObjects(rollout, policyCM, ledgerCM, device).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Create: func(ctx context.Context, inner client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+				if leaf, ok := obj.(*opsv1alpha1.IOSXESoftwareUpgrade); ok && leaf.UID == "" {
+					leaf.UID = types.UID("pre-approval-cancellation-tombstone")
+				}
+				return inner.Create(ctx, obj, opts...)
+			},
+		}).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+		TopologyPolicyNamespace: policyCM.Namespace, TopologyPolicyName: policyCM.Name,
+	}
+
+	result, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(rollout)})
+	if err != nil {
+		t.Fatalf("Reconcile() error = %v", err)
+	}
+	if result.Requeue || result.RequeueAfter != 0 {
+		t.Fatalf("Reconcile() result = %#v, want terminal cancellation", result)
+	}
+
+	var gotRollout opsv1alpha1.IOSXESoftwareRollout
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(rollout), &gotRollout); err != nil {
+		t.Fatal(err)
+	}
+	if gotRollout.Status.Phase != opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled ||
+		gotRollout.Status.Counts.Cancelled != 1 || gotRollout.Status.Counts.Total != 1 ||
+		gotRollout.Status.Control == nil || !gotRollout.Status.Control.Cancelled ||
+		gotRollout.Status.Control.CancellationPending {
+		t.Fatalf("pre-approval cancellation did not converge: status=%#v", gotRollout.Status)
+	}
+	if gotRollout.Status.Approval != nil {
+		t.Fatalf("cancellation invented approval status: %#v", gotRollout.Status.Approval)
+	}
+
+	var leaf opsv1alpha1.IOSXESoftwareUpgrade
+	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: rollout.Namespace, Name: target.ChildName}, &leaf); err != nil {
+		t.Fatal(err)
+	}
+	if leaf.Status.ManagerAdmission == nil ||
+		leaf.Status.ManagerAdmission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
+		leaf.Status.ManagerControl == nil || !leaf.Status.ManagerControl.Cancel ||
+		leaf.Status.ManagerControl.Pause ||
+		leaf.Status.ManagerControl.Revision != rollout.Spec.Control.Revision ||
+		len(leaf.Status.ManagedMutationClaims) != 0 || leaf.Status.ManagerDrain != nil {
+		t.Fatalf("pre-approval cancellation tombstone is not safely settled: %#v", leaf.Status)
+	}
+	store := topologyrollout.Store{Client: apiClient, APIReader: apiClient,
+		Key: types.NamespacedName{Namespace: ledgerCM.Namespace, Name: ledgerCM.Name}, ExpectedUID: ledgerCM.UID}
+	_, ledger, err := store.Read(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ledger.Reservations) != 0 {
+		t.Fatalf("pre-approval cancellation retained reservations: %#v", ledger.Reservations)
+	}
+	var gotDevice ciskov1.CiscoDevice
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &gotDevice); err != nil {
+		t.Fatal(err)
+	}
+	if gotDevice.Status.TopologyLock != nil {
+		t.Fatalf("pre-approval cancellation created a topology lock: %#v", gotDevice.Status.TopologyLock)
 	}
 }
 

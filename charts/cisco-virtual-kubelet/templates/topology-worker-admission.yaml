@@ -168,20 +168,24 @@ spec:
          object.metadata.uid == oldObject.metadata.uid &&
          has(object.metadata.labels) == has(oldObject.metadata.labels) &&
          (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
-         has(object.metadata.finalizers) == has(oldObject.metadata.finalizers) &&
-         (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+         (has(object.metadata.finalizers) ? object.metadata.finalizers.filter(f,
+            f != 'ops.cisco.vk/iosxe-rollout-drain') : []) ==
+         (has(oldObject.metadata.finalizers) ? oldObject.metadata.finalizers.filter(f,
+            f != 'ops.cisco.vk/iosxe-rollout-drain') : []) &&
          has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences) &&
          (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences) &&
          object.spec == oldObject.spec && object.status == oldObject.status &&
          (has(object.metadata.annotations) ? object.metadata.annotations.transformMap(k, v,
-            !(k in ['topology.cisco.vk/app-worker-username',
+            !(k in ['ops.cisco.vk/drain-session', 'topology.cisco.vk/worker-username',
+                    'topology.cisco.vk/app-worker-username',
                     'topology.cisco.vk/app-worker-pod-name',
                     'topology.cisco.vk/app-worker-pod-uid']), v) : {}) ==
          (has(oldObject.metadata.annotations) ? oldObject.metadata.annotations.transformMap(k, v,
-            !(k in ['topology.cisco.vk/app-worker-username',
+            !(k in ['ops.cisco.vk/drain-session', 'topology.cisco.vk/worker-username',
+                    'topology.cisco.vk/app-worker-username',
                     'topology.cisco.vk/app-worker-pod-name',
                     'topology.cisco.vk/app-worker-pod-uid']), v) : {}))
-      message: the topology manager may change only the exact workload worker-binding annotations
+      message: the topology manager may change only exact workload worker bindings and drain protection
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
@@ -352,8 +356,12 @@ spec:
     - name: shared-network-worker
       expression: >-
         request.userInfo.username.startsWith('system:serviceaccount:') &&
-        request.userInfo.username.endsWith(':{{ $networkServiceAccount }}')
+        (request.userInfo.username.endsWith(':{{ $networkServiceAccount }}') ||
+         request.userInfo.username.endsWith(':{{ $appServiceAccount }}'))
   variables:
+    - name: plane
+      expression: >-
+        request.userInfo.username.endsWith(':{{ $appServiceAccount }}') ? 'app' : 'network'
     - name: podUIDs
       expression: >-
         'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
@@ -367,15 +375,14 @@ spec:
         oldObject != null && object != null &&
         has(oldObject.metadata.annotations) &&
         oldObject.metadata.annotations['topology.cisco.vk/managed'] == 'true' &&
-        ['topology.cisco.vk/network-worker-username',
-         'topology.cisco.vk/network-worker-pod-name',
-         'topology.cisco.vk/network-worker-pod-uid'].all(k,
-           k in oldObject.metadata.annotations && oldObject.metadata.annotations[k] != '') &&
-        oldObject.metadata.annotations['topology.cisco.vk/network-worker-username'] == request.userInfo.username &&
+        ['username', 'pod-name', 'pod-uid'].all(k,
+           ('topology.cisco.vk/' + variables.plane + '-worker-' + k) in oldObject.metadata.annotations &&
+           oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-' + k] != '') &&
+        oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-username'] == request.userInfo.username &&
         variables.podUIDs.size() == 1 && variables.podNames.size() == 1 &&
-        variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/network-worker-pod-uid'] &&
-        variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/network-worker-pod-name']
-      message: shared network-management leaf mutation requires the exact manager-bound worker Pod name and UID
+        variables.podUIDs[0] == oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-pod-uid'] &&
+        variables.podNames[0] == oldObject.metadata.annotations['topology.cisco.vk/' + variables.plane + '-worker-pod-name']
+      message: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

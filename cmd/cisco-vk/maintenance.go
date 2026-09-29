@@ -84,7 +84,8 @@ func newMaintenanceCoordinator(cfg *rest.Config, identity workerRuntimeIdentity,
 	}
 	return &maintenance.Coordinator{
 		Client: c, Namespace: identity.DeviceNamespace, DeviceName: identity.DeviceName,
-		DeviceUID: identity.DeviceUID, NodeName: identity.NodeName, LeaseNamespace: leaseNamespace,
+		WorkerRevision: identity.WorkerRevision,
+		DeviceUID:      identity.DeviceUID, NodeName: identity.NodeName, LeaseNamespace: leaseNamespace,
 		ManagedTopology:        identity.ManagedTopology,
 		WorkerMode:             string(identity.WorkerMode),
 		ExpectedWorkerUsername: identity.WorkerUsername,

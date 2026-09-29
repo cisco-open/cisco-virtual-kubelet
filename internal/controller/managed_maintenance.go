@@ -34,18 +34,21 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
+	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard"
 )
 
 type managedMaintenanceDecision struct {
-	guard   bool
-	session *ciskov1.DeviceMaintenanceSessionStatus
-	status  metav1.ConditionStatus
-	reason  string
-	message string
-	err     error
+	guard     bool
+	session   *ciskov1.DeviceMaintenanceSessionStatus
+	drain     *opsv1alpha1.UpgradeManagerDrainStatus
+	drainHold bool
+	status    metav1.ConditionStatus
+	reason    string
+	message   string
+	err       error
 }
 
 const maxManagedMutationLeaseSeconds = int32((7*24*time.Hour + 26*time.Hour) / time.Second)
@@ -178,6 +181,7 @@ func validateLegacyMutationLeaseAdoption(
 		managedprotocol.AnnotationMaintenanceOperationName,
 		managedprotocol.AnnotationMaintenanceOperationUID,
 		managedprotocol.AnnotationMaintenanceControlRevision,
+		managedprotocol.AnnotationMaintenancePurpose,
 	} {
 		if _, exists := lease.Annotations[annotation]; exists {
 			return fmt.Errorf("maintenance request annotation %s is present", annotation)
@@ -232,6 +236,16 @@ func (r *CiscoDeviceReconciler) resolveManagedMaintenance(
 			return blockedMaintenanceDecision(device,
 				fmt.Errorf("idle or routine-write mutation Lease retains maintenance request metadata"))
 		}
+		// Establishing a drain session is an authorization boundary. A routine
+		// writer that won the canonical Lease immediately before the drain intent
+		// was published must finish first; the next reconciliation can then prove
+		// a wholly idle Lease before it applies any scheduling guard or publishes
+		// an Active drain session.
+		if holder == "" {
+			if drainDecision, handled := r.resolveManagedDrainIntent(ctx, device, node, &lease); handled {
+				return drainDecision
+			}
+		}
 		return r.retainOrSettleMaintenance(ctx, device, node, &lease)
 	}
 	// Any disruptive holder fences scheduling, even if its request is missing
@@ -239,6 +253,11 @@ func (r *CiscoDeviceReconciler) resolveManagedMaintenance(
 	decision.guard = true
 	session, requestErr := r.validateMaintenanceRequest(ctx, device, node, &lease, holder)
 	if requestErr != nil {
+		if staleRecovery, handled := r.resolveRetainedStaleDrainRecovery(
+			ctx, device, node, &lease, holder,
+		); handled {
+			return staleRecovery
+		}
 		decision.status = metav1.ConditionFalse
 		decision.reason = "RequestRejected"
 		decision.message = truncateTopologyMessage(requestErr.Error())
@@ -253,12 +272,38 @@ func (r *CiscoDeviceReconciler) resolveManagedMaintenance(
 	}
 	if current := device.Status.MaintenanceSession; current != nil && current.SessionToken == session.SessionToken &&
 		current.AcknowledgedAt != nil {
-		if current.Lease != session.Lease || current.Operation != session.Operation ||
+		leaseIdentityChanged := current.Lease.Namespace != session.Lease.Namespace ||
+			current.Lease.Name != session.Lease.Name || current.Lease.UID != session.Lease.UID
+		validDrainPromotion := current.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 &&
+			current.Purpose == ciskov1.DeviceMaintenancePurposeWorkloadDrain &&
+			session.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 &&
+			session.Purpose == ciskov1.DeviceMaintenancePurposeSoftwareMutation &&
+			current.Lease.Holder == devicecoordination.HolderIdentity("software-drain", session.Operation.Namespace,
+				session.Operation.Name, session.Operation.UID) &&
+			session.Lease.Holder == "software-upgrade/"+session.Operation.UID
+		protocolOrPurposeChanged := current.ProtocolVersion != session.ProtocolVersion ||
+			(current.Purpose != session.Purpose && !validDrainPromotion)
+		if leaseIdentityChanged || (current.Lease.Holder != session.Lease.Holder && !validDrainPromotion) ||
+			protocolOrPurposeChanged || current.Operation != session.Operation ||
 			current.DeviceUID != session.DeviceUID || current.NodeName != session.NodeName || current.NodeUID != session.NodeUID ||
 			!current.RequestedAt.Equal(&session.RequestedAt) || current.ControlRevision > session.ControlRevision {
 			return blockedMaintenanceDecision(device, fmt.Errorf("maintenance session token was reused with a different binding or stale control revision"))
 		}
 		session.AcknowledgedAt = current.AcknowledgedAt.DeepCopy()
+	}
+	if session.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 {
+		var leaf opsv1alpha1.IOSXESoftwareUpgrade
+		if err := r.reader().Get(ctx, types.NamespacedName{
+			Namespace: session.Operation.Namespace, Name: session.Operation.Name,
+		}, &leaf); err != nil {
+			return blockedMaintenanceDecision(device, fmt.Errorf("read acknowledged drain state: %w", err))
+		}
+		if leaf.Status.ManagerDrain == nil {
+			return blockedMaintenanceDecision(device, fmt.Errorf("acknowledged drain leaf lost manager drain state"))
+		}
+		decision.drain = leaf.Status.ManagerDrain.DeepCopy()
+		decision.guard = session.Phase != ciskov1.DeviceMaintenanceSessionRecovering &&
+			session.Phase != ciskov1.DeviceMaintenanceSessionSettled
 	}
 	decision.session = session
 	decision.status = metav1.ConditionTrue
@@ -276,6 +321,140 @@ func blockedMaintenanceDecision(device *ciskov1.CiscoDevice, err error) managedM
 		decision.session = device.Status.MaintenanceSession.DeepCopy()
 	}
 	return decision
+}
+
+// managedCancellationWorkerRecoveryReady recognizes the only maintenance
+// failure for which replacing the managed worker is useful and safe. A
+// promoted pdb-drain request can retain its immutable pre-cancel Lease revision
+// while manager admission/control advance to cancellation and recovery. With
+// no claim or durable mutation marker, the replacement worker may do exactly
+// enough to acknowledge that cancellation and release the unused exact Lease.
+//
+// This is deliberately independent of the rejected request validation above:
+// the old request must remain rejected and must never be rewritten to look like
+// the newer cancellation revision.
+func (r *CiscoDeviceReconciler) managedCancellationWorkerRecoveryReady(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	node *corev1.Node,
+) (bool, error) {
+	// Aggregator-owned config drivers intentionally have no per-device worker
+	// substrate to repair. Never let this exception enter the aggregator
+	// handover path, which has broader authority than cancellation recovery.
+	if device != nil && r.AggregatorEnabled && drivers.ConfigDriverRegistered(device.Spec.Driver) {
+		return false, nil
+	}
+	if device == nil || node == nil || device.Status.NodeIdentity == nil ||
+		device.Status.TopologyLock == nil || device.Status.MaintenanceSession == nil {
+		return false, nil
+	}
+	session := device.Status.MaintenanceSession
+	if (session.Phase != ciskov1.DeviceMaintenanceSessionActive &&
+		session.Phase != ciskov1.DeviceMaintenanceSessionRecovering) ||
+		session.ProtocolVersion != ciskov1.DeviceMaintenanceProtocolPDBDrainV1 ||
+		session.Purpose != ciskov1.DeviceMaintenancePurposeSoftwareMutation ||
+		session.AcknowledgedAt == nil || session.AcknowledgedAt.IsZero() ||
+		session.AcknowledgedAt.Before(&session.RequestedAt) || session.ControlRevision < 0 ||
+		session.SessionToken == "" || session.RequestedAt.IsZero() ||
+		session.DeviceUID != string(device.UID) || session.NodeName != node.Name ||
+		session.NodeUID != string(node.UID) || session.Operation.Namespace != device.Namespace ||
+		session.Operation.Name == "" || session.Operation.UID == "" ||
+		device.Status.TopologyLock.State != ciskov1.DeviceTopologyLockActive {
+		return false, nil
+	}
+
+	leaseNamespace := r.LeaseNamespace
+	if leaseNamespace == "" {
+		leaseNamespace = device.Namespace
+	}
+	leaseKey := types.NamespacedName{
+		Namespace: leaseNamespace,
+		Name: engine.LeaseName(
+			devicecoordination.DeviceKey(device.Namespace, device.Name),
+			devicecoordination.MutationLeaseFamily,
+		),
+	}
+	if session.Lease.Namespace != leaseKey.Namespace || session.Lease.Name != leaseKey.Name ||
+		session.Lease.UID == "" || session.Lease.Holder == "" {
+		return false, nil
+	}
+	var lease coordv1.Lease
+	if err := r.reader().Get(ctx, leaseKey, &lease); err != nil {
+		return false, fmt.Errorf("read cancelled maintenance recovery Lease: %w", err)
+	}
+	expectedAnnotations, expectedLabels := managedMutationLeaseMetadata(
+		device, node.Name, string(node.UID), managedNetworkWorkerUsername(node),
+	)
+	if validateManagedMutationLeaseMetadata(&lease, expectedAnnotations, expectedLabels) != nil ||
+		string(lease.UID) != session.Lease.UID || lease.Spec.HolderIdentity == nil ||
+		*lease.Spec.HolderIdentity != session.Lease.Holder ||
+		validateManagedMutationLeaseSpec(&lease.Spec, session.Lease.Holder) != nil ||
+		!r.now().Before(lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds)*time.Second)) {
+		return false, nil
+	}
+
+	annotations := lease.Annotations
+	if annotations[managedprotocol.AnnotationMaintenanceRequestVersion] != managedprotocol.DrainProtocolVersion ||
+		annotations[managedprotocol.AnnotationMaintenancePurpose] != managedprotocol.MaintenancePurposeSoftwareMutation ||
+		annotations[managedprotocol.AnnotationMaintenanceSessionToken] != session.SessionToken ||
+		annotations[managedprotocol.AnnotationMaintenanceOperationNS] != session.Operation.Namespace ||
+		annotations[managedprotocol.AnnotationMaintenanceOperationName] != session.Operation.Name ||
+		annotations[managedprotocol.AnnotationMaintenanceOperationUID] != session.Operation.UID {
+		return false, nil
+	}
+	requestedAt, err := time.Parse(time.RFC3339Nano, annotations[managedprotocol.AnnotationMaintenanceRequestedAt])
+	if err != nil || !requestedAt.Equal(session.RequestedAt.Time) {
+		return false, nil
+	}
+	requestRevision, err := strconv.ParseInt(
+		annotations[managedprotocol.AnnotationMaintenanceControlRevision], 10, 64,
+	)
+	if err != nil || requestRevision != session.ControlRevision {
+		return false, nil
+	}
+
+	var leaf opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.reader().Get(ctx, types.NamespacedName{
+		Namespace: session.Operation.Namespace, Name: session.Operation.Name,
+	}, &leaf); err != nil {
+		return false, fmt.Errorf("read cancelled maintenance recovery leaf: %w", err)
+	}
+	if string(leaf.UID) != session.Operation.UID ||
+		mutationguard.UpgradeHolderIdentity(&leaf) != session.Lease.Holder {
+		return false, nil
+	}
+	drain, err := validateManagedDrainIntent(device, node, &lease, &leaf)
+	if err != nil {
+		return false, nil
+	}
+	admission := leaf.Status.ManagerAdmission
+	control := leaf.Status.ManagerControl
+	if admission == nil || control == nil || drain == nil ||
+		admission.State != opsv1alpha1.UpgradeManagerAdmissionRevoked ||
+		admission.ControlRevision == nil || *admission.ControlRevision != control.Revision ||
+		!control.Cancel || control.Revision <= requestRevision ||
+		drain.State != opsv1alpha1.UpgradeManagerDrainRecovering ||
+		drain.ControlRevision != control.Revision || drain.SessionToken != session.SessionToken ||
+		!drain.StartedAt.Equal(&session.RequestedAt) || len(leaf.Status.ManagedMutationClaims) != 0 ||
+		mutationguard.UpgradeMutationSubmitted(&leaf) {
+		return false, nil
+	}
+	for annotation, expected := range map[string]string{
+		managedprotocol.AnnotationDeviceNamespace: device.Namespace,
+		managedprotocol.AnnotationDeviceName:      device.Name,
+		managedprotocol.AnnotationNodeName:        node.Name,
+		managedprotocol.AnnotationWorkerUsername:  managedNetworkWorkerUsername(node),
+		managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
+		managedprotocol.AnnotationCampaignUID:     admission.CampaignUID,
+		managedprotocol.AnnotationPlanHash:        admission.PlanHash,
+		managedprotocol.AnnotationLedgerUID:       admission.LedgerUID,
+		managedprotocol.AnnotationReservationID:   admission.ReservationID,
+	} {
+		if expected == "" || leaf.Annotations[annotation] != expected {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (r *CiscoDeviceReconciler) retainOrSettleMaintenance(
@@ -334,17 +513,16 @@ func (r *CiscoDeviceReconciler) validateMaintenanceRequest(
 	}
 	annotations := lease.Annotations
 	required := map[string]string{
-		managedprotocol.AnnotationManaged:                   "true",
-		managedprotocol.AnnotationMaintenanceRequestVersion: managedprotocol.Version,
-		managedprotocol.AnnotationDeviceNamespace:           device.Namespace,
-		managedprotocol.AnnotationDeviceName:                device.Name,
-		managedprotocol.AnnotationDeviceUID:                 string(device.UID),
-		managedprotocol.AnnotationNodeName:                  node.Name,
-		managedprotocol.AnnotationNodeUID:                   string(node.UID),
-		managedprotocol.AnnotationWorkerUsername:            managedNetworkWorkerUsername(node),
-		managedprotocol.AnnotationWorkerProtocol:            managedprotocol.Version,
-		managedprotocol.AnnotationLeasePurpose:              managedprotocol.LeasePurposeDeviceMutation,
-		devicecoordination.RetainLeaseAnnotation:            "true",
+		managedprotocol.AnnotationManaged:         "true",
+		managedprotocol.AnnotationDeviceNamespace: device.Namespace,
+		managedprotocol.AnnotationDeviceName:      device.Name,
+		managedprotocol.AnnotationDeviceUID:       string(device.UID),
+		managedprotocol.AnnotationNodeName:        node.Name,
+		managedprotocol.AnnotationNodeUID:         string(node.UID),
+		managedprotocol.AnnotationWorkerUsername:  managedNetworkWorkerUsername(node),
+		managedprotocol.AnnotationWorkerProtocol:  managedprotocol.Version,
+		managedprotocol.AnnotationLeasePurpose:    managedprotocol.LeasePurposeDeviceMutation,
+		devicecoordination.RetainLeaseAnnotation:  "true",
 	}
 	for _, key := range []string{
 		managedprotocol.AnnotationAppWorkerUsername,
@@ -388,18 +566,78 @@ func (r *CiscoDeviceReconciler) validateMaintenanceRequest(
 		return nil, fmt.Errorf("read requested software-upgrade leaf: %w", err)
 	}
 	if string(leaf.UID) != operation.UID || holder != mutationguard.UpgradeHolderIdentity(&leaf) {
-		return nil, fmt.Errorf("maintenance Lease holder does not bind the exact software-upgrade leaf UID")
+		if annotations[managedprotocol.AnnotationMaintenanceRequestVersion] != managedprotocol.DrainProtocolVersion ||
+			holder != devicecoordination.HolderIdentity("software-drain", leaf.Namespace, leaf.Name, string(leaf.UID)) {
+			return nil, fmt.Errorf("maintenance Lease holder does not bind the exact software-upgrade leaf UID")
+		}
 	}
-	if err := validateMaintenanceLeafBinding(device, node, &leaf, revision); err != nil {
-		return nil, err
+	protocol := ciskov1.DeviceMaintenanceProtocolVersion("")
+	purpose := ciskov1.DeviceMaintenancePurpose("")
+	requestVersion := annotations[managedprotocol.AnnotationMaintenanceRequestVersion]
+	requestPurpose := annotations[managedprotocol.AnnotationMaintenancePurpose]
+	switch requestVersion {
+	case managedprotocol.Version:
+		if requestPurpose != "" && requestPurpose != managedprotocol.MaintenancePurposeSoftwareMutation {
+			return nil, fmt.Errorf("rollout-v1 maintenance request has invalid purpose %q", requestPurpose)
+		}
+		if holder != mutationguard.UpgradeHolderIdentity(&leaf) {
+			return nil, fmt.Errorf("software-mutation request has a non-upgrade Lease holder")
+		}
+		if err := validateMaintenanceLeafBinding(device, node, &leaf, revision); err != nil {
+			return nil, err
+		}
+		if requestPurpose != "" {
+			protocol = ciskov1.DeviceMaintenanceProtocolRolloutV1
+			purpose = ciskov1.DeviceMaintenancePurposeSoftwareMutation
+		}
+	case managedprotocol.DrainProtocolVersion:
+		drain, err := validateManagedDrainIntent(device, node, lease, &leaf)
+		if err != nil {
+			return nil, err
+		}
+		if token != drain.SessionToken || revision != drain.ControlRevision ||
+			!requestedAt.Equal(drain.StartedAt.Time) {
+			return nil, fmt.Errorf("drain maintenance request does not match its immutable session")
+		}
+		protocol = ciskov1.DeviceMaintenanceProtocolPDBDrainV1
+		switch requestPurpose {
+		case managedprotocol.MaintenancePurposeWorkloadDrain:
+			purpose = ciskov1.DeviceMaintenancePurposeWorkloadDrain
+			if holder != devicecoordination.HolderIdentity("software-drain", leaf.Namespace, leaf.Name, string(leaf.UID)) ||
+				(drain.State != opsv1alpha1.UpgradeManagerDrainEvicting &&
+					drain.State != opsv1alpha1.UpgradeManagerDrainRecovering) {
+				return nil, fmt.Errorf("workload-drain request is not authorized by the current drain state")
+			}
+		case managedprotocol.MaintenancePurposeSoftwareMutation:
+			purpose = ciskov1.DeviceMaintenancePurposeSoftwareMutation
+			if holder != mutationguard.UpgradeHolderIdentity(&leaf) ||
+				(drain.State != opsv1alpha1.UpgradeManagerDrainPromoted &&
+					drain.State != opsv1alpha1.UpgradeManagerDrainRecovering) {
+				return nil, fmt.Errorf("promoted software-mutation request is not authorized by the current drain state")
+			}
+		default:
+			return nil, fmt.Errorf("pdb-drain-v1 maintenance request has invalid purpose %q", requestPurpose)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported maintenance request version %q", requestVersion)
 	}
 	phase := ciskov1.DeviceMaintenanceSessionAcknowledged
 	if len(leaf.Status.ManagedMutationClaims) != 0 {
 		phase = ciskov1.DeviceMaintenanceSessionActive
 	}
+	if protocol == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 {
+		// The direct manager handshake applies and verifies the scheduling guard
+		// before any drain/promotion request may acquire this Lease. A held exact
+		// request therefore preserves Active rather than downgrading the durable
+		// session to Acknowledged.
+		phase = ciskov1.DeviceMaintenanceSessionActive
+	}
+	if leaf.Status.ManagerDrain != nil && leaf.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainRecovering {
+		phase = ciskov1.DeviceMaintenanceSessionRecovering
+	}
 	now := metav1.NewTime(r.now())
 	return &ciskov1.DeviceMaintenanceSessionStatus{
-		Phase: phase, SessionToken: token,
+		Phase: phase, ProtocolVersion: protocol, Purpose: purpose, SessionToken: token,
 		Lease: ciskov1.DeviceMaintenanceLeaseReference{
 			DeviceMaintenanceObjectReference: ciskov1.DeviceMaintenanceObjectReference{
 				Namespace: lease.Namespace, Name: lease.Name, UID: string(lease.UID),
@@ -417,8 +655,8 @@ func validateManagedMutationLeaseSpec(spec *coordv1.LeaseSpec, holder string) er
 		return fmt.Errorf("unsupported Lease strategy metadata is present")
 	}
 	if holder == "" {
-		if spec.HolderIdentity != nil && strings.TrimSpace(*spec.HolderIdentity) != "" {
-			return fmt.Errorf("holderIdentity contains only whitespace")
+		if spec.HolderIdentity != nil && *spec.HolderIdentity != "" {
+			return fmt.Errorf("idle Lease has a nonempty holderIdentity")
 		}
 		if spec.LeaseDurationSeconds != nil || spec.AcquireTime != nil || spec.RenewTime != nil {
 			return fmt.Errorf("idle Lease retains holder timing metadata")
@@ -450,6 +688,7 @@ func hasMaintenanceRequestAnnotations(annotations map[string]string) bool {
 		managedprotocol.AnnotationMaintenanceOperationName,
 		managedprotocol.AnnotationMaintenanceOperationUID,
 		managedprotocol.AnnotationMaintenanceControlRevision,
+		managedprotocol.AnnotationMaintenancePurpose,
 	} {
 		if _, present := annotations[key]; present {
 			return true

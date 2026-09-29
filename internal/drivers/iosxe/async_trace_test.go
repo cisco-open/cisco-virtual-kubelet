@@ -43,6 +43,12 @@ func (c *recoveryTraceCaptureClient) Post(ctx context.Context, _ string, _ any, 
 	return c.err
 }
 
+func (c *recoveryTraceCaptureClient) PostWithResult(ctx context.Context, path string, payload, _ any,
+	marshal func(any) ([]byte, error), _ func([]byte, any) error,
+) error {
+	return c.Post(ctx, path, payload, marshal)
+}
+
 func TestRecoverMissingContainersUsesDetachedLinkedSpan(t *testing.T) {
 	recorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))

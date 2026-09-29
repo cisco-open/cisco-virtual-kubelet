@@ -32,6 +32,7 @@ func retainedLeaseFixture() *coordv1.Lease {
 		managedprotocol.AnnotationMaintenanceOperationName:   "upgrade",
 		managedprotocol.AnnotationMaintenanceOperationUID:    "leaf-uid",
 		managedprotocol.AnnotationMaintenanceControlRevision: "7",
+		managedprotocol.AnnotationMaintenancePurpose:         managedprotocol.MaintenancePurposeWorkloadDrain,
 		"topology.cisco.vk/maintenance-future-manager-field": "preserve",
 	}}, Spec: coordv1.LeaseSpec{HolderIdentity: strPtr("old-owner"), AcquireTime: &now, RenewTime: &now, LeaseDurationSeconds: int32Ptr(30), LeaseTransitions: int32Ptr(1)}}
 }

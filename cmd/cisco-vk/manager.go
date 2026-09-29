@@ -61,6 +61,7 @@ var (
 	enableLeaderElect               bool
 	probeAddr                       string
 	vkImage                         string
+	vkImagePullPolicy               string
 	controllerWorkerImage           string
 	controllerWorkerImagePullPolicy string
 	vkServiceAccount                string
@@ -98,6 +99,8 @@ func init() {
 			"Enabling this will ensure there is only one active controller manager.")
 	managerCmd.Flags().StringVar(&vkImage, "vk-image", controller.DefaultImage,
 		"Container image to use for per-device Virtual Kubelet deployments.")
+	managerCmd.Flags().StringVar(&vkImagePullPolicy, "vk-image-pull-policy", "",
+		"Image pull policy for per-device Virtual Kubelet deployments (Always, IfNotPresent, or Never; empty uses the image-tag default).")
 	managerCmd.Flags().StringVar(&controllerWorkerImage, "controller-worker-image", controller.DefaultImage,
 		"Adapter-bearing controller image to use for isolated network-controller workers.")
 	managerCmd.Flags().StringVar(&controllerWorkerImagePullPolicy, "controller-worker-image-pull-policy", string(corev1.PullIfNotPresent),
@@ -131,6 +134,13 @@ func init() {
 }
 
 func runManager(cmd *cobra.Command, args []string) error {
+	if vkImagePullPolicy != "" {
+		switch corev1.PullPolicy(vkImagePullPolicy) {
+		case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
+		default:
+			return fmt.Errorf("invalid --vk-image-pull-policy %q", vkImagePullPolicy)
+		}
+	}
 	switch corev1.PullPolicy(controllerWorkerImagePullPolicy) {
 	case corev1.PullAlways, corev1.PullIfNotPresent, corev1.PullNever:
 	default:
@@ -295,6 +305,9 @@ func runManager(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("managed topology native admission preflight: %w", err)
 		}
+		if err := verifyManagedWorkerClusterRoles(signalCtx, mgr.GetAPIReader()); err != nil {
+			return fmt.Errorf("managed topology worker RBAC preflight: %w", err)
+		}
 		// The preflight derives this from the same verified reads of both shared
 		// and generated account policy/binding UIDs, generations, and compiled
 		// Specs. Metadata-only updates therefore do not rotate worker identities.
@@ -347,6 +360,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 		TopologyPolicyName:              topologyPolicyName,
 		LeaseNamespace:                  os.Getenv("CONFIG_LEASE_NAMESPACE"),
 		Recorder:                        mgr.GetEventRecorderFor("ciscodevice-controller"),
+		ImagePullPolicy:                 corev1.PullPolicy(vkImagePullPolicy),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)
@@ -524,6 +538,13 @@ func managedTopologyStatePresent(ctx context.Context, reader client.Reader) (boo
 	}
 	for i := range clusterRoleBindings.Items {
 		binding := &clusterRoleBindings.Items[i]
+		if binding.RoleRef.APIGroup == rbacv1.GroupName && binding.RoleRef.Kind == "ClusterRole" &&
+			binding.RoleRef.Name == managedprotocol.ManagedWorkerPodDeleteClusterRole {
+			// This retained role is safe only while managed-pod-delete admission is
+			// enforcing. Treat every binding to it as live topology authority, even
+			// if its generated annotations are damaged, so downgrade fails closed.
+			return true, nil
+		}
 		annotations := binding.Annotations
 		managed := annotations[managedprotocol.AnnotationManaged] == "true" &&
 			binding.RoleRef.Name == managedprotocol.ManagedWorkerClusterRole

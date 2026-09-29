@@ -17,6 +17,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -25,6 +26,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance"
 	"github.com/virtual-kubelet/virtual-kubelet/node/nodeutil"
 	coordv1 "k8s.io/api/coordination/v1"
@@ -139,6 +141,147 @@ func TestAppHostingMaintenancePanicRetainsLease(t *testing.T) {
 			key := types.NamespacedName{Namespace: "leases", Name: engine.LeaseName(devicecoordination.DeviceKey("edge", "switch"), devicecoordination.MutationLeaseFamily)}
 			if err := c.Get(ctx, key, &lease); err != nil {
 				t.Fatalf("panic released uncertain mutation lease: %v", err)
+			}
+		})
+	}
+}
+
+func TestDrainMarkersSelectStrictDeleteAuthorization(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		annotations map[string]string
+		finalizers  []string
+		wantCalled  bool
+	}{
+		{name: "ordinary delete", wantCalled: true},
+		{name: "session marker", annotations: map[string]string{managedprotocol.AnnotationDrainSession: "session"}},
+		{name: "finalizer marker", finalizers: []string{managedprotocol.DrainPodFinalizer}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &AppHostingProvider{}
+			pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{
+				Namespace: "edge", Name: "app", UID: "pod-uid",
+				Annotations: tc.annotations, Finalizers: tc.finalizers,
+			}}
+			called := false
+			err := p.withDeleteMutation(context.Background(), pod, func(context.Context) error {
+				called = true
+				return nil
+			})
+			if called != tc.wantCalled {
+				t.Fatalf("delete callback called=%t, want %t", called, tc.wantCalled)
+			}
+			if (err == nil) != tc.wantCalled {
+				t.Fatalf("delete error=%v, want success=%t", err, tc.wantCalled)
+			}
+		})
+	}
+}
+
+func TestReleasedDrainCompletionAcknowledgesWithoutDeviceMutation(t *testing.T) {
+	p := &AppHostingProvider{}
+	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{Namespace: "edge", Name: "app", UID: "pod-uid"}}
+	mutations := 0
+	for i := 0; i < 2; i++ {
+		err := p.withResolvedDeleteMutation(
+			context.Background(), pod, maintenance.PodDeleteReleasedCompletion,
+			func(context.Context) error {
+				mutations++
+				return nil
+			},
+		)
+		if err != nil {
+			t.Fatalf("released completion acknowledgement: %v", err)
+		}
+	}
+	if mutations != 0 {
+		t.Fatalf("released completion invoked %d device mutations", mutations)
+	}
+}
+
+func TestUnknownDeleteDispositionFailsClosed(t *testing.T) {
+	p := &AppHostingProvider{}
+	called := false
+	err := p.withResolvedDeleteMutation(
+		context.Background(), &v1.Pod{}, maintenance.PodDeleteDisposition(255),
+		func(context.Context) error {
+			called = true
+			return nil
+		},
+	)
+	if err == nil || called {
+		t.Fatalf("unknown delete disposition = (called=%t, err=%v), want fail closed", called, err)
+	}
+}
+
+func TestDeletingDrainPodUpdateUsesStrictDeleteAuthorization(t *testing.T) {
+	ctx := context.Background()
+	pod := &v1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "edge", Name: "app", UID: "pod-uid",
+		Annotations: map[string]string{managedprotocol.AnnotationDrainSession: "session"},
+	}}
+	now := metav1.Now()
+	pod.DeletionTimestamp = &now
+	driver := &maintenancePodDriver{}
+	p, err := NewAppHostingProvider(ctx, &ciskov1.DeviceSpec{}, nodeutil.ProviderConfig{}, driver, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ordinary := pod.DeepCopy()
+	ordinary.Annotations = nil
+	if err := p.UpdatePod(ctx, ordinary); err != nil {
+		t.Fatalf("ordinary terminating UpdatePod changed behavior: %v", err)
+	}
+	if driver.updates != 1 {
+		t.Fatalf("ordinary terminating UpdatePod reached driver %d time(s), want 1", driver.updates)
+	}
+	driver.updates = 0
+
+	err = p.UpdatePod(ctx, pod)
+	if err == nil || !strings.Contains(err.Error(), "complete drain inventory support") {
+		t.Fatalf("terminating marked UpdatePod error = %v, want strict drain capability denial", err)
+	}
+	if driver.updates != 0 {
+		t.Fatalf("terminating marked UpdatePod reached ordinary driver update %d time(s)", driver.updates)
+	}
+}
+
+func TestLiveDrainProtectionRoutesStaleCallbacksThroughStrictAuthorization(t *testing.T) {
+	ctx := context.Background()
+	scheme := runtime.NewScheme()
+	if err := v1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	now := metav1.Now()
+	live := &v1.Pod{ObjectMeta: metav1.ObjectMeta{
+		Namespace: "edge", Name: "app", UID: "pod-uid",
+		Annotations:       map[string]string{managedprotocol.AnnotationDrainSession: "session"},
+		Finalizers:        []string{managedprotocol.DrainPodFinalizer},
+		DeletionTimestamp: &now,
+	}}
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(live).Build()
+
+	for _, operation := range []string{"delete", "terminating update"} {
+		t.Run(operation, func(t *testing.T) {
+			driver := &maintenancePodDriver{}
+			p, err := NewAppHostingProvider(ctx, &ciskov1.DeviceSpec{}, nodeutil.ProviderConfig{}, driver, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p.SetMaintenance(&maintenance.Coordinator{Client: apiClient, ManagedTopology: true})
+			stale := live.DeepCopy()
+			stale.Annotations = nil
+			stale.Finalizers = nil
+			if operation == "delete" {
+				err = p.DeletePod(ctx, stale)
+			} else {
+				err = p.UpdatePod(ctx, stale)
+			}
+			if err == nil || !strings.Contains(err.Error(), "complete drain inventory support") {
+				t.Fatalf("stale %s error = %v, want strict drain capability denial", operation, err)
+			}
+			if driver.updates != 0 || atomic.LoadInt32(&driver.deleteCalls) != 0 {
+				t.Fatalf("stale %s reached ordinary driver mutation", operation)
 			}
 		})
 	}

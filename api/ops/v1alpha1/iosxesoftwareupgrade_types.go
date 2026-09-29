@@ -600,6 +600,389 @@ type UpgradeWorkerControlStatus struct {
 	Message string `json:"message,omitempty"`
 }
 
+// ManagedDrainProtocolVersion identifies an explicitly enabled workload-drain
+// handshake. It is separate from ManagedUpgradeProtocolVersion so an older
+// rollout-v1 worker cannot accidentally interpret drain authority as mutation
+// authority.
+//
+// +kubebuilder:validation:Enum=pdb-drain-v1
+type ManagedDrainProtocolVersion string
+
+const (
+	ManagedDrainProtocolPDBV1 ManagedDrainProtocolVersion = "pdb-drain-v1"
+)
+
+// UpgradeManagerDrainState is the manager-owned state of a bounded drain.
+// Recovery is terminal with respect to new evictions: it may only reconcile
+// work already accepted and restore workload/scheduling invariants.
+//
+// +kubebuilder:validation:Enum=Preparing;Guarded;Evicting;Drained;Promoting;Promoted;Recovering;Settled
+type UpgradeManagerDrainState string
+
+const (
+	UpgradeManagerDrainPreparing  UpgradeManagerDrainState = "Preparing"
+	UpgradeManagerDrainGuarded    UpgradeManagerDrainState = "Guarded"
+	UpgradeManagerDrainEvicting   UpgradeManagerDrainState = "Evicting"
+	UpgradeManagerDrainDrained    UpgradeManagerDrainState = "Drained"
+	UpgradeManagerDrainPromoting  UpgradeManagerDrainState = "Promoting"
+	UpgradeManagerDrainPromoted   UpgradeManagerDrainState = "Promoted"
+	UpgradeManagerDrainRecovering UpgradeManagerDrainState = "Recovering"
+	UpgradeManagerDrainSettled    UpgradeManagerDrainState = "Settled"
+)
+
+// UpgradeDrainPodPhase records the durable progress of one exact selected Pod.
+// EvictionRequested is written only after policy/v1 Eviction was accepted;
+// this makes it a durable alternative to observing deletionTimestamp during a
+// provider deletion callback.
+//
+// +kubebuilder:validation:Enum=Selected;Protected;EvictionRequested;TerminationObserved;DeviceClean;Released;Complete
+type UpgradeDrainPodPhase string
+
+const (
+	UpgradeDrainPodSelected            UpgradeDrainPodPhase = "Selected"
+	UpgradeDrainPodProtected           UpgradeDrainPodPhase = "Protected"
+	UpgradeDrainPodEvictionRequested   UpgradeDrainPodPhase = "EvictionRequested"
+	UpgradeDrainPodTerminationObserved UpgradeDrainPodPhase = "TerminationObserved"
+	UpgradeDrainPodDeviceClean         UpgradeDrainPodPhase = "DeviceClean"
+	UpgradeDrainPodReleased            UpgradeDrainPodPhase = "Released"
+	UpgradeDrainPodComplete            UpgradeDrainPodPhase = "Complete"
+)
+
+// UpgradeDrainObjectReference binds drain eligibility to one exact namespaced
+// controller or PodDisruptionBudget incarnation.
+type UpgradeDrainObjectReference struct {
+	// APIVersion and Kind identify the native Kubernetes object type.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	APIVersion string `json:"apiVersion"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	Kind string `json:"kind"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	Namespace string `json:"namespace"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name"`
+
+	// UID prevents a deleted object from being replaced under the same name.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	UID string `json:"uid"`
+
+	// Generation freezes the eligibility inputs read from this object.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	Generation int64 `json:"generation"`
+}
+
+// UpgradeDrainPDBStatus captures the policy/v1 PodDisruptionBudget evidence
+// used to select a Pod. Keeping the health arithmetic explicit makes the
+// decision auditable without trusting an opaque eligibility hash.
+//
+// +kubebuilder:validation:XValidation:rule="self.observedGeneration == self.generation",message="drain PDB status must have observed its exact metadata generation"
+// +kubebuilder:validation:XValidation:rule="self.currentHealthy >= self.desiredHealthy && self.expectedPods >= self.currentHealthy && self.expectedPods >= self.desiredHealthy",message="drain PDB health evidence is inconsistent"
+type UpgradeDrainPDBStatus struct {
+	UpgradeDrainObjectReference `json:",inline"`
+
+	// ObservedGeneration is status.observedGeneration from the exact PDB.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	ObservedGeneration int64 `json:"observedGeneration"`
+
+	// DisruptionsAllowed must be positive in the frozen eligibility snapshot;
+	// the eviction subresource still performs the authoritative live check.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1000000
+	DisruptionsAllowed int32 `json:"disruptionsAllowed"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1000000
+	CurrentHealthy int32 `json:"currentHealthy"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1000000
+	DesiredHealthy int32 `json:"desiredHealthy"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1000000
+	ExpectedPods int32 `json:"expectedPods"`
+}
+
+// UpgradeDrainPodStatus is the bounded, identity-frozen manager record for one
+// drain candidate. A provider may act only on the exact UID and session in this
+// record; names alone never authorize device-side deletion.
+//
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Selected' ? self.phase in ['Selected', 'Protected', 'Complete'] : (oldSelf.phase == 'Protected' ? self.phase in ['Protected', 'EvictionRequested', 'TerminationObserved', 'Released'] : (oldSelf.phase == 'EvictionRequested' ? self.phase in ['EvictionRequested', 'TerminationObserved'] : (oldSelf.phase == 'TerminationObserved' ? self.phase in ['TerminationObserved', 'DeviceClean'] : (oldSelf.phase == 'DeviceClean' ? self.phase in ['DeviceClean', 'Released'] : (oldSelf.phase == 'Released' ? self.phase in ['Released', 'Complete'] : self.phase == 'Complete')))))",message="drain Pod phase cannot regress or skip accepted-teardown cleanup evidence"
+// +kubebuilder:validation:XValidation:rule="self.eligibilityHash == oldSelf.eligibilityHash",message="drain Pod eligibility snapshot is immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.protectedAt) || (has(self.protectedAt) && self.protectedAt == oldSelf.protectedAt)",message="protectedAt is append-only and immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.evictionRequestedAt) || (has(self.evictionRequestedAt) && self.evictionRequestedAt == oldSelf.evictionRequestedAt)",message="evictionRequestedAt is append-only and immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.deletionObservedAt) || (has(self.deletionObservedAt) && self.deletionObservedAt == oldSelf.deletionObservedAt)",message="deletionObservedAt is append-only and immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.deletionObservedInventoryRevision) || (has(self.deletionObservedInventoryRevision) && self.deletionObservedInventoryRevision == oldSelf.deletionObservedInventoryRevision)",message="deletionObservedInventoryRevision is append-only and immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.deviceCleanAt) || (has(self.deviceCleanAt) && self.deviceCleanAt == oldSelf.deviceCleanAt)",message="deviceCleanAt is append-only and immutable"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.releasedAt) || (has(self.releasedAt) && self.releasedAt == oldSelf.releasedAt)",message="releasedAt is append-only and immutable"
+// +kubebuilder:validation:XValidation:rule="!has(self.evictionRequestedAt) || (has(self.protectedAt) && self.evictionRequestedAt >= self.protectedAt)",message="evictionRequestedAt cannot precede protectedAt"
+// +kubebuilder:validation:XValidation:rule="!has(self.deletionObservedAt) || (has(self.evictionRequestedAt) && self.deletionObservedAt >= self.evictionRequestedAt)",message="deletionObservedAt cannot precede evictionRequestedAt"
+// +kubebuilder:validation:XValidation:rule="!has(self.deletionObservedInventoryRevision) || has(self.deletionObservedAt)",message="deletionObservedInventoryRevision requires termination evidence"
+// +kubebuilder:validation:XValidation:rule="!has(self.deviceCleanAt) || (has(self.deletionObservedAt) && self.deviceCleanAt >= self.deletionObservedAt && self.deviceCleanInventoryRevision > (has(self.deletionObservedInventoryRevision) ? self.deletionObservedInventoryRevision : 0))",message="deviceCleanAt requires inventory evidence newer than the termination baseline"
+// +kubebuilder:validation:XValidation:rule="!has(self.releasedAt) || (!has(self.deviceCleanAt) || self.releasedAt >= self.deviceCleanAt)",message="releasedAt cannot precede deviceCleanAt"
+// +kubebuilder:validation:XValidation:rule="self.phase in ['Selected', 'Complete'] || has(self.protectedAt)",message="protected and teardown phases require protectedAt"
+// +kubebuilder:validation:XValidation:rule="!(self.phase in ['EvictionRequested', 'TerminationObserved', 'DeviceClean']) || has(self.evictionRequestedAt)",message="accepted eviction phases require evictionRequestedAt"
+// +kubebuilder:validation:XValidation:rule="!(self.phase in ['TerminationObserved', 'DeviceClean']) || has(self.deletionObservedAt)",message="termination evidence phases require deletionObservedAt"
+// +kubebuilder:validation:XValidation:rule="self.phase != 'DeviceClean' || (has(self.deviceCleanAt) && self.deviceCleanInventoryRevision > 0)",message="DeviceClean requires timestamped positive inventory evidence"
+// +kubebuilder:validation:XValidation:rule="self.phase != 'Released' || has(self.releasedAt)",message="Released requires releasedAt"
+type UpgradeDrainPodStatus struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	Namespace string `json:"namespace"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	UID string `json:"uid"`
+
+	// EligibilityHash is the canonical digest of the Pod identity, controller
+	// chain, exact PDB evidence, and bounded termination policy. Both manager and
+	// worker recompute it before acting, making nested snapshot drift fail closed
+	// without prohibitively expensive recursive CEL transition rules.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=71
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	EligibilityHash string `json:"eligibilityHash"`
+
+	// Controller is the Pod's exact controlling owner.
+	// +kubebuilder:validation:Required
+	Controller UpgradeDrainObjectReference `json:"controller"`
+
+	// WorkloadController is the exact top-level native workload controller when
+	// it differs from Controller (for example Deployment above ReplicaSet).
+	// +kubebuilder:validation:Optional
+	WorkloadController *UpgradeDrainObjectReference `json:"workloadController,omitempty"`
+
+	// PDBs contains the one exact policy/v1 PodDisruptionBudget that selected
+	// this Pod when eligibility was frozen. Kubernetes rejects Eviction when
+	// more than one PDB selects the same Pod.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=1
+	// +listType=map
+	// +listMapKey=uid
+	PDBs []UpgradeDrainPDBStatus `json:"pdbs"`
+
+	// TerminationGracePeriodSeconds is the campaign-capped grace sent with the
+	// Eviction request.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=600
+	TerminationGracePeriodSeconds int64 `json:"terminationGracePeriodSeconds"`
+
+	// +kubebuilder:validation:Required
+	Phase UpgradeDrainPodPhase `json:"phase"`
+
+	// The following timestamps are append-only audit evidence for the bounded
+	// drain state machine.
+	// +kubebuilder:validation:Optional
+	ProtectedAt *metav1.Time `json:"protectedAt,omitempty"`
+	// +kubebuilder:validation:Optional
+	EvictionRequestedAt *metav1.Time `json:"evictionRequestedAt,omitempty"`
+	// +kubebuilder:validation:Optional
+	DeletionObservedAt *metav1.Time `json:"deletionObservedAt,omitempty"`
+	// DeletionObservedInventoryRevision is the latest worker inventory revision
+	// atomically observed when the manager first persisted termination. Only a
+	// strictly newer scan can prove this particular Pod clean.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	DeletionObservedInventoryRevision int64 `json:"deletionObservedInventoryRevision,omitempty"`
+	// +kubebuilder:validation:Optional
+	DeviceCleanAt *metav1.Time `json:"deviceCleanAt,omitempty"`
+	// +kubebuilder:validation:Optional
+	ReleasedAt *metav1.Time `json:"releasedAt,omitempty"`
+
+	// DeviceCleanInventoryRevision is the positive worker inventory revision
+	// that proved the exact Pod UID absent from the device.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	DeviceCleanInventoryRevision int64 `json:"deviceCleanInventoryRevision,omitempty"`
+}
+
+// UpgradeManagerDrainStatus is the manager-owned, bounded drain authority.
+// Its omission preserves the existing BlockIfRunning path and grants no
+// workload-deletion authority.
+//
+// +kubebuilder:validation:XValidation:rule="self.protocolVersion == oldSelf.protocolVersion && self.sessionToken == oldSelf.sessionToken && self.reservationID == oldSelf.reservationID && self.policyEpoch == oldSelf.policyEpoch && self.nodeUID == oldSelf.nodeUID && self.nodeUnschedulableBefore == oldSelf.nodeUnschedulableBefore && self.maintenanceTaintPresentBefore == oldSelf.maintenanceTaintPresentBefore && self.startedAt == oldSelf.startedAt && self.drainDeadline == oldSelf.drainDeadline",message="manager drain identity and pre-guard evidence are immutable"
+// +kubebuilder:validation:XValidation:rule="self.controlRevision >= oldSelf.controlRevision",message="manager drain controlRevision cannot decrease"
+// +kubebuilder:validation:XValidation:rule="oldSelf.state == 'Preparing' ? self.state in ['Preparing', 'Guarded', 'Recovering'] : (oldSelf.state == 'Guarded' ? self.state in ['Guarded', 'Evicting', 'Recovering'] : (oldSelf.state == 'Evicting' ? self.state in ['Evicting', 'Drained', 'Recovering'] : (oldSelf.state == 'Drained' ? self.state in ['Drained', 'Promoting', 'Recovering'] : (oldSelf.state == 'Promoting' ? self.state in ['Promoting', 'Promoted', 'Recovering'] : (oldSelf.state == 'Promoted' ? self.state in ['Promoted', 'Recovering'] : (oldSelf.state == 'Recovering' ? self.state in ['Recovering', 'Settled'] : self.state == 'Settled'))))))",message="manager drain state cannot regress or bypass recovery"
+// +kubebuilder:validation:XValidation:rule="self.drainDeadline > self.startedAt && self.updatedAt >= self.startedAt",message="manager drain deadline must follow start and updates cannot precede start"
+// +kubebuilder:validation:XValidation:rule="self.updatedAt >= oldSelf.updatedAt",message="manager drain updatedAt cannot regress"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.recoveryDeadline) || (has(self.recoveryDeadline) && self.recoveryDeadline >= oldSelf.recoveryDeadline && (self.recoveryDeadline == oldSelf.recoveryDeadline || (oldSelf.state == 'Recovering' && self.state == 'Recovering' && self.controlRevision > oldSelf.controlRevision && self.updatedAt > oldSelf.updatedAt)))",message="recoveryDeadline is append-only and may advance only in Recovering with a newer audited control revision"
+// +kubebuilder:validation:XValidation:rule="self.state in ['Recovering', 'Settled'] ? (has(self.recoveryDeadline) && self.recoveryDeadline > self.startedAt) : !has(self.recoveryDeadline)",message="recoveryDeadline is present only for Recovering or Settled and must follow start"
+type UpgradeManagerDrainStatus struct {
+	// +kubebuilder:validation:Required
+	ProtocolVersion ManagedDrainProtocolVersion `json:"protocolVersion"`
+
+	// +kubebuilder:validation:Required
+	State UpgradeManagerDrainState `json:"state"`
+
+	// SessionToken is a canonical UUID shared only by this drain, the exact
+	// maintenance session/Lease, and protected Pods.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`
+	SessionToken string `json:"sessionToken"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=64
+	ReservationID string `json:"reservationID"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	PolicyEpoch int64 `json:"policyEpoch"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	ControlRevision int64 `json:"controlRevision"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	NodeUID string `json:"nodeUID"`
+
+	// NodeUnschedulableBefore records operator-owned scheduling state before
+	// this exact session applied its guard. Recovery may clear unschedulable only
+	// when this is false and the Node still carries this session's ownership.
+	// +kubebuilder:validation:Required
+	NodeUnschedulableBefore bool `json:"nodeUnschedulableBefore"`
+
+	// MaintenanceTaintPresentBefore prevents recovery from removing a taint that
+	// predated this drain. A false value is not sufficient by itself: the
+	// session ownership annotation must still match before removal.
+	// +kubebuilder:validation:Required
+	MaintenanceTaintPresentBefore bool `json:"maintenanceTaintPresentBefore"`
+
+	// +kubebuilder:validation:Required
+	StartedAt metav1.Time `json:"startedAt"`
+
+	// DrainDeadline is the immutable deadline for accepting new evictions.
+	// +kubebuilder:validation:Required
+	DrainDeadline metav1.Time `json:"drainDeadline"`
+
+	// RecoveryDeadline bounds cleanup after normal drain progress stops. If
+	// recovery outlives this window, the manager may extend it by one bounded
+	// window only while Recovering and only with a strictly newer campaign
+	// control revision. Renewal never authorizes a new eviction or disruptive
+	// software mutation; it can resume only already-accepted teardown and fresh
+	// device inventory needed to prove recovery.
+	// +kubebuilder:validation:Optional
+	RecoveryDeadline *metav1.Time `json:"recoveryDeadline,omitempty"`
+
+	// +kubebuilder:validation:Required
+	UpdatedAt metav1.Time `json:"updatedAt"`
+
+	// Pods is a bounded UID-keyed snapshot; the configured campaign maxPods may
+	// tighten this absolute API limit.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	// +listType=map
+	// +listMapKey=uid
+	Pods []UpgradeDrainPodStatus `json:"pods,omitempty"`
+}
+
+// UpgradeWorkerDrainStatus is the worker-owned inventory acknowledgement for
+// the exact manager drain session. It conveys observations only and is never
+// authority to evict another Pod.
+//
+// +kubebuilder:validation:XValidation:rule="self.protocolVersion == oldSelf.protocolVersion && self.observedSessionToken == oldSelf.observedSessionToken && self.observedPolicyEpoch == oldSelf.observedPolicyEpoch",message="worker drain session identity is immutable"
+// +kubebuilder:validation:XValidation:rule="self.observedControlRevision >= oldSelf.observedControlRevision && self.inventoryRevision >= oldSelf.inventoryRevision",message="worker drain revisions cannot decrease"
+// +kubebuilder:validation:XValidation:rule="self.inventoryObservedAt >= oldSelf.inventoryObservedAt && self.updatedAt >= oldSelf.updatedAt",message="worker drain observation timestamps cannot regress"
+// +kubebuilder:validation:XValidation:rule="self.inventoryRevision == oldSelf.inventoryRevision || (self.inventoryRevision > oldSelf.inventoryRevision && self.inventoryObservedAt > oldSelf.inventoryObservedAt && self.updatedAt > oldSelf.updatedAt)",message="a new inventory revision requires newer observation timestamps"
+// +kubebuilder:validation:XValidation:rule="self.inventoryRevision > oldSelf.inventoryRevision || self == oldSelf",message="worker drain inventory evidence may change only with a strictly newer inventory revision"
+// +kubebuilder:validation:XValidation:rule="self.observedWorkerConfigRevision == oldSelf.observedWorkerConfigRevision || (self.inventoryRevision > oldSelf.inventoryRevision && self.inventoryObservedAt > oldSelf.inventoryObservedAt && self.updatedAt > oldSelf.updatedAt)",message="worker configuration revision may change only with a strictly newer inventory observation"
+type UpgradeWorkerDrainStatus struct {
+	// +kubebuilder:validation:Required
+	ProtocolVersion ManagedDrainProtocolVersion `json:"protocolVersion"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`
+	ObservedSessionToken string `json:"observedSessionToken"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	ObservedPolicyEpoch int64 `json:"observedPolicyEpoch"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=0
+	ObservedControlRevision int64 `json:"observedControlRevision"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	// A worker rotation makes the prior inventory stale; this value may advance
+	// only together with a strictly newer device scan.
+	ObservedWorkerConfigRevision string `json:"observedWorkerConfigRevision"`
+
+	// ObservedWorkerPodUID binds inventory to the app worker process, including
+	// restarts that keep the same configuration. Required for split workers.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	ObservedWorkerPodUID string `json:"observedWorkerPodUID,omitempty"`
+
+	// InventoryRevision identifies one complete, device-derived workload scan.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Minimum=1
+	InventoryRevision int64 `json:"inventoryRevision"`
+
+	// +kubebuilder:validation:Required
+	InventoryObservedAt metav1.Time `json:"inventoryObservedAt"`
+
+	// InventoryComplete is false whenever enumeration was partial or ambiguous.
+	InventoryComplete bool `json:"inventoryComplete"`
+
+	// RemainingAuthorizedPodUIDs is the bounded set of selected Pod UIDs still
+	// observed on the device.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	// +kubebuilder:validation:XValidation:rule="self.all(uid, uid.size() >= 1 && uid.size() <= 128)",message="remaining authorized Pod UIDs must contain 1-128 characters"
+	// +listType=set
+	RemainingAuthorizedPodUIDs []string `json:"remainingAuthorizedPodUIDs,omitempty"`
+
+	// ForeignDeviceWorkloadCount and UnknownDeviceWorkloadCount keep incomplete
+	// attribution fail-closed without persisting an unbounded inventory.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483647
+	ForeignDeviceWorkloadCount int32 `json:"foreignDeviceWorkloadCount,omitempty"`
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483647
+	UnknownDeviceWorkloadCount int32 `json:"unknownDeviceWorkloadCount,omitempty"`
+
+	// +kubebuilder:validation:Required
+	UpdatedAt metav1.Time `json:"updatedAt"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	Reason string `json:"reason,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=256
+	Message string `json:"message,omitempty"`
+}
+
 // UpgradeManagedMutationStage names each durable device-mutating claim.
 //
 // +kubebuilder:validation:Enum=Staging;PrimaryInstall;StandbyInstall;StandbyActivation;PrimaryActivation;RollbackActivation
@@ -648,6 +1031,17 @@ type UpgradeManagedMutationClaimStatus struct {
 }
 
 // IOSXESoftwareUpgradeStatus carries observed state.
+//
+// Once published, drain snapshots and individual manager-selected Pod records
+// cannot be removed or added. The manager publishes the complete immutable
+// candidate snapshot atomically with ManagerDrain; subsequent updates carry
+// only state-machine and observation progress.
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || has(self.managerDrain)",message="managerDrain cannot be removed once published"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.workerDrain) || has(self.workerDrain)",message="workerDrain cannot be removed once published"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(oldSelf.managerDrain.pods) || (has(self.managerDrain) && has(self.managerDrain.pods) && oldSelf.managerDrain.pods.all(p, self.managerDrain.pods.exists(n, n.uid == p.uid)))",message="managerDrain Pod entries cannot be removed once published"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(self.managerDrain) || !has(self.managerDrain.pods) || (has(oldSelf.managerDrain.pods) && self.managerDrain.pods.all(p, oldSelf.managerDrain.pods.exists(o, o.uid == p.uid)))",message="managerDrain Pod entries cannot be added after publication"
+// +kubebuilder:validation:XValidation:rule="!has(self.workerDrain) || (has(self.managerDrain) && self.workerDrain.protocolVersion == self.managerDrain.protocolVersion && self.workerDrain.observedSessionToken == self.managerDrain.sessionToken && self.workerDrain.observedPolicyEpoch == self.managerDrain.policyEpoch && self.workerDrain.observedControlRevision <= self.managerDrain.controlRevision)",message="workerDrain must bind the current manager drain session and may only lag its control revision"
+// +kubebuilder:validation:XValidation:rule="!has(self.workerDrain) || !has(self.workerDrain.remainingAuthorizedPodUIDs) || (has(self.managerDrain) && has(self.managerDrain.pods) && self.workerDrain.remainingAuthorizedPodUIDs.all(uid, self.managerDrain.pods.exists(p, p.uid == uid)))",message="workerDrain remaining Pod UIDs must be a subset of the frozen manager snapshot"
 type IOSXESoftwareUpgradeStatus struct {
 	// Phase is the current state-machine position.
 	// +optional
@@ -676,6 +1070,16 @@ type IOSXESoftwareUpgradeStatus struct {
 	// from ManagerAdmission and ManagerControl.
 	// +kubebuilder:validation:Optional
 	WorkerControl *UpgradeWorkerControlStatus `json:"workerControl,omitempty"`
+
+	// ManagerDrain is the manager-owned, opt-in PDB-aware drain snapshot. Its
+	// absence preserves existing scheduling and BlockIfRunning behavior.
+	// +kubebuilder:validation:Optional
+	ManagerDrain *UpgradeManagerDrainStatus `json:"managerDrain,omitempty"`
+
+	// WorkerDrain is the worker-owned device inventory acknowledgement for the
+	// exact ManagerDrain session.
+	// +kubebuilder:validation:Optional
+	WorkerDrain *UpgradeWorkerDrainStatus `json:"workerDrain,omitempty"`
 
 	// ManagedMutationClaims binds every durable at-most-once mutation marker to
 	// the reservation/control revision it claimed. The worker adds an entry in

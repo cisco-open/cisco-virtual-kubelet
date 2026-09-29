@@ -98,3 +98,33 @@ func TestEnvtest_CiscoDeviceWorkerResourcesAdmission(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvtest_CiscoDeviceRejectsReservedTopologyTaint(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-reserved-topology-taint"
+	envtestNamespace(t, c, namespace)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	object := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": "cisco.vk/v1alpha1",
+		"kind":       "CiscoDevice",
+		"metadata":   map[string]any{"name": "reserved-taint", "namespace": namespace},
+		"spec": map[string]any{
+			"driver":   "XE",
+			"address":  "192.0.2.10",
+			"username": "admin",
+			"taints": []any{map[string]any{
+				"key": "topology.cisco.vk/uninitialized", "value": "true", "effect": "NoSchedule",
+			}},
+		},
+	}}
+	err := c.Create(ctx, object)
+	if err == nil {
+		t.Fatal("API server accepted manager-reserved topology taint")
+	}
+	if !apierrors.IsInvalid(err) || !strings.Contains(err.Error(), "topology.cisco.vk/uninitialized is manager-reserved") {
+		t.Fatalf("reserved topology taint error = %v, want exact CRD validation", err)
+	}
+}

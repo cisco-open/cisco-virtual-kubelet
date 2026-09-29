@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -94,6 +95,23 @@ func TestAdminPolicyHashesSeparateSemanticAndStructuralChanges(t *testing.T) {
 	if structuralChanged == structural {
 		t.Fatal("projected topology change did not change the structural hash")
 	}
+	drainOrderA := base
+	drainOrderA.WorkloadDrain = validAdminWorkloadDrainPolicy()
+	drainOrderA.WorkloadDrain.AllowedNamespaces = []string{"edge-services", "apps"}
+	drainOrderB := base
+	drainOrderB.WorkloadDrain = validAdminWorkloadDrainPolicy()
+	drainOrderB.WorkloadDrain.AllowedNamespaces = []string{"apps", "edge-services"}
+	semanticA, structuralA, err := AdminPolicyHashes(drainOrderA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	semanticB, structuralB, err := AdminPolicyHashes(drainOrderB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if semanticA != semanticB || structuralA != structuralB {
+		t.Fatal("order-only drain namespace rewrite changed canonical policy hashes")
+	}
 	changedLeaseAuthority := base
 	changedLeaseAuthority.ConfigLeaseNamespace = "other-leases"
 	_, structuralLeaseChanged, err := AdminPolicyHashes(changedLeaseAuthority)
@@ -151,6 +169,35 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 				cfg.FleetSelector.MatchLabels["example.com/key-"+strconv.Itoa(i)] = "value"
 			}
 		},
+		"enabled drain without namespaces": func(cfg *AdminPolicyConfig) {
+			cfg.WorkloadDrain = validAdminWorkloadDrainPolicy()
+			cfg.WorkloadDrain.AllowedNamespaces = nil
+		},
+		"duplicate drain namespace": func(cfg *AdminPolicyConfig) {
+			cfg.WorkloadDrain = validAdminWorkloadDrainPolicy()
+			cfg.WorkloadDrain.AllowedNamespaces = []string{"apps", "apps"}
+		},
+		"invalid drain namespace": func(cfg *AdminPolicyConfig) {
+			cfg.WorkloadDrain = validAdminWorkloadDrainPolicy()
+			cfg.WorkloadDrain.AllowedNamespaces = []string{"Not_A_Namespace"}
+		},
+		"undersize drain timeout cap": func(cfg *AdminPolicyConfig) {
+			cfg.WorkloadDrain = validAdminWorkloadDrainPolicy()
+			cfg.WorkloadDrain.MaxTimeoutSeconds = minDrainTimeoutSeconds - 1
+		},
+		"oversize drain pod cap": func(cfg *AdminPolicyConfig) {
+			cfg.WorkloadDrain = validAdminWorkloadDrainPolicy()
+			cfg.WorkloadDrain.MaxPods = maxDrainPods + 1
+		},
+		"undersize drain grace cap": func(cfg *AdminPolicyConfig) {
+			cfg.WorkloadDrain = validAdminWorkloadDrainPolicy()
+			cfg.WorkloadDrain.MaxTerminationGraceSeconds = minDrainGraceSeconds - 1
+		},
+		"drain cap lacks completion buffer": func(cfg *AdminPolicyConfig) {
+			cfg.WorkloadDrain = validAdminWorkloadDrainPolicy()
+			cfg.WorkloadDrain.MaxTimeoutSeconds = minDrainTimeoutSeconds
+			cfg.WorkloadDrain.MaxTerminationGraceSeconds = minDrainTimeoutSeconds - drainCompletionBuffer + 1
+		},
 	}
 	for name, mutate := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -160,6 +207,105 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 				t.Fatal("CanonicalPolicyJSON() accepted invalid policy")
 			}
 		})
+	}
+}
+
+func TestAdminPolicyCanonicalizesDisabledDrainToAbsent(t *testing.T) {
+	cfg := validAdminPolicyConfig()
+	baselineSemantic, baselineStructural, err := AdminPolicyHashes(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg.WorkloadDrain = &AdminWorkloadDrainPolicy{Enabled: false}
+	data, err := CanonicalPolicyJSON(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(data, `"workloadDrain"`) {
+		t.Fatalf("disabled drain changed canonical policy JSON: %s", data)
+	}
+	semantic, structural, err := AdminPolicyHashes(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if semantic != baselineSemantic || structural != baselineStructural {
+		t.Fatal("disabled drain changed the pre-drain v1 policy hashes")
+	}
+}
+
+func TestParsedAdminPolicyValidatesCampaignDrainAsTightening(t *testing.T) {
+	base := validAdminPolicyConfig()
+	request := opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec{
+		Policy: opsv1alpha1.IOSXESoftwareRolloutWorkloadDrain,
+		Drain: &opsv1alpha1.IOSXESoftwareRolloutDrainSpec{
+			Namespaces:                 []string{"apps"},
+			TimeoutSeconds:             600,
+			MaxPods:                    4,
+			MaxTerminationGraceSeconds: 120,
+		},
+	}
+
+	if err := (&ParsedAdminPolicy{Config: base}).ValidateWorkloadPolicy(
+		opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec{},
+	); err != nil {
+		t.Fatalf("default BlockIfRunning rejected: %v", err)
+	}
+	if err := (&ParsedAdminPolicy{Config: base}).ValidateWorkloadPolicy(
+		opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec{Policy: opsv1alpha1.IOSXESoftwareRolloutWorkloadBlockIfRunning},
+	); err != nil {
+		t.Fatalf("explicit BlockIfRunning rejected: %v", err)
+	}
+	if err := (&ParsedAdminPolicy{Config: base}).ValidateWorkloadPolicy(request); err == nil || !strings.Contains(err.Error(), "does not enable") {
+		t.Fatalf("disabled drain error = %v", err)
+	}
+
+	enabled := base
+	enabled.WorkloadDrain = &AdminWorkloadDrainPolicy{
+		Enabled:                    true,
+		AllowedNamespaces:          []string{"apps", "edge-services"},
+		MaxTimeoutSeconds:          900,
+		MaxPods:                    8,
+		MaxTerminationGraceSeconds: 180,
+	}
+	policy := &ParsedAdminPolicy{Config: enabled}
+	if err := policy.ValidateWorkloadPolicy(request); err != nil {
+		t.Fatalf("tightened drain request rejected: %v", err)
+	}
+
+	tests := map[string]func(*opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec){
+		"missing drain": func(got *opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec) { got.Drain = nil },
+		"unallowed namespace": func(got *opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec) {
+			got.Drain.Namespaces = []string{"kube-system"}
+		},
+		"timeout exceeds cap": func(got *opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec) { got.Drain.TimeoutSeconds = 901 },
+		"pods exceed cap":     func(got *opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec) { got.Drain.MaxPods = 9 },
+		"grace exceeds cap": func(got *opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec) {
+			got.Drain.MaxTerminationGraceSeconds = 181
+		},
+		"insufficient completion buffer": func(got *opsv1alpha1.IOSXESoftwareRolloutWorkloadSpec) {
+			got.Drain.TimeoutSeconds = 300
+			got.Drain.MaxTerminationGraceSeconds = 181
+		},
+	}
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			candidate := request
+			if request.Drain != nil {
+				copy := *request.Drain
+				copy.Namespaces = append([]string(nil), request.Drain.Namespaces...)
+				candidate.Drain = &copy
+			}
+			mutate(&candidate)
+			if err := policy.ValidateWorkloadPolicy(candidate); err == nil {
+				t.Fatal("ValidateWorkloadPolicy() accepted a request that loosens administrator policy")
+			}
+		})
+	}
+
+	blockedWithDrain := request
+	blockedWithDrain.Policy = opsv1alpha1.IOSXESoftwareRolloutWorkloadBlockIfRunning
+	if err := policy.ValidateWorkloadPolicy(blockedWithDrain); err == nil {
+		t.Fatal("ValidateWorkloadPolicy() accepted drain configuration with BlockIfRunning")
 	}
 }
 
@@ -246,5 +392,15 @@ func validAdminPolicyConfig() AdminPolicyConfig {
 		MaxActiveReservations:               256,
 		MaxLedgerBytes:                      256 * 1024,
 		LedgerName:                          "cvk-rollout-ledger",
+	}
+}
+
+func validAdminWorkloadDrainPolicy() *AdminWorkloadDrainPolicy {
+	return &AdminWorkloadDrainPolicy{
+		Enabled:                    true,
+		AllowedNamespaces:          []string{"apps"},
+		MaxTimeoutSeconds:          maxDrainTimeoutSeconds,
+		MaxPods:                    maxDrainPods,
+		MaxTerminationGraceSeconds: maxDrainGraceSeconds,
 	}
 }

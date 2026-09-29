@@ -19,6 +19,7 @@ import (
 	"errors"
 	"sort"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 func TestRolloutDependencyIndexesScopeReconciliations(t *testing.T) {
@@ -79,6 +81,62 @@ func TestRolloutDependencyIndexesScopeReconciliations(t *testing.T) {
 	}
 	if got := rolloutSourceSecretNameIndexValues(first); len(got) != 2 || got[0] != "source-a" || got[1] != "source-b" {
 		t.Fatalf("source Secret index values = %v, want sorted unique [source-a source-b]", got)
+	}
+}
+
+func TestRolloutDrainPodWatchRetainsFinalDeletionEvent(t *testing.T) {
+	rollout := indexedRollout("lab-a", "rollout-a", "edge-a", "node-a", "source-a")
+	scheme := runtime.NewScheme()
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithIndex(&opsv1alpha1.IOSXESoftwareRollout{}, rolloutTargetNodeNameIndex, rolloutTargetNodeNameIndexValues).
+		WithObjects(rollout).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{Client: apiClient}
+	terminatingAt := metav1.NewTime(time.Now())
+
+	for _, tc := range []struct {
+		name string
+		pod  corev1.Pod
+		want bool
+	}{
+		{
+			name: "protected",
+			pod: corev1.Pod{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{
+				managedprotocol.AnnotationDrainSession: "session",
+			}}, Spec: corev1.PodSpec{NodeName: "node-a"}},
+			want: true,
+		},
+		{
+			name: "terminating after protection release",
+			pod: corev1.Pod{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &terminatingAt},
+				Spec: corev1.PodSpec{NodeName: "node-a"}},
+			want: true,
+		},
+		{
+			name: "ordinary unprotected",
+			pod:  corev1.Pod{Spec: corev1.PodSpec{NodeName: "node-a"}},
+		},
+		{
+			name: "terminating on unrelated Node",
+			pod: corev1.Pod{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &terminatingAt},
+				Spec: corev1.PodSpec{NodeName: "node-b"}},
+		},
+		{
+			name: "terminating before scheduling",
+			pod:  corev1.Pod{ObjectMeta: metav1.ObjectMeta{DeletionTimestamp: &terminatingAt}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			requests := reconciler.rolloutRequestsForDrainPod(context.Background(), &tc.pod)
+			if (len(requests) != 0) != tc.want {
+				t.Fatalf("requests = %#v, want mapped=%t", requests, tc.want)
+			}
+			if tc.want {
+				assertRolloutRequests(t, requests, "lab-a/rollout-a")
+			}
+		})
 	}
 }
 

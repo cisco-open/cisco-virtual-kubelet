@@ -235,6 +235,35 @@ func managedTerminalMutationSettled(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 			meta.IsStatusConditionTrue(up.Status.Conditions, conditionTypeMutationSettled))
 }
 
+// managedCancellationCanReleaseMutationLease recognizes the narrow
+// pre-dispatch cancellation boundary. The worker acknowledgement must already
+// reflect the exact manager revision and admission epoch; the caller invokes
+// this only after syncManagedLeafGate found that acknowledgement durable. A
+// durable claim or any at-most-once mutation marker makes the outcome
+// potentially physical and therefore keeps the Lease quarantined.
+func managedCancellationCanReleaseMutationLease(
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	decision managedLeafDecision,
+) bool {
+	if up == nil || !decision.applies || decision.allowProgress ||
+		decision.effectiveState != opsv1alpha1.UpgradeWorkerControlCancelled ||
+		len(up.Status.ManagedMutationClaims) != 0 || upgradeMutationSubmitted(up) {
+		return false
+	}
+	admission := up.Status.ManagerAdmission
+	control := up.Status.ManagerControl
+	worker := up.Status.WorkerControl
+	return admission != nil && control != nil && worker != nil && control.Cancel &&
+		decision.admissionState == admission.State &&
+		decision.policyEpoch == admission.PolicyEpoch &&
+		decision.controlRevision == control.Revision &&
+		worker.ObservedAdmissionState == admission.State &&
+		worker.ObservedPolicyEpoch == admission.PolicyEpoch &&
+		worker.ObservedControlRevision == control.Revision &&
+		worker.ObservedWorkerConfigRevision == decision.workerRevision &&
+		worker.EffectiveState == opsv1alpha1.UpgradeWorkerControlCancelled
+}
+
 func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade) error {
 	if r.Reader == nil {
 		return fmt.Errorf("managed topology requires an uncached Kubernetes API reader")
@@ -563,7 +592,13 @@ func (r *Reconciler) prepareManagedMutationClaim(
 		return true, nil
 	}
 	if decision.allowClaim {
-		if err := r.ensureNoFailedCampaignPeer(ctx, current); err != nil {
+		devicePodLister, workloadGate, gateErr := r.managedClaimPodLister(current)
+		if gateErr != nil {
+			decision.allowClaim = false
+			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
+			decision.reason = "WorkloadGateUnavailable"
+			decision.message = boundedWorkerMessage(gateErr.Error())
+		} else if err := r.ensureNoFailedCampaignPeer(ctx, current); err != nil {
 			decision.allowClaim = false
 			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
 			decision.reason = "CampaignTargetFailed"
@@ -572,28 +607,28 @@ func (r *Reconciler) prepareManagedMutationClaim(
 			decision.allowClaim = false
 			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
 			decision.reason = "WorkloadCheckFailed"
-			decision.message = boundedWorkerMessage("BlockIfRunning could not list workloads for the bound Node: " + err.Error())
+			decision.message = boundedWorkerMessage(workloadGate + " could not list workloads for the bound Node: " + err.Error())
 		} else if len(pods) > 0 {
 			decision.allowClaim = false
 			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
 			decision.reason = "WorkloadsRunning"
-			decision.message = fmt.Sprintf("BlockIfRunning denied %s: %d active workload Pod(s) remain bound to Node %q",
+			decision.message = fmt.Sprintf("%s denied %s: %d active workload Pod(s) remain bound to Node %q", workloadGate,
 				stage, len(pods), r.NodeName)
-		} else if r.DevicePodLister == nil {
+		} else if devicePodLister == nil {
 			decision.allowClaim = false
 			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
 			decision.reason = "DeviceWorkloadCheckFailed"
-			decision.message = "BlockIfRunning could not verify the device app-hosting inventory"
-		} else if devicePods, err := r.DevicePodLister(ctx); err != nil {
+			decision.message = workloadGate + " could not verify the device app-hosting inventory"
+		} else if devicePods, err := devicePodLister(ctx); err != nil {
 			decision.allowClaim = false
 			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
 			decision.reason = "DeviceWorkloadCheckFailed"
-			decision.message = boundedWorkerMessage("BlockIfRunning could not list the device app-hosting inventory: " + err.Error())
+			decision.message = boundedWorkerMessage(workloadGate + " could not list the device app-hosting inventory: " + err.Error())
 		} else if count := nonNilPodCount(devicePods); count > 0 {
 			decision.allowClaim = false
 			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
 			decision.reason = "DeviceWorkloadsRunning"
-			decision.message = fmt.Sprintf("BlockIfRunning denied %s: device inventory still reports %d hosted workload Pod(s)", stage, count)
+			decision.message = fmt.Sprintf("%s denied %s: device inventory still reports %d hosted workload Pod(s)", workloadGate, stage, count)
 		}
 	}
 	if !decision.allowClaim {
@@ -620,6 +655,32 @@ func (r *Reconciler) prepareManagedMutationClaim(
 	decision.message = fmt.Sprintf("claimed %s at manager control revision %d", stage, decision.controlRevision)
 	applyWorkerControlDecision(current, decision, now)
 	return true, nil
+}
+
+// managedClaimPodLister selects the final device-side workload fence. The
+// established BlockIfRunning path keeps its compatibility inventory, while an
+// explicitly promoted drain requires the driver's fail-closed complete scan.
+func (r *Reconciler) managedClaimPodLister(
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+) (func(context.Context) ([]*corev1.Pod, error), string, error) {
+	if up == nil || up.Status.ManagerDrain == nil {
+		return r.DevicePodLister, "BlockIfRunning", nil
+	}
+	drain := up.Status.ManagerDrain
+	admission := up.Status.ManagerAdmission
+	control := up.Status.ManagerControl
+	if admission == nil || control == nil || admission.ControlRevision == nil ||
+		drain.ProtocolVersion != opsv1alpha1.ManagedDrainProtocolPDBV1 ||
+		drain.State != opsv1alpha1.UpgradeManagerDrainPromoted ||
+		drain.ReservationID != admission.ReservationID || drain.PolicyEpoch != admission.PolicyEpoch ||
+		drain.ControlRevision != control.Revision || drain.ControlRevision != *admission.ControlRevision ||
+		drain.NodeUID != admission.NodeUID || drain.SessionToken == "" {
+		return nil, "Drain", fmt.Errorf("managed Drain has no exact promoted session authority")
+	}
+	if r.DrainDevicePodLister == nil {
+		return nil, "Drain", fmt.Errorf("managed Drain requires complete device inventory support from the platform driver")
+	}
+	return r.DrainDevicePodLister, "Drain", nil
 }
 
 // ensureNoFailedCampaignPeer is the worker-side half of the campaign failure

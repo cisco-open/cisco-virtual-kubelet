@@ -520,6 +520,20 @@ scheduler placement, does not evict existing Pods, and is removed only after
 the disruptive Lease is released or expires. Direct `nodeName` assignments do
 not bypass the device-write guard. Disabling mutation gates does not discard
 an existing quarantine. Operator-owned taints are preserved.
+
+That description remains the default `BlockIfRunning` and standalone behavior.
+Managed IOS-XE campaigns have a separate, disabled-by-default PDB-aware drain
+preview. It extends the same maintenance session: the manager owns a cordon
+and taint, eviction uses only `policy/v1` Eviction, selected provider teardown
+acquires and renews the ordinary mutation Lease through device teardown and a
+fresh inventory, and promotion to disruptive gNOI waits for device-clean and
+replacement-workload evidence. A conclusive cleanup releases that Lease;
+ambiguous teardown, incomplete inventory, lost authorization, or a failed
+release retains it as a fail-closed quarantine. The path does not add a parallel
+Lease or bypass PDBs. See
+[Opt-in PDB-aware drain](topology-awareness.md#opt-in-pdb-aware-drain-development-preview)
+for the exact workload subset, RBAC, recovery, and qualification limits.
+
 Taint removal is observed on a 30-second polling interval; setting it before
 dispatch is synchronous. The compatibility scan lists both mutation kinds in
 the device namespace, so large fleets should measure Kubernetes API cost and

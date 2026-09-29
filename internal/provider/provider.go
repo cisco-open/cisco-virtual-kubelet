@@ -19,6 +19,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -326,7 +327,9 @@ func (p *AppHostingProvider) recoverDeletingPod(ctx context.Context, pod *v1.Pod
 		traceCtx, span := p.startPodSpan(boundedCtx, podCopy, "delete-recovery")
 		defer span.End()
 		p.rememberPodTrace(traceCtx, podCopy)
-		if err := p.withMutation(traceCtx, func(writeCtx context.Context) error { return p.driver.DeletePod(writeCtx, podCopy) }); err != nil {
+		if err := p.withDeleteMutation(traceCtx, podCopy, func(writeCtx context.Context) error {
+			return p.driver.DeletePod(writeCtx, podCopy)
+		}); err != nil {
 			span.SetAttributes(attribute.String("cisco.vk.delete.outcome", "error"))
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "recover deleting pod")
@@ -711,7 +714,18 @@ func (p *AppHostingProvider) UpdatePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
 	// IOS-XE/XR may have limited "Update" support (e.g., changing resources requires a restart)
-	if err := p.withMutation(ctx, func(writeCtx context.Context) error { return p.driver.UpdatePod(writeCtx, pod) }); err != nil {
+	mutate := func(writeCtx context.Context) error { return p.driver.UpdatePod(writeCtx, pod) }
+	var err error
+	if pod != nil && pod.DeletionTimestamp != nil {
+		// IOS-XE UpdatePod performs deletion cleanup for terminating Pods. Route
+		// that side effect through the same exact drain authorization and strict
+		// post-delete inventory proof as DeletePod; recovery otherwise reopens
+		// ordinary writes and could bypass the drain protocol through this path.
+		err = p.withDeleteMutation(ctx, pod, mutate)
+	} else {
+		err = p.withMutation(ctx, mutate)
+	}
+	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "update pod")
 		return err
@@ -725,7 +739,9 @@ func (p *AppHostingProvider) DeletePod(ctx context.Context, pod *v1.Pod) error {
 	defer span.End()
 	p.rememberPodTrace(ctx, pod)
 	deleteOwner := p.beginDelete(pod)
-	err := p.withMutation(ctx, func(writeCtx context.Context) error { return p.driver.DeletePod(writeCtx, pod) })
+	err := p.withDeleteMutation(ctx, pod, func(writeCtx context.Context) error {
+		return p.driver.DeletePod(writeCtx, pod)
+	})
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "delete pod")
@@ -753,6 +769,72 @@ func (p *AppHostingProvider) withMutation(ctx context.Context, mutate func(conte
 	outcome = devicecoordination.ErrMutationIncomplete
 	defer func() { finish(outcome) }()
 	return mutate(writeCtx)
+}
+
+// withDeleteMutation preserves the ordinary mutation barrier unless the
+// manager has marked this exact Pod for its identity-bound drain protocol.
+// Either reserved marker selects the stricter path so partial or forged drain
+// metadata fails closed instead of falling back to an ordinary delete.
+func (p *AppHostingProvider) withDeleteMutation(
+	ctx context.Context,
+	pod *v1.Pod,
+	mutate func(context.Context) error,
+) (outcome error) {
+	authorizationPod, disposition, err := p.maintenance.ResolveDrainDeletePod(ctx, pod)
+	if err != nil {
+		return err
+	}
+	return p.withResolvedDeleteMutation(ctx, authorizationPod, disposition, mutate)
+}
+
+func (p *AppHostingProvider) withResolvedDeleteMutation(
+	ctx context.Context,
+	authorizationPod *v1.Pod,
+	disposition maintenance.PodDeleteDisposition,
+	mutate func(context.Context) error,
+) (outcome error) {
+	switch disposition {
+	case maintenance.PodDeleteOrdinary:
+		return p.withMutation(ctx, mutate)
+	case maintenance.PodDeleteReleasedCompletion:
+		// Device teardown and complete inventory were already durably accepted
+		// by the manager. Returning success lets upstream Virtual Kubelet perform
+		// its own exact-UID, zero-grace Kubernetes deletion; do not touch the
+		// device, Lease, inventory, or API objects from this acknowledgement.
+		oteltrace.SpanFromContext(ctx).SetAttributes(
+			attribute.String("cisco.vk.delete.disposition", "device-clean-completion"),
+		)
+		if authorizationPod != nil {
+			log.G(ctx).WithFields(log.Fields{
+				"pod": authorizationPod.Name, "namespace": authorizationPod.Namespace,
+				"uid": authorizationPod.UID,
+			}).Info("managed drain device-clean completion acknowledged without device mutation")
+		}
+		return nil
+	case maintenance.PodDeleteDrainTeardown:
+		// Continue through the strict device teardown path below.
+	default:
+		return fmt.Errorf("unknown Pod delete disposition %d", disposition)
+	}
+	strictInventory, ok := p.driver.(drivers.DrainPodInventoryProvider)
+	if !ok {
+		return fmt.Errorf("managed drain requires a driver with complete drain inventory support")
+	}
+
+	writeCtx, finish, err := p.maintenance.AcquireDrainDelete(ctx, authorizationPod)
+	if err != nil {
+		return err
+	}
+	outcome = devicecoordination.ErrMutationIncomplete
+	defer func() {
+		if finishErr := finish(outcome); finishErr != nil {
+			outcome = errors.Join(outcome, finishErr)
+		}
+	}()
+	if err := mutate(writeCtx); err != nil {
+		return err
+	}
+	return p.maintenance.VerifyAndPublishDrainInventory(writeCtx, authorizationPod, strictInventory.ListPodsForDrain)
 }
 
 func (p *AppHostingProvider) GetPod(ctx context.Context, namespace, name string) (*v1.Pod, error) {

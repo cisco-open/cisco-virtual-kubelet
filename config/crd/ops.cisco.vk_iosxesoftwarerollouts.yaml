@@ -626,20 +626,80 @@ spec:
                         > 0) || (has(self.selector.matchExpressions) && self.selector.matchExpressions.size()
                         > 0)'
                   workloads:
-                    description: Workloads defines the safe Phase 2 behavior for device-hosted
-                      workloads.
+                    description: |-
+                      Workloads defines the campaign's administrator-gated handling of
+                      device-hosted workloads before disruptive maintenance.
                     properties:
+                      drain:
+                        description: |-
+                          Drain bounds an opt-in workload evacuation. It is forbidden for the
+                          default BlockIfRunning policy.
+                        properties:
+                          maxPods:
+                            description: |-
+                              MaxPods is the maximum number of bound workload Pods the campaign may
+                              attempt to drain from one target.
+                            format: int32
+                            maximum: 32
+                            minimum: 1
+                            type: integer
+                          maxTerminationGraceSeconds:
+                            description: |-
+                              MaxTerminationGraceSeconds caps the grace period used for each eviction.
+                              A Pod requesting a longer grace period receives this stricter cap.
+                            format: int32
+                            maximum: 600
+                            minimum: 30
+                            type: integer
+                          namespaces:
+                            description: |-
+                              Namespaces is the explicit set from which this campaign may evict
+                              controller-owned, drain-safe workloads. Other bound workloads block it.
+                            items:
+                              maxLength: 63
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                              type: string
+                            maxItems: 16
+                            minItems: 1
+                            type: array
+                            x-kubernetes-list-type: set
+                          timeoutSeconds:
+                            description: |-
+                              TimeoutSeconds is the total deadline for eviction, device-side teardown,
+                              and confirmation that all in-scope workloads have stopped.
+                            format: int32
+                            maximum: 7200
+                            minimum: 300
+                            type: integer
+                        required:
+                        - maxPods
+                        - maxTerminationGraceSeconds
+                        - namespaces
+                        - timeoutSeconds
+                        type: object
+                        x-kubernetes-validations:
+                        - message: timeoutSeconds must be at least maxTerminationGraceSeconds
+                            plus 120 seconds
+                          rule: self.timeoutSeconds >= self.maxTerminationGraceSeconds
+                            + 120
                       policy:
                         allOf:
                         - enum:
                           - BlockIfRunning
+                          - Drain
                         - enum:
                           - BlockIfRunning
+                          - Drain
                         default: BlockIfRunning
-                        description: Policy blocks admission when any workload is
-                          running on the bound Node.
+                        description: |-
+                          Policy either blocks admission while a workload is running or requests a
+                          bounded, PDB-aware drain. Drain remains subject to administrator policy.
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: drain must be set if and only if policy is Drain
+                      rule: has(self.drain) == (has(self.policy) && self.policy ==
+                        'Drain')
                 required:
                 - budgets
                 - canaries

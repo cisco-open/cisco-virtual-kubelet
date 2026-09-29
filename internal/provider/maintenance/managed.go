@@ -118,6 +118,8 @@ type publishedRequest struct {
 	Token           string
 	RequestedAt     time.Time
 	ControlRevision int64
+	ProtocolVersion ciskov1.DeviceMaintenanceProtocolVersion
+	Purpose         ciskov1.DeviceMaintenancePurpose
 	LeaseNamespace  string
 	LeaseName       string
 	LeaseUID        string
@@ -146,6 +148,19 @@ func (c *Coordinator) publishMaintenanceRequest(
 		UID:       string(up.UID),
 	}
 	controlRevision := up.Status.ManagerControl.Revision
+	requestVersion := managedprotocol.Version
+	requestPurpose := ""
+	requestToken := ""
+	requestTime := time.Time{}
+	if drain := up.Status.ManagerDrain; drain != nil &&
+		drain.ProtocolVersion == opsv1alpha1.ManagedDrainProtocolPDBV1 &&
+		drain.State == opsv1alpha1.UpgradeManagerDrainPromoted {
+		requestVersion = managedprotocol.DrainProtocolVersion
+		requestPurpose = managedprotocol.MaintenancePurposeSoftwareMutation
+		requestToken = drain.SessionToken
+		requestTime = drain.StartedAt.Time
+		controlRevision = drain.ControlRevision
+	}
 	var published publishedRequest
 	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		var lease coordv1.Lease
@@ -168,8 +183,11 @@ func (c *Coordinator) publishMaintenanceRequest(
 		parsedToken, tokenErr := uuid.Parse(token)
 		requestedAt, parseErr := time.Parse(time.RFC3339Nano,
 			lease.Annotations[managedprotocol.AnnotationMaintenanceRequestedAt])
-		if tokenErr != nil || parsedToken.String() != token || parseErr != nil || !maintenanceRequestMatches(
-			lease.Annotations, c, up, node,
+		if requestToken != "" {
+			token = requestToken
+			requestedAt = requestTime
+		} else if tokenErr != nil || parsedToken.String() != token || parseErr != nil || !maintenanceRequestMatches(
+			lease.Annotations, c, up, node, requestVersion, requestPurpose,
 		) {
 			token = uuid.NewString()
 			requestedAt = time.Now().UTC()
@@ -178,13 +196,18 @@ func (c *Coordinator) publishMaintenanceRequest(
 		// the Lease so a real API round trip can match the acknowledgement.
 		requestedAt = requestedAt.UTC().Truncate(time.Second)
 		values := map[string]string{
-			managedprotocol.AnnotationMaintenanceRequestVersion:  managedprotocol.Version,
+			managedprotocol.AnnotationMaintenanceRequestVersion:  requestVersion,
 			managedprotocol.AnnotationMaintenanceSessionToken:    token,
 			managedprotocol.AnnotationMaintenanceRequestedAt:     requestedAt.Format(time.RFC3339Nano),
 			managedprotocol.AnnotationMaintenanceOperationNS:     operation.Namespace,
 			managedprotocol.AnnotationMaintenanceOperationName:   operation.Name,
 			managedprotocol.AnnotationMaintenanceOperationUID:    operation.UID,
 			managedprotocol.AnnotationMaintenanceControlRevision: strconv.FormatInt(controlRevision, 10),
+		}
+		if requestPurpose == "" {
+			delete(lease.Annotations, managedprotocol.AnnotationMaintenancePurpose)
+		} else {
+			values[managedprotocol.AnnotationMaintenancePurpose] = requestPurpose
 		}
 		for annotation, value := range values {
 			lease.Annotations[annotation] = value
@@ -197,7 +220,9 @@ func (c *Coordinator) publishMaintenanceRequest(
 		}
 		published = publishedRequest{
 			Token: token, RequestedAt: requestedAt, ControlRevision: controlRevision,
-			LeaseNamespace: lease.Namespace, LeaseName: lease.Name, LeaseUID: string(lease.UID),
+			ProtocolVersion: ciskov1.DeviceMaintenanceProtocolVersion(requestVersion),
+			Purpose:         ciskov1.DeviceMaintenancePurpose(requestPurpose),
+			LeaseNamespace:  lease.Namespace, LeaseName: lease.Name, LeaseUID: string(lease.UID),
 			Holder: holder, Operation: operation,
 		}
 		return nil
@@ -228,8 +253,10 @@ func maintenanceRequestMatches(
 	c *Coordinator,
 	up *opsv1alpha1.IOSXESoftwareUpgrade,
 	node *corev1.Node,
+	requestVersion, requestPurpose string,
 ) bool {
-	return annotations[managedprotocol.AnnotationMaintenanceRequestVersion] == managedprotocol.Version &&
+	return annotations[managedprotocol.AnnotationMaintenanceRequestVersion] == requestVersion &&
+		annotations[managedprotocol.AnnotationMaintenancePurpose] == requestPurpose &&
 		annotations[managedprotocol.AnnotationMaintenanceOperationNS] == up.Namespace &&
 		annotations[managedprotocol.AnnotationMaintenanceOperationName] == up.Name &&
 		annotations[managedprotocol.AnnotationMaintenanceOperationUID] == string(up.UID) &&
@@ -405,9 +432,17 @@ func (c *Coordinator) checkManagedWriteSession(ctx context.Context) error {
 			return fmt.Errorf("managed device topology initialization guard remains active")
 		}
 	}
-	if session := device.Status.MaintenanceSession; session != nil {
-		if session.Phase != ciskov1.DeviceMaintenanceSessionSettled || session.DeviceUID != c.DeviceUID ||
-			session.NodeName != node.Name || session.NodeUID != string(node.UID) {
+	recoveryWrite := false
+	session := device.Status.MaintenanceSession
+	if session != nil {
+		switch {
+		case session.Phase == ciskov1.DeviceMaintenanceSessionSettled && session.DeviceUID == c.DeviceUID &&
+			session.NodeName == node.Name && session.NodeUID == string(node.UID):
+			// The historical settled path remains unchanged.
+		case session.Phase == ciskov1.DeviceMaintenanceSessionRecovering &&
+			session.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolPDBDrainV1:
+			recoveryWrite = true
+		default:
 			return fmt.Errorf("managed maintenance session remains unresolved or belongs to a different device incarnation")
 		}
 	}
@@ -431,11 +466,88 @@ func (c *Coordinator) checkManagedWriteSession(ctx context.Context) error {
 	} else if err := validateActiveManagedMutationLease(&lease, holder); err != nil {
 		return err
 	}
+	if recoveryWrite {
+		if holder != "" && !strings.HasPrefix(holder, routineHolderPrefix) {
+			return fmt.Errorf("managed recovery permits only an idle Lease or the exact routine writer")
+		}
+		if err := c.validateManagedRecoveryWriteSession(ctx, &device, &node, &lease, session); err != nil {
+			return err
+		}
+	}
 	if (holder == "" || strings.HasPrefix(holder, routineHolderPrefix)) &&
 		hasManagedMaintenanceRequestAnnotations(lease.Annotations) {
 		return fmt.Errorf("idle or routine-write mutation Lease retains maintenance request metadata")
 	}
 	return nil
+}
+
+// validateManagedRecoveryWriteSession is the only exception to the durable
+// maintenance-session write fence. It opens ordinary writes narrowly while an
+// exact PDB drain is Recovering, after this session's scheduling guard has been
+// restored and while the canonical Lease is idle or owned by the caller's
+// routine write. This is what lets native controllers recreate workloads
+// before the disruption reservation is released.
+func (c *Coordinator) validateManagedRecoveryWriteSession(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	node *corev1.Node,
+	lease *coordv1.Lease,
+	session *ciskov1.DeviceMaintenanceSessionStatus,
+) error {
+	if device == nil || node == nil || lease == nil || session == nil ||
+		session.Phase != ciskov1.DeviceMaintenanceSessionRecovering ||
+		session.ProtocolVersion != ciskov1.DeviceMaintenanceProtocolPDBDrainV1 ||
+		(session.Purpose != ciskov1.DeviceMaintenancePurposeWorkloadDrain &&
+			session.Purpose != ciskov1.DeviceMaintenancePurposeSoftwareMutation) ||
+		session.DeviceUID != c.DeviceUID || session.NodeName != node.Name ||
+		session.NodeUID != string(node.UID) || session.Operation.Namespace != c.Namespace ||
+		session.Operation.Name == "" || session.Operation.UID == "" ||
+		session.AcknowledgedAt == nil || session.AcknowledgedAt.IsZero() || session.RequestedAt.IsZero() ||
+		session.AcknowledgedAt.Before(&session.RequestedAt) {
+		return fmt.Errorf("managed recovery session identity is incomplete or stale")
+	}
+	parsed, err := uuid.Parse(session.SessionToken)
+	if err != nil || parsed.String() != session.SessionToken || parsed.Version() != 4 || parsed.Variant() != uuid.RFC4122 {
+		return fmt.Errorf("managed recovery session token is not a canonical UUIDv4")
+	}
+	if session.Lease.Namespace != lease.Namespace || session.Lease.Name != lease.Name ||
+		session.Lease.UID != string(lease.UID) {
+		return fmt.Errorf("managed recovery session is bound to a different mutation Lease incarnation")
+	}
+	expectedSessionHolder := devicecoordination.HolderIdentity(
+		"software-drain", session.Operation.Namespace, session.Operation.Name, session.Operation.UID,
+	)
+	if session.Purpose == ciskov1.DeviceMaintenancePurposeSoftwareMutation {
+		expectedSessionHolder = "software-upgrade/" + session.Operation.UID
+	}
+	if session.Lease.Holder != expectedSessionHolder {
+		return fmt.Errorf("managed recovery session has an invalid purpose-bound Lease holder")
+	}
+	if err := validateManagedWorkerRuntimeBinding(device, c); err != nil {
+		return fmt.Errorf("validate managed recovery worker: %w", err)
+	}
+
+	var leaf opsv1alpha1.IOSXESoftwareUpgrade
+	if err := c.Client.Get(ctx, types.NamespacedName{
+		Namespace: session.Operation.Namespace, Name: session.Operation.Name,
+	}, &leaf); err != nil {
+		return fmt.Errorf("read managed recovery software-upgrade leaf: %w", err)
+	}
+	if string(leaf.UID) != session.Operation.UID || leaf.Spec.DeviceRef.Name != c.DeviceName {
+		return fmt.Errorf("managed recovery leaf incarnation or target changed")
+	}
+	drain, err := validateDrainLeafBinding(&leaf, device, node, session, c.WorkerRevision)
+	if err != nil {
+		return fmt.Errorf("validate managed recovery leaf: %w", err)
+	}
+	if drain.State != opsv1alpha1.UpgradeManagerDrainRecovering || drain.RecoveryDeadline == nil ||
+		drain.RecoveryDeadline.IsZero() || time.Now().After(drain.RecoveryDeadline.Time) {
+		return fmt.Errorf("managed recovery is not active within its bounded deadline")
+	}
+	if err := validateDrainTopologyLock(device, node, &leaf, drain); err != nil {
+		return fmt.Errorf("validate managed recovery topology lock: %w", err)
+	}
+	return validateRestoredDrainGuard(device, node, drain)
 }
 
 func hasManagedMaintenanceRequestAnnotations(annotations map[string]string) bool {
@@ -447,6 +559,7 @@ func hasManagedMaintenanceRequestAnnotations(annotations map[string]string) bool
 		managedprotocol.AnnotationMaintenanceOperationName,
 		managedprotocol.AnnotationMaintenanceOperationUID,
 		managedprotocol.AnnotationMaintenanceControlRevision,
+		managedprotocol.AnnotationMaintenancePurpose,
 	} {
 		if _, present := annotations[key]; present {
 			return true
@@ -475,6 +588,13 @@ func validateMaintenanceAcknowledgement(
 		session.Lease.UID != request.LeaseUID || session.Lease.Holder != request.Holder ||
 		session.Operation != request.Operation || !session.RequestedAt.Time.Equal(request.RequestedAt) {
 		return fmt.Errorf("manager maintenance acknowledgement does not match the current Lease request")
+	}
+	if request.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 {
+		if session.ProtocolVersion != request.ProtocolVersion || session.Purpose != request.Purpose {
+			return fmt.Errorf("manager maintenance acknowledgement has the wrong drain protocol or purpose")
+		}
+	} else if session.ProtocolVersion != "" || session.Purpose != "" {
+		return fmt.Errorf("legacy rollout-v1 acknowledgement unexpectedly carries drain protocol fields")
 	}
 	return nil
 }

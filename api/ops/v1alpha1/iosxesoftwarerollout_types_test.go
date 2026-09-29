@@ -249,6 +249,38 @@ func TestIOSXESoftwareRolloutWireContractUsesNamedImageSources(t *testing.T) {
 	if strings.Contains(text, `"mirrors"`) {
 		t.Fatalf("wire contract unexpectedly exposes a separate mirror concept: %s", text)
 	}
+	if strings.Contains(text, `"drain"`) {
+		t.Fatalf("BlockIfRunning wire contract unexpectedly contains drain configuration: %s", text)
+	}
+}
+
+func TestIOSXESoftwareRolloutWorkloadWireContract(t *testing.T) {
+	blocked, err := json.Marshal(IOSXESoftwareRolloutWorkloadSpec{
+		Policy: IOSXESoftwareRolloutWorkloadBlockIfRunning,
+	})
+	if err != nil {
+		t.Fatalf("Marshal(BlockIfRunning) error = %v", err)
+	}
+	if got, want := string(blocked), `{"policy":"BlockIfRunning"}`; got != want {
+		t.Fatalf("Marshal(BlockIfRunning) = %s, want %s", got, want)
+	}
+
+	drain, err := json.Marshal(IOSXESoftwareRolloutWorkloadSpec{
+		Policy: IOSXESoftwareRolloutWorkloadDrain,
+		Drain: &IOSXESoftwareRolloutDrainSpec{
+			Namespaces:                 []string{"apps", "edge-services"},
+			TimeoutSeconds:             900,
+			MaxPods:                    8,
+			MaxTerminationGraceSeconds: 120,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Marshal(Drain) error = %v", err)
+	}
+	want := `{"policy":"Drain","drain":{"namespaces":["apps","edge-services"],"timeoutSeconds":900,"maxPods":8,"maxTerminationGraceSeconds":120}}`
+	if got := string(drain); got != want {
+		t.Fatalf("Marshal(Drain) = %s, want %s", got, want)
+	}
 }
 
 func TestManagedUpgradeAdmissionAndClaimsDeepCopyDoNotAlias(t *testing.T) {

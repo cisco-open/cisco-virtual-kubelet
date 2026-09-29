@@ -17,20 +17,25 @@ package softwareupgrade
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
@@ -176,6 +181,65 @@ func managedTestLeaf(name string) *opsv1alpha1.IOSXESoftwareUpgrade {
 	return up
 }
 
+func managedCancellationQueueTombstone(name string) *opsv1alpha1.IOSXESoftwareUpgrade {
+	up := managedTestLeaf(name)
+	up.Status.ExecutionModel = ""
+	up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionSettled
+	up.Status.ManagerAdmission.TopologyLockID = ""
+	up.Status.ManagerControl.Cancel = true
+	return up
+}
+
+func managedCancellationAuditRecord(name string, withDrain bool) *opsv1alpha1.IOSXESoftwareUpgrade {
+	up := managedCancellationQueueTombstone(name)
+	up.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+	up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	up.Status.WorkerControl = &opsv1alpha1.UpgradeWorkerControlStatus{
+		ObservedAdmissionState:       opsv1alpha1.UpgradeManagerAdmissionSettled,
+		ObservedPolicyEpoch:          up.Status.ManagerAdmission.PolicyEpoch,
+		ObservedControlRevision:      up.Status.ManagerControl.Revision,
+		ObservedWorkerConfigRevision: managedTestWorkerRevision,
+		EffectiveState:               opsv1alpha1.UpgradeWorkerControlSettled,
+		UpdatedAt:                    metav1.NewTime(managedTestTime),
+	}
+	if !withDrain {
+		return up
+	}
+
+	up.Status.ManagerAdmission.TopologyLockID = strings.Repeat("1", 32)
+	started := metav1.NewTime(managedTestTime.Add(-time.Hour))
+	recoveryDeadline := metav1.NewTime(managedTestTime.Add(time.Hour))
+	up.Status.ManagerDrain = &opsv1alpha1.UpgradeManagerDrainStatus{
+		ProtocolVersion:  opsv1alpha1.ManagedDrainProtocolPDBV1,
+		State:            opsv1alpha1.UpgradeManagerDrainSettled,
+		SessionToken:     "00000000-0000-4000-8000-000000000001",
+		ReservationID:    up.Status.ManagerAdmission.ReservationID,
+		PolicyEpoch:      up.Status.ManagerAdmission.PolicyEpoch,
+		ControlRevision:  up.Status.ManagerControl.Revision,
+		NodeUID:          up.Status.ManagerAdmission.NodeUID,
+		StartedAt:        started,
+		DrainDeadline:    metav1.NewTime(managedTestTime.Add(-30 * time.Minute)),
+		RecoveryDeadline: &recoveryDeadline,
+		UpdatedAt:        metav1.NewTime(managedTestTime),
+		Pods: []opsv1alpha1.UpgradeDrainPodStatus{{
+			Namespace: "workloads", Name: "app-1", UID: "pod-uid-1",
+			Phase: opsv1alpha1.UpgradeDrainPodComplete,
+		}},
+	}
+	up.Status.WorkerDrain = &opsv1alpha1.UpgradeWorkerDrainStatus{
+		ProtocolVersion:              opsv1alpha1.ManagedDrainProtocolPDBV1,
+		ObservedSessionToken:         up.Status.ManagerDrain.SessionToken,
+		ObservedPolicyEpoch:          up.Status.ManagerDrain.PolicyEpoch,
+		ObservedControlRevision:      up.Status.ManagerDrain.ControlRevision,
+		ObservedWorkerConfigRevision: managedTestWorkerRevision,
+		InventoryRevision:            9,
+		InventoryObservedAt:          metav1.NewTime(managedTestTime.Add(-time.Minute)),
+		InventoryComplete:            true,
+		UpdatedAt:                    metav1.NewTime(managedTestTime.Add(-time.Minute)),
+	}
+	return up
+}
+
 func newManagedTestReconciler(
 	t *testing.T,
 	up *opsv1alpha1.IOSXESoftwareUpgrade,
@@ -212,6 +276,115 @@ func newManagedTestReconciler(
 		WorkerPodUID:    managedTestWorkerPodUID,
 		DevicePodLister: func(context.Context) ([]*corev1.Pod, error) { return nil, nil },
 		Now:             func() time.Time { return managedTestTime },
+	}
+}
+
+func managedCancelledDrainLeaf(name string) *opsv1alpha1.IOSXESoftwareUpgrade {
+	up := managedTestLeaf(name)
+	up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionRevoked
+	up.Status.ManagerAdmission.RevocationReason = "CampaignCancelled"
+	up.Status.ManagerControl.Cancel = true
+	up.Status.WorkerControl = &opsv1alpha1.UpgradeWorkerControlStatus{
+		ObservedAdmissionState:       opsv1alpha1.UpgradeManagerAdmissionGranted,
+		ObservedPolicyEpoch:          up.Status.ManagerAdmission.PolicyEpoch,
+		ObservedControlRevision:      up.Status.ManagerControl.Revision - 1,
+		ObservedWorkerConfigRevision: managedTestWorkerRevision,
+		EffectiveState:               opsv1alpha1.UpgradeWorkerControlDenied,
+		UpdatedAt:                    metav1.Time{Time: managedTestTime.Add(-time.Second)},
+		Message:                      "complete device inventory contains an app without CVK workload identity",
+	}
+	up.Status.ManagerDrain = &opsv1alpha1.UpgradeManagerDrainStatus{
+		ProtocolVersion:               opsv1alpha1.ManagedDrainProtocolPDBV1,
+		State:                         opsv1alpha1.UpgradeManagerDrainRecovering,
+		SessionToken:                  "00000000-0000-4000-8000-000000000001",
+		ReservationID:                 managedTestReservationID,
+		PolicyEpoch:                   up.Status.ManagerAdmission.PolicyEpoch,
+		ControlRevision:               up.Status.ManagerControl.Revision,
+		NodeUID:                       managedTestNodeUID,
+		NodeUnschedulableBefore:       false,
+		MaintenanceTaintPresentBefore: false,
+		StartedAt:                     metav1.Time{Time: managedTestTime.Add(-time.Minute)},
+		DrainDeadline:                 metav1.Time{Time: managedTestTime.Add(time.Hour)},
+		RecoveryDeadline:              ptr.To(metav1.Time{Time: managedTestTime.Add(2 * time.Hour)}),
+		UpdatedAt:                     metav1.Time{Time: managedTestTime},
+	}
+	return up
+}
+
+func managedCancelledDrainLease(up *opsv1alpha1.IOSXESoftwareUpgrade) *coordv1.Lease {
+	deviceKey := devicecoordination.DeviceKey(managedTestDeviceNamespace, managedTestDeviceName)
+	acquired := metav1.NewMicroTime(managedTestTime.Add(-time.Minute))
+	renewed := metav1.NewMicroTime(managedTestTime)
+	return &coordv1.Lease{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:       managedTestDeviceNamespace,
+			Name:            engine.LeaseName(deviceKey, devicecoordination.MutationLeaseFamily),
+			UID:             types.UID("managed-mutation-lease-uid"),
+			ResourceVersion: "41",
+			Labels: map[string]string{
+				"cisco.vk/device": deviceKey,
+				"cisco.vk/family": devicecoordination.MutationLeaseFamily,
+			},
+			Annotations: map[string]string{
+				managedprotocol.AnnotationManaged:                   "true",
+				managedprotocol.AnnotationDeviceNamespace:           managedTestDeviceNamespace,
+				managedprotocol.AnnotationDeviceName:                managedTestDeviceName,
+				managedprotocol.AnnotationDeviceUID:                 managedTestDeviceUID,
+				managedprotocol.AnnotationNodeName:                  managedTestNodeName,
+				managedprotocol.AnnotationNodeUID:                   managedTestNodeUID,
+				managedprotocol.AnnotationWorkerUsername:            managedTestWorkerUsername,
+				managedprotocol.AnnotationWorkerProtocol:            managedprotocol.Version,
+				managedprotocol.AnnotationLeasePurpose:              managedprotocol.LeasePurposeDeviceMutation,
+				devicecoordination.RetainLeaseAnnotation:            "true",
+				managedprotocol.AnnotationMaintenanceRequestVersion: managedprotocol.DrainProtocolVersion,
+				managedprotocol.AnnotationMaintenanceSessionToken:   up.Status.ManagerDrain.SessionToken,
+				managedprotocol.AnnotationMaintenanceRequestedAt:    up.Status.ManagerDrain.StartedAt.Time.UTC().Format(time.RFC3339Nano),
+				managedprotocol.AnnotationMaintenanceOperationNS:    up.Namespace,
+				managedprotocol.AnnotationMaintenanceOperationName:  up.Name,
+				managedprotocol.AnnotationMaintenanceOperationUID:   string(up.UID),
+				// The held request predates cancellation. Its old revision must be
+				// cleared, never rewritten as fresh recovery authorization.
+				managedprotocol.AnnotationMaintenanceControlRevision: strconv.FormatInt(up.Status.ManagerControl.Revision-1, 10),
+				managedprotocol.AnnotationMaintenancePurpose:         managedprotocol.MaintenancePurposeSoftwareMutation,
+			},
+		},
+		Spec: coordv1.LeaseSpec{
+			HolderIdentity:       ptr.To(upgradeLeaseIdentity(up)),
+			LeaseDurationSeconds: ptr.To[int32](int32((26 * time.Hour) / time.Second)),
+			AcquireTime:          &acquired,
+			RenewTime:            &renewed,
+			LeaseTransitions:     ptr.To[int32](4),
+		},
+	}
+}
+
+func attachManagedMutationLeaser(r *Reconciler, lease *coordv1.Lease) {
+	r.MutationLeaser = &engine.FamilyLeaser{
+		Client:          r.Client,
+		Namespace:       lease.Namespace,
+		DeviceKey:       devicecoordination.DeviceKey(managedTestDeviceNamespace, managedTestDeviceName),
+		TTL:             26 * time.Hour,
+		RequireExisting: true,
+	}
+}
+
+func getManagedMutationLease(t *testing.T, r *Reconciler, lease *coordv1.Lease) *coordv1.Lease {
+	t.Helper()
+	var current coordv1.Lease
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(lease), &current); err != nil {
+		t.Fatalf("get managed mutation Lease: %v", err)
+	}
+	return &current
+}
+
+func managedTestMutationClaim(stage opsv1alpha1.UpgradeManagedMutationStage) opsv1alpha1.UpgradeManagedMutationClaimStatus {
+	return opsv1alpha1.UpgradeManagedMutationClaimStatus{
+		Stage:           stage,
+		ReservationID:   managedTestReservationID,
+		PolicyEpoch:     1,
+		ControlRevision: 7,
+		ClaimedAt:       metav1.Time{Time: managedTestTime},
 	}
 }
 
@@ -662,6 +835,333 @@ func TestManagedControlBlocksNewClaimsButAllowsClaimObservation(t *testing.T) {
 	}
 }
 
+func TestManagedCancellationReleasesUnusedDrainMutationLeaseAfterDurableAcknowledgement(t *testing.T) {
+	up := managedCancelledDrainLeaf("cancel-release-unused-lease")
+	lease := managedCancelledDrainLease(up)
+	wantUID := lease.UID
+	wantLabels := map[string]string{}
+	for key, value := range lease.Labels {
+		wantLabels[key] = value
+	}
+	wantBindings := map[string]string{}
+	for _, key := range []string{
+		managedprotocol.AnnotationManaged,
+		managedprotocol.AnnotationDeviceNamespace,
+		managedprotocol.AnnotationDeviceName,
+		managedprotocol.AnnotationDeviceUID,
+		managedprotocol.AnnotationNodeName,
+		managedprotocol.AnnotationNodeUID,
+		managedprotocol.AnnotationWorkerUsername,
+		managedprotocol.AnnotationWorkerProtocol,
+		managedprotocol.AnnotationLeasePurpose,
+		devicecoordination.RetainLeaseAnnotation,
+	} {
+		wantBindings[key] = lease.Annotations[key]
+	}
+
+	r := newManagedTestReconciler(t, up, nil, lease)
+	attachManagedMutationLeaser(r, lease)
+	req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(up)}
+
+	// The first pass only persists the exact manager cancellation acknowledgement.
+	// The holder must remain until that worker-owned status update is durable.
+	result, err := r.Reconcile(context.Background(), req)
+	if err != nil {
+		t.Fatalf("acknowledge cancellation: %v", err)
+	}
+	if result.RequeueAfter != time.Second {
+		t.Fatalf("acknowledgement requeue=%s, want 1s", result.RequeueAfter)
+	}
+	var acknowledged opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &acknowledged); err != nil {
+		t.Fatalf("get acknowledged leaf: %v", err)
+	}
+	if acknowledged.Status.WorkerControl == nil ||
+		acknowledged.Status.WorkerControl.ObservedAdmissionState != opsv1alpha1.UpgradeManagerAdmissionRevoked ||
+		acknowledged.Status.WorkerControl.ObservedPolicyEpoch != up.Status.ManagerAdmission.PolicyEpoch ||
+		acknowledged.Status.WorkerControl.ObservedControlRevision != up.Status.ManagerControl.Revision ||
+		acknowledged.Status.WorkerControl.ObservedWorkerConfigRevision != managedTestWorkerRevision ||
+		acknowledged.Status.WorkerControl.EffectiveState != opsv1alpha1.UpgradeWorkerControlCancelled {
+		t.Fatalf("worker cancellation acknowledgement = %#v", acknowledged.Status.WorkerControl)
+	}
+	held := getManagedMutationLease(t, r, lease)
+	if held.Spec.HolderIdentity == nil || *held.Spec.HolderIdentity != upgradeLeaseIdentity(up) {
+		t.Fatalf("Lease released before cancellation acknowledgement was durable: holder=%v", held.Spec.HolderIdentity)
+	}
+
+	result, err = r.Reconcile(context.Background(), req)
+	if err != nil {
+		t.Fatalf("release unused mutation Lease: %v", err)
+	}
+	if result.RequeueAfter != managedAdmissionPoll {
+		t.Fatalf("post-cancellation requeue=%s, want %s", result.RequeueAfter, managedAdmissionPoll)
+	}
+	released := getManagedMutationLease(t, r, lease)
+	if released.UID != wantUID {
+		t.Fatalf("retained Lease UID=%q, want %q", released.UID, wantUID)
+	}
+	if !reflect.DeepEqual(released.Labels, wantLabels) {
+		t.Fatalf("retained Lease labels=%v, want %v", released.Labels, wantLabels)
+	}
+	for key, want := range wantBindings {
+		if got := released.Annotations[key]; got != want {
+			t.Errorf("retained Lease binding %s=%q, want %q", key, got, want)
+		}
+	}
+	if released.Spec.HolderIdentity != nil || released.Spec.LeaseDurationSeconds != nil ||
+		released.Spec.AcquireTime != nil || released.Spec.RenewTime != nil {
+		t.Fatalf("released Lease retained holder/timing state: %#v", released.Spec)
+	}
+	if released.Spec.LeaseTransitions == nil || *released.Spec.LeaseTransitions != 4 {
+		t.Fatalf("released Lease transitions=%v, want preserved value 4", released.Spec.LeaseTransitions)
+	}
+	for _, key := range []string{
+		managedprotocol.AnnotationMaintenanceRequestVersion,
+		managedprotocol.AnnotationMaintenanceSessionToken,
+		managedprotocol.AnnotationMaintenanceRequestedAt,
+		managedprotocol.AnnotationMaintenanceOperationNS,
+		managedprotocol.AnnotationMaintenanceOperationName,
+		managedprotocol.AnnotationMaintenanceOperationUID,
+		managedprotocol.AnnotationMaintenanceControlRevision,
+		managedprotocol.AnnotationMaintenancePurpose,
+	} {
+		if _, present := released.Annotations[key]; present {
+			t.Errorf("released Lease retained request annotation %s=%q", key, released.Annotations[key])
+		}
+	}
+}
+
+func TestManagedCancellationReleasesLeaseWithPreDispatchBookkeeping(t *testing.T) {
+	markTime := metav1.NewTime(managedTestTime)
+	for i, tt := range []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+	}{
+		{
+			name: "staging correlation ID",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.StagingOperationID = "00000000-0000-4000-8000-000000000001"
+			},
+		},
+		{
+			name: "activation control timer",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.ActivationControlStartTime = markTime.DeepCopy()
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			up := managedCancelledDrainLeaf("cancel-predispatch-" + strconv.Itoa(i))
+			tt.mutate(up)
+			if upgradeMutationSubmitted(up) {
+				t.Fatal("pre-dispatch bookkeeping was treated as submitted mutation evidence")
+			}
+			lease := managedCancelledDrainLease(up)
+			r := newManagedTestReconciler(t, up, nil, lease)
+			attachManagedMutationLeaser(r, lease)
+			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(up)}
+			for pass := 0; pass < 2; pass++ {
+				if _, err := r.Reconcile(context.Background(), req); err != nil {
+					t.Fatalf("reconcile pass %d: %v", pass+1, err)
+				}
+			}
+			released := getManagedMutationLease(t, r, lease)
+			if released.Spec.HolderIdentity != nil || released.Spec.LeaseDurationSeconds != nil ||
+				released.Spec.AcquireTime != nil || released.Spec.RenewTime != nil {
+				t.Fatalf("pre-dispatch cancellation retained Lease authority: %#v", released.Spec)
+			}
+		})
+	}
+}
+
+func TestManagedCancellationRetainsMutationLeaseForClaimsAndDispatchEvidence(t *testing.T) {
+	tests := []struct {
+		name          string
+		mutate        func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		wantSubmitted bool
+	}{
+		{
+			name: "managed claim without marker",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryInstall),
+				}
+			},
+		},
+		{
+			name: "staging requested marker",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.StagingRequested = true
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationStaging),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "staging requested condition",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.Conditions = []metav1.Condition{{Type: conditionTypeStaged, Reason: "StagingRequested"}}
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationStaging),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "primary install marker",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.PrimarySupervisorInstallRequested = true
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryInstall),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "standby install marker",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.StandbySupervisorInstallRequested = true
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationStandbyInstall),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "standby activation marker",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.StandbySupervisorActivationRequested = true
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationStandbyActivation),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "primary activation marker",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.PrimarySupervisorActivationRequested = true
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryActivation),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "primary activation requested condition",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.Conditions = []metav1.Condition{{Type: conditionTypeActivated, Reason: "ActivationRequested"}}
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryActivation),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "rollback activation marker",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.RollbackActivationRequested = true
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationRollbackActivation),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "rollback requested condition",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.Conditions = []metav1.Condition{{Type: conditionTypeRollback, Reason: "RollbackRequested"}}
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationRollbackActivation),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "rollback dispatched condition",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.Conditions = []metav1.Condition{{Type: conditionTypeRollback, Reason: "RollbackDispatched"}}
+				up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+					managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationRollbackActivation),
+				}
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "legacy unknown outcome",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.FailureReason = "LegacyStateOutcomeUnknown"
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "unsupported execution model",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModel("AtMostOnceV2")
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "markerless legacy mutation phase",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.ExecutionModel = ""
+				up.Status.Phase = opsv1alpha1.UpgradePhaseStaging
+			},
+			wantSubmitted: true,
+		},
+		{
+			name: "markerless unknown legacy phase",
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.ExecutionModel = ""
+				up.Status.Phase = opsv1alpha1.UpgradePhase("FutureMutating")
+			},
+			wantSubmitted: true,
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			up := managedCancelledDrainLeaf("cancel-retain-" + strconv.Itoa(i))
+			tt.mutate(up)
+			if got := upgradeMutationSubmitted(up); got != tt.wantSubmitted {
+				t.Fatalf("upgradeMutationSubmitted()=%t, want %t for test evidence", got, tt.wantSubmitted)
+			}
+			lease := managedCancelledDrainLease(up)
+			r := newManagedTestReconciler(t, up, nil, lease)
+			attachManagedMutationLeaser(r, lease)
+			req := reconcile.Request{NamespacedName: client.ObjectKeyFromObject(up)}
+
+			// Drive both the worker-control acknowledgement and the following
+			// cancellation pass. Evidence must keep the exact Lease held on both.
+			for pass := 0; pass < 2; pass++ {
+				if _, err := r.Reconcile(context.Background(), req); err != nil {
+					t.Fatalf("reconcile pass %d: %v", pass+1, err)
+				}
+			}
+			retained := getManagedMutationLease(t, r, lease)
+			if retained.UID != lease.UID {
+				t.Fatalf("retained Lease UID=%q, want %q", retained.UID, lease.UID)
+			}
+			if retained.Spec.HolderIdentity == nil || *retained.Spec.HolderIdentity != upgradeLeaseIdentity(up) {
+				t.Fatalf("cancellation released quarantined Lease: holder=%v", retained.Spec.HolderIdentity)
+			}
+			if retained.Spec.LeaseDurationSeconds == nil || retained.Spec.AcquireTime == nil || retained.Spec.RenewTime == nil {
+				t.Fatalf("cancellation cleared retained Lease timing: %#v", retained.Spec)
+			}
+			if retained.Spec.LeaseTransitions == nil || *retained.Spec.LeaseTransitions != 4 {
+				t.Fatalf("retained Lease transitions=%v, want 4", retained.Spec.LeaseTransitions)
+			}
+			if got := retained.Annotations[managedprotocol.AnnotationMaintenanceRequestVersion]; got != managedprotocol.DrainProtocolVersion {
+				t.Fatalf("retained request version=%q, want %q", got, managedprotocol.DrainProtocolVersion)
+			}
+			if got := retained.Annotations[managedprotocol.AnnotationMaintenancePurpose]; got != managedprotocol.MaintenancePurposeSoftwareMutation {
+				t.Fatalf("retained request purpose=%q, want %q", got, managedprotocol.MaintenancePurposeSoftwareMutation)
+			}
+		})
+	}
+}
+
 func TestManagedTerminalClaimRequiresConclusiveSettlementAcrossRestart(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
@@ -732,6 +1232,522 @@ func TestManagedPendingAdmissionAcknowledgesIdentityWithoutAdvancing(t *testing.
 		up.Status.WorkerControl.ObservedAdmissionState != opsv1alpha1.UpgradeManagerAdmissionPending ||
 		up.Status.WorkerControl.EffectiveState != opsv1alpha1.UpgradeWorkerControlReady {
 		t.Fatalf("pending admission acknowledgement = %#v", up.Status.WorkerControl)
+	}
+}
+
+func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
+	markTime := metav1.NewTime(managedTestTime)
+	tests := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		want   bool
+	}{
+		{name: "exact empty-phase cancellation tombstone", want: true},
+		{name: "current execution model remains pre-dispatch", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+		}},
+		{name: "ordinary empty-phase leaf", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			delete(up.Annotations, managedprotocol.AnnotationManaged)
+		}},
+		{name: "missing UID", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) { up.UID = "" }},
+		{name: "pending phase", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Phase = opsv1alpha1.UpgradePhasePending
+		}},
+		{name: "resolving phase", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Phase = opsv1alpha1.UpgradePhaseResolving
+		}},
+		{name: "missing admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission = nil
+		}},
+		{name: "unknown protocol", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.ProtocolVersion = "future"
+		}},
+		{name: "pending admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionPending
+		}},
+		{name: "granted admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
+		}},
+		{name: "revoked admission", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionRevoked
+			up.Status.ManagerAdmission.RevocationReason = "CampaignCancelled"
+		}},
+		{name: "settled admission retains revocation reason", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.RevocationReason = "CampaignCancelled"
+		}},
+		{name: "leaf UID mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.LeafUID = "another-leaf"
+		}},
+		{name: "campaign binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.CampaignUID = "another-campaign"
+		}},
+		{name: "plan binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PlanHash = "sha256:" + strings.Repeat("b", 64)
+		}},
+		{name: "ledger binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.LedgerUID = "another-ledger"
+		}},
+		{name: "reservation binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.ReservationID = "another-reservation"
+		}},
+		{name: "device binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.DeviceUID = "another-device"
+		}},
+		{name: "node binding mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.NodeUID = "another-node"
+		}},
+		{name: "missing policy UID", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PolicyUID = ""
+		}},
+		{name: "missing policy resource version", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PolicyResourceVersion = ""
+		}},
+		{name: "invalid policy epoch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PolicyEpoch = 0
+		}},
+		{name: "missing physical identity", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PhysicalIdentity = ""
+		}},
+		{name: "missing admission revision", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.ControlRevision = nil
+		}},
+		{name: "missing manager control", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl = nil
+		}},
+		{name: "control is not cancellation", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Cancel = false
+		}},
+		{name: "control also pauses", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Pause = true
+		}},
+		{name: "neutral cancellation revision", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision = 0
+			*up.Status.ManagerAdmission.ControlRevision = 0
+		}},
+		{name: "control revision mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision++
+		}},
+		{name: "manager drain retained", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain = &opsv1alpha1.UpgradeManagerDrainStatus{}
+		}},
+		{name: "worker drain retained", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain = &opsv1alpha1.UpgradeWorkerDrainStatus{}
+		}},
+		{name: "durable managed claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: managedTestReservationID,
+				PolicyEpoch: 1, ControlRevision: 7, ClaimedAt: metav1.Time{Time: managedTestTime},
+			}}
+		}},
+	}
+	evidence := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgradeStatus)
+	}{
+		{name: "unknown execution model", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.ExecutionModel = "FutureModel" }},
+		{name: "legacy in-flight phase", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Phase = opsv1alpha1.UpgradePhaseTransferring
+		}},
+		{name: "legacy outcome unknown", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "LegacyStateOutcomeUnknown" }},
+		{name: "install marker missing", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "InstallAttemptMarkerMissing" }},
+		{name: "staging operation missing", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.FailureReason = "StagingOperationMissing" }},
+		{name: "staging requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StagingRequested = true }},
+		{name: "install started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.InstallStartTime = markTime.DeepCopy() }},
+		{name: "activation started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.ActivationStartTime = markTime.DeepCopy() }},
+		{name: "rollback started", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.RollbackStartTime = markTime.DeepCopy() }},
+		{name: "primary install requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorInstallRequested = true }},
+		{name: "primary installed", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorInstalled = true }},
+		{name: "standby install requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorInstallRequested = true }},
+		{name: "standby installed", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorInstalled = true }},
+		{name: "standby activation requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorActivationRequested = true }},
+		{name: "standby activated", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.StandbySupervisorActivated = true }},
+		{name: "primary activation requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.PrimarySupervisorActivationRequested = true }},
+		{name: "no-reboot activation accepted", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.NoRebootActivationAccepted = true }},
+		{name: "rollback requested", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) { s.RollbackActivationRequested = true }},
+		{name: "legacy staging condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Staged", Reason: "StagingRequested"}}
+		}},
+		{name: "legacy activation condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Activated", Reason: "ActivationRequested"}}
+		}},
+		{name: "legacy rollback condition", mutate: func(s *opsv1alpha1.IOSXESoftwareUpgradeStatus) {
+			s.Conditions = []metav1.Condition{{Type: "Rollback", Reason: "RollbackDispatched"}}
+		}},
+	}
+	for _, marker := range evidence {
+		marker := marker
+		tests = append(tests, struct {
+			name   string
+			mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+			want   bool
+		}{
+			name: "mutation evidence: " + marker.name,
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				marker.mutate(&up.Status)
+			},
+		})
+	}
+
+	if inertManagedCancellationTombstone(nil) {
+		t.Fatal("nil upgrade was treated as an inert cancellation tombstone")
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			up := managedCancellationQueueTombstone("queue-tombstone")
+			if test.mutate != nil {
+				test.mutate(up)
+			}
+			if got := inertManagedCancellationTombstone(up); got != test.want {
+				t.Fatalf("inertManagedCancellationTombstone() = %t, want %t; status=%+v", got, test.want, up.Status)
+			}
+		})
+	}
+}
+
+func TestSettledManagedCancellationAuditRecordFailsClosed(t *testing.T) {
+	safePhases := []opsv1alpha1.UpgradePhase{
+		opsv1alpha1.UpgradePhasePending,
+		opsv1alpha1.UpgradePhaseResolving,
+		opsv1alpha1.UpgradePhaseStaging,
+		opsv1alpha1.UpgradePhaseTransferring,
+		opsv1alpha1.UpgradePhaseActivating,
+	}
+	for _, workerState := range []opsv1alpha1.UpgradeWorkerControlState{
+		opsv1alpha1.UpgradeWorkerControlSettled,
+		opsv1alpha1.UpgradeWorkerControlDenied,
+	} {
+		for _, phase := range safePhases {
+			t.Run("safe "+string(phase)+" "+string(workerState), func(t *testing.T) {
+				up := managedCancellationAuditRecord("settled-audit", false)
+				up.Status.Phase = phase
+				up.Status.WorkerControl.EffectiveState = workerState
+				if !settledManagedCancellationAuditRecord(up) {
+					t.Fatalf("exact settled %s record with worker state %s retained the queue lock", phase, workerState)
+				}
+			})
+		}
+	}
+
+	t.Run("fully bound settled drain", func(t *testing.T) {
+		up := managedCancellationAuditRecord("settled-drain-audit", true)
+		if !settledManagedCancellationAuditRecord(up) {
+			t.Fatalf("fully settled drain audit record retained the queue lock: status=%+v", up.Status)
+		}
+	})
+	t.Run("settled zero-Pod drain without worker inventory", func(t *testing.T) {
+		up := managedCancellationAuditRecord("settled-empty-drain-audit", true)
+		up.Status.ManagerDrain.Pods = nil
+		up.Status.WorkerDrain = nil
+		if !settledManagedCancellationAuditRecord(up) {
+			t.Fatalf("settled zero-Pod drain audit record retained the queue lock: status=%+v", up.Status)
+		}
+	})
+	t.Run("settled drain accepts lagging pre-rotation inventory", func(t *testing.T) {
+		up := managedCancellationAuditRecord("settled-lagging-drain-audit", true)
+		up.Status.WorkerDrain.ObservedControlRevision = 0
+		up.Status.WorkerDrain.ObservedWorkerConfigRevision = "sha256:" + strings.Repeat("b", 64)
+		if !settledManagedCancellationAuditRecord(up) {
+			t.Fatalf("settled drain with prior bound inventory retained the queue lock: status=%+v", up.Status)
+		}
+	})
+
+	unsafePhases := []opsv1alpha1.UpgradePhase{
+		opsv1alpha1.UpgradePhaseTransferInterrupted,
+		opsv1alpha1.UpgradePhaseValidating,
+		opsv1alpha1.UpgradePhaseAwaitingReachability,
+		opsv1alpha1.UpgradePhaseVerifying,
+		opsv1alpha1.UpgradePhaseRollingBack,
+		opsv1alpha1.UpgradePhaseSucceeded,
+		opsv1alpha1.UpgradePhaseStagedForNextBoot,
+		opsv1alpha1.UpgradePhaseFailed,
+		opsv1alpha1.UpgradePhasePreflightFailed,
+		opsv1alpha1.UpgradePhaseValidationFailed,
+		opsv1alpha1.UpgradePhaseRolledBack,
+		opsv1alpha1.UpgradePhaseRebootTimeout,
+		opsv1alpha1.UpgradePhaseCancelled,
+		opsv1alpha1.UpgradePhase("FuturePhase"),
+	}
+	tests := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+	}{
+		{name: "empty phase belongs to tombstone predicate", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Phase = ""
+		}},
+		{name: "missing execution model", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = ""
+		}},
+		{name: "unknown execution model", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = "FutureModel"
+		}},
+		{name: "managed claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall,
+			}}
+		}},
+		{name: "durable install marker", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.PrimarySupervisorInstallRequested = true
+		}},
+		{name: "durable mutation timestamp", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.InstallStartTime = ptr.To(metav1.NewTime(managedTestTime))
+		}},
+		{name: "durable transfer progress", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.TransferProgress = &opsv1alpha1.UpgradeTransferProgress{}
+		}},
+		{name: "durable mutation condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "Activated", Reason: "ActivationRequested"}}
+		}},
+		{name: "durable mutation-requested condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "DeviceMutationSettled", Reason: "MutationRequested"}}
+		}},
+		{name: "durable install condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "Transferred", Reason: "InstallRequested"}}
+		}},
+		{name: "durable standby activation condition", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.Conditions = []metav1.Condition{{Type: "Activated", Reason: "StandbyActivationRequested"}}
+		}},
+		{name: "durable uncertainty reason", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.FailureReason = "InstallAttemptMarkerMissing"
+		}},
+		{name: "manager identity mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision++
+		}},
+		{name: "worker acknowledgement missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl = nil
+		}},
+		{name: "worker admission stale", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedAdmissionState = opsv1alpha1.UpgradeManagerAdmissionRevoked
+		}},
+		{name: "worker policy epoch stale", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedPolicyEpoch++
+		}},
+		{name: "worker control revision stale", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedControlRevision--
+		}},
+		{name: "worker revision invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedWorkerConfigRevision = "sha256:invalid"
+		}},
+		{name: "worker timestamp missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.UpdatedAt = metav1.Time{}
+		}},
+		{name: "drain not settled", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainRecovering
+		}},
+		{name: "drain protocol mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.ProtocolVersion = "future"
+		}},
+		{name: "drain session invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.SessionToken = "not-a-session"
+		}},
+		{name: "drain reservation mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.ReservationID = "another-reservation"
+		}},
+		{name: "drain policy epoch mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.PolicyEpoch++
+		}},
+		{name: "drain control revision mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.ControlRevision--
+		}},
+		{name: "drain node mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.NodeUID = "another-node"
+		}},
+		{name: "drain start missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.StartedAt = metav1.Time{}
+		}},
+		{name: "drain deadline invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.DrainDeadline = up.Status.ManagerDrain.StartedAt
+		}},
+		{name: "drain update precedes start", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.UpdatedAt = metav1.NewTime(up.Status.ManagerDrain.StartedAt.Add(-time.Second))
+		}},
+		{name: "drain recovery deadline missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.RecoveryDeadline = nil
+		}},
+		{name: "drain Pod incomplete", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.Pods[0].Phase = opsv1alpha1.UpgradeDrainPodReleased
+		}},
+		{name: "settled drain inventory missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain = nil
+		}},
+		{name: "worker drain without manager drain", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain = nil
+		}},
+		{name: "worker drain protocol mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ProtocolVersion = "future"
+		}},
+		{name: "worker drain session mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedSessionToken = "00000000-0000-4000-8000-000000000002"
+		}},
+		{name: "worker drain policy mismatch", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedPolicyEpoch++
+		}},
+		{name: "worker drain control ahead", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedControlRevision++
+		}},
+		{name: "worker drain revision invalid", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ObservedWorkerConfigRevision = "invalid"
+		}},
+		{name: "worker drain inventory revision missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.InventoryRevision = 0
+		}},
+		{name: "worker drain inventory timestamp missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.InventoryObservedAt = metav1.Time{}
+		}},
+		{name: "worker drain update timestamp missing", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.UpdatedAt = metav1.Time{}
+		}},
+		{name: "worker drain inventory incomplete", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.InventoryComplete = false
+		}},
+		{name: "worker drain unknown workload", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.UnknownDeviceWorkloadCount = 1
+		}},
+		{name: "worker drain invalid foreign count", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.ForeignDeviceWorkloadCount = -1
+		}},
+		{name: "worker drain selected workload remains", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerDrain.RemainingAuthorizedPodUIDs = []string{"pod-uid-1"}
+		}},
+	}
+	for _, workerState := range []opsv1alpha1.UpgradeWorkerControlState{
+		"",
+		opsv1alpha1.UpgradeWorkerControlReady,
+		opsv1alpha1.UpgradeWorkerControlPaused,
+		opsv1alpha1.UpgradeWorkerControlCancelled,
+		opsv1alpha1.UpgradeWorkerControlClaimed,
+	} {
+		workerState := workerState
+		tests = append(tests, struct {
+			name   string
+			mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		}{
+			name: "unsafe worker state " + string(workerState),
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.WorkerControl.EffectiveState = workerState
+			},
+		})
+	}
+	for _, phase := range unsafePhases {
+		phase := phase
+		tests = append(tests, struct {
+			name   string
+			mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		}{
+			name: "unsafe phase " + string(phase),
+			mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+				up.Status.Phase = phase
+			},
+		})
+	}
+
+	if settledManagedCancellationAuditRecord(nil) {
+		t.Fatal("nil upgrade was treated as a settled audit record")
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			up := managedCancellationAuditRecord("settled-audit", true)
+			test.mutate(up)
+			if settledManagedCancellationAuditRecord(up) {
+				t.Fatalf("ambiguous settled audit record released the queue lock: status=%+v", up.Status)
+			}
+		})
+	}
+}
+
+func TestDeviceUpgradeOwnerSkipsSettledManagedCancellationAuditRecord(t *testing.T) {
+	tests := []struct {
+		name      string
+		withDrain bool
+		mutateOld func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		wantNext  bool
+	}{
+		{name: "settled pre-dispatch record", wantNext: true},
+		{name: "settled denied worker record", wantNext: true, mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.EffectiveState = opsv1alpha1.UpgradeWorkerControlDenied
+		}},
+		{name: "fully settled drain record", withDrain: true, wantNext: true},
+		{name: "legacy execution model", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ExecutionModel = ""
+		}},
+		{name: "unsettled drain", withDrain: true, mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainRecovering
+		}},
+		{name: "stale worker acknowledgement", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.WorkerControl.ObservedAdmissionState = opsv1alpha1.UpgradeManagerAdmissionRevoked
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			old := managedCancellationAuditRecord("a-retained-audit", test.withDrain)
+			old.CreationTimestamp = metav1.NewTime(managedTestTime.Add(-time.Hour))
+			if test.mutateOld != nil {
+				test.mutateOld(old)
+			}
+			next := managedTestLeaf("z-next-upgrade")
+			next.CreationTimestamp = metav1.NewTime(managedTestTime)
+			r := newManagedTestReconciler(t, next, nil, old)
+
+			owner, err := r.deviceUpgradeOwner(context.Background(), next, managedTestTime)
+			if err != nil {
+				t.Fatalf("deviceUpgradeOwner() error = %v", err)
+			}
+			want := old.Name
+			if test.wantNext {
+				want = next.Name
+			}
+			if owner != want {
+				t.Fatalf("deviceUpgradeOwner() = %q, want %q", owner, want)
+			}
+		})
+	}
+}
+
+func TestDeviceUpgradeOwnerSkipsOnlyInertManagedCancellationTombstone(t *testing.T) {
+	tests := []struct {
+		name      string
+		mutateOld func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		wantNext  bool
+	}{
+		{name: "settled cancellation tombstone", wantNext: true},
+		{name: "ordinary empty-phase leaf", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			delete(up.Annotations, managedprotocol.AnnotationManaged)
+		}},
+		{name: "claimed cancellation leaf", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: managedTestReservationID,
+				PolicyEpoch: 1, ControlRevision: 7, ClaimedAt: metav1.Time{Time: managedTestTime},
+			}}
+		}},
+		{name: "cancellation leaf with mutation marker", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.PrimarySupervisorInstallRequested = true
+		}},
+		{name: "cancellation leaf with mismatched control", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Revision++
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			old := managedCancellationQueueTombstone("a-retained-tombstone")
+			old.CreationTimestamp = metav1.NewTime(managedTestTime.Add(-time.Hour))
+			if test.mutateOld != nil {
+				test.mutateOld(old)
+			}
+			next := managedTestLeaf("z-next-upgrade")
+			next.CreationTimestamp = metav1.NewTime(managedTestTime)
+			r := newManagedTestReconciler(t, next, nil, old)
+
+			owner, err := r.deviceUpgradeOwner(context.Background(), next, managedTestTime)
+			if err != nil {
+				t.Fatalf("deviceUpgradeOwner() error = %v", err)
+			}
+			want := old.Name
+			if test.wantNext {
+				want = next.Name
+			}
+			if owner != want {
+				t.Fatalf("deviceUpgradeOwner() = %q, want %q", owner, want)
+			}
+		})
 	}
 }
 
@@ -1088,6 +2104,80 @@ func TestManagedClaimRequiresEmptyDeviceWorkloadInventory(t *testing.T) {
 				t.Fatalf("device workload gate status = %+v", got.Status)
 			}
 		})
+	}
+}
+
+func TestManagedDrainClaimRequiresStrictDeviceInventoryCapability(t *testing.T) {
+	up := managedTestLeaf("drain-without-strict-inventory")
+	up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+	up.Status.ManagerDrain = promotedManagedDrain(up)
+	r := newManagedTestReconciler(t, up, nil)
+
+	var snapshot opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	*up = *snapshot.DeepCopy()
+	claimed, _, err := r.claimActivation(
+		context.Background(), up, false, "ActivationRequested", "activate", managedTestTime,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claimed {
+		t.Fatal("managed drain mutation used compatibility inventory without strict driver capability")
+	}
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &got); err != nil {
+		t.Fatal(err)
+	}
+	if readyReason(got.Status.Conditions) != "WorkloadGateUnavailable" ||
+		got.Status.WorkerControl == nil || got.Status.WorkerControl.EffectiveState != opsv1alpha1.UpgradeWorkerControlDenied {
+		t.Fatalf("strict inventory denial was not durable: %+v", got.Status)
+	}
+}
+
+func TestManagedDrainClaimUsesStrictInventoryAfterPromotion(t *testing.T) {
+	up := managedTestLeaf("drain-strict-inventory")
+	up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+	up.Status.ManagerDrain = promotedManagedDrain(up)
+	r := newManagedTestReconciler(t, up, nil)
+	compatibilityCalled := false
+	strictCalled := false
+	r.DevicePodLister = func(context.Context) ([]*corev1.Pod, error) {
+		compatibilityCalled = true
+		return []*corev1.Pod{{ObjectMeta: metav1.ObjectMeta{Name: "would-block"}}}, nil
+	}
+	r.DrainDevicePodLister = func(context.Context) ([]*corev1.Pod, error) {
+		strictCalled = true
+		return nil, nil
+	}
+
+	var snapshot opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &snapshot); err != nil {
+		t.Fatal(err)
+	}
+	*up = *snapshot.DeepCopy()
+	claimed, _, err := r.claimActivation(
+		context.Background(), up, false, "ActivationRequested", "activate", managedTestTime,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !claimed || !strictCalled || compatibilityCalled {
+		t.Fatalf("claim=%t strictCalled=%t compatibilityCalled=%t", claimed, strictCalled, compatibilityCalled)
+	}
+}
+
+func promotedManagedDrain(up *opsv1alpha1.IOSXESoftwareUpgrade) *opsv1alpha1.UpgradeManagerDrainStatus {
+	return &opsv1alpha1.UpgradeManagerDrainStatus{
+		ProtocolVersion: opsv1alpha1.ManagedDrainProtocolPDBV1,
+		State:           opsv1alpha1.UpgradeManagerDrainPromoted,
+		SessionToken:    "00000000-0000-4000-8000-000000000001",
+		ReservationID:   up.Status.ManagerAdmission.ReservationID,
+		PolicyEpoch:     up.Status.ManagerAdmission.PolicyEpoch,
+		ControlRevision: up.Status.ManagerControl.Revision,
+		NodeUID:         up.Status.ManagerAdmission.NodeUID,
 	}
 }
 

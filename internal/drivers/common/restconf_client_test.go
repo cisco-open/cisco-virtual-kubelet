@@ -118,6 +118,52 @@ func TestRestconfClient_Post(t *testing.T) {
 	}
 }
 
+func TestRestconfClient_PostWithResult(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("method=%s, want POST", r.Method)
+		}
+		w.Header().Set("Content-Type", "application/yang-data+json")
+		_, _ = io.WriteString(w, `{"Cisco-IOS-XE-rpc:output":{"result":"accepted"}}`)
+	}))
+	defer server.Close()
+
+	client := NewClientRestconfClient(server.URL, &ClientAuth{}, nil, 5*time.Second)
+	var result struct {
+		Output struct {
+			Result string `json:"result"`
+		} `json:"Cisco-IOS-XE-rpc:output"`
+	}
+	err := client.PostWithResult(context.Background(), "/restconf/operations/test:rpc",
+		map[string]any{"test:rpc": map[string]string{"value": "request"}}, &result,
+		json.Marshal, json.Unmarshal)
+	if err != nil {
+		t.Fatalf("PostWithResult: %v", err)
+	}
+	if result.Output.Result != "accepted" {
+		t.Fatalf("result=%q, want accepted", result.Output.Result)
+	}
+}
+
+func TestRestconfClient_PostWithResultDecodeFailureIsAmbiguous(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, `{"result":"device-secret-sentinel"}`)
+	}))
+	defer server.Close()
+
+	client := NewClientRestconfClient(server.URL, &ClientAuth{}, nil, 5*time.Second)
+	err := client.PostWithResult(context.Background(), "/restconf/operations/test:rpc",
+		map[string]string{"value": "request"}, &struct{}{}, json.Marshal,
+		func([]byte, any) error { return errors.New("invalid response") })
+	if !IsRESTCONFMutationAmbiguous(err) {
+		t.Fatalf("error=%v, want ambiguous mutation marker", err)
+	}
+	if strings.Contains(err.Error(), "device-secret-sentinel") {
+		t.Fatalf("error exposed response body: %v", err)
+	}
+}
+
 func TestRestconfClient_Delete(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "DELETE" {

@@ -18,6 +18,9 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestUpgradeImageSourceIntentJSON(t *testing.T) {
@@ -103,5 +106,82 @@ func TestIOSXESoftwareUpgradeLegacyWireFieldsRemainCompatible(t *testing.T) {
 	}
 	if strings.Contains(string(withoutLegacyFields), "resumePolicy") || strings.Contains(string(withoutLegacyFields), "maxRetries") {
 		t.Fatalf("empty spec unexpectedly emits deprecated fields: %s", withoutLegacyFields)
+	}
+}
+
+func TestIOSXESoftwareUpgradeDrainSnapshotsAreOptionalAndAuditable(t *testing.T) {
+	empty, err := json.Marshal(IOSXESoftwareUpgradeStatus{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(empty), "managerDrain") || strings.Contains(string(empty), "workerDrain") {
+		t.Fatalf("default status activated drain fields: %s", empty)
+	}
+
+	now := metav1.NewTime(time.Date(2026, time.September, 12, 10, 0, 0, 0, time.UTC))
+	deadline := metav1.NewTime(now.Add(10 * time.Minute))
+	status := IOSXESoftwareUpgradeStatus{
+		ManagerDrain: &UpgradeManagerDrainStatus{
+			ProtocolVersion:               ManagedDrainProtocolPDBV1,
+			State:                         UpgradeManagerDrainEvicting,
+			SessionToken:                  "11111111-1111-4111-8111-111111111111",
+			ReservationID:                 "reservation-a",
+			PolicyEpoch:                   3,
+			ControlRevision:               7,
+			NodeUID:                       "node-uid",
+			NodeUnschedulableBefore:       false,
+			MaintenanceTaintPresentBefore: false,
+			StartedAt:                     now,
+			DrainDeadline:                 deadline,
+			UpdatedAt:                     now,
+			Pods: []UpgradeDrainPodStatus{{
+				Namespace: "apps", Name: "web-0", UID: "pod-uid",
+				EligibilityHash: "sha256:" + strings.Repeat("a", 64),
+				Controller: UpgradeDrainObjectReference{
+					APIVersion: "apps/v1", Kind: "ReplicaSet", Namespace: "apps", Name: "web", UID: "rs-uid", Generation: 2,
+				},
+				PDBs: []UpgradeDrainPDBStatus{{
+					UpgradeDrainObjectReference: UpgradeDrainObjectReference{
+						APIVersion: "policy/v1", Kind: "PodDisruptionBudget", Namespace: "apps", Name: "web", UID: "pdb-uid", Generation: 4,
+					},
+					ObservedGeneration: 4, DisruptionsAllowed: 1, CurrentHealthy: 3, DesiredHealthy: 2, ExpectedPods: 3,
+				}},
+				TerminationGracePeriodSeconds: 60,
+				Phase:                         UpgradeDrainPodEvictionRequested,
+			}},
+		},
+		WorkerDrain: &UpgradeWorkerDrainStatus{
+			ProtocolVersion:              ManagedDrainProtocolPDBV1,
+			ObservedSessionToken:         "11111111-1111-4111-8111-111111111111",
+			ObservedPolicyEpoch:          3,
+			ObservedControlRevision:      7,
+			ObservedWorkerConfigRevision: "sha256:" + strings.Repeat("b", 64),
+			InventoryRevision:            9,
+			InventoryObservedAt:          now,
+			InventoryComplete:            true,
+			RemainingAuthorizedPodUIDs:   []string{"pod-uid"},
+			UpdatedAt:                    now,
+		},
+	}
+	raw, err := json.Marshal(status)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, evidence := range []string{
+		`"managerDrain"`, `"workerDrain"`, `"nodeUnschedulableBefore":false`,
+		`"maintenanceTaintPresentBefore":false`, `"observedGeneration":4`,
+		`"disruptionsAllowed":1`, `"currentHealthy":3`, `"desiredHealthy":2`, `"expectedPods":3`,
+	} {
+		if !strings.Contains(string(raw), evidence) {
+			t.Fatalf("Marshal() = %s, missing audit evidence %s", raw, evidence)
+		}
+	}
+	var roundTrip IOSXESoftwareUpgradeStatus
+	if err := json.Unmarshal(raw, &roundTrip); err != nil {
+		t.Fatal(err)
+	}
+	if roundTrip.ManagerDrain == nil || len(roundTrip.ManagerDrain.Pods) != 1 ||
+		len(roundTrip.ManagerDrain.Pods[0].PDBs) != 1 || roundTrip.WorkerDrain == nil {
+		t.Fatalf("drain snapshot did not round trip: %+v", roundTrip)
 	}
 }

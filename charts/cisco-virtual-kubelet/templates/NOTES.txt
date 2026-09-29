@@ -105,6 +105,9 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   ConfigMap's live UID and binding that UID into the policy annotation. It
   fails closed if admission discovery/type checking, either object identity,
   or the binding is invalid.
+  A later live Helm upgrade preserves the immutable policy binding and omits
+  the kept, manager-owned ledger from its update set. It refuses partial or
+  UID-mismatched retained state rather than creating replacement authority.
   Do not use helm upgrade --force and do not recreate the ledger to clear an
   error. The ledger, policy, admission pairs, and functional profile roles carry
   Helm keep protection; disabling or uninstalling does not retire them. Verify

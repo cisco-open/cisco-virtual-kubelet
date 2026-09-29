@@ -183,6 +183,7 @@ type DeviceSpec struct {
 
 	// Taints to apply to the virtual kubelet node.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:XValidation:rule="self.all(t, t.key != 'topology.cisco.vk/uninitialized')",message="topology.cisco.vk/uninitialized is manager-reserved"
 	Taints []v1.Taint `json:"taints,omitempty" mapstructure:"taints,omitempty"`
 
 	// MaxPods is the maximum number of pods the device can host.
@@ -350,15 +351,18 @@ type DeviceStatus struct {
 
 	// HealthObservation is a manager-authenticated snapshot binding the latest
 	// observed Node Ready heartbeat to the current CiscoDevice condition set.
-	// Rollout admission requires both sides of this snapshot to remain current;
-	// a fresh Node heartbeat cannot mask stale or subsequently changed device
-	// health evidence.
+	// Rollout admission requires the device evidence to remain unchanged and
+	// the live Node Ready heartbeat to be no older than the snapshot. A later
+	// compatible heartbeat proves continuity but does not advance authenticated
+	// health freshness.
 	// +kubebuilder:validation:Optional
 	HealthObservation *DeviceHealthObservationStatus `json:"healthObservation,omitempty"`
 
 	// WorkerRevision binds the desired per-device Deployment PodTemplate to the
-	// exact running Pod and its post-start managed Node heartbeat. A rollout may
-	// use gNOI only when desiredRevision and observedRevision are identical.
+	// exact running Pod and a post-start managed Node heartbeat lower bound. A
+	// rollout may use gNOI only when desiredRevision and observedRevision are
+	// identical and live identity, revision, readiness, and heartbeat evidence
+	// has not regressed.
 	// +kubebuilder:validation:Optional
 	WorkerRevision *DeviceWorkerRevisionStatus `json:"workerRevision,omitempty"`
 
@@ -571,15 +575,18 @@ type DeviceTopologyProjectionStatus struct {
 
 // DeviceHealthObservationStatus binds independently changing Node and
 // CiscoDevice health evidence at one manager observation boundary. It is not a
-// desired-state source and is refreshed only when the source heartbeat or the
-// normalized condition snapshot changes.
+// desired-state source. Its source snapshot refreshes when the heartbeat or
+// normalized condition set changes, while condition observation times advance
+// only when their owning manager producer is explicitly revalidated.
 type DeviceHealthObservationStatus struct {
 	// ObservedAt is manager time when this exact source snapshot was verified.
 	// +kubebuilder:validation:Required
 	ObservedAt metav1.Time `json:"observedAt"`
 
 	// NodeReadyHeartbeatTime is the bound worker's Ready heartbeat in the
-	// snapshot. The rollout controller compares it with the live Node.
+	// snapshot. The rollout controller validates it monotonically against the
+	// live Node without treating a later heartbeat as fresher authenticated
+	// evidence.
 	// +kubebuilder:validation:Required
 	NodeReadyHeartbeatTime metav1.Time `json:"nodeReadyHeartbeatTime"`
 
@@ -592,7 +599,9 @@ type DeviceHealthObservationStatus struct {
 	// ConditionObservations carries independent producer observation times for
 	// manager-evaluated conditions. A fresh Node heartbeat does not refresh
 	// these entries. Rollout-required conditions without a matching entry are
-	// rejected; LastTransitionTime is not proof that the manager ran a producer.
+	// rejected; a CiscoDevice condition's LastTransitionTime is not proof that
+	// the manager ran its producer. Node Ready transition time is used only to
+	// prove continuity across heartbeat skew, never as a freshness source.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxItems=64
 	// +listType=map
@@ -644,8 +653,11 @@ type DeviceWorkerRevisionStatus struct {
 	// +kubebuilder:validation:Optional
 	PodStartTime *metav1.Time `json:"podStartTime,omitempty"`
 
-	// ReadyHeartbeatTime is the matching managed-worker Node heartbeat and must
-	// not predate PodStartTime. It is absent until the new Pod has reported.
+	// ReadyHeartbeatTime is a manager-observed lower bound for the exact ready
+	// Pod and revision and must not predate PodStartTime. Revalidation accepts an
+	// equal or later live heartbeat only while all identity, revision, and
+	// readiness facts still match; regression fails. It is absent until the new
+	// Pod has reported and is not a rollout-health freshness source.
 	// +kubebuilder:validation:Optional
 	ReadyHeartbeatTime *metav1.Time `json:"readyHeartbeatTime,omitempty"`
 
@@ -802,16 +814,42 @@ const (
 	DeviceTopologyLockReleasing DeviceTopologyLockState = "Releasing"
 )
 
-// DeviceMaintenanceSessionPhase is the manager-owned maintenance handoff
-// state. A settled record may be replaced by a later distinct session; active
-// session identity fields cannot be rewritten in place.
+// DeviceMaintenanceProtocolVersion identifies the cross-controller maintenance
+// handshake. Omitting it (and Purpose) preserves the pre-drain rollout-v1
+// software-mutation contract for stored objects and older clients.
 //
-// +kubebuilder:validation:Enum=Acknowledged;Active;Settled
+// +kubebuilder:validation:Enum=rollout-v1;pdb-drain-v1
+type DeviceMaintenanceProtocolVersion string
+
+const (
+	DeviceMaintenanceProtocolRolloutV1  DeviceMaintenanceProtocolVersion = "rollout-v1"
+	DeviceMaintenanceProtocolPDBDrainV1 DeviceMaintenanceProtocolVersion = "pdb-drain-v1"
+)
+
+// DeviceMaintenancePurpose limits the side effects authorized by a session.
+// WorkloadDrain authorizes only exact drain cleanup; SoftwareMutation is the
+// existing gNOI/device-mutation authority.
+//
+// +kubebuilder:validation:Enum=WorkloadDrain;SoftwareMutation
+type DeviceMaintenancePurpose string
+
+const (
+	DeviceMaintenancePurposeWorkloadDrain    DeviceMaintenancePurpose = "WorkloadDrain"
+	DeviceMaintenancePurposeSoftwareMutation DeviceMaintenancePurpose = "SoftwareMutation"
+)
+
+// DeviceMaintenanceSessionPhase is the manager-owned maintenance handoff
+// state. Recovering forbids new side effects and permits only reconciliation of
+// already accepted work. A settled record may be replaced by a later distinct
+// session; active session identity fields cannot be rewritten in place.
+//
+// +kubebuilder:validation:Enum=Acknowledged;Active;Recovering;Settled
 type DeviceMaintenanceSessionPhase string
 
 const (
 	DeviceMaintenanceSessionAcknowledged DeviceMaintenanceSessionPhase = "Acknowledged"
 	DeviceMaintenanceSessionActive       DeviceMaintenanceSessionPhase = "Active"
+	DeviceMaintenanceSessionRecovering   DeviceMaintenanceSessionPhase = "Recovering"
 	DeviceMaintenanceSessionSettled      DeviceMaintenanceSessionPhase = "Settled"
 )
 
@@ -838,8 +876,9 @@ type DeviceMaintenanceObjectReference struct {
 }
 
 // DeviceMaintenanceLeaseReference binds a session request to the current
-// mutation Lease incarnation and holder. Request metadata must never transfer
-// to a successor holder.
+// mutation Lease incarnation and holder. The one permitted drain-to-mutation
+// promotion changes only the holder from software-drain/<operation UID> to
+// software-upgrade/<operation UID>; all other request identity remains fixed.
 type DeviceMaintenanceLeaseReference struct {
 	DeviceMaintenanceObjectReference `json:",inline"`
 
@@ -856,12 +895,39 @@ type DeviceMaintenanceLeaseReference struct {
 // metadata through the separately owned mutation Lease.
 //
 // +kubebuilder:validation:XValidation:rule="has(self.acknowledgedAt)",message="acknowledgedAt is required after manager acknowledgement"
-// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || (self.sessionToken == oldSelf.sessionToken && self.lease == oldSelf.lease && self.operation == oldSelf.operation && self.deviceUID == oldSelf.deviceUID && self.nodeName == oldSelf.nodeName && self.nodeUID == oldSelf.nodeUID && self.requestedAt == oldSelf.requestedAt)",message="active maintenance session identity is immutable"
+// +kubebuilder:validation:XValidation:rule="has(self.protocolVersion) == has(self.purpose)",message="maintenance protocolVersion and purpose must be set together"
+// +kubebuilder:validation:XValidation:rule="!has(self.protocolVersion) || (self.protocolVersion == 'rollout-v1' ? self.purpose == 'SoftwareMutation' : self.protocolVersion == 'pdb-drain-v1' && self.purpose in ['WorkloadDrain', 'SoftwareMutation'])",message="maintenance protocolVersion and purpose combination is invalid"
+// +kubebuilder:validation:XValidation:rule="self.phase != 'Recovering' || has(self.protocolVersion)",message="a recovering session requires an explicit protocolVersion and purpose"
+// +kubebuilder:validation:XValidation:rule="!has(self.protocolVersion) || self.protocolVersion != 'pdb-drain-v1' || self.sessionToken.matches('^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')",message="pdb-drain-v1 requires a canonical UUIDv4 sessionToken"
+// +kubebuilder:validation:XValidation:rule="!has(self.purpose) || self.purpose != 'WorkloadDrain' || self.lease.holder == 'software-drain/' + self.operation.uid",message="WorkloadDrain requires its exact UID-bound Lease holder"
+// +kubebuilder:validation:XValidation:rule="!has(self.protocolVersion) || self.protocolVersion != 'pdb-drain-v1' || self.purpose != 'SoftwareMutation' || self.lease.holder == 'software-upgrade/' + self.operation.uid",message="promoted drain requires its exact UID-bound software-mutation holder"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || (self.sessionToken == oldSelf.sessionToken && self.operation.uid == oldSelf.operation.uid && self.deviceUID == oldSelf.deviceUID && self.nodeName == oldSelf.nodeName && self.nodeUID == oldSelf.nodeUID && self.requestedAt == oldSelf.requestedAt)",message="active maintenance session and UID-bound operation identity are immutable"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || self.operation.__namespace__ == oldSelf.operation.__namespace__",message="active maintenance operation namespace is immutable"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || self.operation.name == oldSelf.operation.name",message="active maintenance operation name is immutable"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || (has(oldSelf.protocolVersion) == has(self.protocolVersion) && (!has(oldSelf.protocolVersion) || self.protocolVersion == oldSelf.protocolVersion))",message="active maintenance protocolVersion is immutable"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || has(oldSelf.purpose) == has(self.purpose)",message="active maintenance purpose cannot be added or removed"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || !has(oldSelf.purpose) || self.purpose == oldSelf.purpose || (oldSelf.protocolVersion == 'pdb-drain-v1' && oldSelf.purpose == 'WorkloadDrain' && self.purpose == 'SoftwareMutation')",message="active maintenance purpose permits only drain-to-mutation promotion"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || self.lease.__namespace__ == oldSelf.lease.__namespace__",message="active maintenance Lease namespace is immutable"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || self.lease.name == oldSelf.lease.name",message="active maintenance Lease name is immutable"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || self.lease.uid == oldSelf.lease.uid",message="active maintenance Lease UID is immutable"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || self.lease.holder == oldSelf.lease.holder || (oldSelf.protocolVersion == 'pdb-drain-v1' && oldSelf.purpose == 'WorkloadDrain' && self.purpose == 'SoftwareMutation' && oldSelf.lease.holder == 'software-drain/' + oldSelf.operation.uid && self.lease.holder == 'software-upgrade/' + self.operation.uid)",message="active maintenance Lease holder permits only the exact drain-to-mutation promotion"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || !has(oldSelf.acknowledgedAt) || (has(self.acknowledgedAt) && self.acknowledgedAt == oldSelf.acknowledgedAt)",message="maintenance acknowledgedAt is append-only and immutable within a session"
+// +kubebuilder:validation:XValidation:rule="self.acknowledgedAt >= self.requestedAt",message="maintenance acknowledgement cannot precede its request"
 // +kubebuilder:validation:XValidation:rule="self.sessionToken != oldSelf.sessionToken || self.controlRevision >= oldSelf.controlRevision",message="maintenance controlRevision cannot decrease within a session"
+// +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Settled' || (oldSelf.phase == 'Acknowledged' ? (self.phase in ['Acknowledged', 'Active', 'Recovering'] || (self.phase == 'Settled' && (!has(oldSelf.protocolVersion) || oldSelf.protocolVersion != 'pdb-drain-v1'))) : (oldSelf.phase == 'Active' ? (self.phase in ['Active', 'Recovering'] || (self.phase == 'Settled' && (!has(oldSelf.protocolVersion) || oldSelf.protocolVersion != 'pdb-drain-v1'))) : (oldSelf.phase == 'Recovering' ? self.phase in ['Recovering', 'Settled'] : self.phase == 'Settled')))",message="maintenance session phase cannot regress or bypass drain recovery"
 type DeviceMaintenanceSessionStatus struct {
 	// Phase is the current durable manager handoff phase.
 	// +kubebuilder:validation:Required
 	Phase DeviceMaintenanceSessionPhase `json:"phase"`
+
+	// ProtocolVersion and Purpose are optional only for backward compatibility.
+	// Their joint omission has the historical rollout-v1 SoftwareMutation
+	// meaning; new drain-aware writers always set both explicitly.
+	// +kubebuilder:validation:Optional
+	ProtocolVersion DeviceMaintenanceProtocolVersion `json:"protocolVersion,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	Purpose DeviceMaintenancePurpose `json:"purpose,omitempty"`
 
 	// SessionToken uniquely binds one request/acknowledgement exchange and must
 	// not be reused for a later Lease holder or operation.

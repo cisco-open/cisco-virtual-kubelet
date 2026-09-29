@@ -140,6 +140,8 @@ helm_args=(
   --namespace "$system_namespace"
   --kube-version 1.35.0
   --set topology.enabled=true
+  --set gnoi.enableSoftwareUpgrade=true
+  --set topology.workerAccounts.networkManagement.accessMode=readWrite
   --set controller.leaderElect=true
   --set rbac.profile=strict
   --set "serviceAccount.controllerName=${controller_service_account}"
@@ -1401,8 +1403,13 @@ if kubectl --context "$context" get iosxediagnostic root-kcm-cleanup-partial-bin
   exit 1
 fi
 
+kubectl --context "$context" create rolebinding app-drain-device-probe \
+  --namespace "$worker_namespace" --clusterrole=cisco-virtual-kubelet-app-hosting-device-read \
+  --serviceaccount="${worker_namespace}:${app_service_account}" >/dev/null
+
 # Exercise retained Lease bootstrap and rotation with actual bound tokens.
 source "$chart_dir/tests/managed-lease-rebind-checks.sh"
+source "$chart_dir/tests/managed-split-drain-checks.sh"
 source "$chart_dir/tests/managed-native-node-checks.sh"
 source "$chart_dir/tests/managed-foreground-cleanup-checks.sh"
 
