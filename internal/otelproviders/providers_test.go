@@ -65,7 +65,7 @@ func TestProvidersConstructAndShutdown(t *testing.T) {
 
 	var record otellog.Record
 	record.SetTimestamp(time.Now())
-	record.SetBody(otellog.StringValue("phase2 log"))
+	record.SetBody(attribute.StringValue("phase2 log"))
 	record.SetSeverity(otellog.SeverityInfo)
 	record.SetSeverityText("INFO")
 	providers.Logger.Logger("providers-test").Emit(ctx, record)

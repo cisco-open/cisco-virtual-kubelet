@@ -22,6 +22,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 )
@@ -115,7 +116,7 @@ func (e *LogsEmitter) EmitWithPolicy(
 		rec.SetSeverity(toOTelSeverity(event.Severity))
 		rec.SetSeverityText(string(event.Severity))
 		rec.SetEventName(logEventName(event.Name))
-		rec.SetBody(log.StringValue(event.Body))
+		rec.SetBody(attribute.StringValue(event.Body))
 		attrs := make([]mapper.KeyValue, 0, len(event.Resource)+len(event.Attributes))
 		attrs = append(attrs, event.Resource...)
 		attrs = append(attrs, event.Attributes...)
@@ -217,13 +218,13 @@ func toOTelSeverity(sev mapper.Severity) log.Severity {
 	}
 }
 
-func toLogAttrs(attrs []mapper.KeyValue) []log.KeyValue {
-	out := make([]log.KeyValue, 0, len(attrs))
+func toLogAttrs(attrs []mapper.KeyValue) []attribute.KeyValue {
+	out := make([]attribute.KeyValue, 0, len(attrs))
 	for _, attr := range attrs {
 		if mapper.IsForbiddenDataPointAttribute(attr.Key) {
 			continue
 		}
-		out = append(out, log.String(attr.Key, attr.Value))
+		out = append(out, attribute.String(attr.Key, attr.Value))
 	}
 	return out
 }

@@ -22,7 +22,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/mapper"
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -276,8 +276,8 @@ func newCaptureEmitter(t *testing.T) (*LogsEmitter, *captureLogExporter) {
 
 func logAttr(record sdklog.Record, key string) string {
 	var out string
-	record.WalkAttributes(func(kv log.KeyValue) bool {
-		if kv.Key == key {
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		if string(kv.Key) == key {
 			out = kv.Value.AsString()
 			return false
 		}
