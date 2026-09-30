@@ -32,6 +32,20 @@ func TestEvaluateRequiresCompleteFreshEvidence(t *testing.T) {
 	}
 }
 
+func TestEvaluateRejectsAmbiguousPeerIdentity(t *testing.T) {
+	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	decision := Evaluate(now, Observation{
+		ObservedAt: now, Complete: true, DeviceIdentityHash: "sha256:" + strings.Repeat("a", 64),
+		Neighbors: []NeighborObservation{
+			{Identity: "cdp|core-a|Gi1|", ID: "core-a", State: "discovered"},
+			{Identity: "ospf|core-a|Gi2|0", ID: "core-a", State: "Full"},
+		},
+	}, Policy{RequiredNeighbors: []string{"core-a"}})
+	if decision.Reason != "EvidenceAmbiguous" {
+		t.Fatalf("decision=%#v, want EvidenceAmbiguous", decision)
+	}
+}
+
 func TestEvaluateChecksPathsAndHeadroom(t *testing.T) {
 	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	minimum := 30.0

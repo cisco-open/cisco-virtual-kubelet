@@ -1,0 +1,270 @@
+// Copyright © 2026 Cisco Systems Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+
+package topology
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+)
+
+const (
+	DefaultGraphMaxNodes = 256
+	DefaultGraphMaxEdges = 512
+)
+
+// GraphObservation is the manager-facing form of one authenticated network
+// snapshot. The graph builder deliberately accepts observations, rather than
+// Kubernetes objects, so it cannot grant authority or mutate labels.
+type GraphObservation struct {
+	PhysicalID    string
+	ObservedAt    time.Time
+	Complete      bool
+	UnknownReason string
+	Neighbors     []GraphNeighbor
+}
+
+type GraphNeighbor struct {
+	Identity      string
+	PeerID        string
+	Interface     string
+	RoutingDomain string
+	State         string
+}
+
+type GraphPolicy struct {
+	MaxNodes int
+	MaxEdges int
+	Declared []DeclaredLink
+}
+
+type DeclaredLink struct {
+	Local         string
+	Peer          string
+	Interface     string
+	RoutingDomain string
+}
+
+type Graph struct {
+	Nodes        []string
+	Edges        []GraphEdge
+	Diagnostics  []GraphDiagnostic
+	Complete     bool
+	EvidenceHash string
+}
+
+type GraphEdge struct {
+	Local         string
+	Peer          string
+	Identity      string
+	Interface     string
+	RoutingDomain string
+	State         string
+}
+
+type GraphDiagnostic struct {
+	Code     string
+	Severity string
+	Local    string
+	Peer     string
+	Message  string
+}
+
+// BuildGraph creates a bounded, deterministic observed graph. Missing peers,
+// incomplete source snapshots and asymmetric observations are diagnostics;
+// they never get converted into a healthy or writable topology policy.
+func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, error) {
+	maxNodes := policy.MaxNodes
+	if maxNodes <= 0 {
+		maxNodes = DefaultGraphMaxNodes
+	}
+	maxEdges := policy.MaxEdges
+	if maxEdges <= 0 {
+		maxEdges = DefaultGraphMaxEdges
+	}
+	if len(observations) > maxNodes {
+		return Graph{}, fmt.Errorf("topology graph has %d observations; limit is %d", len(observations), maxNodes)
+	}
+
+	graph := Graph{Complete: true}
+	nodes := make(map[string]struct{}, len(observations))
+	for _, observation := range observations {
+		local := strings.TrimSpace(observation.PhysicalID)
+		if local == "" {
+			return Graph{}, fmt.Errorf("topology graph contains an observation without physical identity")
+		}
+		if _, duplicate := nodes[local]; duplicate {
+			graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+				Code: "DuplicateDeviceIdentity", Severity: "Error", Local: local,
+				Message: "more than one observation claims the same physical identity",
+			})
+			graph.Complete = false
+			continue
+		}
+		nodes[local] = struct{}{}
+		graph.Nodes = append(graph.Nodes, local)
+		if !observation.Complete {
+			graph.Complete = false
+			graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+				Code: "IncompleteObservation", Severity: "Error", Local: local,
+				Message: boundedMessage(observation.UnknownReason, "observation did not prove complete source coverage"),
+			})
+		}
+	}
+	sort.Strings(graph.Nodes)
+
+	seen := make(map[string]struct{}, maxEdges)
+	for _, observation := range observations {
+		local := strings.TrimSpace(observation.PhysicalID)
+		for _, neighbor := range observation.Neighbors {
+			peer := strings.TrimSpace(neighbor.PeerID)
+			identity := strings.TrimSpace(neighbor.Identity)
+			if identity == "" {
+				identity = graphEdgeIdentity(local, peer, neighbor.Interface, neighbor.RoutingDomain)
+			}
+			key := local + "\x00" + identity
+			if _, duplicate := seen[key]; duplicate {
+				graph.Complete = false
+				graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+					Code: "DuplicateAdjacency", Severity: "Error", Local: local, Peer: peer,
+					Message: "the same source-qualified adjacency was observed more than once",
+				})
+				continue
+			}
+			seen[key] = struct{}{}
+			if len(graph.Edges) >= maxEdges {
+				return Graph{}, fmt.Errorf("topology graph has more than %d edges", maxEdges)
+			}
+			graph.Edges = append(graph.Edges, GraphEdge{
+				Local: local, Peer: peer, Identity: identity,
+				Interface: strings.TrimSpace(neighbor.Interface), RoutingDomain: strings.TrimSpace(neighbor.RoutingDomain),
+				State: strings.TrimSpace(neighbor.State),
+			})
+			if _, known := nodes[peer]; !known {
+				graph.Complete = false
+				graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+					Code: "UnknownPeer", Severity: "Warning", Local: local, Peer: peer,
+					Message: "peer is not present in the supplied observation set",
+				})
+			}
+		}
+	}
+	sort.Slice(graph.Edges, func(i, j int) bool {
+		if graph.Edges[i].Local != graph.Edges[j].Local {
+			return graph.Edges[i].Local < graph.Edges[j].Local
+		}
+		return graph.Edges[i].Identity < graph.Edges[j].Identity
+	})
+	graph.Diagnostics = append(graph.Diagnostics, asymmetricDiagnostics(graph.Edges, nodes)...)
+	graph.Diagnostics = append(graph.Diagnostics, declaredDrift(graph.Edges, policy.Declared)...)
+	sort.Slice(graph.Diagnostics, func(i, j int) bool {
+		left := graph.Diagnostics[i].Code + "\x00" + graph.Diagnostics[i].Local + "\x00" + graph.Diagnostics[i].Peer + "\x00" + graph.Diagnostics[i].Message
+		right := graph.Diagnostics[j].Code + "\x00" + graph.Diagnostics[j].Local + "\x00" + graph.Diagnostics[j].Peer + "\x00" + graph.Diagnostics[j].Message
+		return left < right
+	})
+	if len(graph.Diagnostics) > 0 {
+		for _, diagnostic := range graph.Diagnostics {
+			if diagnostic.Severity == "Error" {
+				graph.Complete = false
+				break
+			}
+		}
+	}
+	graph.EvidenceHash = graphHash(graph)
+	return graph, nil
+}
+
+func asymmetricDiagnostics(edges []GraphEdge, nodes map[string]struct{}) []GraphDiagnostic {
+	seen := make(map[string]struct{}, len(edges))
+	for _, edge := range edges {
+		seen[edge.Local+"\x00"+edge.Peer] = struct{}{}
+	}
+	var diagnostics []GraphDiagnostic
+	for _, edge := range edges {
+		if _, known := nodes[edge.Peer]; !known {
+			continue
+		}
+		if _, reverse := seen[edge.Peer+"\x00"+edge.Local]; reverse {
+			continue
+		}
+		diagnostics = append(diagnostics, GraphDiagnostic{
+			Code: "AsymmetricLink", Severity: "Warning", Local: edge.Local, Peer: edge.Peer,
+			Message: "the peer does not report a reverse adjacency in the supplied snapshot",
+		})
+	}
+	return diagnostics
+}
+
+func declaredDrift(edges []GraphEdge, declared []DeclaredLink) []GraphDiagnostic {
+	observed := make(map[string]struct{}, len(edges))
+	for _, edge := range edges {
+		observed[linkKey(edge.Local, edge.Peer, edge.Interface, edge.RoutingDomain)] = struct{}{}
+	}
+	declaredSet := make(map[string]struct{}, len(declared))
+	var diagnostics []GraphDiagnostic
+	for _, link := range declared {
+		key := linkKey(link.Local, link.Peer, link.Interface, link.RoutingDomain)
+		declaredSet[key] = struct{}{}
+		if _, ok := observed[key]; !ok {
+			diagnostics = append(diagnostics, GraphDiagnostic{Code: "DeclaredLinkMissing", Severity: "Error", Local: link.Local, Peer: link.Peer, Message: "declared link is not present in observed topology"})
+		}
+	}
+	for _, edge := range edges {
+		if len(declared) == 0 {
+			break
+		}
+		if _, ok := declaredSet[linkKey(edge.Local, edge.Peer, edge.Interface, edge.RoutingDomain)]; !ok {
+			diagnostics = append(diagnostics, GraphDiagnostic{Code: "UnexpectedObservedLink", Severity: "Warning", Local: edge.Local, Peer: edge.Peer, Message: "observed link is outside the declared topology"})
+		}
+	}
+	return diagnostics
+}
+
+func linkKey(local, peer, iface, domain string) string {
+	return strings.Join([]string{strings.TrimSpace(local), strings.TrimSpace(peer), strings.TrimSpace(iface), strings.TrimSpace(domain)}, "\x00")
+}
+
+func graphEdgeIdentity(local, peer, iface, domain string) string {
+	raw := linkKey(local, peer, iface, domain)
+	if len(raw) <= 128 {
+		return raw
+	}
+	digest := sha256.Sum256([]byte(raw))
+	return "sha256:" + hex.EncodeToString(digest[:])
+}
+
+func graphHash(graph Graph) string {
+	// The graph is already sorted and bounded. Hashing its canonical diagnostic
+	// text gives callers a compact drift/provenance token without exposing it
+	// as an authorization credential.
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "complete|%t\n", graph.Complete)
+	for _, node := range graph.Nodes {
+		fmt.Fprintf(&builder, "n|%s\n", node)
+	}
+	for _, edge := range graph.Edges {
+		fmt.Fprintf(&builder, "e|%s|%s|%s|%s|%s|%s\n", edge.Local, edge.Peer, edge.Identity, edge.Interface, edge.RoutingDomain, edge.State)
+	}
+	for _, diagnostic := range graph.Diagnostics {
+		fmt.Fprintf(&builder, "d|%s|%s|%s|%s|%s\n", diagnostic.Code, diagnostic.Local, diagnostic.Peer, diagnostic.Severity, diagnostic.Message)
+	}
+	digest := sha256.Sum256([]byte(builder.String()))
+	return "sha256:" + hex.EncodeToString(digest[:])
+}
+
+func boundedMessage(message, fallback string) string {
+	message = strings.TrimSpace(message)
+	if message == "" {
+		message = fallback
+	}
+	if len(message) > 256 {
+		message = message[:256]
+	}
+	return message
+}

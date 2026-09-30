@@ -50,8 +50,13 @@ func TestBuildNetworkObservationIsBoundedAndDeterministic(t *testing.T) {
 	if got := observation.Interfaces[0].Name; got != "Gi1" {
 		t.Fatalf("interfaces not sorted: %#v", observation.Interfaces)
 	}
-	if len(observation.Neighbors) != 2 || observation.Neighbors[0].Source != "cdp,ospf" {
-		t.Fatalf("neighbors not merged: %#v", observation.Neighbors)
+	if len(observation.Neighbors) != 3 {
+		t.Fatalf("neighbors with distinct discovery identities = %#v, want 3", observation.Neighbors)
+	}
+	for _, neighbor := range observation.Neighbors {
+		if neighbor.Identity == "" || !strings.Contains(neighbor.Identity, "|") {
+			t.Fatalf("neighbor identity is not source/context-qualified: %#v", neighbor)
+		}
 	}
 }
 

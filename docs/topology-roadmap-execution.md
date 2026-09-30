@@ -22,7 +22,7 @@ deliverables.
 | Package | Roadmap | Work to execute | Prerequisites | Audit status |
 | --- | --- | --- | --- | --- |
 | E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | Partial physical evidence; open |
-| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | Implemented correction; physical qualification and provenance expansion open |
+| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | Implemented correction plus bounded collection/adjacency provenance; physical qualification open |
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | Headroom publication implemented; controlled traffic/supervisor qualification open |
 | E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | Partial campaign gate; open |
 | E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Open |
@@ -31,7 +31,7 @@ deliverables.
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | Partial drain evidence; open |
 | E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | Kubernetes 1.37 synthetic conformance passed; CVK physical lifecycle open |
 | E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Ephemeral baseline only; open |
-| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | Open |
+| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | Bounded deterministic graph diagnostics implemented; manager-authoritative publication/drift watch open |
 | E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Open; suitable hardware required |
 | E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | Open |
 | E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Open |
@@ -103,10 +103,25 @@ Conditional work must have a written, evidence-backed decision:
   do not remove exclusions to make the checklist appear complete.
 - E11 must qualify a second driver before claiming second-platform support.
   An unsupported NX-OS probe leaves this objective blocked; it does not justify
-  an empty generic API. Public API extraction requires the subsequent ADR.
-- Forced drain, automatic authority from discovery, graph-cost scheduling,
-  mandatory experimental TAS, zero-downtime promises and active unfenced
-  multi-cluster control remain excluded. They are not completion tasks.
+an empty generic API. Public API extraction requires the subsequent ADR.
+
+### Follow-up topology evidence and graph-safety changes
+
+The current revision also tightens the observation contract without changing
+the existing rollout opt-in defaults:
+
+| Change/test | Result | Evidence and limitation |
+| --- | --- | --- |
+| Source-qualified neighbor identity | Implemented | CDP and OSPF observations now retain source, local interface and OSPF area in a bounded canonical identity. Equal peer names are no longer merged solely by string equality; ambiguous required peers fail closed. Older persisted observations may omit the new identity and use the legacy peer ID fallback until the next worker sample. |
+| Collection provenance | Implemented | Network observations carry bounded collection start/end timestamps and a per-worker sample sequence. The sequence resets with a worker revision, so it is diagnostic provenance only until manager-side replay/ordering persistence is enabled. |
+| Observed graph diagnostics | Implemented as pure library | `internal/topology/graph.go` builds a bounded deterministic graph, reports incomplete/unknown/asymmetric/duplicate links, and compares observed links with a declared topology without mutating labels or authority. Unit tests cover limits, deterministic hashes and policy drift. Manager-owned status publication and physical drift capture remain open E10 gates. |
+| Compatibility | Preserved | The new fields are additive, the network gate remains opt-in, and existing standalone topology projection and non-network rollout paths are unchanged. |
+| Physical observation qualification | Passed for the available IOS-XE lab devices | Ubuntu16 manager ran the provenance-enabled worker image; `cat9k-lab-101`, `cat9k-lab-103` and `cat9k-live` remained `Ready`, each produced complete observations with non-zero collection start/end timestamps and monotonic sample sequences, and the updated CRD was server-side applied. This validates observation publication and schema compatibility only; it is not a claim of full physical upgrade/TAS qualification. |
+| Final repository gates | Passed | Full `go test -race -count=1 ./...`, strict MkDocs, Helm lint, topology render contract and `git diff --check` passed. The render contract’s managed-device variable count was corrected from a stale baseline assertion (7) to the current chart contract (9); no chart template behavior changed. |
+
+Forced drain, automatic authority from discovery, graph-cost scheduling,
+mandatory experimental TAS, zero-downtime promises and active unfenced
+multi-cluster control remain excluded. They are not completion tasks.
 
 ## 2. Common implementation and test contract
 

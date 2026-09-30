@@ -750,7 +750,8 @@ func evaluateNetworkHealth(
 	}
 	for _, item := range health.Network.Neighbors {
 		observation.Neighbors = append(observation.Neighbors, topologyhealth.NeighborObservation{
-			ID: item.ID, State: item.State, Source: item.Source,
+			Identity: item.Identity, ID: item.ID, Interface: item.Interface,
+			RoutingDomain: item.RoutingDomain, State: item.State, Source: item.Source,
 		})
 	}
 	var minimumHeadroom *float64

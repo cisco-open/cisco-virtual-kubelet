@@ -859,6 +859,16 @@ spec:
                       worker. It is evidence only; rollout admission applies its own freshness
                       and policy checks and never treats an absent observation as healthy.
                     properties:
+                      collectionEndedAt:
+                        format: date-time
+                        type: string
+                      collectionStartedAt:
+                        description: |-
+                          CollectionStartedAt and CollectionEndedAt delimit the authenticated
+                          worker collection interval. They make slow or unexpectedly long device
+                          reads visible to rollout diagnostics without retaining raw CLI output.
+                        format: date-time
+                        type: string
                       complete:
                         description: Complete is false when any required source was
                           unavailable or partial.
@@ -898,10 +908,27 @@ spec:
                         - name
                         x-kubernetes-list-type: map
                       neighbors:
+                        description: |-
+                          Atomic is intentional: multiple source-qualified adjacencies may share
+                          the same human-facing peer ID, and the network worker owns this complete
+                          bounded snapshot rather than merging individual entries.
                         items:
                           properties:
                             id:
                               maxLength: 128
+                              type: string
+                            identity:
+                              description: |-
+                                Identity is a canonical source-plus-adjacency key. It intentionally
+                                includes the discovery source and local routing context so equal device
+                                names from separate VRFs or interfaces cannot be silently merged.
+                              maxLength: 128
+                              type: string
+                            interface:
+                              maxLength: 128
+                              type: string
+                            routingDomain:
+                              maxLength: 64
                               type: string
                             source:
                               maxLength: 32
@@ -915,9 +942,7 @@ spec:
                           type: object
                         maxItems: 64
                         type: array
-                        x-kubernetes-list-map-keys:
-                        - id
-                        x-kubernetes-list-type: map
+                        x-kubernetes-list-type: atomic
                       observedAt:
                         description: ObservedAt is the worker collection time, validated
                           by the manager.
@@ -929,6 +954,14 @@ spec:
                         maxLength: 128
                         minLength: 1
                         type: string
+                      sampleSequence:
+                        description: |-
+                          SampleSequence is monotonic for one worker incarnation and resets when
+                          that worker is replaced. The manager binds the producer revision before
+                          using a sample for admission; a zero value is retained for older workers.
+                        format: int64
+                        minimum: 0
+                        type: integer
                       unknownReason:
                         description: |-
                           UnknownReason explains why Complete is false without including device

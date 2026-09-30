@@ -622,6 +622,21 @@ type DeviceHealthObservationStatus struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.complete || has(self.unknownReason)",message="incomplete network evidence requires an unknown reason"
 type DeviceNetworkObservationStatus struct {
+	// CollectionStartedAt and CollectionEndedAt delimit the authenticated
+	// worker collection interval. They make slow or unexpectedly long device
+	// reads visible to rollout diagnostics without retaining raw CLI output.
+	// +kubebuilder:validation:Optional
+	CollectionStartedAt metav1.Time `json:"collectionStartedAt,omitempty"`
+	// +kubebuilder:validation:Optional
+	CollectionEndedAt metav1.Time `json:"collectionEndedAt,omitempty"`
+
+	// SampleSequence is monotonic for one worker incarnation and resets when
+	// that worker is replaced. The manager binds the producer revision before
+	// using a sample for admission; a zero value is retained for older workers.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	SampleSequence uint64 `json:"sampleSequence,omitempty"`
+
 	// ObservedAt is the worker collection time, validated by the manager.
 	// +kubebuilder:validation:Required
 	ObservedAt metav1.Time `json:"observedAt"`
@@ -658,8 +673,10 @@ type DeviceNetworkObservationStatus struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxItems=64
-	// +listType=map
-	// +listMapKey=id
+	// Atomic is intentional: multiple source-qualified adjacencies may share
+	// the same human-facing peer ID, and the network worker owns this complete
+	// bounded snapshot rather than merging individual entries.
+	// +listType=atomic
 	Neighbors []DeviceNetworkNeighborObservation `json:"neighbors,omitempty"`
 }
 
@@ -678,9 +695,22 @@ type DeviceNetworkInterfaceObservation struct {
 }
 
 type DeviceNetworkNeighborObservation struct {
+	// Identity is a canonical source-plus-adjacency key. It intentionally
+	// includes the discovery source and local routing context so equal device
+	// names from separate VRFs or interfaces cannot be silently merged.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	Identity string `json:"identity"`
+
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MaxLength=128
 	ID string `json:"id"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	Interface string `json:"interface,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=64
+	RoutingDomain string `json:"routingDomain,omitempty"`
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MaxLength=32
 	State string `json:"state"`

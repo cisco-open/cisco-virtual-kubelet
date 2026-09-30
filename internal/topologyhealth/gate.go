@@ -25,9 +25,14 @@ type InterfaceObservation struct {
 }
 
 type NeighborObservation struct {
-	ID     string
-	State  string
-	Source string
+	// Identity is the source-qualified adjacency key. ID remains the stable
+	// operator-facing peer name used by required-neighbor policy.
+	Identity      string
+	ID            string
+	Interface     string
+	RoutingDomain string
+	State         string
+	Source        string
 }
 
 // Observation is a bounded snapshot from one authenticated network worker.
@@ -118,21 +123,34 @@ func Evaluate(now time.Time, observation Observation, policy Policy) Decision {
 		}
 	}
 	neighbors := make(map[string]NeighborObservation, len(observation.Neighbors))
+	neighborIDs := make(map[string][]string, len(observation.Neighbors))
 	for _, item := range observation.Neighbors {
 		id := strings.TrimSpace(item.ID)
 		if id == "" {
 			return blocked("EvidenceInvalid", "network observation contains an unnamed neighbor", observation)
 		}
-		if _, exists := neighbors[id]; exists {
-			return blocked("EvidenceAmbiguous", fmt.Sprintf("neighbor %q appears more than once", id), observation)
+		identity := strings.TrimSpace(item.Identity)
+		if identity == "" {
+			// Compatibility for pre-provenance observations. New workers always
+			// publish Identity; treating the peer ID as the fallback prevents a
+			// status upgrade from inventing a second identity.
+			identity = id
 		}
-		neighbors[id] = item
+		if _, exists := neighbors[identity]; exists {
+			return blocked("EvidenceAmbiguous", fmt.Sprintf("neighbor identity %q appears more than once", identity), observation)
+		}
+		neighbors[identity] = item
+		neighborIDs[id] = append(neighborIDs[id], identity)
 	}
 	for _, id := range sortedUnique(policy.RequiredNeighbors) {
-		item, ok := neighbors[id]
-		if !ok {
+		identities := neighborIDs[id]
+		if len(identities) == 0 {
 			return blocked("AlternatePathUnavailable", fmt.Sprintf("required neighbor %q is absent", id), observation)
 		}
+		if len(identities) > 1 {
+			return blocked("EvidenceAmbiguous", fmt.Sprintf("required neighbor %q has %d distinct adjacencies", id, len(identities)), observation)
+		}
+		item := neighbors[identities[0]]
 		if policy.RequireNeighborsFull && !strings.EqualFold(strings.TrimSpace(item.State), "full") {
 			return blocked("NeighborUnhealthy", fmt.Sprintf("required neighbor %q is in state %q", id, item.State), observation)
 		}
@@ -163,7 +181,16 @@ func hash(observation Observation) string {
 	interfaces := append([]InterfaceObservation(nil), observation.Interfaces...)
 	neighbors := append([]NeighborObservation(nil), observation.Neighbors...)
 	sort.Slice(interfaces, func(i, j int) bool { return interfaces[i].Name < interfaces[j].Name })
-	sort.Slice(neighbors, func(i, j int) bool { return neighbors[i].ID < neighbors[j].ID })
+	sort.Slice(neighbors, func(i, j int) bool {
+		left, right := neighbors[i].Identity, neighbors[j].Identity
+		if left == "" {
+			left = neighbors[i].ID
+		}
+		if right == "" {
+			right = neighbors[j].ID
+		}
+		return left < right
+	})
 	canonical := struct {
 		ObservedAt         time.Time              `json:"observedAt"`
 		Complete           bool                   `json:"complete"`

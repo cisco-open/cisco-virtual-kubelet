@@ -46,12 +46,15 @@ func RunNetworkObservationPublisher(
 	producerRevision string,
 	provider drivers.TopologyProvider,
 ) {
+	var sampleSequence uint64
 	publish := func() {
 		observation, err := BuildNetworkObservation(ctx, provider, physicalIdentity, producerRevision, time.Now())
 		if err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation failed")
 			return
 		}
+		sampleSequence++
+		observation.SampleSequence = sampleSequence
 		if err := PublishNetworkObservation(ctx, c, deviceKey, deviceUID, observation); err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation status update failed")
 		}
@@ -83,6 +86,7 @@ func BuildNetworkObservation(
 	if provider == nil {
 		return nil, fmt.Errorf("topology provider is nil")
 	}
+	collectionStarted := time.Now().UTC()
 	identity, err := topology.CanonicalPhysicalIdentity(physicalIdentity)
 	if err != nil {
 		return nil, fmt.Errorf("canonical physical identity: %w", err)
@@ -99,10 +103,11 @@ func BuildNetworkObservation(
 	ospf, ospfErr := provider.GetOSPFNeighbors(ctx)
 
 	status := &ciskov1.DeviceNetworkObservationStatus{
-		ObservedAt:         metav1.NewTime(now.UTC()),
-		Complete:           interfaceErr == nil && cdpErr == nil && ospfErr == nil,
-		ProducerRevision:   producerRevision,
-		DeviceIdentityHash: identityHash(identity),
+		CollectionStartedAt: metav1.NewTime(collectionStarted),
+		ObservedAt:          metav1.NewTime(now.UTC()),
+		Complete:            interfaceErr == nil && cdpErr == nil && ospfErr == nil,
+		ProducerRevision:    producerRevision,
+		DeviceIdentityHash:  identityHash(identity),
 	}
 	var failures []string
 	if interfaceErr != nil {
@@ -134,6 +139,7 @@ func BuildNetworkObservation(
 		}
 		status.UnknownReason += strings.Join(normalizationFailures, "; ")
 	}
+	status.CollectionEndedAt = metav1.NewTime(time.Now().UTC())
 	return status, nil
 }
 
@@ -203,46 +209,57 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 	if len(cdp)+len(ospf) > maxNetworkObservationNeighbors {
 		return nil, fmt.Errorf("sources returned %d neighbors; limit is %d", len(cdp)+len(ospf), maxNetworkObservationNeighbors)
 	}
-	byID := make(map[string]ciskov1.DeviceNetworkNeighborObservation, len(cdp)+len(ospf))
-	cdpInterfaces := make(map[string]string, len(cdp))
+	byIdentity := make(map[string]ciskov1.DeviceNetworkNeighborObservation, len(cdp)+len(ospf))
 	for _, value := range cdp {
 		id := strings.TrimSpace(value.DeviceID)
 		if id == "" {
 			return nil, fmt.Errorf("source returned an unnamed CDP neighbor")
 		}
-		if _, exists := cdpInterfaces[id]; exists {
-			return nil, fmt.Errorf("source returned duplicate CDP neighbor %q", id)
+		localInterface := strings.TrimSpace(value.LocalInterface)
+		identity := neighborIdentity("cdp", id, localInterface, "")
+		if _, exists := byIdentity[identity]; exists {
+			return nil, fmt.Errorf("source returned duplicate CDP adjacency %q", identity)
 		}
-		cdpInterfaces[id] = strings.TrimSpace(value.LocalInterface)
-		byID[id] = ciskov1.DeviceNetworkNeighborObservation{ID: id, State: "discovered", Source: "cdp"}
+		byIdentity[identity] = ciskov1.DeviceNetworkNeighborObservation{
+			Identity: identity, ID: id, Interface: localInterface, State: "discovered", Source: "cdp",
+		}
 	}
 	for _, value := range ospf {
 		id := strings.TrimSpace(value.NeighborID)
 		if id == "" {
 			return nil, fmt.Errorf("source returned an unnamed OSPF neighbor")
 		}
-		if existing, ok := byID[id]; ok {
-			if existing.Source != "cdp" {
-				return nil, fmt.Errorf("source returned duplicate OSPF neighbor %q", id)
-			}
-			cdpInterface := cdpInterfaces[id]
-			ospfInterface := strings.TrimSpace(value.Interface)
-			if cdpInterface != "" && ospfInterface != "" && cdpInterface != ospfInterface {
-				return nil, fmt.Errorf("neighbor %q has conflicting CDP/OSPF interfaces %q and %q", id, cdpInterface, ospfInterface)
-			}
-			existing.State = strings.TrimSpace(value.State)
-			existing.Source = "cdp,ospf"
-			byID[id] = existing
-			continue
+		localInterface := strings.TrimSpace(value.Interface)
+		routingDomain := strings.TrimSpace(value.Area)
+		identity := neighborIdentity("ospf", id, localInterface, routingDomain)
+		if _, exists := byIdentity[identity]; exists {
+			return nil, fmt.Errorf("source returned duplicate OSPF adjacency %q", identity)
 		}
-		byID[id] = ciskov1.DeviceNetworkNeighborObservation{ID: id, State: strings.TrimSpace(value.State), Source: "ospf"}
+		byIdentity[identity] = ciskov1.DeviceNetworkNeighborObservation{
+			Identity: identity, ID: id, Interface: localInterface, RoutingDomain: routingDomain,
+			State: strings.TrimSpace(value.State), Source: "ospf",
+		}
 	}
-	out := make([]ciskov1.DeviceNetworkNeighborObservation, 0, len(byID))
-	for _, value := range byID {
+	out := make([]ciskov1.DeviceNetworkNeighborObservation, 0, len(byIdentity))
+	for _, value := range byIdentity {
 		out = append(out, value)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].ID != out[j].ID {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].Identity < out[j].Identity
+	})
 	return out, nil
+}
+
+func neighborIdentity(source, id, localInterface, routingDomain string) string {
+	canonical := strings.Join([]string{source, id, localInterface, routingDomain}, "|")
+	if len(canonical) <= 128 {
+		return canonical
+	}
+	sum := sha256.Sum256([]byte(canonical))
+	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
 // interfaceHeadroom derives a conservative percentage from the driver's
