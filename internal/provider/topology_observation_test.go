@@ -3,6 +3,8 @@ package provider
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -60,5 +62,54 @@ func TestBuildNetworkObservationFailsClosedOnPartialSource(t *testing.T) {
 	}
 	if observation.Complete || observation.UnknownReason == "" {
 		t.Fatalf("partial observation=%#v", observation)
+	}
+}
+
+func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
+	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	interfaces := make([]common.InterfaceStats, 65)
+	for i := range interfaces {
+		interfaces[i].Name = fmt.Sprintf("Gi1/0/%d", i+1)
+	}
+	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		interfaces: interfaces,
+	}, "SERIAL-01", "worker", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.Complete || !strings.Contains(observation.UnknownReason, "limit") {
+		t.Fatalf("expected truncation to be incomplete, got %#v", observation)
+	}
+
+	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		interfaces: []common.InterfaceStats{{Name: "Gi1"}, {Name: "Gi1"}},
+	}, "SERIAL-01", "worker", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.Complete || !strings.Contains(observation.UnknownReason, "duplicate interface") {
+		t.Fatalf("expected duplicate to be incomplete, got %#v", observation)
+	}
+}
+
+func TestBuildNetworkObservationPublishesConservativeHeadroom(t *testing.T) {
+	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 250, OutBitsPerSec: 100}},
+	}, "SERIAL-01", "worker", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.Interfaces[0].HeadroomPercent == nil || *observation.Interfaces[0].HeadroomPercent != 75 {
+		t.Fatalf("headroom=%v, want 75%%", observation.Interfaces[0].HeadroomPercent)
+	}
+	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		interfaces: []common.InterfaceStats{{Name: "Gi1", InBitsPerSec: 1}},
+	}, "SERIAL-01", "worker", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.Interfaces[0].HeadroomPercent != nil {
+		t.Fatalf("missing speed must remain unknown, got %v", *observation.Interfaces[0].HeadroomPercent)
 	}
 }

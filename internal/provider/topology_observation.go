@@ -118,8 +118,22 @@ func BuildNetworkObservation(
 		status.UnknownReason = "unavailable sources: " + strings.Join(failures, ",")
 	}
 
-	status.Interfaces = normalizeInterfaces(interfaces)
-	status.Neighbors = normalizeNeighbors(cdp, ospf)
+	var normalizationFailures []string
+	status.Interfaces, err = normalizeInterfaces(interfaces)
+	if err != nil {
+		normalizationFailures = append(normalizationFailures, "interfaces: "+err.Error())
+	}
+	status.Neighbors, err = normalizeNeighbors(cdp, ospf)
+	if err != nil {
+		normalizationFailures = append(normalizationFailures, "neighbors: "+err.Error())
+	}
+	if len(normalizationFailures) != 0 {
+		status.Complete = false
+		if status.UnknownReason != "" {
+			status.UnknownReason += "; "
+		}
+		status.UnknownReason += strings.Join(normalizationFailures, "; ")
+	}
 	return status, nil
 }
 
@@ -159,15 +173,22 @@ func identityHash(identity string) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-func normalizeInterfaces(values []common.InterfaceStats) []ciskov1.DeviceNetworkInterfaceObservation {
+func normalizeInterfaces(values []common.InterfaceStats) ([]ciskov1.DeviceNetworkInterfaceObservation, error) {
+	if len(values) > maxNetworkObservationInterfaces {
+		return nil, fmt.Errorf("source returned %d interfaces; limit is %d", len(values), maxNetworkObservationInterfaces)
+	}
 	byName := make(map[string]ciskov1.DeviceNetworkInterfaceObservation, len(values))
 	for _, value := range values {
 		name := strings.TrimSpace(value.Name)
-		if name == "" || len(byName) >= maxNetworkObservationInterfaces {
-			continue
+		if name == "" {
+			return nil, fmt.Errorf("source returned an unnamed interface")
 		}
+		if _, exists := byName[name]; exists {
+			return nil, fmt.Errorf("source returned duplicate interface %q", name)
+		}
+		headroom := interfaceHeadroom(value)
 		byName[name] = ciskov1.DeviceNetworkInterfaceObservation{
-			Name: name, OperUp: strings.EqualFold(strings.TrimSpace(value.OperStatus), "up"),
+			Name: name, OperUp: strings.EqualFold(strings.TrimSpace(value.OperStatus), "up"), HeadroomPercent: headroom,
 		}
 	}
 	out := make([]ciskov1.DeviceNetworkInterfaceObservation, 0, len(byName))
@@ -175,30 +196,43 @@ func normalizeInterfaces(values []common.InterfaceStats) []ciskov1.DeviceNetwork
 		out = append(out, value)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-	return out
+	return out, nil
 }
 
-func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) []ciskov1.DeviceNetworkNeighborObservation {
+func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([]ciskov1.DeviceNetworkNeighborObservation, error) {
+	if len(cdp)+len(ospf) > maxNetworkObservationNeighbors {
+		return nil, fmt.Errorf("sources returned %d neighbors; limit is %d", len(cdp)+len(ospf), maxNetworkObservationNeighbors)
+	}
 	byID := make(map[string]ciskov1.DeviceNetworkNeighborObservation, len(cdp)+len(ospf))
+	cdpInterfaces := make(map[string]string, len(cdp))
 	for _, value := range cdp {
 		id := strings.TrimSpace(value.DeviceID)
-		if id == "" || len(byID) >= maxNetworkObservationNeighbors {
-			continue
+		if id == "" {
+			return nil, fmt.Errorf("source returned an unnamed CDP neighbor")
 		}
+		if _, exists := cdpInterfaces[id]; exists {
+			return nil, fmt.Errorf("source returned duplicate CDP neighbor %q", id)
+		}
+		cdpInterfaces[id] = strings.TrimSpace(value.LocalInterface)
 		byID[id] = ciskov1.DeviceNetworkNeighborObservation{ID: id, State: "discovered", Source: "cdp"}
 	}
 	for _, value := range ospf {
 		id := strings.TrimSpace(value.NeighborID)
 		if id == "" {
-			continue
+			return nil, fmt.Errorf("source returned an unnamed OSPF neighbor")
 		}
 		if existing, ok := byID[id]; ok {
+			if existing.Source != "cdp" {
+				return nil, fmt.Errorf("source returned duplicate OSPF neighbor %q", id)
+			}
+			cdpInterface := cdpInterfaces[id]
+			ospfInterface := strings.TrimSpace(value.Interface)
+			if cdpInterface != "" && ospfInterface != "" && cdpInterface != ospfInterface {
+				return nil, fmt.Errorf("neighbor %q has conflicting CDP/OSPF interfaces %q and %q", id, cdpInterface, ospfInterface)
+			}
 			existing.State = strings.TrimSpace(value.State)
 			existing.Source = "cdp,ospf"
 			byID[id] = existing
-			continue
-		}
-		if len(byID) >= maxNetworkObservationNeighbors {
 			continue
 		}
 		byID[id] = ciskov1.DeviceNetworkNeighborObservation{ID: id, State: strings.TrimSpace(value.State), Source: "ospf"}
@@ -208,5 +242,31 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) []
 		out = append(out, value)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
-	return out
+	return out, nil
+}
+
+// interfaceHeadroom derives a conservative percentage from the driver's
+// directional counters. Speed and rates are expressed in bits per second by
+// the common driver contract. Missing/zero capacity or counters outside the
+// representable range remain Unknown (nil), never zero-headroom.
+func interfaceHeadroom(value common.InterfaceStats) *int32 {
+	if value.Speed == 0 {
+		return nil
+	}
+	utilization := value.InBitsPerSec
+	if value.OutBitsPerSec > utilization {
+		utilization = value.OutBitsPerSec
+	}
+	if utilization >= value.Speed {
+		zero := int32(0)
+		return &zero
+	}
+	remaining := value.Speed - utilization
+	// Use floating-point only for this bounded percentage so multiplying a
+	// very large counter cannot overflow uint64 before the division.
+	headroom := int32(float64(remaining) * 100 / float64(value.Speed))
+	if headroom > 100 {
+		headroom = 100
+	}
+	return &headroom
 }

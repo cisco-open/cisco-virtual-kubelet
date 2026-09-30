@@ -134,6 +134,30 @@ func (d *XEDriver) GetOSPFNeighbors(ctx context.Context) ([]common.OSPFNeighbor,
 			if instance.RouterId != nil && d.deviceInfo != nil && d.deviceInfo.RouterID == "" {
 				d.deviceInfo.RouterID = uint32ToIPv4(*instance.RouterId)
 			}
+			for areaID, area := range instance.Ospfv2Area {
+				if area == nil {
+					continue
+				}
+				areaStr := fmt.Sprintf("%d", areaID)
+				for interfaceName, intf := range area.Ospfv2Interface {
+					if intf == nil {
+						continue
+					}
+					for _, nbr := range intf.Ospfv2Neighbor {
+						if nbr == nil {
+							continue
+						}
+						n := common.OSPFNeighbor{Interface: interfaceName, Area: areaStr, State: nbrStateToString(nbr.State)}
+						if nbr.NbrId != nil {
+							n.NeighborID = uint32ToIPv4(*nbr.NbrId)
+						}
+						if nbr.Address != nil {
+							n.Address = *nbr.Address
+						}
+						neighbors = append(neighbors, n)
+					}
+				}
+			}
 		}
 	}
 

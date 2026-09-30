@@ -1,11 +1,18 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: execution plan with the bounded topology, drain, distribution and
-native-TAS slices implemented and qualified where the lab can provide evidence,
-30 September 2026. Working branch:
+Status: **incomplete**, audited against `bf3f4764` on 30 September 2026.
+Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
-#190, #191, #192, #193, and #194 merged. The remaining T3–T10 work still
-requires the physical qualification evidence described below.
+#190, #191, #192, #193, and #194 merged. Implementation and qualification
+gaps remain in T0–T10, including correctness issues in the bounded observation
+slice. The existing combined lifecycle does not meet the independent
+preparation/activation completion criterion.
+
+The [execution plan](topology-roadmap-execution.md) is the actionable companion
+to this design: it identifies ordered work packages, code ownership, tests,
+physical prerequisites, evidence and completion gates for every outstanding
+area. Its work-package IDs must be used when reporting progress. Updating a
+status description does not implement or qualify the corresponding feature.
 
 The next useful increment is network-aware admission and an independently
 approved activation step. Operators should be able to prepare an image in
@@ -22,25 +29,25 @@ supersedes neither the current runtime contract nor release qualification.
 
 ### Execution status for this branch
 
-| Slice | Status at `db7129af` | Evidence or boundary |
+| Slice | Audited status at `bf3f4764` | Required execution |
 | --- | --- | --- |
-| T0 | Complete for the three-device IOS-XE cohort | The pinned physical run, including image digests, secure gNOI verification, device terminal output, final versions and cleanup, is retained in `/tmp/cvk-tas-extentions-physical-evidence-20260930.md`. |
-| T1 | Complete for bounded IOS-XE observations | Fresh complete interface/CDP/OSPF summaries were published for `198.51.100.100`, `.101`, and `.103`; stale, incomplete and identity-mismatched evidence is covered by unit and API-server tests. |
-| T2 | Implemented; negative physical gate qualified | A live rollout requiring the down `GigabitEthernet1/0/24` was rejected before an upgrade leaf was created. The lab does not contain a declared redundant service path or measured congestion workload, so those claims remain unqualified. |
-| T3–T4 | Conservative combined lifecycle complete; independent activation remains deferred | Durable mutation claims, restart-safe recovery, `NoReboot` staging, approval hashes and maintenance windows are implemented. The lab has not demonstrated a reliable platform-specific staged receipt and therefore does not enable a separate stage/approve/activate API. |
-| T5 | Qualified for the supported ReplicaSet/Deployment subset | The physical run drained and restored two PDB-protected Deployments, verified device-clean inventory and settled maintenance sessions before and after upgrade/downgrade. StatefulSet/PVC, DaemonSet, Job and custom-controller relocation remain blocked by explicit capability checks. |
-| T6 | Native TAS fixture lane complete; physical CVK group lifecycle not claimed | The Kubernetes 1.37 conformance script and example passed on a disposable cluster using `kind v0.33.0` and the pinned `kindest/node:v1.37.0` image on 30 September 2026, including API discovery, co-location and negative capacity cases. The physical 1.35 lab is intentionally not upgraded or feature-gated for TAS. |
-| T7 | Digest-addressed per-worker cache implemented; path-locality qualification deferred | Atomic publication, corruption detection, size limits, restart-safe reuse and cache-loss refetch are covered by resolver tests. No WAN/oversubscription measurement exists in the physical lab, so cache benefit and path locality are not asserted. |
-| T8 | Bounded observations complete; authoritative graph intentionally not enabled | The worker publishes bounded interface/neighbor evidence with provenance and freshness. A discovered graph must not rewrite administrator authority and remains a future diagnostic-only extension. |
-| T9 | IOS-XE-only lifecycle qualified; second driver not qualified | NX-OS is present for read-only inventory, but no supported NX-OS gNOI OS lifecycle/image contract is available in this lab. IOS-XR hardware is absent. No generic rollout API is introduced. |
-| T10 | Bounded single-cluster, three-device evidence complete | Concurrent campaigns, reservation CAS and fail-closed saturation are unit-tested and the three-device run completed. Fleet-scale measurements and cross-cluster ownership transfer require a larger controlled environment and are not enabled. |
+| T0 | Partial physical baseline | E00: reconstruct revision-bound evidence and capability matrix; verify current ownership, images, packages and paths. |
+| T1 | Partial implementation; correctness gaps | E01–E02: fix truncation/duplicate/OSPF completeness, ineffective freshness tests, provenance and traffic/supervisor evidence. |
+| T2 | Partial gate only | E03: implement administrator protection, overlapping groups, measured headroom and expiring evidence-bound grants; qualify service-path scenarios. |
+| T3 | Combined lifecycle exists; new preparation contract absent | E04–E05: qualify the device boundary, implement and test durable staged receipts and ownership. |
+| T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
+| T5 | Partial physical evidence for existing drain subset | E07: prove application reachability and supported drain in both directions, add qualified hard placement and test recovery. The latest downgrade scaled workloads down manually and used `BlockIfRunning`. |
+| T6 | Synthetic conformance exists; physical group lifecycle absent | E08: raw group-field recognition, native controller recreation, physical service and group-aware drain tests. |
+| T7 | Existing ephemeral cache only | E09: measure both transfer segments; implement durable prefetch/PVC cache only when its decision gate passes, then qualify failures. |
+| T8 | Diagnostic graph/drift work absent | E10: implement bounded graph comparison and provenance. An authoritative discovered graph is excluded; diagnostic graph work is required. |
+| T9 | Second-platform qualification absent | E11: probe a suitable platform, qualify its lifecycle and record the public-API decision. Unsupported hardware leaves this gate open. |
+| T10 | Scale and ownership qualification incomplete | E12: measure the supported envelope and test controlled single-cluster/offline handoff. Three switches do not prove fleet scale. |
 
-This distinction is deliberate: the branch ships only the capabilities that
-have both an implementation contract and evidence. A healthy observation
-stream does not prove hitless forwarding, a version string does not prove an
-independently restorable staged receipt, and an NX-OS Node does not prove an
-NX-OS software lifecycle. Unsupported scenarios fail closed and remain
-documented rather than being represented by speculative API fields.
+Previous status text overstated completion by equating baseline functionality
+with later roadmap deliverables. Existing test passes and physical upgrade
+results remain useful evidence for the scenarios actually exercised; they do
+not establish the missing contracts or the full physical acceptance matrix.
+E13 supplies the final integrated acceptance gate after implementation.
 
 ## 1. Baseline and remaining scope
 

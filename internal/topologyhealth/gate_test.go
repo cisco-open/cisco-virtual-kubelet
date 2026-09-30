@@ -8,17 +8,25 @@ import (
 
 func TestEvaluateRequiresCompleteFreshEvidence(t *testing.T) {
 	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
-	policy := Policy{MaxAge: 5 * time.Minute, RequireCompleteEvidence: true}
+	identity := "sha256:" + strings.Repeat("a", 64)
+	policy := Policy{MaxAge: 5 * time.Minute, RequireCompleteEvidence: true, ExpectedDeviceIdentityHash: identity}
 	for name, observation := range map[string]Observation{
 		"missing":    {},
-		"stale":      {ObservedAt: now.Add(-6 * time.Minute), Complete: true},
-		"incomplete": {ObservedAt: now, Complete: false, UnknownReason: "OSPF read failed"},
-		"future":     {ObservedAt: now.Add(time.Minute), Complete: true},
+		"stale":      {ObservedAt: now.Add(-6 * time.Minute), Complete: true, DeviceIdentityHash: identity},
+		"incomplete": {ObservedAt: now, Complete: false, UnknownReason: "OSPF read failed", DeviceIdentityHash: identity},
+		"future":     {ObservedAt: now.Add(time.Minute), Complete: true, DeviceIdentityHash: identity},
 	} {
 		t.Run(name, func(t *testing.T) {
 			decision := Evaluate(now, observation, policy)
 			if decision.Allowed || decision.EvidenceHash == "" {
 				t.Fatalf("expected blocked decision with evidence hash: %+v", decision)
+			}
+			want := map[string]string{
+				"missing": "EvidenceMissing", "stale": "EvidenceStale",
+				"incomplete": "EvidenceIncomplete", "future": "EvidenceClockSkew",
+			}[name]
+			if decision.Reason != want {
+				t.Fatalf("reason=%q, want %q", decision.Reason, want)
 			}
 		})
 	}

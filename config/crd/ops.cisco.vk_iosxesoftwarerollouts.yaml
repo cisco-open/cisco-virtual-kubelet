@@ -312,6 +312,11 @@ spec:
                         required:
                         - enabled
                         type: object
+                        x-kubernetes-validations:
+                        - message: minimumHeadroomPercent requires at least one required
+                            interface
+                          rule: '!has(self.minimumHeadroomPercent) || size(self.requiredInterfaces)
+                            > 0'
                       waveSoakSeconds:
                         default: 300
                         description: |-

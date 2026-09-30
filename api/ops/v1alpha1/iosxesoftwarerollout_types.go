@@ -541,6 +541,8 @@ type IOSXESoftwareRolloutHealthSpec struct {
 // required before a target can enter device-disruptive work. The manager must
 // have a current DeviceHealthObservationStatus.Network for every target when
 // this gate is enabled.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.minimumHeadroomPercent) || size(self.requiredInterfaces) > 0",message="minimumHeadroomPercent requires at least one required interface"
 type IOSXESoftwareRolloutNetworkHealthSpec struct {
 	// +kubebuilder:validation:Required
 	Enabled bool `json:"enabled"`

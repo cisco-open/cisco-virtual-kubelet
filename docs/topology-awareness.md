@@ -1739,12 +1739,14 @@ switches are not evidence of real multi-site fault tolerance.
 ## Deferred roadmap and limitations
 
 The [remaining implementation roadmap](topology-roadmap.md) maps these gaps
-to PR slices, ownership boundaries, dependencies and qualification gates. This
-branch adds the bounded T1/T2 evidence gate, the qualified ReplicaSet/
-Deployment drain path, digest-addressed worker-local image caching, the
-optional Kubernetes 1.37 native-TAS conformance lane, and an explicit NoReboot
-preparation mapping. It does not claim a discovered graph, hitless activation,
-or independent stage/approval/activate semantics.
+to PR slices, ownership boundaries, dependencies and qualification gates. The
+[execution plan](topology-roadmap-execution.md) records outstanding code and
+test work. The current code includes a partial T1/T2 evidence gate, a bounded
+ReplicaSet/Deployment drain path with partial physical evidence, ephemeral
+digest-addressed worker-local image caching, an optional Kubernetes 1.37
+native-TAS conformance lane, and a NoReboot strategy mapping. Independent
+stage/approval/activate semantics and diagnostic graph comparison remain
+unimplemented. The roadmap is not complete.
 
 To opt into the network gate, require complete evidence and name the exact
 interfaces and adjacencies that must be healthy:
@@ -1766,11 +1768,16 @@ spec:
 The network-management worker publishes only a bounded summary under
 `CiscoDevice.status.healthObservation.network`; it does not publish raw CLI,
 credentials, or arbitrary topology. The manager verifies freshness, source
-completeness, physical-identity binding, duplicate-free evidence and the
+completeness flag, physical-identity binding, duplicate-free evidence and the
 requested interface/neighbor checks immediately before admission. Missing or
 stale evidence blocks the rollout with a reason such as `EvidenceStale`,
 `AlternatePathUnavailable`, or `DeviceIdentityMismatch`. The gate is nil by
-default, so existing campaigns retain their behavior.
+default, so existing campaigns retain their behavior. The audit identified
+gaps in that completeness flag: normalization can discard or merge records,
+and the newer OSPF reader path does not enumerate adjacencies. E01 must fix
+these issues before the summary qualifies as complete topology evidence.
+Headroom is currently unpopulated; measured congestion support requires E02
+and E03.
 
 The following remain intentionally bounded or deferred:
 
@@ -1780,8 +1787,9 @@ The following remain intentionally bounded or deferred:
   requires measured WAN benefit and a separate ownership protocol;
 - general-purpose drain, StatefulSet/PVC/DaemonSet/Job/custom-controller
   evacuation, forced deletion or PDB bypass, and independently approved
-  activation. The qualified path is limited to ReplicaSet/Deployment owners
-  with portable workloads and PDB-aware eviction;
+  activation. The implemented path is limited to ReplicaSet/Deployment owners
+  with portable workloads and PDB-aware eviction; complete physical service
+  qualification and hard-placement support require E07;
 - an authoritative discovered graph, graph-cost workload scheduling, a custom
   scheduler, or automatic declared-topology mutation;
 - a mandatory dependency on alpha native Workload/PodGroup/TAS APIs. Native
