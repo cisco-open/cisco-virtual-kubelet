@@ -56,6 +56,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	typedv1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -486,7 +487,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("managed worker bound-token preflight: %w", err)
 		}
 		if runtimeProfile.runsAppHosting() {
-			if err := verifyManagedWorkerAdmission(preflightCtx, clientset, identity.NodeName); err != nil {
+			if err := waitForManagedWorkerAdmission(preflightCtx, clientset, identity.NodeName); err != nil {
 				return fmt.Errorf("managed worker native admission preflight: %w", err)
 			}
 		}
@@ -735,6 +736,28 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	}
 
 	log.G(ctx).Info("Cisco Virtual Kubelet stopped")
+	return nil
+}
+
+// waitForManagedWorkerAdmission covers the short creation window in which a
+// worker Pod is running before the manager has stamped its name/UID onto the
+// bound Node. Admission must remain fail-closed, but treating that expected
+// ordering race as a fatal process error causes an endless CrashLoopBackOff:
+// the Pod cannot stay alive long enough for the manager to bind it. A bounded
+// retry preserves fail-closed behavior for genuine RBAC/policy failures while
+// allowing the manager's binding update to converge.
+func waitForManagedWorkerAdmission(ctx context.Context, clientset kubernetes.Interface, nodeName string) error {
+	var lastErr error
+	err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(ctx context.Context) (bool, error) {
+		lastErr = verifyManagedWorkerAdmission(ctx, clientset, nodeName)
+		return lastErr == nil, nil
+	})
+	if err != nil {
+		if lastErr != nil {
+			return lastErr
+		}
+		return err
+	}
 	return nil
 }
 

@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -363,25 +364,57 @@ func (r *CiscoDeviceReconciler) updateManagedWorkerStatuses(ctx context.Context,
 		condition.Message = "validated gNOI configuration is waiting for the exact network worker revision and bound Pod identity"
 	}
 
-	before := device.DeepCopy()
-	if appStatus != nil && workerRevisionEvidenceEqual(device.Status.WorkerRevision, appStatus) {
-		appStatus.ObservedAt = device.Status.WorkerRevision.ObservedAt
-	}
-	if networkStatus != nil && networkWorkerRevisionEvidenceEqual(device.Status.NetworkWorkerRevision, networkStatus) {
-		networkStatus.ObservedAt = device.Status.NetworkWorkerRevision.ObservedAt
-	}
-	device.Status.WorkerRevision = appStatus
-	device.Status.NetworkWorkerRevision = networkStatus
-	if err := r.applyCiscoDeviceConditionObserved(device, condition); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		if appStatus != nil && workerRevisionEvidenceEqual(current.Status.WorkerRevision, appStatus) {
+			appStatus = appStatus.DeepCopy()
+			appStatus.ObservedAt = current.Status.WorkerRevision.ObservedAt
+		}
+		if networkStatus != nil && networkWorkerRevisionEvidenceEqual(current.Status.NetworkWorkerRevision, networkStatus) {
+			networkStatus = networkStatus.DeepCopy()
+			networkStatus.ObservedAt = current.Status.NetworkWorkerRevision.ObservedAt
+		}
+		current.Status.WorkerRevision = appStatus
+		current.Status.NetworkWorkerRevision = networkStatus
+		return r.applyCiscoDeviceConditionObserved(current, condition)
+	}); err != nil {
 		return fmt.Errorf("update managed functional worker status: %w", err)
 	}
 	return nil
+}
+
+// updateManagedDeviceStatusWithRetry serializes controller-owned status changes
+// with other status writers. The cached object passed to a reconcile can be
+// stale while a worker, topology probe, or another controller updates status;
+// re-reading on conflict avoids a hot error loop and preserves fields owned by
+// those other writers.
+func (r *CiscoDeviceReconciler) updateManagedDeviceStatusWithRetry(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	mutate func(*ciskov1.CiscoDevice) error,
+) error {
+	if device == nil {
+		return fmt.Errorf("cannot update status for nil CiscoDevice")
+	}
+	key := client.ObjectKeyFromObject(device)
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		current := &ciskov1.CiscoDevice{}
+		if err := r.reader().Get(ctx, key, current); err != nil {
+			return err
+		}
+		before := current.DeepCopy()
+		if err := mutate(current); err != nil {
+			return err
+		}
+		if statusesEqual(before.Status, current.Status) {
+			*device = *current
+			return nil
+		}
+		if err := r.Status().Update(ctx, current); err != nil {
+			return err
+		}
+		*device = *current
+		return nil
+	})
 }
 
 func (r *CiscoDeviceReconciler) reconcileManagedWorkerObjectBindings(ctx context.Context,

@@ -73,6 +73,18 @@ whose remaining gates are listed above.
 | E04/E07 physical combined upgrade on `cat9k-lab-103` | Passed as a combined Reload regression; E04/E07 gates remain open | `cvk-roadmap-938a-upgrade-103` / leaf `...-8e943463` transferred the pinned `17.18.03` image, submitted gNOI `OS.Activate`, survived the IOS-XE reload, and reached `Succeeded` with running version `17.18.03.0.5496.1776157760`. The Node returned `Ready=True`, workers returned healthy, and network evidence returned complete. This proves the current combined path only; it does not prove a separately durable staged receipt, activation approval, critical-service drain, service probe, or hard placement contract. |
 | E04/E07 physical combined downgrade on `cat9k-lab-103` | Passed as a combined Reload regression; E04/E07 gates remain open | `cvk-roadmap-938a-downgrade-103` / leaf `...-53aa8191` transferred the pinned `17.18.02` image and reached `Succeeded` with running version `17.18.02.0.4112.1766116039`. The Node returned `Ready=True`, network evidence was complete, and both worker Deployments remained healthy. The first apply was rejected while the post-reload topology initialization guard was still settling; retry after `maintenanceSession=Settled` was clean and no duplicate mutation was issued. |
 
+### Follow-up integration evidence for the handoff-race correction
+
+The following bounded fixes were added after the `938a488f` evidence capture:
+
+| Change/test | Result | Evidence and limitation |
+| --- | --- | --- |
+| Rollout planning during topology handoff | Passed | `f079f5c5` converts the transient `topology initialization guard` planning error into a five-second deferred reconcile. The frozen plan is still built before any leaf/device mutation; non-handoff planning errors remain terminal. Unit coverage is in `internal/controller/iosxesoftwarerollout_planning_test.go`. |
+| Concurrent managed status writers | Passed | Managed Device status, topology status, pre-rollout fences and retained Lease binding repairs now re-read and retry on API conflicts while preserving fields owned by other writers. This removes the physical `Operation cannot be fulfilled ... object has been modified` hot loop observed during worker rollout. |
+| Worker startup admission ordering | Passed | App workers keep the native admission check fail-closed but retry for the bounded Pod-binding window, preventing a legitimate freshly-created worker from CrashLooping before the manager stamps its Pod name/UID. Genuine policy/RBAC denial still fails startup after the timeout. |
+| Disposable Kubernetes integration | Passed | `CVK_TOPOLOGY_TEST_ALLOW_DISPOSABLE_CONTEXT=true bash charts/cisco-virtual-kubelet/tests/topology-kind-test.sh` and `bash charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh --cluster-name cvk-roadmap-shared-it` both passed on `kindest/node:v1.35.0`; both disposable clusters were deleted by their test cleanup. |
+| Physical deployment of the correction | Passed | Helm release revision 93 on Ubuntu16 converged manager, all three IOS-XE app workers and all three network workers to `cvk-tas-extentions:topology-status-retry`, image ID `sha256:d1a7ac2ffde0...`, with zero conflict/reconcile errors in the final 45-second log window. `cat9k-lab-101`, `cat9k-lab-103`, and `cat9k-live` remained `Ready` and their CiscoDevice resources remained `Ready`. This validates lifecycle convergence; it does not close the independent staging/activation or broader physical roadmap gates below. |
+
 Historical combined 17.18.02↔17.18.03 upgrade/downgrade evidence remains
 valid for the previously tested revisions, and the current revision now has
 the single-device positive regression above; neither closes E04–E06 or

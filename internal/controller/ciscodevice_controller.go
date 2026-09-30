@@ -3507,24 +3507,19 @@ func (r *CiscoDeviceReconciler) fenceManagedWorkerRevision(
 	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, true, false); err != nil {
 		return fmt.Errorf("clear prior app worker Pod binding before rollout: %w", err)
 	}
-	before := device.DeepCopy()
-	device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
-		DesiredRevision: desiredRevision,
-		ObservedAt:      metav1.NewTime(r.now()),
-	}
-	if err := r.applyCiscoDeviceConditionObserved(device, metav1.Condition{
-		Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             "WorkerRolloutPending",
-		Message:            "managed worker configuration changed; the old worker is fenced before Deployment rollout",
-		ObservedGeneration: device.Generation,
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		current.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+			DesiredRevision: desiredRevision,
+			ObservedAt:      metav1.NewTime(r.now()),
+		}
+		return r.applyCiscoDeviceConditionObserved(current, metav1.Condition{
+			Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "WorkerRolloutPending",
+			Message:            "managed worker configuration changed; the old worker is fenced before Deployment rollout",
+			ObservedGeneration: current.Generation,
+		})
 	}); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
 		return fmt.Errorf("persist managed worker revision pre-rollout fence: %w", err)
 	}
 	return nil
@@ -3541,24 +3536,19 @@ func (r *CiscoDeviceReconciler) fenceManagedNetworkWorkerRevision(
 	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, false, true); err != nil {
 		return fmt.Errorf("clear prior network worker Pod binding before rollout: %w", err)
 	}
-	before := device.DeepCopy()
-	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
-		DesiredRevision: desiredRevision,
-		ObservedAt:      metav1.NewTime(r.now()),
-	}
-	if err := r.applyCiscoDeviceConditionObserved(device, metav1.Condition{
-		Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             "NetworkWorkerRolloutPending",
-		Message:            "managed network worker configuration changed; the old mutation worker is fenced before Deployment rollout",
-		ObservedGeneration: device.Generation,
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		current.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+			DesiredRevision: desiredRevision,
+			ObservedAt:      metav1.NewTime(r.now()),
+		}
+		return r.applyCiscoDeviceConditionObserved(current, metav1.Condition{
+			Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "NetworkWorkerRolloutPending",
+			Message:            "managed network worker configuration changed; the old mutation worker is fenced before Deployment rollout",
+			ObservedGeneration: current.Generation,
+		})
 	}); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
 		return fmt.Errorf("persist managed network worker revision pre-rollout fence: %w", err)
 	}
 	return nil

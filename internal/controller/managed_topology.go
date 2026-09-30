@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -673,6 +674,40 @@ func (r *CiscoDeviceReconciler) patchManagedTopologyStatus(
 	hash string,
 	maintenance managedMaintenanceDecision,
 ) error {
+	if device == nil || node == nil {
+		return fmt.Errorf("managed topology status requires a device and Node")
+	}
+	deviceKey := client.ObjectKeyFromObject(device)
+	nodeKey := client.ObjectKeyFromObject(node)
+	attempt := 0
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		current := device.DeepCopy()
+		currentNode := node.DeepCopy()
+		if attempt > 0 {
+			if err := r.reader().Get(ctx, deviceKey, current); err != nil {
+				return err
+			}
+			if err := r.reader().Get(ctx, nodeKey, currentNode); err != nil {
+				return err
+			}
+		}
+		attempt++
+		if err := r.patchManagedTopologyStatusOnce(ctx, current, currentNode, hash, maintenance); err != nil {
+			return err
+		}
+		*device = *current
+		*node = *currentNode
+		return nil
+	})
+}
+
+func (r *CiscoDeviceReconciler) patchManagedTopologyStatusOnce(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	node *corev1.Node,
+	hash string,
+	maintenance managedMaintenanceDecision,
+) error {
 	before := device.DeepCopy()
 	physicalObservation := managedPhysicalIdentityState(device, node)
 	physicalIdentity, err := topology.CanonicalPhysicalIdentity(device.Spec.PhysicalIdentity)
@@ -921,20 +956,17 @@ func (r *CiscoDeviceReconciler) recordTopologyFailure(
 	device *ciskov1.CiscoDevice,
 	conditionType, reason, message string,
 ) error {
-	before := device.DeepCopy()
-	meta.SetStatusCondition(&device.Status.Conditions, metav1.Condition{
-		Type: conditionType, Status: metav1.ConditionTrue, Reason: reason,
-		Message: truncateTopologyMessage(message), ObservedGeneration: device.Generation,
-	})
-	meta.SetStatusCondition(&device.Status.Conditions, metav1.Condition{
-		Type: ciskov1.CiscoDeviceConditionTopologyReady, Status: metav1.ConditionFalse,
-		Reason: reason, Message: truncateTopologyMessage(message), ObservedGeneration: device.Generation,
-	})
-	if statusesEqual(before.Status, device.Status) {
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		meta.SetStatusCondition(&current.Status.Conditions, metav1.Condition{
+			Type: conditionType, Status: metav1.ConditionTrue, Reason: reason,
+			Message: truncateTopologyMessage(message), ObservedGeneration: current.Generation,
+		})
+		meta.SetStatusCondition(&current.Status.Conditions, metav1.Condition{
+			Type: ciskov1.CiscoDeviceConditionTopologyReady, Status: metav1.ConditionFalse,
+			Reason: reason, Message: truncateTopologyMessage(message), ObservedGeneration: current.Generation,
+		})
 		return nil
-	}
-	if err := r.Status().Patch(ctx, device,
-		client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})); err != nil {
+	}); err != nil {
 		return fmt.Errorf("record managed topology failure: %w", err)
 	}
 	return nil
