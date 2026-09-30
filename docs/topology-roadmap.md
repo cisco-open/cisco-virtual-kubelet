@@ -1,7 +1,7 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete**, reviewed against `8ce7d167` (runtime changes through
-`9523720c`) on 30 September 2026.
+Status: **incomplete**, reviewed against `6bd7d471` (runtime changes through
+`6bd7d471`) on 30 September 2026.
 Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
 #190, #191, #192, #193, and #194 merged. Implementation and qualification
@@ -33,15 +33,16 @@ supersedes neither the current runtime contract nor release qualification.
 The foundation is implemented and has historical physical combined upgrade
 and downgrade evidence. No E00–E13 work package yet satisfies every exit gate;
 the extension still needs substantial policy, lifecycle and integration code
-as well as tests. The latest recorded lab deployment (Ubuntu16 revision 95,
-`9523720c`) qualifies observation publication/convergence on all three C9Ks.
-It does not qualify separate preparation/activation or full service drain.
-This review performed no new physical upgrade/downgrade operations.
+as well as tests. The latest recorded lab deployment (Ubuntu16 revision 96,
+`6bd7d471`) qualifies read-only observation publication/convergence on all
+three C9Ks, including collection provenance fields. It does not qualify
+separate preparation/activation or full service drain. This review performed
+no new physical upgrade/downgrade operations.
 
-| Slice | Reviewed status at `8ce7d167` | Required execution |
+| Slice | Reviewed status at `6bd7d471` | Required execution |
 | --- | --- | --- |
 | T0 | Partial physical baseline | E00: reconstruct revision-bound evidence and capability matrix; verify current ownership, images, packages and paths. |
-| T1 | Observation corrections and collection metadata published; acceptance/capacity gaps remain | E01–E02: exact producer/sequence acceptance, VRF/process context, absent-rate validity, schema migration, controlled traffic and supervisor qualification. `938a488f` and `9523720c` supply the current partial implementation. |
+| T1 | Observation corrections and collection metadata published; acceptance/capacity gaps remain | E01–E02: exact producer/sequence acceptance, VRF/process context, absent-rate validity, schema migration, controlled traffic and supervisor qualification. `938a488f`, `9523720c`, and `6bd7d471` supply the current partial implementation. |
 | T2 | Partial gate only | E03: implement administrator protection, overlapping groups, measured headroom and expiring evidence-bound grants; qualify service-path scenarios. |
 | T3 | Combined lifecycle exists; new preparation contract absent | E04–E05: qualify the device boundary, implement and test durable staged receipts and ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |

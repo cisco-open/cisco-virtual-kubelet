@@ -1,10 +1,11 @@
 # Topology roadmap: execution and acceptance plan
 
 Status: **in progress; roadmap not complete**. Reviewed source/documentation:
-`8ce7d167` (runtime changes through `9523720c`), branch
-`pr/johalley/tas-extentions`, 30 September 2026. The last recorded physical
-deployment is `9523720c`, Ubuntu16 Helm revision 95. This review checked code,
-tests and retained evidence; it did not rerun physical device operations.
+`6bd7d471` (runtime changes through `6bd7d471`), branch
+`pr/johalley/tas-extentions`, 30 September 2026. The latest physical
+deployment is `6bd7d471`, Ubuntu16 Helm revision 96. This review checked code,
+tests and the read-only physical qualification below; it did not run a
+disruptive upgrade or downgrade.
 
 This document converts the [topology roadmap](topology-roadmap.md) into work
 packages with implementation scope, test procedures and completion gates.
@@ -115,7 +116,7 @@ whose remaining gates are listed above.
 | Package/test | Result | Evidence and limitation |
 | --- | --- | --- |
 | E01/E02 unit and race coverage | Passed | `go test -race -count=1 ./...`; duplicate/over-limit records, exact freshness reasons and headroom cases are covered. |
-| E01/E02 physical observation | Passed for .101/.103; blocked for .100 completeness | Helm-managed image `cvk-tas-extentions:938a488f` published complete observations and headroom on `cat9k-lab-101` and `cat9k-lab-103`. `cat9k-live` is conservatively incomplete because duplicate CDP identity `MaC_Outside_Switch` cannot be disambiguated. |
+| E01/E02 physical observation | Passed for the managed read-only publication check | Helm revision 96 on Ubuntu16 rolled `cvk-tas-extentions:6bd7d471` to the manager, three IOS-XE app workers and three IOS-XE network workers. `cat9k-lab-101`, `cat9k-lab-103`, and `cat9k-live` remained `Ready`; each published `complete=true`, a non-zero `sampleSequence`, producer revision, and collection start/end timestamps. This validates publication/convergence, not the independent staging/activation, controlled-load, or supervisor gates. |
 | E01 network gate negative | Passed | A temporary rollout targeting `.100` stopped at `PlanningFailed / EvidenceIncomplete`; no software-upgrade leaf or device mutation was created. |
 | E08-B native TAS subset | Passed for co-location/conflict assertions | Fresh kind v0.33.0 / `kindest/node:v1.37.0`, exact checked-in feature-gate config; co-location and unschedulable conflict assertions passed; cluster deleted afterward. Remaining E08-B fault/restart/maintenance cases and physical CVK lifecycle remain unqualified. |
 | Repository gates | Passed | Focused tests, full race suite, Helm lint, topology render test, strict MkDocs build and `git diff --check`. The Makefile generator target remains incompatible with its pinned controller-tools package; CRD parity was checked with controller-gen v0.19.0 and the reviewed validation was applied to both CRD copies. |
@@ -133,7 +134,7 @@ The following bounded fixes were added after the `938a488f` evidence capture:
 | Concurrent managed status writers | Passed | Managed Device status, topology status, pre-rollout fences and retained Lease binding repairs now re-read and retry on API conflicts while preserving fields owned by other writers. This removes the physical `Operation cannot be fulfilled ... object has been modified` hot loop observed during worker rollout. |
 | Worker startup admission ordering | Passed | App workers keep the native admission check fail-closed but retry for the bounded Pod-binding window, preventing a legitimate freshly-created worker from CrashLooping before the manager stamps its Pod name/UID. Genuine policy/RBAC denial still fails startup after the timeout. |
 | Disposable Kubernetes integration | Passed | `CVK_TOPOLOGY_TEST_ALLOW_DISPOSABLE_CONTEXT=true bash charts/cisco-virtual-kubelet/tests/topology-kind-test.sh` and `bash charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh --cluster-name cvk-roadmap-shared-it` both passed on `kindest/node:v1.35.0`; both disposable clusters were deleted by their test cleanup. |
-| Physical deployment of the correction | Passed | Helm release revision 93 on Ubuntu16 converged manager, all three IOS-XE app workers and all three network workers to `cvk-tas-extentions:topology-status-retry`, image ID `sha256:d1a7ac2ffde0...`, with zero conflict/reconcile errors in the final 45-second log window. `cat9k-lab-101`, `cat9k-lab-103`, and `cat9k-live` remained `Ready` and their CiscoDevice resources remained `Ready`. This validates lifecycle convergence; it does not close the independent staging/activation or broader physical roadmap gates below. |
+| Physical deployment of the correction | Passed | Helm revision 96 on Ubuntu16 converged the manager and all three IOS-XE app/network workers to `cvk-tas-extentions:6bd7d471`. `cat9k-lab-101`, `cat9k-lab-103`, and `cat9k-live` remained `Ready`, all three CiscoDevice resources returned `GNOIConfigurationReady=True`, and the final controller log window contained no error/panic/failure entries. This validates lifecycle convergence; it does not close the independent staging/activation or broader physical roadmap gates below. |
 
 Historical combined 17.18.02↔17.18.03 upgrade/downgrade evidence remains
 valid for the previously tested revisions, and the current revision now has
@@ -166,10 +167,10 @@ the existing rollout opt-in defaults:
 | Collection provenance | Implemented / partially enforced | Start/end timestamps and a process-local sample sequence are published. Network rollout admission now requires the expected worker revision, non-zero sequence and bounded collection interval. Sequence persistence, Pod UID binding and replay ordering remain pending. |
 | Observed graph diagnostics | In progress | `internal/topology/graph.go` is a pure helper with no runtime caller. Tests cover matching declarations, reordered conflicting duplicates, state-sensitive hashing, stale/unknown/incomplete sources, known-peer asymmetry, node/input limits and duplicate device IDs. Runtime integration and physical drift remain open. |
 | Compatibility | In progress | Added scalar fields are optional and the network gate remains opt-in. The neighbor list changes from map-by-ID to atomic, and required-peer ambiguity now blocks. Persisted objects, server-side-apply ownership and mixed-version publication/rollback need explicit E01-C/E13 tests. |
-| Physical observation publication | Passed for the recorded IOS-XE lab deployment | Ubuntu16 Helm revision 95 ran `cvk-tas-extentions:9523720c`; all three app workers and three network workers converged, all three managed C9K Nodes/CiscoDevices were Ready, and all three published complete samples with collection times and non-zero sequences. Final logs reported no manager errors in the three-minute window. Image manifest: `sha256:c119ece99ec1276630ac3454e839ebc2d16962387b856d8e98f269a4107c13f2`. This is publication/deployment evidence, not full provenance enforcement, service reachability or a new software upgrade/downgrade run. |
+| Physical observation publication | Passed for the latest read-only IOS-XE lab deployment | Ubuntu16 Helm revision 96 ran `cvk-tas-extentions:6bd7d471`; all three app workers and three network workers converged, all three managed C9K Nodes/CiscoDevices were Ready, and all three published complete samples with collection start/end times, producer revisions, and non-zero sequences. Final logs reported no manager errors in the five-minute window. This is publication/deployment evidence, not full staging/activation, service reachability, controlled-load, or a new software upgrade/downgrade run. |
 | Repository gates at the prior implementation turn | Passed as recorded | Full race suite, strict MkDocs, Helm lint, topology render contract and `git diff --check` passed locally. The stale managed-device variable count assertion was corrected from 7 to 9; no chart template behavior changed. These local results do not establish passing CI or complete real-API coverage at this revision. |
 
-### Evidence reconciliation at `8ce7d167`
+### Evidence reconciliation at `6bd7d471`
 
 The focused observation/graph/gate tests were rerun successfully during this
 review using `go test -count=1 ./internal/topology ./internal/topologyhealth
@@ -194,8 +195,8 @@ They require a sanitized, checksummed durable index before release closure:
   Record when protection was changed and which operations occurred in that
   interval; replay relevant E13 negatives with admission continuously enforced.
 - `.103` has later combined 17.18.02↔17.18.03 regression results at
-  `938a488f`. Revision 95 validates observation publication for `9523720c`;
-  neither dataset qualifies independent preparation/activation.
+  `938a488f`. Revision 96 validates read-only provenance publication for
+  `6bd7d471`; neither dataset qualifies independent preparation/activation.
 - Earlier `.100` incompleteness was tied to duplicate CDP peer names at
   `938a488f`. The later interface-qualified publisher reports complete
   `.100` samples. Preserve both revision-specific results; requiring an
@@ -330,8 +331,10 @@ acceptance and native status-write admission.
 
 Current increment: `938a488f` added newer-path OSPF adjacency traversal and
 source/limit corrections; `9523720c` added source/interface identities and
-collection metadata. Neither closes the manager acceptance contract. Keep
-the positive publication evidence, then execute the remaining work below.
+collection metadata; `6bd7d471` adds producer, sequence, collection-window,
+and directional-rate validity checks. These increments do not close the full
+manager acceptance contract. Keep the positive publication evidence, then
+execute the remaining work below.
 
 ### Required updates
 
