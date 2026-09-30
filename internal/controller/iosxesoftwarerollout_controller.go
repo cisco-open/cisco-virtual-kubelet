@@ -200,6 +200,16 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 	if rollout.Status.FrozenPlan == nil {
 		frozen, targets, err := r.buildFrozenPlan(ctx, &rollout, policy, now)
 		if err != nil {
+			// A managed Node can briefly retain the initialization guard while
+			// the worker republishes its post-reboot identity/topology proof.
+			// Treat that narrow handoff window as retryable planning state rather
+			// than freezing a terminal PlanningFailed result that forces operators
+			// to delete and recreate an otherwise valid rollout. No child leaf or
+			// device mutation exists before the frozen plan is published.
+			if isRetryableRolloutPlanningError(err) {
+				r.emitRolloutEvent(&rollout, corev1.EventTypeNormal, "PlanningDeferred", err.Error())
+				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+			}
 			return r.failRollout(ctx, &rollout, "PlanningFailed", err.Error(), true)
 		}
 		before := rollout.DeepCopy()
@@ -262,6 +272,10 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 	return r.reconcileExecution(ctx, &rollout, policy, now)
+}
+
+func isRetryableRolloutPlanningError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "topology initialization guard")
 }
 
 func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
