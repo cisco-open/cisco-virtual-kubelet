@@ -70,9 +70,12 @@ whose remaining gates are listed above.
 | E08-B native TAS | Passed | Fresh kind v0.33.0 / `kindest/node:v1.37.0`, exact checked-in feature-gate config; co-location and unschedulable conflict assertions passed; cluster deleted afterward. This is synthetic scheduler evidence only. |
 | Repository gates | Passed | Focused tests, full race suite, Helm lint, topology render test, strict MkDocs build and `git diff --check`. The Makefile generator target remains incompatible with its pinned controller-tools package; CRD parity was checked with controller-gen v0.19.0 and the reviewed validation was applied to both CRD copies. |
 | Physical deployment health | Passed after managed rollout convergence | Manager, three IOS-XE app workers and three IOS-XE network workers converged to the immutable image; all three managed IOS-XE Nodes were Ready. Protected admission rejected direct worker mutation as expected; the upgrade was completed through Helm. |
+| E04/E07 physical combined upgrade on `cat9k-lab-103` | Passed as a combined Reload regression; E04/E07 gates remain open | `cvk-roadmap-938a-upgrade-103` / leaf `...-8e943463` transferred the pinned `17.18.03` image, submitted gNOI `OS.Activate`, survived the IOS-XE reload, and reached `Succeeded` with running version `17.18.03.0.5496.1776157760`. The Node returned `Ready=True`, workers returned healthy, and network evidence returned complete. This proves the current combined path only; it does not prove a separately durable staged receipt, activation approval, critical-service drain, service probe, or hard placement contract. |
+| E04/E07 physical combined downgrade on `cat9k-lab-103` | Passed as a combined Reload regression; E04/E07 gates remain open | `cvk-roadmap-938a-downgrade-103` / leaf `...-53aa8191` transferred the pinned `17.18.02` image and reached `Succeeded` with running version `17.18.02.0.4112.1766116039`. The Node returned `Ready=True`, network evidence was complete, and both worker Deployments remained healthy. The first apply was rejected while the post-reload topology initialization guard was still settling; retry after `maintenanceSession=Settled` was clean and no duplicate mutation was issued. |
 
 Historical combined 17.18.02↔17.18.03 upgrade/downgrade evidence remains
-valid for the previously tested revision, but it does not close E04–E06 or
+valid for the previously tested revisions, and the current revision now has
+the single-device positive regression above; neither closes E04–E06 or
 the new E07 service-probe gate for `938a488f`. No separate staged receipt,
 activation approval, durable cache, physical TAS lifecycle, second-driver
 qualification, scale envelope or ownership-transfer evidence exists yet.
