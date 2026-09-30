@@ -7,6 +7,7 @@ package topology
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestBuildGraphIsBoundedDeterministicAndReportsDrift(t *testing.T) {
@@ -81,5 +82,55 @@ func TestBuildGraphRejectsLimitsAndDuplicateDeviceIdentity(t *testing.T) {
 	}
 	if graph.Complete || len(graph.Diagnostics) == 0 || graph.Diagnostics[0].Code != "DuplicateDeviceIdentity" {
 		t.Fatalf("duplicate identity was not diagnosed: %#v", graph)
+	}
+}
+
+func TestBuildGraphCanonicalizesConflictsAndFreshness(t *testing.T) {
+	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	first := GraphObservation{
+		PhysicalID: "leaf-a", ObservedAt: now.Add(-time.Second), Complete: true,
+		Neighbors: []GraphNeighbor{{Identity: "cdp|peer|Gi1|", PeerID: "leaf-b", Source: "cdp", Interface: "Gi1", State: "up"}},
+	}
+	conflict := first
+	conflict.Neighbors = []GraphNeighbor{{Identity: "cdp|peer|Gi1|", PeerID: "leaf-b", Source: "cdp", Interface: "Gi1", State: "down"}}
+	left, err := BuildGraph([]GraphObservation{first, conflict}, GraphPolicy{Now: now, MaxObservationAge: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := BuildGraph([]GraphObservation{conflict, first}, GraphPolicy{Now: now, MaxObservationAge: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left.Complete || left.EvidenceHash != right.EvidenceHash || len(left.Edges) != 1 || left.Diagnostics[0].Code != "DuplicateAdjacency" {
+		t.Fatalf("conflict was not deterministic/fail-closed: left=%#v right=%#v", left, right)
+	}
+	stale, err := BuildGraph([]GraphObservation{{PhysicalID: "leaf-a", ObservedAt: now.Add(-2 * time.Minute), Complete: true}}, GraphPolicy{Now: now, MaxObservationAge: time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stale.Complete || len(stale.Diagnostics) == 0 || stale.Diagnostics[0].Code != "StaleObservation" {
+		t.Fatalf("stale observation was not rejected: %#v", stale)
+	}
+}
+
+func TestBuildGraphReportsKnownPeerAsymmetryAndInputLimits(t *testing.T) {
+	graph, err := BuildGraph([]GraphObservation{
+		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{PeerID: "leaf-b", Source: "ospf", Interface: "Gi1", RoutingDomain: "0"}}},
+		{PhysicalID: "leaf-b", Complete: true},
+	}, GraphPolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Code == "AsymmetricLink" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("known-peer asymmetry was not reported: %#v", graph.Diagnostics)
+	}
+	if _, err := BuildGraph([]GraphObservation{{PhysicalID: "leaf-a", Neighbors: make([]GraphNeighbor, 2)}}, GraphPolicy{MaxInputNeighbors: 1}); err == nil {
+		t.Fatal("input neighbor limit was not enforced")
 	}
 }

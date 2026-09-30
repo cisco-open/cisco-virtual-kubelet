@@ -267,7 +267,8 @@ func neighborIdentity(source, id, localInterface, routingDomain string) string {
 // the common driver contract. Missing/zero capacity or counters outside the
 // representable range remain Unknown (nil), never zero-headroom.
 func interfaceHeadroom(value common.InterfaceStats) *int32 {
-	if value.Speed == 0 {
+	if value.Speed == 0 || !value.InRatePresent || !value.OutRatePresent ||
+		!value.InRateValid || !value.OutRateValid {
 		return nil
 	}
 	utilization := value.InBitsPerSec

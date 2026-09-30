@@ -122,8 +122,15 @@ type InterfaceStats struct {
 	OutOctets     uint64
 	InBitsPerSec  uint64
 	OutBitsPerSec uint64
-	Speed         uint64
-	IPv4Address   string
+	// Rate presence and validity are separate from the numeric values. A
+	// missing YANG leaf is not a measured zero and must not become 100%
+	// headroom in topology admission.
+	InRatePresent  bool
+	OutRatePresent bool
+	InRateValid    bool
+	OutRateValid   bool
+	Speed          uint64
+	IPv4Address    string
 }
 
 // InterfaceIP represents an interface with its IPv4 address and operational status

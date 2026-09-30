@@ -1,13 +1,17 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **in progress; roadmap not complete**. Audit baseline:
-`938a488f`, branch `pr/johalley/tas-extentions`, 30 September 2026.
+Status: **in progress; roadmap not complete**. Reviewed source/documentation:
+`8ce7d167` (runtime changes through `9523720c`), branch
+`pr/johalley/tas-extentions`, 30 September 2026. The last recorded physical
+deployment is `9523720c`, Ubuntu16 Helm revision 95. This review checked code,
+tests and retained evidence; it did not rerun physical device operations.
 
 This document converts the [topology roadmap](topology-roadmap.md) into work
 packages with implementation scope, test procedures and completion gates.
-The roadmap retains the architecture and exclusions. This plan defines what
-must be executed to satisfy it. Nothing below is a claim that new APIs or
-tests already exist. New API concepts are requirements, not apply-ready YAML.
+The roadmap retains the architecture and exclusions. This plan distinguishes
+implemented evidence from required work. Items under "Required updates" and
+the acceptance matrices are requirements until an explicit result closes
+them; proposed API concepts are not apply-ready YAML.
 
 ## 1. Scope, ordering and completion accounting
 
@@ -19,29 +23,75 @@ acceptance. Observation publication, ordinary combined upgrades, an ephemeral
 image cache and synthetic TAS tests are baselines, not substitutes for these
 deliverables.
 
-| Package | Roadmap | Work to execute | Prerequisites | Audit status |
+| Package | Roadmap | Work to execute | Prerequisites | Package status and remaining gate |
 | --- | --- | --- | --- | --- |
-| E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | Partial physical evidence; open |
-| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | Implemented correction plus bounded collection/adjacency provenance; physical qualification open |
-| E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | Headroom publication implemented; controlled traffic/supervisor qualification open |
-| E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | Partial campaign gate; open |
-| E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Open |
-| E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Open |
-| E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Open |
-| E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | Partial drain evidence; open |
-| E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | Kubernetes 1.37 synthetic conformance passed; CVK physical lifecycle open |
-| E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Ephemeral baseline only; open |
-| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | Bounded deterministic graph diagnostics implemented; manager-authoritative publication/drift watch open |
-| E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Open; suitable hardware required |
-| E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | Open |
-| E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Open |
+| E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | In progress: historical inventory exists; reproducible capture, capability matrix, service baseline and durable evidence index remain. |
+| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: source/interface identities, collection metadata and expected producer/provenance checks are present; replay ordering, VRF context and full negative/API/physical coverage remain. |
+| E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
+| E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: campaign-local gate exists; administrator protection, overlapping memberships, transfer pacing and evidence-bound expiring grants require implementation. |
+| E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Not started for the independent boundary: combined upgrade/downgrade evidence exists, but E04-A–D remain unqualified. |
+| E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Not started: receipt/protocol/retained ownership absent; physical qualification depends on E04. |
+| E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Not started: independent authorization and phase accounting absent; physical qualification depends on E04–E05. |
+| E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | In progress: narrow drain implementation and partial historical evidence; hard placement, portable services and both-direction automated drain remain. |
+| E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | In progress: synthetic co-location/conflict evidence only; E08-A guard, remaining scheduler scenarios and physical native owner lifecycle remain. |
+| E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Not started for roadmap measurement/decision: ephemeral cache exists; E09-A and explicit cache selection decision remain mandatory. |
+| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | In progress: unused pure helper exists; correctness/bounds/provenance, runtime integration and physical drift qualification remain. |
+| E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Blocked — prerequisite for positive qualification: no qualified second-platform image pair/service evidence; discovery and fixtures can proceed. |
+| E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | In progress: legacy handoff/convergence exists; measured scale envelope and full staged/uncertain-operation ownership transfer remain. |
+| E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Not started for final acceptance: no single candidate has passed the applicable F01–F13 matrix. |
 
-Recommended implementation/merge order is E00, E01, E02, E03, E04, E05,
-E06, E07, E08, E09, E10, E11, E12, E13. E04 discovery, E09 measurement and
-E11 capability discovery can proceed alongside earlier coding; E10 can
-start after E03. Each package should be an independently reviewable change
-or short dependent stack. E04 may deliver evidence and fixtures without
-runtime changes. Do not enable E05/E06 on a cohort until E04 passes.
+**Completion accounting:** none of the 14 work packages has all of its exit
+gates closed. This does not discard the implemented baseline or passing
+subtests. Substantial implementation remains in E03–E06, E07–E08 and E10–E12;
+the remaining work is not solely lab testing. A percentage based on commit
+counts or passing unit tests would obscure those dependencies.
+
+### Review findings that change the next work
+
+These are pending implementation/test tasks, not fixes made by this review.
+
+| Priority/package | Current code evidence | Required change and proof |
+| --- | --- | --- |
+| First: E01 producer and freshness acceptance | `evaluateNetworkHealth` now checks the expected managed network worker revision, non-zero sequence, collection interval and maximum collection duration when the network gate is enabled. `PublishNetworkObservation` checks Device/Node binding, but does not establish a manager-owned acceptance record or monotonic sequence history. | Bind accepted samples to the current network worker Pod UID/config revision and physical identity; persist ordering/oldest-source freshness. Audit shared-account admission against stale and cross-device publishers. E01-B/C must reject replayed samples even when Node heartbeat and worker readiness are fresh. |
+| First: E01 adjacency identity and compatibility | New identities include source, peer, local interface and OSPF area; `common.OSPFNeighbor` has no VRF/process identity. Area is not a VRF. `RequiredNeighbors` still selects only a peer string and blocks when it resolves to multiple adjacencies. | Preserve actual VRF/process and remote-interface context where available; specify an unambiguous selector/migration for legitimate multi-adjacency peers. Test delimiter-bearing identities, field limits, old/new workers and the map-to-atomic CRD transition. Do not describe the list topology change as purely additive. |
+| First: E02 absent rates | `InterfaceStats` now carries direction-specific presence/validity; IOS-XE marks missing leaves and Kbps conversion overflow invalid, while measured zero remains valid. `interfaceHeadroom` returns Unknown unless both directions are present and valid. | Add driver/API fixtures for every supported YANG representation and independently measure idle/load behavior (E02-A/B). Keep supervisor/stack health separate until it has a qualified source. |
+| Next: E03–E06 missing runtime contracts | `AdminPolicyConfig` has no required network checks or overlapping groups; the campaign has a network gate and plan approval. The lifecycle backend exposes inventory and registration, but no durable separately approved staged-receipt workflow. | Implement the policy and lifecycle packages below after qualifying E04. Existing `NoReboot`, claims and approval hashes cannot satisfy these new contracts by renaming states. |
+| Next: E07/E08 placement and group eligibility | `validateDrainPodSpec` explicitly rejects node selectors, required affinity and hard topology spread. The native TAS script uses fixture Nodes and installs no CVK runtime. | Add only qualified placement eligibility and fail-closed raw group recognition before expanding drain; pass E07-A–D and E08-A–D with portable applications and independent probes. |
+| Next: E10 graph correctness and integration | `BuildGraph` now applies freshness, canonical JSON keys, deterministic conflicting-duplicate handling, source-aware edges and hard input/output bounds. It is still called only by tests. | Add a manager-owned diagnostic consumer and CLI output, carry accepted sample provenance, and qualify physical drift. Graph completeness must not imply path health. |
+| Evidence: E10 test claims | Tests now cover reordered conflicting input, matching declarations, stale input, known-peer asymmetry, state-sensitive hashing and input limits. Runtime publication, physical drift and manager/CLI integration remain untested. | Add missing/unexpected declared-link, diagnostic-boundary, field-encoding and runtime API tests before claiming E10-A–D coverage. |
+
+### Next execution sequence and required tests
+
+Each row delivers code, examples and its evidence before advancing to the
+dependent physical scenario. Independent read-only discovery and measurements
+can proceed alongside implementation.
+
+| Order | Concrete next deliverable | Testing required before closing the increment |
+| --- | --- | --- |
+| 1 | Reconcile E00 evidence and finish E01/E02 correctness: current owner/inventory capture, exact producer acceptance, identity/VRF handling, missing-rate validity. | E00-A–D; E01-A–D; E02-A first, followed by isolated E02-B/C. Compare device terminal output with published samples; reproduce old failures and assert exact blockers/zero dispatched mutations. |
+| 2 | Qualify E04 independently, while adding E03 administrator policy, risk groups and expiring grants. | E04-A–D in both image directions; E03-A/B CAS and real-API negative tests before E03-C–F physical path/load tests. Record incapable cohorts as blocked. |
+| 3 | Implement E05 staged receipts/ownership and E06 independent activation approval, windows and atomic phase reservations. | E05-A/B and E06-A/B/D fault/admission suites; then E05-C and E06-C/E on E04-qualified hardware. Hold across worker/manager restarts and a closed activation window; prove no activation before the separate grant. |
+| 4 | Add E08-A group guard, then E07 hard-placement support and automatic service-preserving drain. | E08-A before broader drain eligibility; E07-A–D upgrade and downgrade with portable signed/supported artifacts, PDB, spare capacity and independent service probes. Manual workload scale-down does not pass this increment. |
+| 5 | Complete E10 graph corrections and manager/CLI integration; perform E09 transfer measurements and select or reject durable cache explicitly. | E10-A–D including isolated physical link change/restoration; E09-A warm/cold measurement of both segments. If cache is selected, implement and pass E09-B–D. |
+| 6 | Complete E12 ownership transfer before moving physical devices to the optional TAS cluster; finish E08 physical group lifecycle. | E12-B/C and E12-D when moving across clusters; complete remaining E08-B scenarios and E08-C/D. Remove old authority before destination enrollment. |
+| 7 | Qualify E11 second platform and E12 scale once shared contracts are stable. | E11-A capability discovery can start earlier; E11-B–D require qualified hardware/images. E12-A benchmarks at 1/10/50/100 targets and boundaries need predefined latency/resource budgets. |
+| 8 | Run E13 migration/security and the final integrated physical matrix on one pinned candidate; archive evidence and align release claims. | Core F01–F08/F13 plus applicable F09–F12; exact candidate CI, baseline and optional-version lanes, recovery and final ownership/maintenance checks. |
+
+Inputs still needed for physical closure are a portable supported application
+and independent service probe, isolated traffic sources/test links, suitable
+redundant supervisor hardware for any failover claim, a qualified second-platform
+image pair, and durable evidence storage. These are prerequisites to resolve
+in E00/E11, not reasons to postpone the independent code and fixture work.
+The historical image source Secret/key were removed after the prior run;
+re-establish scoped trust/credentials before testing its recorded SFTP URLs.
+
+The execution sequence above supersedes a purely numeric E00–E13 order.
+E04 discovery, E09 measurement and E11 capability discovery can proceed
+alongside earlier coding; E10 pure-helper repairs can start immediately,
+while policy integration depends on E01/E03. Each package should be an
+independently reviewable change or short dependent stack. E04 may deliver
+evidence and fixtures without runtime changes. Do not enable E05/E06 on a
+cohort until E04 passes.
 
 Split E12 when the optional TAS cluster needs ownership of lab devices:
 execute its handoff implementation and E12-B–D after E06 and before E08-C/D.
@@ -67,7 +117,7 @@ whose remaining gates are listed above.
 | E01/E02 unit and race coverage | Passed | `go test -race -count=1 ./...`; duplicate/over-limit records, exact freshness reasons and headroom cases are covered. |
 | E01/E02 physical observation | Passed for .101/.103; blocked for .100 completeness | Helm-managed image `cvk-tas-extentions:938a488f` published complete observations and headroom on `cat9k-lab-101` and `cat9k-lab-103`. `cat9k-live` is conservatively incomplete because duplicate CDP identity `MaC_Outside_Switch` cannot be disambiguated. |
 | E01 network gate negative | Passed | A temporary rollout targeting `.100` stopped at `PlanningFailed / EvidenceIncomplete`; no software-upgrade leaf or device mutation was created. |
-| E08-B native TAS | Passed | Fresh kind v0.33.0 / `kindest/node:v1.37.0`, exact checked-in feature-gate config; co-location and unschedulable conflict assertions passed; cluster deleted afterward. This is synthetic scheduler evidence only. |
+| E08-B native TAS subset | Passed for co-location/conflict assertions | Fresh kind v0.33.0 / `kindest/node:v1.37.0`, exact checked-in feature-gate config; co-location and unschedulable conflict assertions passed; cluster deleted afterward. Remaining E08-B fault/restart/maintenance cases and physical CVK lifecycle remain unqualified. |
 | Repository gates | Passed | Focused tests, full race suite, Helm lint, topology render test, strict MkDocs build and `git diff --check`. The Makefile generator target remains incompatible with its pinned controller-tools package; CRD parity was checked with controller-gen v0.19.0 and the reviewed validation was applied to both CRD copies. |
 | Physical deployment health | Passed after managed rollout convergence | Manager, three IOS-XE app workers and three IOS-XE network workers converged to the immutable image; all three managed IOS-XE Nodes were Ready. Protected admission rejected direct worker mutation as expected; the upgrade was completed through Helm. |
 | E04/E07 physical combined upgrade on `cat9k-lab-103` | Passed as a combined Reload regression; E04/E07 gates remain open | `cvk-roadmap-938a-upgrade-103` / leaf `...-8e943463` transferred the pinned `17.18.03` image, submitted gNOI `OS.Activate`, survived the IOS-XE reload, and reached `Succeeded` with running version `17.18.03.0.5496.1776157760`. The Node returned `Ready=True`, workers returned healthy, and network evidence returned complete. This proves the current combined path only; it does not prove a separately durable staged receipt, activation approval, critical-service drain, service probe, or hard placement contract. |
@@ -103,7 +153,7 @@ Conditional work must have a written, evidence-backed decision:
   do not remove exclusions to make the checklist appear complete.
 - E11 must qualify a second driver before claiming second-platform support.
   An unsupported NX-OS probe leaves this objective blocked; it does not justify
-an empty generic API. Public API extraction requires the subsequent ADR.
+  an empty generic API. Public API extraction requires the subsequent ADR.
 
 ### Follow-up topology evidence and graph-safety changes
 
@@ -112,12 +162,44 @@ the existing rollout opt-in defaults:
 
 | Change/test | Result | Evidence and limitation |
 | --- | --- | --- |
-| Source-qualified neighbor identity | Implemented | CDP and OSPF observations now retain source, local interface and OSPF area in a bounded canonical identity. Equal peer names are no longer merged solely by string equality; ambiguous required peers fail closed. Older persisted observations may omit the new identity and use the legacy peer ID fallback until the next worker sample. |
-| Collection provenance | Implemented | Network observations carry bounded collection start/end timestamps and a per-worker sample sequence. The sequence resets with a worker revision, so it is diagnostic provenance only until manager-side replay/ordering persistence is enabled. |
-| Observed graph diagnostics | Implemented as pure library | `internal/topology/graph.go` builds a bounded deterministic graph, reports incomplete/unknown/asymmetric/duplicate links, and compares observed links with a declared topology without mutating labels or authority. Unit tests cover limits, deterministic hashes and policy drift. Manager-owned status publication and physical drift capture remain open E10 gates. |
-| Compatibility | Preserved | The new fields are additive, the network gate remains opt-in, and existing standalone topology projection and non-network rollout paths are unchanged. |
-| Physical observation qualification | Passed for the available IOS-XE lab devices | Ubuntu16 Helm release revision 95 ran `cvk-tas-extentions:9523720c`; `cat9k-lab-101`, `cat9k-lab-103` and `cat9k-live` remained `Ready`, each produced complete observations with non-zero collection start/end timestamps and monotonic sample sequences, and the updated CRD was server-side applied. This validates observation publication and schema compatibility only; it is not a claim of full physical upgrade/TAS qualification. |
-| Final repository gates | Passed | Full `go test -race -count=1 ./...`, strict MkDocs, Helm lint, topology render contract and `git diff --check` passed. The render contract’s managed-device variable count was corrected from a stale baseline assertion (7) to the current chart contract (9); no chart template behavior changed. |
+| Source-qualified neighbor identity | Implemented / unqualified for full E01 | CDP and OSPF retain source, local interface and OSPF area. Equal peer names are no longer merged solely by string equality; ambiguous required peers fail closed. Legacy observations fall back to peer ID. VRF/process context and explicit multi-adjacency selection remain pending. |
+| Collection provenance | Implemented / partially enforced | Start/end timestamps and a process-local sample sequence are published. Network rollout admission now requires the expected worker revision, non-zero sequence and bounded collection interval. Sequence persistence, Pod UID binding and replay ordering remain pending. |
+| Observed graph diagnostics | In progress | `internal/topology/graph.go` is a pure helper with no runtime caller. Tests cover matching declarations, reordered conflicting duplicates, state-sensitive hashing, stale/unknown/incomplete sources, known-peer asymmetry, node/input limits and duplicate device IDs. Runtime integration and physical drift remain open. |
+| Compatibility | In progress | Added scalar fields are optional and the network gate remains opt-in. The neighbor list changes from map-by-ID to atomic, and required-peer ambiguity now blocks. Persisted objects, server-side-apply ownership and mixed-version publication/rollback need explicit E01-C/E13 tests. |
+| Physical observation publication | Passed for the recorded IOS-XE lab deployment | Ubuntu16 Helm revision 95 ran `cvk-tas-extentions:9523720c`; all three app workers and three network workers converged, all three managed C9K Nodes/CiscoDevices were Ready, and all three published complete samples with collection times and non-zero sequences. Final logs reported no manager errors in the three-minute window. Image manifest: `sha256:c119ece99ec1276630ac3454e839ebc2d16962387b856d8e98f269a4107c13f2`. This is publication/deployment evidence, not full provenance enforcement, service reachability or a new software upgrade/downgrade run. |
+| Repository gates at the prior implementation turn | Passed as recorded | Full race suite, strict MkDocs, Helm lint, topology render contract and `git diff --check` passed locally. The stale managed-device variable count assertion was corrected from 7 to 9; no chart template behavior changed. These local results do not establish passing CI or complete real-API coverage at this revision. |
+
+### Evidence reconciliation at `8ce7d167`
+
+The focused observation/graph/gate tests were rerun successfully during this
+review using `go test -count=1 ./internal/topology ./internal/topologyhealth
+./internal/provider -run 'Test(BuildGraph|BuildNetworkObservation|Evaluate)'`.
+Their pass confirms the current assertions; it does not fill the missing
+scenarios listed above. `gh run list --branch pr/johalley/tas-extentions`
+returned no runs at review time, so candidate CI remains unverified.
+
+Historical sources inspected include
+`/tmp/cvk-tas-extentions-physical-evidence-20260930.md` and
+`/tmp/cvk-roadmap-qualification-20260930/{physical-validation,final-state}.txt`.
+They require a sanitized, checksummed durable index before release closure:
+
+- The retained `cvk-lab-upgrade-20260930-r7` object has one target (`.101`)
+  and `succeeded=1`. The report describes separate earlier runs for `.100`
+  and `.103`; recover their exact campaign/leaf evidence before presenting
+  this as one three-target upgrade run.
+- `cvk-lab-downgrade-20260930-r11` records three successes, but used
+  `BlockIfRunning` after manual workload scale-down/cleanup. This supports
+  combined device downgrade, not E07's automatic drain/service criterion.
+- The report states that admission bindings were restored after cleanup.
+  Record when protection was changed and which operations occurred in that
+  interval; replay relevant E13 negatives with admission continuously enforced.
+- `.103` has later combined 17.18.02↔17.18.03 regression results at
+  `938a488f`. Revision 95 validates observation publication for `9523720c`;
+  neither dataset qualifies independent preparation/activation.
+- Earlier `.100` incompleteness was tied to duplicate CDP peer names at
+  `938a488f`. The later interface-qualified publisher reports complete
+  `.100` samples. Preserve both revision-specific results; requiring an
+  ambiguous peer name still blocks by design until selection is refined.
 
 Forced drain, automatic authority from discovery, graph-cost scheduling,
 mandatory experimental TAS, zero-downtime promises and active unfenced
@@ -186,6 +268,12 @@ never invokes is insufficient recurring coverage. Save commands, exit codes,
 test counts and skips. Assert exact rejection reasons and zero forbidden RPCs,
 not just an error or terminal phase.
 
+Before the next API change, resolve the recorded Makefile/controller-tools
+generation incompatibility: pin a compatible generator, retain its actual
+version metadata, regenerate both CRD copies and DeepCopy code, and rerun for
+idempotence in CI. The prior v0.19.0 parity comparison is interim evidence;
+it does not close reproducible generation or real-server schema migration.
+
 `topology-kind-test.sh`, `managed-shared-worker-kind-test.sh` and
 `native-tas-kind-test.sh` are disposable-cluster tests. Use dedicated
 kubeconfig files and explicit contexts. Do not run their cleanup/finalizer
@@ -240,6 +328,11 @@ Code: `internal/provider/topology_observation.go`, its tests,
 `internal/topologyhealth/gate.go`, `api/v1alpha1/types.go`, manager health
 acceptance and native status-write admission.
 
+Current increment: `938a488f` added newer-path OSPF adjacency traversal and
+source/limit corrections; `9523720c` added source/interface identities and
+collection metadata. Neither closes the manager acceptance contract. Keep
+the positive publication evidence, then execute the remaining work below.
+
 ### Required updates
 
 1. Set completeness from actual source coverage. Truncation, invalid records,
@@ -248,10 +341,14 @@ acceptance and native status-write admission.
    why data is incomplete; never silently lose evidence and keep `Complete`.
 2. Preserve neighbor source, interface and routing context. Do not merge CDP
    and OSPF identities based solely on equal strings, or multiple adjacencies
-   solely by neighbor ID. Define and test a canonical composite identity.
-3. Implement the supported newer OSPF adjacency path or return explicit
-   unsupported coverage. Distinguish a proven empty source from an unread or
-   partially decoded source. Preserve compatibility for telemetry consumers.
+   solely by neighbor ID. Retain OSPF VRF/process separately from area and
+   preserve the remote interface when available. Define collision-safe
+   composite identity encoding and qualified peer selectors; test legitimate
+   parallel adjacencies, same-name protocols and delimiter-bearing values.
+3. Qualify the implemented newer OSPF adjacency traversal. Distinguish a
+   proven empty source from unread, unsupported or partially decoded data;
+   test both model paths and overlapping records. Preserve compatibility for
+   telemetry consumers.
 4. Add collection start/end, oldest source time, sample sequence, exact worker
    Pod incarnation/config revision, and manager acceptance binding. Define
    sequence reset on worker replacement; replay and old-incarnation samples
@@ -259,17 +356,24 @@ acceptance and native status-write admission.
 5. Validate identity, producer and time before using evidence. Separate
    worker-owned samples from manager-owned acceptance; protect both in
    admission. A new Node heartbeat must not refresh an old network sample.
-6. Fix `TestEvaluateRequiresCompleteFreshEvidence`: give each case a valid
-   identity and assert its specific stale/incomplete/skew reason. Add
-   regressions that fail on the current truncation and duplicate behavior.
+6. Retain the corrected specific stale/incomplete/skew assertions in
+   `TestEvaluateRequiresCompleteFreshEvidence`; extend the suite for the
+   still-missing replay/incarnation/collection cases. Enforce field lengths
+   and bounded error text before publication so a rejected status write cannot
+   silently leave an older complete sample as the only available evidence.
+7. Qualify stored-object/schema migration from map-by-ID to atomic neighbors,
+   including multiple status field managers, legacy missing-identity samples,
+   mixed publishers and attempted CRD/runtime downgrade. Document the required
+   upgrade order and block rollback when duplicate peer IDs are incompatible
+   with the old schema.
 
 ### Tests and exit gate
 
 | ID | Execute | Required result |
 | --- | --- | --- |
-| E01-A | Unit fixtures at 0, 1, 64 and 65 records; reordered inputs; conflicting duplicates; repeated peer IDs on different interfaces/VRFs; valid empty and unsupported sources | Deterministic bounded output; no false completeness or accidental identity merging |
+| E01-A | Unit fixtures at 0, 1, 64 and 65 records for both interfaces and neighbors; reordered/conflicting duplicates; same peer across protocols/interfaces/VRFs/processes; delimiter/overlength values; valid empty and unsupported sources | Deterministic bounded output; no false completeness, identity collision or accidental merging; error status remains publishable |
 | E01-B | Fake-clock tests for stale, future, replayed, slow collection and reordered samples; wrong serial/UID/worker revision; worker restart | Exact expected reasons; acceptance never extends oldest evidence freshness |
-| E01-C | Real API updates using manager, app worker, network RO/RW worker and unrelated identity | Only designated fields writable; old worker/incarnation and forged manager acceptance rejected |
+| E01-C | Real API updates using manager, app worker, network RO/RW worker and unrelated identity; same shared account on wrong device/stale Pod; persisted map-to-atomic schema transition and mixed-version publication/downgrade | Only designated fields writable; old/wrong worker and forged manager acceptance rejected; migration preserves evidence and blocks incompatible rollback |
 | E01-D | Compare physical summaries with device interface/CDP/OSPF output; interrupt a test source or use an unsupported source fixture | Physical coverage documented; missing data blocks opted-in checks, with no upgrade leaf mutation |
 
 Close E01 only when the new negative tests fail against the old behavior,
@@ -280,6 +384,11 @@ coverage. A successful transport call alone cannot pass E01-D.
 
 Code: IOS-XE readers/optional driver interfaces, worker observation publisher,
 `api/v1alpha1`, `internal/topologyhealth`, telemetry export and fixtures.
+
+Current percentage publication uses reported RX/TX rates and interface speed.
+It has no rate-presence bit, oldest-source/sample-interval acceptance or
+supervisor readiness evidence. These require implementation before a physical
+percentage can qualify capacity policy.
 
 ### Required updates
 
@@ -299,7 +408,7 @@ Code: IOS-XE readers/optional driver interfaces, worker observation publisher,
 
 | ID | Execute | Required result |
 | --- | --- | --- |
-| E02-A | Counter fixtures for reset, wrap, huge values, capacity change, missing direction, threshold boundaries and empty scope | Correct conservative headroom or explicit Unknown; no false idle capacity |
+| E02-A | Counter fixtures for reset, wrap, huge values/conversion overflow, capacity change, speed with absent statistics, either rate direction absent, measured zero, threshold boundaries and empty scope | Correct conservative headroom or explicit Unknown; absent rates must not become 100% headroom |
 | E02-B | Sample idle then controlled loaded lab test links, recording interface counters and independent traffic rate | Published utilization agrees within a documented tolerance chosen before the run |
 | E02-C | Remove/stale one contributing sample and recover it; simulate standby/stack mismatch before attempting any hardware fault | Unknown/unhealthy blocks; fresh complete recovery clears the specific blocker |
 
@@ -573,11 +682,18 @@ not demonstrate persistence across Pod replacement or volume loss.
 Code: observation schema/normalization, pure comparison logic,
 manager read-only diagnostics, status/Events and `kubectl ciscovk` output.
 
+Current implementation is a pure helper in `internal/topology/graph.go` with
+three test functions and no production caller. E10-A is partial; E10-B/C and
+the runtime consumer are not qualified. `GraphObservation.ObservedAt` is not
+used, and the helper does not carry accepted-worker/sample provenance.
+
 ### Required updates
 
 1. Build a bounded diagnostic graph retaining local/remote interface, protocol,
    VRF context, sample time and provenance. Resolve managed peers only from
    sufficient identity evidence; preserve unknown peers and asymmetric edges.
+   Do not compare a CDP hostname or OSPF router ID directly with a managed
+   device serial as if the namespaces were interchangeable.
 2. Compare against administrator-declared peers/risk groups. Report missing
    peers, changed uplinks, stale coverage and potential single points of
    failure in the declared model. Never assert end-to-end redundancy solely
@@ -585,14 +701,30 @@ manager read-only diagnostics, status/Events and `kubectl ciscovk` output.
 3. Add read-only explain output with the evidence behind each finding. A
    policy can block on qualified evidence; suggestions require a new operator
    plan and do not rewrite labels, membership or approvals.
+4. Repair helper determinism and resource bounds before integrating it:
+   conflicting duplicates must not select a different edge when reordered;
+   canonical encoding must distinguish delimiter/newline-bearing fields.
+   Bound input adjacency count, declared links, field lengths, diagnostics and
+   user-supplied limits in addition to unique output nodes/edges. Duplicate
+   floods must not bypass the edge cap and allocate unbounded diagnostics.
+5. Separate graph coverage from operational health. Define stale/empty
+   coverage and DOWN adjacencies explicitly; match reverse observations in
+   protocol/VRF/interface context. Include accepted sample identity/time in
+   the evidence token, or provide a separate documented topology-content hash
+   and provenance token. Never use a topology-content hash as fresh authority.
+6. Wire the helper into a bounded manager-owned diagnostic snapshot and
+   read-only CLI/status/Events. Specify reconcile triggers and persistence;
+   protect any new manager fields from workers via CEL and RBAC, with schema,
+   compatibility and contract-digest tests. The manager opens no device session.
 
 ### Tests and exit gate
 
 | ID | Execute | Required result |
 | --- | --- | --- |
-| E10-A | Fixtures: spoofed/equal names, unknown neighbors, asymmetric links, multiple VRFs, LAGs, stale/truncated input and graph size limit | Honest unresolved identity/coverage; bounded deterministic diagnostics |
+| E10-A | Fixtures: actual reordered conflicting duplicates, unknown/spoofed names, known-peer asymmetric links, mismatched VRFs/protocols, LAGs, stale/empty/truncated input, missing/unexpected declarations, ambiguous hash inputs, edge/input/diagnostic/declaration bounds | No first-wins identity ambiguity or hash collision from serialization; explicit coverage/health semantics and bounded deterministic diagnostics |
 | E10-B | Physical capture, controlled change to an isolated test uplink, restore and recapture | Drift shown with provenance and cleared on fresh recovery; declared authority unchanged |
 | E10-C | Compare protected labels, policy, approval hashes and RBAC before/after discovery changes | Diagnostics cannot grant mutation authority or silently edit the plan |
+| E10-D | Real API/CLI integration: publish/reconcile, watch observation/policy changes, restart manager, stale worker input, unauthorized diagnostic status writes | Reachable operator output updates and expires predictably; only manager owns acceptance/diagnostics; no per-node accounts or device sessions introduced |
 
 Close after usable diagnostic examples and physical drift evidence. An
 authoritative discovered topology or graph-cost scheduler remains excluded.

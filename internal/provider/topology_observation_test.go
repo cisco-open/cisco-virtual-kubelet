@@ -100,7 +100,8 @@ func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
 func TestBuildNetworkObservationPublishesConservativeHeadroom(t *testing.T) {
 	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
-		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 250, OutBitsPerSec: 100}},
+		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 250, OutBitsPerSec: 100,
+			InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true}},
 	}, "SERIAL-01", "worker", now)
 	if err != nil {
 		t.Fatal(err)
@@ -116,5 +117,19 @@ func TestBuildNetworkObservationPublishesConservativeHeadroom(t *testing.T) {
 	}
 	if observation.Interfaces[0].HeadroomPercent != nil {
 		t.Fatalf("missing speed must remain unknown, got %v", *observation.Interfaces[0].HeadroomPercent)
+	}
+	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 0, OutBitsPerSec: 0,
+			InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true}},
+	}, "SERIAL-01", "worker", now)
+	if err != nil || observation.Interfaces[0].HeadroomPercent == nil || *observation.Interfaces[0].HeadroomPercent != 100 {
+		t.Fatalf("measured zero rates must produce 100%% headroom, got %#v err=%v", observation.Interfaces[0].HeadroomPercent, err)
+	}
+	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 250,
+			InRatePresent: true, InRateValid: true}},
+	}, "SERIAL-01", "worker", now)
+	if err != nil || observation.Interfaces[0].HeadroomPercent != nil {
+		t.Fatalf("one missing direction must remain unknown, got %#v err=%v", observation.Interfaces[0].HeadroomPercent, err)
 	}
 }

@@ -39,16 +39,22 @@ type NeighborObservation struct {
 // Complete must be false when the driver could not prove that the required
 // source was fully read; an empty successful response is not complete evidence.
 type Observation struct {
-	ObservedAt         time.Time
-	Complete           bool
-	UnknownReason      string
-	Interfaces         []InterfaceObservation
-	Neighbors          []NeighborObservation
-	ProducerRevision   string
-	DeviceIdentityHash string
+	CollectionStartedAt time.Time
+	CollectionEndedAt   time.Time
+	SampleSequence      uint64
+	ObservedAt          time.Time
+	Complete            bool
+	UnknownReason       string
+	Interfaces          []InterfaceObservation
+	Neighbors           []NeighborObservation
+	ProducerRevision    string
+	DeviceIdentityHash  string
 }
 
 type Policy struct {
+	ExpectedProducerRevision   string
+	RequireSampleProvenance    bool
+	MaxCollectionDuration      time.Duration
 	MaxAge                     time.Duration
 	RequiredInterfaces         []string
 	RequiredNeighbors          []string
@@ -76,6 +82,20 @@ func Evaluate(now time.Time, observation Observation, policy Policy) Decision {
 	}
 	if observation.DeviceIdentityHash == "" {
 		return blocked("DeviceIdentityMissing", "network observation has no device identity binding", observation)
+	}
+	if policy.ExpectedProducerRevision != "" && observation.ProducerRevision != policy.ExpectedProducerRevision {
+		return blocked("ProducerRevisionMismatch", "network observation was published by an unexpected worker revision", observation)
+	}
+	if policy.RequireSampleProvenance {
+		if observation.SampleSequence == 0 || observation.CollectionStartedAt.IsZero() || observation.CollectionEndedAt.IsZero() {
+			return blocked("EvidenceProvenanceMissing", "network observation is missing collection provenance", observation)
+		}
+		if observation.CollectionEndedAt.Before(observation.CollectionStartedAt) || observation.CollectionEndedAt.After(now.Add(30*time.Second)) {
+			return blocked("EvidenceProvenanceInvalid", "network observation collection interval is invalid", observation)
+		}
+		if policy.MaxCollectionDuration > 0 && observation.CollectionEndedAt.Sub(observation.CollectionStartedAt) > policy.MaxCollectionDuration {
+			return blocked("EvidenceCollectionSlow", "network observation collection exceeded the configured duration", observation)
+		}
 	}
 	if policy.ExpectedDeviceIdentityHash != "" && observation.DeviceIdentityHash != policy.ExpectedDeviceIdentityHash {
 		return blocked("DeviceIdentityMismatch", "network observation is bound to a different physical device", observation)
@@ -192,14 +212,17 @@ func hash(observation Observation) string {
 		return left < right
 	})
 	canonical := struct {
-		ObservedAt         time.Time              `json:"observedAt"`
-		Complete           bool                   `json:"complete"`
-		UnknownReason      string                 `json:"unknownReason,omitempty"`
-		Interfaces         []InterfaceObservation `json:"interfaces"`
-		Neighbors          []NeighborObservation  `json:"neighbors"`
-		ProducerRevision   string                 `json:"producerRevision,omitempty"`
-		DeviceIdentityHash string                 `json:"deviceIdentityHash,omitempty"`
-	}{observation.ObservedAt.UTC(), observation.Complete, observation.UnknownReason, interfaces, neighbors, observation.ProducerRevision, observation.DeviceIdentityHash}
+		CollectionStartedAt time.Time              `json:"collectionStartedAt,omitempty"`
+		CollectionEndedAt   time.Time              `json:"collectionEndedAt,omitempty"`
+		SampleSequence      uint64                 `json:"sampleSequence,omitempty"`
+		ObservedAt          time.Time              `json:"observedAt"`
+		Complete            bool                   `json:"complete"`
+		UnknownReason       string                 `json:"unknownReason,omitempty"`
+		Interfaces          []InterfaceObservation `json:"interfaces"`
+		Neighbors           []NeighborObservation  `json:"neighbors"`
+		ProducerRevision    string                 `json:"producerRevision,omitempty"`
+		DeviceIdentityHash  string                 `json:"deviceIdentityHash,omitempty"`
+	}{observation.CollectionStartedAt.UTC(), observation.CollectionEndedAt.UTC(), observation.SampleSequence, observation.ObservedAt.UTC(), observation.Complete, observation.UnknownReason, interfaces, neighbors, observation.ProducerRevision, observation.DeviceIdentityHash}
 	encoded, _ := json.Marshal(canonical)
 	digest := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(digest[:])

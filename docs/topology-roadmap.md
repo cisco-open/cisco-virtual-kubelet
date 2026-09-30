@@ -1,6 +1,7 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete**, audited against `938a488f` on 30 September 2026.
+Status: **incomplete**, reviewed against `8ce7d167` (runtime changes through
+`9523720c`) on 30 September 2026.
 Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
 #190, #191, #192, #193, and #194 merged. Implementation and qualification
@@ -29,19 +30,27 @@ supersedes neither the current runtime contract nor release qualification.
 
 ### Execution status for this branch
 
-| Slice | Audited status at `bf3f4764` | Required execution |
+The foundation is implemented and has historical physical combined upgrade
+and downgrade evidence. No E00–E13 work package yet satisfies every exit gate;
+the extension still needs substantial policy, lifecycle and integration code
+as well as tests. The latest recorded lab deployment (Ubuntu16 revision 95,
+`9523720c`) qualifies observation publication/convergence on all three C9Ks.
+It does not qualify separate preparation/activation or full service drain.
+This review performed no new physical upgrade/downgrade operations.
+
+| Slice | Reviewed status at `8ce7d167` | Required execution |
 | --- | --- | --- |
 | T0 | Partial physical baseline | E00: reconstruct revision-bound evidence and capability matrix; verify current ownership, images, packages and paths. |
-| T1 | Observation correction implemented; qualification gaps remain | E01–E02: provenance, controlled traffic and supervisor evidence remain; corrected truncation/duplicate/OSPF/headroom behavior is in `938a488f`. |
+| T1 | Observation corrections and collection metadata published; acceptance/capacity gaps remain | E01–E02: exact producer/sequence acceptance, VRF/process context, absent-rate validity, schema migration, controlled traffic and supervisor qualification. `938a488f` and `9523720c` supply the current partial implementation. |
 | T2 | Partial gate only | E03: implement administrator protection, overlapping groups, measured headroom and expiring evidence-bound grants; qualify service-path scenarios. |
 | T3 | Combined lifecycle exists; new preparation contract absent | E04–E05: qualify the device boundary, implement and test durable staged receipts and ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
 | T5 | Partial physical evidence for existing drain subset | E07: prove application reachability and supported drain in both directions, add qualified hard placement and test recovery. The latest downgrade scaled workloads down manually and used `BlockIfRunning`. |
-| T6 | Synthetic conformance exists; physical group lifecycle absent | E08: raw group-field recognition, native controller recreation, physical service and group-aware drain tests. |
+| T6 | Synthetic co-location/conflict evidence exists; full scheduler and physical group lifecycle absent | E08: raw group-field recognition before expanding drain, remaining scheduler scenarios, native controller recreation, physical service and group-aware drain tests. |
 | T7 | Existing ephemeral cache only | E09: measure both transfer segments; implement durable prefetch/PVC cache only when its decision gate passes, then qualify failures. |
-| T8 | Diagnostic graph/drift work absent | E10: implement bounded graph comparison and provenance. An authoritative discovered graph is excluded; diagnostic graph work is required. |
+| T8 | Pure graph helper added; no runtime consumer | E10: correct identity, determinism, freshness, hashing and input/diagnostic bounds; add manager/CLI integration and physical drift tests. Existing tests cover a subset of the helper contract. |
 | T9 | Second-platform qualification absent | E11: probe a suitable platform, qualify its lifecycle and record the public-API decision. Unsupported hardware leaves this gate open. |
-| T10 | Scale and ownership qualification incomplete | E12: measure the supported envelope and test controlled single-cluster/offline handoff. Three switches do not prove fleet scale. |
+| T10 | Legacy handoff/convergence hardened; broader ownership and scale remain | E12: measure the supported envelope and test controlled single-cluster/offline handoff including staged/uncertain operations. Three switches do not prove fleet scale. |
 
 Previous status text overstated completion by equating baseline functionality
 with later roadmap deliverables. Existing test passes and physical upgrade
@@ -58,7 +67,7 @@ E13 supplies the final integrated acceptance gate after implementation.
 | Distribution, Phase 3A | Deterministic selection of existing endpoints; frozen source, digest and Secret UID | Measured path locality, durable prefetch, optional cache and cache-loss recovery |
 | Drain, initial Phase 4 | Opt-in bounded ReplicaSet/Deployment drain, Eviction/PDB checks, device teardown and replacement evidence | Physical qualification, safe hard-placement support, individually justified workload types |
 | Lifecycle, remaining Phase 4 | Combined install/activate with durable request markers and limited rollback; rollout `NoReboot` preparation mapping | Durable staged receipt, later activation approval, restart-safe reservation handoff |
-| Observed topology | IOS-XE CDP, OSPF and interface readers; topology telemetry export | Bounded observations for policy, declared/observed drift, optional graph diagnostics |
+| Observed topology | Bounded IOS-XE CDP/OSPF/interface status, source/interface identities, diagnostic collection metadata and an unintegrated graph helper | Manager acceptance/replay checks, complete routing context, trustworthy rate coverage, graph correctness and operator-visible drift diagnostics |
 | Native TAS | Separate Kubernetes 1.37 scheduler conformance with fixture Nodes | Real app-hosting and group lifecycle tests; version-specific opt-in examples |
 | Other drivers, Phase 5 | Reusable coordination and optional lifecycle interfaces | Second qualified software-lifecycle driver before a public generic API |
 | Larger deployments | Bounded single-ledger, single-control-plane model | Scale measurements and explicit ownership transfer; active multi-cluster control remains conditional |
@@ -146,12 +155,15 @@ items in one release. Keep each change independently reviewable and usable.
 | T9 | Second-platform software lifecycle and public API decision | T3 + T4 contracts; platform-specific hardware evidence |
 | T10 | Scale qualification and controlled ownership handoff | Core contracts stable; active multi-cluster design needs a separate fencing proof |
 
-Recommended first implementation PR: T0 and the smallest complete T1 slice
-(bounded IOS-XE interface/adjacency observations, freshness tests, and a
-read-only explanation of blockers). Then T2, T3 and T4 deliver the main
-operator benefit. T5 and T6 can advance independently within their gates.
-Avoid combining cache infrastructure, generalized APIs and lifecycle changes
-into the first PR.
+The initial T1 slice has landed on the branch. Next, complete E00 evidence
+and correct E01/E02 trust, identity and missing-rate handling. Qualify E04's
+independent device boundary alongside E03 policy implementation, then build
+E05/E06 durable staging and separate activation. Add the E08-A group guard
+before E07's broader drain eligibility. E10 helper repairs and E09 measurement
+can advance independently; physical TAS ownership transfer depends on E12.
+The execution plan gives the ordered deliverables and exact tests. Keep cache
+selection conditional on measurement and the second-platform API decision
+dependent on successful hardware qualification.
 
 ## 4. T0 — establish capability and qualification evidence
 
@@ -181,10 +193,10 @@ this roadmap. Do not use these new features to widen October release claims.
 ### Observation contract
 
 Reuse `internal/drivers/iosxe/topology.go` and narrow optional driver interfaces.
-Audit existing readers first: for example, the newer OSPF instance path in
-the current reader enriches router identity but does not supply the same full
-adjacency scan as the classic path. A successful call or empty list must not
-be interpreted as complete healthy evidence.
+The newer OSPF path now traverses adjacencies, but full coverage and VRF/process
+identity still need qualification. The current normalized neighbor carries
+area, not VRF. A successful call or empty list must not be interpreted as
+proof of complete source coverage or healthy required paths.
 
 Add bounded typed observations for selected interfaces, adjacency state,
 traffic samples and qualified supervisor/stack health. Worker observations
@@ -203,6 +215,14 @@ Observe through the network worker using the existing transports. OTEL remains
 an optional export of evidence, never a required authorization dependency.
 Counter reset, interface-speed changes, missing samples and unsupported YANG
 models produce `Unknown`, not zero utilization or a healthy empty topology.
+The observation bridge now carries direction-specific rate presence/validity;
+missing or overflowing IOS-XE rate leaves remain Unknown while measured zero
+is valid. E02 still needs YANG representation fixtures and an independent
+idle/load qualification before capacity policy relies on the percentage.
+Collection timestamps and a process-local sequence now exist, and the opted-in
+rollout gate checks the expected worker revision, sequence and interval. Pod
+UID binding, persisted sequence ordering and manager acceptance history remain
+open.
 
 ### Policy and admission
 
@@ -459,6 +479,11 @@ Resolve edges to declared physical identities with provenance, sample time and
 confidence. Preserve unknown/unmanaged neighbors and asymmetric observations;
 CDP names alone are not authenticated chassis identity. Model interface/VRF
 context where needed rather than merging unrelated paths.
+
+The current pure helper applies freshness, source-aware canonical JSON keys,
+conflicting-duplicate detection and hard input/output bounds, but it is not
+yet called by the manager. Integrate it only after the manager-owned status and
+CLI contract is defined.
 
 Compare that graph with declared risk groups and expected adjacency sets. Show
 missing peers, changed uplinks, new single points of failure and stale data.

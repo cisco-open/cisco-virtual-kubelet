@@ -17,6 +17,7 @@ package iosxe
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -203,10 +204,18 @@ func (d *XEDriver) GetInterfaceStats(ctx context.Context) ([]common.InterfaceSta
 				s.OutOctets = uint64(*intf.Statistics.OutOctets)
 			}
 			if intf.Statistics.RxKbps != nil {
-				s.InBitsPerSec = *intf.Statistics.RxKbps * 1000
+				s.InRatePresent = true
+				if *intf.Statistics.RxKbps <= math.MaxUint64/1000 {
+					s.InBitsPerSec = *intf.Statistics.RxKbps * 1000
+					s.InRateValid = true
+				}
 			}
 			if intf.Statistics.TxKbps != nil {
-				s.OutBitsPerSec = *intf.Statistics.TxKbps * 1000
+				s.OutRatePresent = true
+				if *intf.Statistics.TxKbps <= math.MaxUint64/1000 {
+					s.OutBitsPerSec = *intf.Statistics.TxKbps * 1000
+					s.OutRateValid = true
+				}
 			}
 		}
 		stats = append(stats, s)

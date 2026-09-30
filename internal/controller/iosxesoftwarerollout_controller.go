@@ -646,7 +646,8 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if !deviceConditionCurrentTrue(device, ciskov1.CiscoDeviceConditionGNOIConfigurationReady) {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("device gNOI configuration is not ready")
 	}
-	if _, err := r.currentReadyWorkerRevision(ctx, device); err != nil {
+	networkWorkerRevision, err := r.currentReadyWorkerRevision(ctx, device)
+	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("managed worker revision is not ready: %w", err)
 	}
 	readyCondition := nodeReadyCondition(&node)
@@ -685,7 +686,7 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
 	if networkPolicy := rollout.Spec.Plan.Health.Network; networkPolicy != nil && networkPolicy.Enabled {
-		decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalID, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
+		decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalID, networkWorkerRevision, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
 		if !decision.Allowed {
 			return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("network health gate %s: %s", decision.Reason, decision.Message)
 		}
@@ -724,6 +725,7 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 func evaluateNetworkHealth(
 	health *ciskov1.DeviceHealthObservationStatus,
 	physicalIdentity string,
+	expectedProducerRevision string,
 	now time.Time,
 	maxAge time.Duration,
 	policy *opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec,
@@ -732,11 +734,14 @@ func evaluateNetworkHealth(
 		return topologyhealth.Decision{Reason: "EvidenceMissing", Message: "network worker has not published an observation"}
 	}
 	observation := topologyhealth.Observation{
-		ObservedAt:         health.Network.ObservedAt.Time,
-		Complete:           health.Network.Complete,
-		UnknownReason:      health.Network.UnknownReason,
-		ProducerRevision:   health.Network.ProducerRevision,
-		DeviceIdentityHash: health.Network.DeviceIdentityHash,
+		CollectionStartedAt: health.Network.CollectionStartedAt.Time,
+		CollectionEndedAt:   health.Network.CollectionEndedAt.Time,
+		SampleSequence:      health.Network.SampleSequence,
+		ObservedAt:          health.Network.ObservedAt.Time,
+		Complete:            health.Network.Complete,
+		UnknownReason:       health.Network.UnknownReason,
+		ProducerRevision:    health.Network.ProducerRevision,
+		DeviceIdentityHash:  health.Network.DeviceIdentityHash,
 	}
 	for _, item := range health.Network.Interfaces {
 		var headroom *float64
@@ -760,7 +765,10 @@ func evaluateNetworkHealth(
 		minimumHeadroom = &value
 	}
 	return topologyhealth.Evaluate(now, observation, topologyhealth.Policy{
-		MaxAge: maxAge, RequiredInterfaces: policy.RequiredInterfaces,
+		ExpectedProducerRevision: expectedProducerRevision,
+		RequireSampleProvenance:  true,
+		MaxCollectionDuration:    60 * time.Second,
+		MaxAge:                   maxAge, RequiredInterfaces: policy.RequiredInterfaces,
 		RequiredNeighbors: policy.RequiredNeighbors, RequireInterfacesUp: policy.RequireInterfacesUp,
 		RequireNeighborsFull: policy.RequireNeighborsFull, MinimumHeadroomPercent: minimumHeadroom,
 		RequireCompleteEvidence:    policy.RequireCompleteEvidence,

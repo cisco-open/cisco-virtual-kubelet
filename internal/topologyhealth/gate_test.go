@@ -90,3 +90,31 @@ func TestEvaluateRejectsIdentityMismatch(t *testing.T) {
 		t.Fatalf("expected identity mismatch rejection, got %+v", decision)
 	}
 }
+
+func TestEvaluateRejectsMissingOrUnexpectedSampleProvenance(t *testing.T) {
+	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
+	identity := "sha256:" + strings.Repeat("a", 64)
+	base := Observation{
+		CollectionStartedAt: now.Add(-2 * time.Second), CollectionEndedAt: now.Add(-time.Second), SampleSequence: 7,
+		ObservedAt: now.Add(-time.Second), Complete: true, ProducerRevision: "sha256:worker-a", DeviceIdentityHash: identity,
+	}
+	policy := Policy{ExpectedProducerRevision: "sha256:worker-a", RequireSampleProvenance: true, MaxCollectionDuration: 10 * time.Second}
+	if decision := Evaluate(now, base, policy); !decision.Allowed {
+		t.Fatalf("valid provenance was rejected: %+v", decision)
+	}
+	missing := base
+	missing.SampleSequence = 0
+	if decision := Evaluate(now, missing, policy); decision.Allowed || decision.Reason != "EvidenceProvenanceMissing" {
+		t.Fatalf("missing sequence was not rejected: %+v", decision)
+	}
+	wrong := base
+	wrong.ProducerRevision = "sha256:worker-b"
+	if decision := Evaluate(now, wrong, policy); decision.Allowed || decision.Reason != "ProducerRevisionMismatch" {
+		t.Fatalf("wrong producer was not rejected: %+v", decision)
+	}
+	slow := base
+	slow.CollectionStartedAt = now.Add(-20 * time.Second)
+	if decision := Evaluate(now, slow, policy); decision.Allowed || decision.Reason != "EvidenceCollectionSlow" {
+		t.Fatalf("slow collection was not rejected: %+v", decision)
+	}
+}
