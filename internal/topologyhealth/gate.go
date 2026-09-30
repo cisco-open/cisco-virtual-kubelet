@@ -42,6 +42,7 @@ type Observation struct {
 	CollectionStartedAt time.Time
 	CollectionEndedAt   time.Time
 	SampleSequence      uint64
+	WorkerPodUID        string
 	ObservedAt          time.Time
 	Complete            bool
 	UnknownReason       string
@@ -53,6 +54,7 @@ type Observation struct {
 
 type Policy struct {
 	ExpectedProducerRevision   string
+	ExpectedWorkerPodUID       string
 	RequireSampleProvenance    bool
 	MaxCollectionDuration      time.Duration
 	MaxAge                     time.Duration
@@ -85,6 +87,9 @@ func Evaluate(now time.Time, observation Observation, policy Policy) Decision {
 	}
 	if policy.ExpectedProducerRevision != "" && observation.ProducerRevision != policy.ExpectedProducerRevision {
 		return blocked("ProducerRevisionMismatch", "network observation was published by an unexpected worker revision", observation)
+	}
+	if policy.ExpectedWorkerPodUID != "" && observation.WorkerPodUID != policy.ExpectedWorkerPodUID {
+		return blocked("WorkerPodMismatch", "network observation was published by an unexpected worker Pod", observation)
 	}
 	if policy.RequireSampleProvenance {
 		if observation.SampleSequence == 0 || observation.CollectionStartedAt.IsZero() || observation.CollectionEndedAt.IsZero() {
@@ -215,6 +220,7 @@ func hash(observation Observation) string {
 		CollectionStartedAt time.Time              `json:"collectionStartedAt,omitempty"`
 		CollectionEndedAt   time.Time              `json:"collectionEndedAt,omitempty"`
 		SampleSequence      uint64                 `json:"sampleSequence,omitempty"`
+		WorkerPodUID        string                 `json:"workerPodUID,omitempty"`
 		ObservedAt          time.Time              `json:"observedAt"`
 		Complete            bool                   `json:"complete"`
 		UnknownReason       string                 `json:"unknownReason,omitempty"`
@@ -222,7 +228,7 @@ func hash(observation Observation) string {
 		Neighbors           []NeighborObservation  `json:"neighbors"`
 		ProducerRevision    string                 `json:"producerRevision,omitempty"`
 		DeviceIdentityHash  string                 `json:"deviceIdentityHash,omitempty"`
-	}{observation.CollectionStartedAt.UTC(), observation.CollectionEndedAt.UTC(), observation.SampleSequence, observation.ObservedAt.UTC(), observation.Complete, observation.UnknownReason, interfaces, neighbors, observation.ProducerRevision, observation.DeviceIdentityHash}
+	}{observation.CollectionStartedAt.UTC(), observation.CollectionEndedAt.UTC(), observation.SampleSequence, observation.WorkerPodUID, observation.ObservedAt.UTC(), observation.Complete, observation.UnknownReason, interfaces, neighbors, observation.ProducerRevision, observation.DeviceIdentityHash}
 	encoded, _ := json.Marshal(canonical)
 	digest := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(digest[:])

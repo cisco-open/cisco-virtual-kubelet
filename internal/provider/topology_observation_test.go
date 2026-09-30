@@ -40,11 +40,11 @@ func TestBuildNetworkObservationIsBoundedAndDeterministic(t *testing.T) {
 		interfaces: []common.InterfaceStats{{Name: "Gi2", OperStatus: "down"}, {Name: "Gi1", OperStatus: "up"}},
 		cdp:        []common.CDPNeighbor{{DeviceID: "peer-a"}},
 		ospf:       []common.OSPFNeighbor{{NeighborID: "peer-a", State: "FULL"}, {NeighborID: "peer-b", State: "2way"}},
-	}, "SERIAL-01", "sha256:worker", now)
+	}, "SERIAL-01", "sha256:worker", now, "pod-uid")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !observation.Complete || observation.DeviceIdentityHash == "" {
+	if !observation.Complete || observation.DeviceIdentityHash == "" || observation.WorkerPodUID != "pod-uid" {
 		t.Fatalf("observation=%#v", observation)
 	}
 	if got := observation.Interfaces[0].Name; got != "Gi1" {

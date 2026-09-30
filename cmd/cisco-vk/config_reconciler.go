@@ -712,7 +712,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	if opts.ManagedTopology && !opts.ReadOnly && opts.NetworkObservationProvider != nil {
 		go provider.RunNetworkObservationPublisher(ctx, mgr.GetClient(), client.ObjectKey{
 			Namespace: opts.DeviceNamespace, Name: deviceName,
-		}, types.UID(opts.DeviceUID), opts.Spec.PhysicalIdentity, opts.WorkerRevision, opts.NetworkObservationProvider)
+		}, types.UID(opts.DeviceUID), opts.Spec.PhysicalIdentity, opts.WorkerRevision, opts.NetworkObservationProvider, runtimeID)
 	}
 
 	// Diagnostics-RFC Phase C: HTTP admin endpoint for ad-hoc

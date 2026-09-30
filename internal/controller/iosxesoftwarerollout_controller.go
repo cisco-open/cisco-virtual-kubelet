@@ -686,7 +686,11 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
 	if networkPolicy := rollout.Spec.Plan.Health.Network; networkPolicy != nil && networkPolicy.Enabled {
-		decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalID, networkWorkerRevision, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
+		networkWorkerPodUID := ""
+		if device.Status.NetworkWorkerRevision != nil {
+			networkWorkerPodUID = device.Status.NetworkWorkerRevision.PodUID
+		}
+		decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalID, networkWorkerRevision, networkWorkerPodUID, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
 		if !decision.Allowed {
 			return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("network health gate %s: %s", decision.Reason, decision.Message)
 		}
@@ -726,6 +730,7 @@ func evaluateNetworkHealth(
 	health *ciskov1.DeviceHealthObservationStatus,
 	physicalIdentity string,
 	expectedProducerRevision string,
+	expectedWorkerPodUID string,
 	now time.Time,
 	maxAge time.Duration,
 	policy *opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec,
@@ -737,6 +742,7 @@ func evaluateNetworkHealth(
 		CollectionStartedAt: health.Network.CollectionStartedAt.Time,
 		CollectionEndedAt:   health.Network.CollectionEndedAt.Time,
 		SampleSequence:      health.Network.SampleSequence,
+		WorkerPodUID:        health.Network.WorkerPodUID,
 		ObservedAt:          health.Network.ObservedAt.Time,
 		Complete:            health.Network.Complete,
 		UnknownReason:       health.Network.UnknownReason,
@@ -766,6 +772,7 @@ func evaluateNetworkHealth(
 	}
 	return topologyhealth.Evaluate(now, observation, topologyhealth.Policy{
 		ExpectedProducerRevision: expectedProducerRevision,
+		ExpectedWorkerPodUID:     expectedWorkerPodUID,
 		RequireSampleProvenance:  true,
 		MaxCollectionDuration:    60 * time.Second,
 		MaxAge:                   maxAge, RequiredInterfaces: policy.RequiredInterfaces,

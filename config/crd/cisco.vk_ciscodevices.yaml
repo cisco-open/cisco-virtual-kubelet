@@ -954,6 +954,14 @@ spec:
                         maxLength: 128
                         minLength: 1
                         type: string
+                      workerPodUID:
+                        description: |-
+                          WorkerPodUID binds this sample to the exact network-management Pod
+                          incarnation that collected it. The manager compares it with the
+                          manager-authenticated NetworkWorkerRevision before using the sample for
+                          disruptive admission.
+                        maxLength: 128
+                        type: string
                       sampleSequence:
                         description: |-
                           SampleSequence is monotonic for one worker incarnation and resets when

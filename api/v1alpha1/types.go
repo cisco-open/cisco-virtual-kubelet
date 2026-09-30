@@ -622,6 +622,14 @@ type DeviceHealthObservationStatus struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.complete || has(self.unknownReason)",message="incomplete network evidence requires an unknown reason"
 type DeviceNetworkObservationStatus struct {
+	// WorkerPodUID binds this sample to the exact network-management Pod
+	// incarnation that collected it. The manager compares it with the
+	// manager-authenticated NetworkWorkerRevision before using the sample for
+	// disruptive admission.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	WorkerPodUID string `json:"workerPodUID,omitempty"`
+
 	// CollectionStartedAt and CollectionEndedAt delimit the authenticated
 	// worker collection interval. They make slow or unexpectedly long device
 	// reads visible to rollout diagnostics without retaining raw CLI output.

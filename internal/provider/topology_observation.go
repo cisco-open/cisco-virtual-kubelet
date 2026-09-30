@@ -45,10 +45,11 @@ func RunNetworkObservationPublisher(
 	physicalIdentity string,
 	producerRevision string,
 	provider drivers.TopologyProvider,
+	workerPodUID ...string,
 ) {
 	var sampleSequence uint64
 	publish := func() {
-		observation, err := BuildNetworkObservation(ctx, provider, physicalIdentity, producerRevision, time.Now())
+		observation, err := BuildNetworkObservation(ctx, provider, physicalIdentity, producerRevision, time.Now(), workerPodUID...)
 		if err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation failed")
 			return
@@ -82,6 +83,7 @@ func BuildNetworkObservation(
 	physicalIdentity string,
 	producerRevision string,
 	now time.Time,
+	workerPodUID ...string,
 ) (*ciskov1.DeviceNetworkObservationStatus, error) {
 	if provider == nil {
 		return nil, fmt.Errorf("topology provider is nil")
@@ -108,6 +110,12 @@ func BuildNetworkObservation(
 		Complete:            interfaceErr == nil && cdpErr == nil && ospfErr == nil,
 		ProducerRevision:    producerRevision,
 		DeviceIdentityHash:  identityHash(identity),
+	}
+	if len(workerPodUID) > 0 {
+		status.WorkerPodUID = strings.TrimSpace(workerPodUID[0])
+		if len(status.WorkerPodUID) > 128 {
+			return nil, fmt.Errorf("worker Pod UID exceeds 128 characters")
+		}
 	}
 	var failures []string
 	if interfaceErr != nil {

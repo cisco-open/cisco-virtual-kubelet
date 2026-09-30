@@ -96,9 +96,9 @@ func TestEvaluateRejectsMissingOrUnexpectedSampleProvenance(t *testing.T) {
 	identity := "sha256:" + strings.Repeat("a", 64)
 	base := Observation{
 		CollectionStartedAt: now.Add(-2 * time.Second), CollectionEndedAt: now.Add(-time.Second), SampleSequence: 7,
-		ObservedAt: now.Add(-time.Second), Complete: true, ProducerRevision: "sha256:worker-a", DeviceIdentityHash: identity,
+		WorkerPodUID: "pod-a", ObservedAt: now.Add(-time.Second), Complete: true, ProducerRevision: "sha256:worker-a", DeviceIdentityHash: identity,
 	}
-	policy := Policy{ExpectedProducerRevision: "sha256:worker-a", RequireSampleProvenance: true, MaxCollectionDuration: 10 * time.Second}
+	policy := Policy{ExpectedProducerRevision: "sha256:worker-a", ExpectedWorkerPodUID: "pod-a", RequireSampleProvenance: true, MaxCollectionDuration: 10 * time.Second}
 	if decision := Evaluate(now, base, policy); !decision.Allowed {
 		t.Fatalf("valid provenance was rejected: %+v", decision)
 	}
@@ -111,6 +111,11 @@ func TestEvaluateRejectsMissingOrUnexpectedSampleProvenance(t *testing.T) {
 	wrong.ProducerRevision = "sha256:worker-b"
 	if decision := Evaluate(now, wrong, policy); decision.Allowed || decision.Reason != "ProducerRevisionMismatch" {
 		t.Fatalf("wrong producer was not rejected: %+v", decision)
+	}
+	wrongPod := base
+	wrongPod.WorkerPodUID = "pod-b"
+	if decision := Evaluate(now, wrongPod, policy); decision.Allowed || decision.Reason != "WorkerPodMismatch" {
+		t.Fatalf("wrong worker Pod was not rejected: %+v", decision)
 	}
 	slow := base
 	slow.CollectionStartedAt = now.Add(-20 * time.Second)
