@@ -1,6 +1,6 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete**, audited against `bf3f4764` on 30 September 2026.
+Status: **incomplete**, audited against `938a488f` on 30 September 2026.
 Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
 #190, #191, #192, #193, and #194 merged. Implementation and qualification
@@ -32,7 +32,7 @@ supersedes neither the current runtime contract nor release qualification.
 | Slice | Audited status at `bf3f4764` | Required execution |
 | --- | --- | --- |
 | T0 | Partial physical baseline | E00: reconstruct revision-bound evidence and capability matrix; verify current ownership, images, packages and paths. |
-| T1 | Partial implementation; correctness gaps | E01–E02: fix truncation/duplicate/OSPF completeness, ineffective freshness tests, provenance and traffic/supervisor evidence. |
+| T1 | Observation correction implemented; qualification gaps remain | E01–E02: provenance, controlled traffic and supervisor evidence remain; corrected truncation/duplicate/OSPF/headroom behavior is in `938a488f`. |
 | T2 | Partial gate only | E03: implement administrator protection, overlapping groups, measured headroom and expiring evidence-bound grants; qualify service-path scenarios. |
 | T3 | Combined lifecycle exists; new preparation contract absent | E04–E05: qualify the device boundary, implement and test durable staged receipts and ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |

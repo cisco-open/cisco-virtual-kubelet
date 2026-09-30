@@ -1,7 +1,7 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **planned; execution remains outstanding**. Audit baseline:
-`bf3f4764`, branch `pr/johalley/tas-extentions`, 30 September 2026.
+Status: **in progress; roadmap not complete**. Audit baseline:
+`938a488f`, branch `pr/johalley/tas-extentions`, 30 September 2026.
 
 This document converts the [topology roadmap](topology-roadmap.md) into work
 packages with implementation scope, test procedures and completion gates.
@@ -21,15 +21,15 @@ deliverables.
 
 | Package | Roadmap | Work to execute | Prerequisites | Audit status |
 | --- | --- | --- | --- | --- |
-| E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | Partial historical evidence; open |
-| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | Partial implementation; open |
-| E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | Open |
+| E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | Partial physical evidence; open |
+| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | Implemented correction; physical qualification and provenance expansion open |
+| E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | Headroom publication implemented; controlled traffic/supervisor qualification open |
 | E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | Partial campaign gate; open |
 | E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Open |
 | E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Open |
 | E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Open |
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | Partial drain evidence; open |
-| E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | Synthetic baseline only; open |
+| E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | Kubernetes 1.37 synthetic conformance passed; CVK physical lifecycle open |
 | E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Ephemeral baseline only; open |
 | E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | Open |
 | E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Open; suitable hardware required |
@@ -56,6 +56,26 @@ evidence path and residual limitation alongside a status. Missing hardware
 or an unsupported device response is not `Passed` for a positive capability.
 Use `Not selected — conditional` only for an explicitly conditional feature
 with the decision evidence described below, never for a required test.
+
+### Execution evidence for revision `938a488f`
+
+These results are evidence for this revision only; they do not close packages
+whose remaining gates are listed above.
+
+| Package/test | Result | Evidence and limitation |
+| --- | --- | --- |
+| E01/E02 unit and race coverage | Passed | `go test -race -count=1 ./...`; duplicate/over-limit records, exact freshness reasons and headroom cases are covered. |
+| E01/E02 physical observation | Passed for .101/.103; blocked for .100 completeness | Helm-managed image `cvk-tas-extentions:938a488f` published complete observations and headroom on `cat9k-lab-101` and `cat9k-lab-103`. `cat9k-live` is conservatively incomplete because duplicate CDP identity `MaC_Outside_Switch` cannot be disambiguated. |
+| E01 network gate negative | Passed | A temporary rollout targeting `.100` stopped at `PlanningFailed / EvidenceIncomplete`; no software-upgrade leaf or device mutation was created. |
+| E08-B native TAS | Passed | Fresh kind v0.33.0 / `kindest/node:v1.37.0`, exact checked-in feature-gate config; co-location and unschedulable conflict assertions passed; cluster deleted afterward. This is synthetic scheduler evidence only. |
+| Repository gates | Passed | Focused tests, full race suite, Helm lint, topology render test, strict MkDocs build and `git diff --check`. The Makefile generator target remains incompatible with its pinned controller-tools package; CRD parity was checked with controller-gen v0.19.0 and the reviewed validation was applied to both CRD copies. |
+| Physical deployment health | Passed after managed rollout convergence | Manager, three IOS-XE app workers and three IOS-XE network workers converged to the immutable image; all three managed IOS-XE Nodes were Ready. Protected admission rejected direct worker mutation as expected; the upgrade was completed through Helm. |
+
+Historical combined 17.18.02↔17.18.03 upgrade/downgrade evidence remains
+valid for the previously tested revision, but it does not close E04–E06 or
+the new E07 service-probe gate for `938a488f`. No separate staged receipt,
+activation approval, durable cache, physical TAS lifecycle, second-driver
+qualification, scale envelope or ownership-transfer evidence exists yet.
 
 Conditional work must have a written, evidence-backed decision:
 
