@@ -1,7 +1,8 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: execution plan with the T1/T2 bounded evidence slice implemented,
-29 September 2026. Working branch:
+Status: execution plan with the bounded topology, drain, distribution and
+native-TAS slices implemented and qualified where the lab can provide evidence,
+30 September 2026. Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
 #190, #191, #192, #193, and #194 merged. The remaining T3–T10 work still
 requires the physical qualification evidence described below.
@@ -21,16 +22,25 @@ supersedes neither the current runtime contract nor release qualification.
 
 ### Execution status for this branch
 
-| Slice | Status at `dec4bc69` | Evidence or boundary |
+| Slice | Status at `db7129af` | Evidence or boundary |
 | --- | --- | --- |
-| T0 | Read-only baseline complete; lifecycle qualification blocked | Capability and health evidence is retained in `/tmp/cvk-tas-extentions-physical-evidence/`; no image mutation was attempted because the cohort had only the running 17.18.02 image available for this run. |
-| T1 | Complete for bounded IOS-XE observations | Fresh, complete interface/CDP summaries were published for `198.51.100.100`, `.101`, and `.103`; secure gNOI `OS.Verify` and five read-only CLI probes succeeded. |
-| T2 | Implemented and negatively qualified for the current gate set | A live rollout requiring the down `GigabitEthernet1/0/24` was rejected before an upgrade leaf was created. The broader redundant-path, congestion and critical-service matrix remains unqualified. |
-| T3–T10 | Not complete | These slices require new durable APIs, lifecycle/cache/graph/scale implementations and their own physical or platform qualification. They are intentionally not represented as enabled behavior in this branch. |
+| T0 | Complete for the three-device IOS-XE cohort | The pinned physical run, including image digests, secure gNOI verification, device terminal output, final versions and cleanup, is retained in `/tmp/cvk-tas-extentions-physical-evidence-20260930.md`. |
+| T1 | Complete for bounded IOS-XE observations | Fresh complete interface/CDP/OSPF summaries were published for `198.51.100.100`, `.101`, and `.103`; stale, incomplete and identity-mismatched evidence is covered by unit and API-server tests. |
+| T2 | Implemented; negative physical gate qualified | A live rollout requiring the down `GigabitEthernet1/0/24` was rejected before an upgrade leaf was created. The lab does not contain a declared redundant service path or measured congestion workload, so those claims remain unqualified. |
+| T3–T4 | Conservative combined lifecycle complete; independent activation remains deferred | Durable mutation claims, restart-safe recovery, `NoReboot` staging, approval hashes and maintenance windows are implemented. The lab has not demonstrated a reliable platform-specific staged receipt and therefore does not enable a separate stage/approve/activate API. |
+| T5 | Qualified for the supported ReplicaSet/Deployment subset | The physical run drained and restored two PDB-protected Deployments, verified device-clean inventory and settled maintenance sessions before and after upgrade/downgrade. StatefulSet/PVC, DaemonSet, Job and custom-controller relocation remain blocked by explicit capability checks. |
+| T6 | Native TAS fixture lane complete; physical CVK group lifecycle not claimed | The Kubernetes 1.37 conformance script and example passed on a disposable cluster using `kind v0.33.0` and the pinned `kindest/node:v1.37.0` image on 30 September 2026, including API discovery, co-location and negative capacity cases. The physical 1.35 lab is intentionally not upgraded or feature-gated for TAS. |
+| T7 | Digest-addressed per-worker cache implemented; path-locality qualification deferred | Atomic publication, corruption detection, size limits, restart-safe reuse and cache-loss refetch are covered by resolver tests. No WAN/oversubscription measurement exists in the physical lab, so cache benefit and path locality are not asserted. |
+| T8 | Bounded observations complete; authoritative graph intentionally not enabled | The worker publishes bounded interface/neighbor evidence with provenance and freshness. A discovered graph must not rewrite administrator authority and remains a future diagnostic-only extension. |
+| T9 | IOS-XE-only lifecycle qualified; second driver not qualified | NX-OS is present for read-only inventory, but no supported NX-OS gNOI OS lifecycle/image contract is available in this lab. IOS-XR hardware is absent. No generic rollout API is introduced. |
+| T10 | Bounded single-cluster, three-device evidence complete | Concurrent campaigns, reservation CAS and fail-closed saturation are unit-tested and the three-device run completed. Fleet-scale measurements and cross-cluster ownership transfer require a larger controlled environment and are not enabled. |
 
-This distinction is deliberate: a healthy observation stream and a passing
-API dry run do not prove safe image staging, activation, hitless forwarding,
-cache recovery, workload relocation, or cross-platform lifecycle support.
+This distinction is deliberate: the branch ships only the capabilities that
+have both an implementation contract and evidence. A healthy observation
+stream does not prove hitless forwarding, a version string does not prove an
+independently restorable staged receipt, and an NX-OS Node does not prove an
+NX-OS software lifecycle. Unsupported scenarios fail closed and remain
+documented rather than being represented by speculative API fields.
 
 ## 1. Baseline and remaining scope
 

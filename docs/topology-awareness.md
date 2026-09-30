@@ -1740,8 +1740,10 @@ switches are not evidence of real multi-site fault tolerance.
 
 The [remaining implementation roadmap](topology-roadmap.md) maps these gaps
 to PR slices, ownership boundaries, dependencies and qualification gates. This
-branch adds the first T1/T2 bounded-evidence slice and an explicit NoReboot
-preparation mapping; it does not claim a discovered graph, hitless activation,
+branch adds the bounded T1/T2 evidence gate, the qualified ReplicaSet/
+Deployment drain path, digest-addressed worker-local image caching, the
+optional Kubernetes 1.37 native-TAS conformance lane, and an explicit NoReboot
+preparation mapping. It does not claim a discovered graph, hitless activation,
 or independent stage/approval/activate semantics.
 
 To opt into the network gate, require complete evidence and name the exact
@@ -1770,17 +1772,21 @@ stale evidence blocks the rollout with a reason such as `EvidenceStale`,
 `AlternatePathUnavailable`, or `DeviceIdentityMismatch`. The gate is nil by
 default, so existing campaigns retain their behavior.
 
-The following are intentionally not implemented in the current phases:
+The following remain intentionally bounded or deferred:
 
-- durable prefetch, shared/PVC cache, independent transfer-only admission, or
-  claims that the worker's location represents the device data path (later
-  Phase 3 work, pending measured need and a complete cache-loss protocol);
+- shared/PVC cache, independent transfer-only admission, or claims that the
+  worker's location represents the device data path. The implemented
+  per-worker cache is digest-addressed and fail-closed; shared caching still
+  requires measured WAN benefit and a separate ownership protocol;
 - general-purpose drain, StatefulSet/PVC/DaemonSet/Job/custom-controller
-  evacuation, forced deletion or PDB bypass, and independently durable
-  install/stage/activate reservations (later Phase 4 work);
+  evacuation, forced deletion or PDB bypass, and independently approved
+  activation. The qualified path is limited to ReplicaSet/Deployment owners
+  with portable workloads and PDB-aware eviction;
 - an authoritative discovered graph, graph-cost workload scheduling, a custom
   scheduler, or automatic declared-topology mutation;
-- a mandatory dependency on alpha native Workload/PodGroup/TAS APIs; and
+- a mandatory dependency on alpha native Workload/PodGroup/TAS APIs. Native
+  TAS is validated only in the separate Kubernetes 1.37 disposable conformance
+  lane and is not enabled in the Kubernetes 1.35 production baseline; and
 - a generic NX-OS/IOS XR rollout CRD before a second driver demonstrates
   compatible lifecycle guarantees (Phase 5).
 
