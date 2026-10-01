@@ -6,6 +6,14 @@ November release work, **not a merge recommendation or completed roadmap**.
 No E00–E13 package has all its exit gates closed. Do not promote this branch
 on the strength of the physical software-transition results alone.
 
+Review update: source through `e7f3e8bf`, 1 October 2026. Follow the execution
+plan's **N1–N5 queue** before its broader orders 4–8. First repair same-Pod
+sequence reset/recovery (N1), qualify and extend native API enforcement (N2),
+finish timeout/schema/source/binding regressions (N3), and deploy a clean
+candidate for physical read-only acceptance (N4). E03 policy and E04 device
+boundary qualification follow (N5). The earlier saved physical evidence
+continues to refer to its historical images.
+
 ## Start here
 
 1. Read the [evidence index](evidence/topology-2026-10-01/README.md), especially
@@ -32,8 +40,8 @@ git log -1 --format=fuller -- docs/topology-november-handoff.md
 | Latest `.101` downgrade | `665a7954-settled5`, 08:04–08:34 UTC, 1 October; `Succeeded`, gNOI `17.18.02.0.4112.1766116039`, settled drain/session, replacement Pods Ready on `.100` | Original collector **STOPPED** during app-log classification, before saving manager/network logs; no full end-to-end harness pass |
 | Drain callback repair | Exact released device-clean completion recognized after promotion to `SoftwareMutation`, settlement and Pod disappearance; regression tests retained | Released completion is acknowledgement-only, not authority for another device teardown. Broader lifecycle/fault/service qualification remains E07 |
 | Retained worker history | Wrong-bound worker skips forbidden leaf status updates | Missing/new binding, read failures, unresolved predecessors and real-API zero-dispatch tests still required |
-| Observation work | Read-only network publisher/status permissions, bounded collection/write budgets, exact manager-bound revision/Pod and physical-identity checks, monotonic sample acceptance, native bound-token Pod-UID admission (commits `4711d3c7` and current checkpoint) | Worker restart/session semantics, real API-server negative tests and cluster-version capability qualification remain open; do not advertise secure RO isolation as fully qualified |
-| Graph helper | Structured hash and field bounds, regression tests | No production consumer; determinism, identity, diagnostics and physical drift work remain E10 |
+| Observation work | `4711d3c7`: separate write budget; `f9b76322`: publisher identity/order guards; `c5a2deeb`: native token Pod-UID comparison | Same-Pod restart blocks sequence recovery; client-side order checks are not API enforcement. Manager acceptance and genuine bound-token negatives remain N1/N2. |
+| Graph helper | Structured hash/field bounds, remote-port reverse identity and two-input conflict correction (`4711d3c7`) | Three-way permutations and duplicate-device cases still need qualification; no production consumer or physical drift acceptance. |
 | Harness | Explicit source/target validation, direction-specific runs, binding observation, log-plane capture attempt, exact preceding cleanup-log correlation | Binding observation does not establish RPC order; offline marker correlation does not prove service health or complete drain safety |
 
 The saved full `.101` app log has preceding clean acknowledgements and
@@ -88,6 +96,11 @@ fleet stability test. No new lab mutation or cleanup was performed to create
 this checkpoint. The lab remains provisioned; this document does not reserve
 it indefinitely or assert its present state when read later.
 
+A subsequent read-only Node listing reported all three C9Ks Ready with
+`.100`/`.103` on 17.18.2 and `.101` on 17.18.3. The discrepancy with archived
+`.101` downgrade evidence requires fresh CLI and secure OS.Verify before
+choosing the next direction; a Node listing alone cannot resolve it.
+
 ## Exact next implementation increments
 
 Each increment should be a reviewable commit on this branch with its tests,
@@ -113,6 +126,13 @@ ordering, and incomplete drain/service evidence. Also reproduce the transient
 `NodeProjectionFailed` resource-version conflicts/uninitialized taints across
 multiple reconcile periods (E00-D). Do not bypass these guards, disable
 admission, widen accounts or force-delete Pods to obtain a green test.
+
+The current review adds publisher negative/preservation tests, a same-Pod vs
+replacement-Pod characterization, and `TestEnvtest_NetworkObservationStatusRoundTrip`.
+The latter runs CRD validation with an administrative client, without Helm
+admission policies. Do not count it as E01-C/E bound-token authorization.
+Keep local test exit codes and pass/skip counts: `go test` without `-tags
+envtest` may report success with no matching tests.
 
 This preserves the native-Kubernetes constraint and the two functional
 ServiceAccount model with read-only/read-write role options. Do not introduce

@@ -1,11 +1,11 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **checkpointed for November resumption; roadmap not complete**.
+Status: **reviewed for continued execution; roadmap not complete**, 1 October 2026.
 Read the [November handoff](topology-november-handoff.md) first for the saved
 evidence, ordered restart procedure, known defects and release boundaries.
-Reviewed source/documentation:
-`665a7954` (runtime changes through `0884666e`), branch
-`pr/johalley/tas-extentions`, 1 October 2026. The initial physical deployment
+Reviewed source: `e7f3e8bf` on `pr/johalley/tas-extentions`, including
+`4711d3c7`, `f9b76322` and `c5a2deeb`. Historical physical evidence below is
+from `665a7954` plus runtime changes through `0884666e`. The initial physical deployment
 used the rebuilt image `cvk-tas-extentions:665a7954-fix1` (full binary revision
 `665a7954a9def499cd3ee36e972e2b5fe15256f5`) on Ubuntu16. That binary embeds
 the base commit while the build includes uncommitted runtime changes; it is
@@ -23,35 +23,47 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
-### Latest implementation increment (1 October 2026)
+### Current review and immediate execution queue (1 October 2026)
 
-Commit `4711d3c7` hardens the read-only observation boundary without changing
-the two-ServiceAccount model or granting mutation permission. The network
-worker now receives an independent five-second Kubernetes status-write budget
-after its twenty-second device-collection budget expires. Publication is
-rejected unless the manager has recorded the exact ready network-worker
-revision and Pod, the sample producer and Pod match that binding, and the
-sample's physical-identity hash matches the manager's canonical identity.
+| Commit | Implemented | Qualification boundary |
+| --- | --- | --- |
+| `4711d3c7` | Separate 20-second collection and 5-second publication contexts; remote-port graph identity and two-input conflict diagnostic correction | Timeout fallback still needs end-to-end publisher testing. Graph helper has no runtime consumer; three-way conflict permutations remain untested. |
+| `f9b76322` | Publisher checks manager-recorded revision/Pod, physical hash, provenance presence and increasing sequence with an optimistic status patch | These are client-side checks. Same-Pod restart resets the process counter and can prevent publication for hours. No manager-owned acceptance record exists. |
+| `c5a2deeb` | Native admission compares authenticated token Pod UID with manager proof and submitted Pod UID; compiled contract digest updated | Render checks establish contract consistency. They do not execute CEL or validate real worker tokens. Revision, readiness, sequence and time constraints are not enforced by this added expression. |
 
-Focused provider tests cover exact evidence, missing/stale/wrong-identity
-rejection, and monotonic replay rejection; provider/controller/topology/
-topologyhealth race tests pass. This is an E01 ownership/freshness increment,
-not proof of the complete E01 admission contract: Kubernetes admission must
-still authenticate the caller's bound Pod identity, cross-process worker
-restart/session semantics and real API-server qualification remain open.
-Existing workers converge by retrying after the manager publishes their
-binding; no device mutation path is widened.
+At a 30-second sampling interval, a same-Pod restart after sequence 10,000
+rejects the first 10,000 new samples: roughly 83 hours before recovery.
+Repeated restarts can extend this further. A new manager-bound Pod can start
+at sequence one. The new `TestPublishNetworkObservationRestartSequenceCharacterization`
+records this distinction; its pass is **a reproduced defect, not restart
+acceptance**. Do not deploy the current counter behavior as the finished E01
+implementation.
 
-The chart's native `ValidatingAdmissionPolicy` now adds the same bound-token
-Pod-UID check used by the functional worker policies: a network worker status
-request is denied unless the authenticated token's
-`authentication.kubernetes.io/pod-uid` equals both the manager-recorded
-network-worker Pod and the submitted observation. The preflight contract
-digest and Helm render shape were updated together, and the render contract
-plus `cmd/cisco-vk` tests pass. This closes the chart-side caller/Pod identity
-check for clusters that issue bound service-account tokens; a real API-server
-negative test and cluster-version capability check are still required before
-calling E01 admission qualified.
+The previously captured `/tmp/cvk-envtest.log` now contains successful provider
+and controller package results (176.478s and 13.318s). This is historical local
+suite evidence without per-test counts. The existing `startEnvtest` installs
+CRDs, uses an administrative client, and does **not** install the Helm
+ValidatingAdmissionPolicies or issue worker tokens. The prior statement that
+the Kubernetes 1.35 admission suite passed must therefore be read as CRD/schema
+coverage only; E01-C/E authorization remains unqualified. New tests below
+exercise persisted observations separately from authorization.
+
+Execute these reviewable increments in order; retain the full E00–E13 scope:
+
+| Next | Implementation deliverable | Required tests and exit condition |
+| --- | --- | --- |
+| N1 / E01-B | Replace process-local sequence allocation with restart-safe persisted ordering. Read the current high-water value and binding through a live reader before collecting; collect a fresh sample; re-read and publish the next sequence with a resource-version precondition only while the preceding sample/binding still match. Retry unrelated manager status conflicts boundedly; discard/recollect if sample or binding changed, never renumber an old sample. Bound counter overflow. Add manager-owned acceptance of the exact Pod/revision/sequence/hash and original sample time; new opted-in checks require populated expected identity. | Same-Pod restart at sequence 10,000 resumes within two healthy 30-second cycles, without waiting to catch up. Cover two concurrent producers, stale cached reads, lost write acknowledgement, manager restart, Pod replacement, old-Pod replay, overflow and time regression; old evidence must never regain freshness. Replace the characterization test with the positive recovery regression. |
+| N2 / E01-C/E | Extend native admission to validate submitted provenance and ordering against the old object, and protect manager acceptance. Audit metadata and the entire status delta, including optional fields. Preserve exactly two functional ServiceAccounts and RO/RW profiles. Define chart/binary/schema rollout and rollback order with matching preflight digests. | Install rendered policies on a disposable API server; wait for policy readiness/type-check results. Exercise actual bound tokens for correct, peer-device, replaced and missing-Pod callers; direct status patches must not bypass publisher checks. Test app/unrelated callers, RO mutation denials, absent optional health fields, forged readiness/revision/sequence/time, metadata changes, manager writes and old/new chart/binary combinations. Zero unauthorized writes/RPCs. |
+| N3 / E00/E01-A/B, E02-A | Prove timeout-to-incomplete publication, bound error text to CRD limits and preserve oldest-source times. Complete VRF/process/remote-port identity and rate-source fixtures. Finish delayed-binding/retained-leaf regressions and reproducible generation. | Context-aware hung source reaches the collection deadline, publishes valid incomplete evidence within the separate write budget, then prior complete evidence expires. Parent cancellation stops both phases. Real API accepts normalized malformed-source diagnostics; test 64/65 records, delimiter/length limits and measured-zero/absent/overflow rates. Retained predecessors dispatch zero RPCs. |
+| N4 / E00, E01-D/E, E02-B | Build one clean candidate after N1–N3. Record source, chart/admission/CRD and resolved container digests. Re-establish exclusive lab ownership, service probes and recovery access; deploy and compare RO observations to physical CLI before disruption. | Save all three log planes, exact UID/revision bindings, fresh secure OS.Verify plus device inventory, and independent service baselines. The last Node listing reported `.101` on 17.18.3 despite the archived downgrade to 17.18.02: resolve through fresh device CLI/Verify, not assumed history. |
+| N5 / E03 and E04 | Implement administrator protection, overlapping budgets and evidence-bound expiring grants; qualify the device preparation/activation boundary on the isolated cohort. | Claim-time and recovery/soak checks deny new mutations after stale evidence or grant expiry. E04-A–D prove transfer, durable staging identity, restart and explicit activation in both directions before enabling E05/E06. |
+
+N1–N3 can proceed locally without physical traffic hardware. N4 gates the next
+disruptive run; E04 discovery and E11 capability inventory may proceed read-only
+earlier. E05/E06 fixtures can be developed while hardware qualification is
+pending, but their physical acceptance requires E04. Then execute orders 4–8
+below for placement/TAS, graph/distribution, ownership/scale/second platform,
+and E13. No package is closed by this review.
 
 ## 1. Scope, ordering and completion accounting
 
@@ -66,7 +78,7 @@ deliverables.
 | Package | Roadmap | Work to execute | Prerequisites | Package status and remaining gate |
 | --- | --- | --- | --- | --- |
 | E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | In progress: combined physical rollouts and a sanitized durable evidence index are saved; complete log-plane capture, reproducible candidate, capability matrix and service baseline remain. |
-| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: source/interface identities, collection metadata and expected producer/provenance checks are present; replay ordering, VRF context and full negative/API/physical coverage remain. |
+| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: publisher binding/sequence guards, separate write deadline and native Pod-UID expression landed; same-Pod restart recovery, manager acceptance, full API enforcement, VRF context and physical coverage remain (N1–N4). |
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
 | E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: campaign-local gate exists; administrator protection, overlapping memberships, transfer pacing and evidence-bound expiring grants require implementation. |
 | E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Not started for the independent boundary: combined upgrade/downgrade evidence exists, but E04-A–D remain unqualified. |
@@ -109,22 +121,22 @@ log does not establish healthy network-worker reconciliation.
 
 ### Review findings that change the next work
 
-This table reflects source at the 1 October follow-up review, including the
-uncommitted fixes used in the lab. A partial code correction does not close
-the corresponding package's integration and physical gates.
+This table reflects source through `e7f3e8bf`. Historical lab findings remain
+qualified by their recorded image. The N1–N5 queue above defines the immediate
+implementation/test sequence.
 
 | Priority/package | Current code evidence | Required change and proof |
 | --- | --- | --- |
-| First: E01 producer and freshness acceptance | `evaluateNetworkHealth` compares the managed network revision/Pod, non-zero sequence and bounded collection interval at plan freeze. Pod comparison is skipped when the expected UID is empty; the legacy-worker fallback can supply that case. `PublishNetworkObservation` checks Device/Node binding, not durable sample ordering. | Persist manager-owned acceptance and oldest-source freshness. Reject missing expected identity for new opted-in behavior; explicitly migrate legacy workers. Cover container/process restart within the same Pod as well as Pod replacement. E01-B/C must reject replay even with fresh heartbeat/readiness. |
-| First: E01 authenticated write ownership | In `topology-admission.yaml`, `networkObservationOnly` recognizes the shared network ServiceAccount username and restricts changed fields, but does not bind the request's authenticated Pod UID to that target's manager-owned network worker proof. The sample's `workerPodUID` is caller-supplied. | Bind the actual request identity to the exact target/Pod using native admission and existing bound-token metadata; reject absent metadata, peer-device and stale-Pod writes. Do not mistake equality of a supplied string for authenticated provenance. Prove the rule on a real API server while preserving two functional accounts. |
+| First: E01 producer and freshness acceptance | Publisher checks increasing persisted sequence, revision and Pod, but its process-local counter resets. Gate still skips comparison for an empty expected Pod; no independent manager acceptance or oldest-source time exists. | N1: restart-safe ordering, manager-owned acceptance and strict required identity. E01-B/C must reject replay without delaying legitimate restart recovery. |
+| First: E01 authenticated write ownership | Native policy now binds authenticated Pod UID to manager proof and sample. Added expression does not validate producer revision/readiness, sequence progression or timestamps; publisher-side guards are bypassable by a direct API request from the bound worker. | N2: real bound-token tests, server-enforced provenance/order, protected acceptance and full-field/metadata delta audit. Preserve the two functional accounts and test chart/binary migration. |
 | First: E03 claim-time and recovery checks | The only production `evaluateNetworkHealth` call is in `freezeTarget`; execution/recovery use generic managed health. A passing planning sample does not ensure healthy network evidence when a later claim is made. | Re-evaluate accepted network evidence before grants, at each mutation claim via evidence-bound authority, and during recovery/soak. E03-F must cover plan-to-approval delay, install-to-activation delay, API/cache lag and post-operation network failure; assert zero new forbidden RPCs. Do not advertise the planning check as continuous network protection. |
-| First: E01 read-only mode and collection bounds | Uncommitted changes enable the RO publisher and add status RBAC plus a 20-second cycle context. The same deadline covers collection and publication, so a timed-out collection cannot publish its incomplete result with that expired context. RBAC comments claim exact-worker confinement that current observation admission does not establish. | Land authenticated observation admission with RO wiring as one increment. Reserve a separate bounded publication budget; prove hung-source cancellation, schema-valid incomplete publication and expiry of prior complete samples. Test RO startup and denial of every mutation path; correct misleading comments. |
+| First: E01 read-only mode and collection bounds | RO publisher/status RBAC and separate 20-second collection/5-second write contexts are implemented. Normalization errors include input strings without bounding the combined reason to 256 characters. | N3: timeout-to-incomplete publisher regression, schema-valid error normalization and prior-sample expiry. N2/N4: integrated RO startup, status authorization and denial of every device mutation path. |
 | First: E00/E13 retained-leaf reconciliation | Uncommitted `bindingDenied` handling skips a status write on failed binding; one unit test checks the replacement-Pod case. This is separate from new-object binding delays still seen by DeviceOperation and leaf reconcilers. | Test settled and unresolved predecessors with a status-write spy and zero RPC assertions, including missing binding/API-read errors and manager recovery. For new objects, wait boundedly for the exact manager binding before status/transport work; preserve real wrong-Pod denial. Require real-API and lab regression without deleting retained history. |
 | First: E01 adjacency identity and compatibility | New identities include source, peer, local interface and OSPF area; `common.OSPFNeighbor` has no VRF/process identity. Area is not a VRF. `RequiredNeighbors` still selects only a peer string and blocks when it resolves to multiple adjacencies. | Preserve actual VRF/process and remote-interface context where available; specify an unambiguous selector/migration for legitimate multi-adjacency peers. Test delimiter-bearing identities, field limits, old/new workers and the map-to-atomic CRD transition. Do not describe the list topology change as purely additive. |
 | First: E02 absent rates | `InterfaceStats` now carries direction-specific presence/validity; IOS-XE marks missing leaves and Kbps conversion overflow invalid, while measured zero remains valid. `interfaceHeadroom` returns Unknown unless both directions are present and valid. | Add driver/API fixtures for every supported YANG representation and independently measure idle/load behavior (E02-A/B). Keep supervisor/stack health separate until it has a qualified source. |
 | Next: E03–E06 missing runtime contracts | `AdminPolicyConfig` has no required network checks or overlapping groups; the campaign has a network gate and plan approval. The lifecycle backend exposes inventory and registration, but no durable separately approved staged-receipt workflow. | Implement E03 independently; qualify E04 before finalizing E05/E06 platform semantics. Existing `NoReboot`, claims and approval hashes cannot satisfy these new contracts by renaming states. |
 | Next: E07/E08 placement and group eligibility | `validateDrainPodSpec` explicitly rejects node selectors, required affinity and hard topology spread. The native TAS script uses fixture Nodes and installs no CVK runtime. | Add only qualified placement eligibility and fail-closed raw group recognition before expanding drain; pass E07-A–D and E08-A–D with portable applications and independent probes. |
-| Next: E10 graph correctness and integration | The uncommitted fix hashes structured JSON and bounds adjacency state. Conflicting duplicate diagnostics still use the incoming peer, and reverse-link matching compares the same local interface name at both ends. The helper has no production caller. | Add a hash regression that actually collides under the old encoding, including explicit identities; make edges and diagnostics order-independent for conflicting peers; match local/remote ports or report insufficient identity. Finish bounds, accepted provenance, manager diagnostics and CLI. Graph completeness must not imply path health. |
+| Next: E10 graph correctness and integration | Structured hash, local/remote-port matching and two-input conflicting-peer correction are committed. The helper has no production caller or accepted-sample provenance. | Extend permutation coverage to three or more conflicting values and duplicate device observations; prove old-encoding collision regression and all bounds. Integrate manager/CLI diagnostics after E01/E03. Graph completeness must not imply path health. |
 | Evidence: E10 test claims | Tests now cover reordered conflicting input, matching declarations, stale input, known-peer asymmetry, state-sensitive hashing and input limits. Runtime publication, physical drift and manager/CLI integration remain untested. | Add missing/unexpected declared-link, diagnostic-boundary, field-encoding and runtime API tests before claiming E10-A–D coverage. |
 
 ### Next execution sequence and required tests
@@ -364,7 +376,7 @@ git diff --check
 helm lint charts/cisco-virtual-kubelet
 bash charts/cisco-virtual-kubelet/tests/topology-render-test.sh
 
-# Real API-server/CEL tests: install the pinned setup-envtest from Makefile.
+# Real API-server CRD/schema tests; rendered policy/token tests are a separate lane.
 go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20260305142021-f9589b9f2b9d
 # Ensure the go install binary directory is in PATH, then run:
 make test-envtest
@@ -464,7 +476,9 @@ Current increment: `938a488f` added newer-path OSPF adjacency traversal and
 source/limit corrections; `9523720c` added source/interface identities and
 collection metadata; `6bd7d471` adds producer, sequence, collection-window,
 and directional-rate validity checks; `0884666e` binds observations to the
-network-worker Pod UID. These increments do not close the full manager
+network-worker Pod UID. `4711d3c7` separates collection/write deadlines;
+`f9b76322` adds publisher binding/sequence guards; `c5a2deeb` adds native
+authenticated Pod-UID comparison. These increments do not close the full manager
 acceptance contract. Keep the positive publication evidence, then
 execute the remaining work below.
 
@@ -536,6 +550,40 @@ execute the remaining work below.
 Close E01 only when the new negative tests fail against the old behavior,
 pass against the correction, and physical observations match their declared
 coverage. A successful transport call alone cannot pass E01-D.
+
+### Review regression coverage and next test additions
+
+These test names are the handoff for the next implementer; a passing
+characterization must not be counted as a passed future acceptance gate.
+
+| Test / lane | Current assertion | Remaining acceptance |
+| --- | --- | --- |
+| `TestPublishNetworkObservationRequiresExactManagedWorkerBinding` | Exact publication preserves manager status; 11 negative cases assert the specific rejection and unchanged persisted status; repeated sequence rejected and next sequence accepted | Add write spies, stale-reader/conflict/lost-response cases, collection time vs Pod start/readiness, and live-manager acceptance to N1. |
+| `TestPublishNetworkObservationRestartSequenceCharacterization` | Same Pod/sequence one is rejected after persisted 10,000; new manager-bound Pod/sequence one succeeds | Reproduces the current availability defect. Replace with end-to-end publisher recovery within two cycles and stale-process exclusion in N1. |
+| `TestEnvtest_NetworkObservationStatusRoundTrip` | Kubernetes 1.35 CRD accepts complete then incomplete samples and preserves manager fields. Duplicate interface/CDP inputs with 128-character names produce a combined reason over 256 characters: CRD rejects it and retains prior evidence. | Admin-client schema/persistence coverage plus characterization of the N3 diagnostic-length defect. Replace the malformed-input rejection with successful normalized incomplete publication after repair; test partially initialized manager health separately. Do not count as token/policy coverage. |
+| Helm render/preflight lane | Policy structure and compiled digest agree | N2 must install the exact rendered policies, inspect their type-check results, and test authenticated tokens against them. |
+| Required new N2 admission suite | Not implemented by this review | Correct/peer/stale/missing-Pod tokens; direct API replay and forged provenance; optional fields; manager acceptance immutability; app and RO mutation denial; chart/binary migration. Require a positive write for the authorized worker so universal denial cannot pass the suite. |
+| Required new N3 publisher timeout suite | Not implemented by this review | Actual collection cancellation followed by a successful incomplete status write under its independent deadline, parent cancellation and API-outage expiry; use clock/deadline injection where practical. |
+
+Review validation commands (repository root):
+
+```sh
+GOCACHE=/tmp/cvk-gocache go test -race -count=1 ./internal/provider \
+  -run '^Test(BuildNetworkObservation|PublishNetworkObservation)'
+# Use the pinned setup-envtest version from Makefile and its 1.35.0 assets.
+KUBEBUILDER_ASSETS="$(setup-envtest use 1.35.0 -p path)" \
+  GOCACHE=/tmp/cvk-gocache go test -tags envtest -count=1 -v \
+  ./internal/provider -run '^TestEnvtest_NetworkObservationStatusRoundTrip$'
+git diff --check
+```
+
+The focused race lane passed (six top-level tests, including eleven publisher
+negative cases and two restart cases). The new Kubernetes 1.35 round-trip
+test passed with exit code zero and no skips. `mkdocs build --strict` and
+`git diff --check` passed. Results apply to this documentation/test revision
+over `e7f3e8bf`. No runtime, chart, lab deployment or device software was changed
+by this review. Full E00-G still requires generation parity and the complete
+candidate CI/envtest matrix; the recorded local subset does not close it.
 
 ## 5. E02 — supply measured path and platform-health inputs
 
@@ -851,9 +899,9 @@ Current implementation is a pure helper in `internal/topology/graph.go` with
 partial fixture coverage and no production caller. E10-A is partial; E10-B/C and
 the runtime consumer are not qualified. `GraphObservation.ObservedAt` is checked
 only when `MaxObservationAge` is positive; accepted-worker/sample provenance
-is absent. Structured JSON hashing and a state-length bound are present in
-the uncommitted correction. Collision-regression strength, conflicting-peer
-diagnostics and reverse-link matching still require the tests/repairs below.
+is absent. Structured JSON hashing, state bounds, two-input conflicting-peer
+diagnostics and remote-port reverse matching are committed. Broader permutation,
+collision, bounds and integration coverage still require the tests below.
 
 ### Required updates
 
@@ -1145,8 +1193,10 @@ Repository verification for this execution passed `go test -race -count=1
 --check`. The earlier full race suite, Helm lint, render and MkDocs results
 remain evidence for their tested source states. Harness edits after those
 checks and the dirty build must not inherit full candidate qualification.
-The attempted `make test-envtest` stopped because `setup-envtest` was absent;
-install the pinned tool and run E00-G before candidate acceptance.
+At the historical physical checkpoint, `make test-envtest` stopped because
+`setup-envtest` was absent. The later local run downloaded the pinned tool and
+1.35.0 assets and completed both packages; see the current review above.
+Re-run the full E00-G matrix for the eventual deployment candidate.
 
 ### Follow-up drain qualification: settled worker images (1 Oct 2026)
 

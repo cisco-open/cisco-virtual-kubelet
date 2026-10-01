@@ -10,6 +10,7 @@ import (
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
+	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -141,17 +142,123 @@ func TestBuildNetworkObservationPublishesConservativeHeadroom(t *testing.T) {
 }
 
 func TestPublishNetworkObservationRequiresExactManagedWorkerBinding(t *testing.T) {
+	device, observation := topologyObservationFixture()
+	apiClient := newTopologyObservationClient(t, device)
+	if err := PublishNetworkObservation(context.Background(), apiClient,
+		types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, device.UID, observation); err != nil {
+		t.Fatalf("exact binding rejected: %v", err)
+	}
+	var updated ciskov1.CiscoDevice
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &updated); err != nil {
+		t.Fatal(err)
+	}
+	wantStatus := device.Status.DeepCopy()
+	wantStatus.HealthObservation.Network = observation.DeepCopy()
+	if !equality.Semantic.DeepEqual(updated.Status, *wantStatus) {
+		t.Fatalf("publication changed fields outside network evidence: got %#v, want %#v", updated.Status, *wantStatus)
+	}
+	if err := PublishNetworkObservation(context.Background(), apiClient,
+		client.ObjectKeyFromObject(device), device.UID, observation); err == nil {
+		t.Fatal("replayed observation was accepted")
+	}
+	newer := observation.DeepCopy()
+	newer.SampleSequence = 2
+	if err := PublishNetworkObservation(context.Background(), apiClient,
+		client.ObjectKeyFromObject(device), device.UID, newer); err != nil {
+		t.Fatalf("newer observation rejected: %v", err)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*ciskov1.CiscoDevice, *ciskov1.DeviceNetworkObservationStatus)
+		want   string
+	}{
+		{"missing binding", func(d *ciskov1.CiscoDevice, _ *ciskov1.DeviceNetworkObservationStatus) {
+			d.Status.NetworkWorkerRevision = nil
+		}, "binding is absent"},
+		{"replacement device", func(d *ciskov1.CiscoDevice, _ *ciskov1.DeviceNetworkObservationStatus) { d.UID = "replacement" }, "device UID changed"},
+		{"missing Node binding", func(d *ciskov1.CiscoDevice, _ *ciskov1.DeviceNetworkObservationStatus) { d.Status.NodeIdentity = nil }, "not manager-bound"},
+		{"revision rollout pending", func(d *ciskov1.CiscoDevice, _ *ciskov1.DeviceNetworkObservationStatus) {
+			d.Status.NetworkWorkerRevision.DesiredRevision = "sha256:" + strings.Repeat("b", 64)
+		}, "not at the desired revision"},
+		{"Pod not ready", func(d *ciskov1.CiscoDevice, _ *ciskov1.DeviceNetworkObservationStatus) {
+			d.Status.NetworkWorkerRevision.PodReadyTime = nil
+		}, "no valid ready Pod"},
+		{"stale revision", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
+			o.ProducerRevision = "sha256:" + strings.Repeat("b", 64)
+		}, "producer revision"},
+		{"wrong Pod", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
+			o.WorkerPodUID = "old-pod-uid"
+		}, "worker Pod UID"},
+		{"missing Pod", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) { o.WorkerPodUID = "" }, "worker Pod UID"},
+		{"wrong physical identity", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
+			o.DeviceIdentityHash = identityHash("other-device")
+		}, "device identity"},
+		{"missing provenance", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) { o.SampleSequence = 0 }, "missing collection provenance"},
+		{"reversed interval", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
+			o.CollectionEndedAt = metav1.NewTime(o.CollectionStartedAt.Add(-time.Second))
+		}, "interval is invalid"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d, o := device.DeepCopy(), observation.DeepCopy()
+			tc.mutate(d, o)
+			c := newTopologyObservationClient(t, d)
+			before := d.Status.DeepCopy()
+			err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), device.UID, o)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error = %v, want %q", err, tc.want)
+			}
+			var after ciskov1.CiscoDevice
+			if err := c.Get(context.Background(), client.ObjectKeyFromObject(d), &after); err != nil {
+				t.Fatal(err)
+			}
+			if !equality.Semantic.DeepEqual(after.Status, *before) {
+				t.Fatal("rejected publication changed persisted status")
+			}
+		})
+	}
+}
+
+// Characterizes the E01-B restart defect: the process-local counter starts at
+// one again in the same Pod. Rejection protects ordering, but does not prove
+// timely recovery. Replace this with bounded recovery coverage when the
+// manager-accepted producer session or durable sequence protocol lands.
+func TestPublishNetworkObservationRestartSequenceCharacterization(t *testing.T) {
+	for _, replacement := range []bool{false, true} {
+		t.Run(fmt.Sprintf("replacementPod=%t", replacement), func(t *testing.T) {
+			d, o := topologyObservationFixture()
+			previous := o.DeepCopy()
+			previous.SampleSequence = 10000
+			d.Status.HealthObservation.Network = previous
+			if replacement {
+				d.Status.NetworkWorkerRevision.PodUID = "replacement-pod"
+				o.WorkerPodUID = "replacement-pod"
+			}
+			c := newTopologyObservationClient(t, d)
+			err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, o)
+			if replacement && err != nil {
+				t.Fatalf("new bound Pod cannot start at sequence one: %v", err)
+			}
+			if !replacement && (err == nil || !strings.Contains(err.Error(), "not newer than accepted sequence 10000")) {
+				t.Fatalf("same-Pod counter reset behavior changed: %v; review E01-B acceptance", err)
+			}
+		})
+	}
+}
+
+func topologyObservationFixture() (*ciskov1.CiscoDevice, *ciskov1.DeviceNetworkObservationStatus) {
 	const revision = "sha256:" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	now := metav1.NewTime(time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC))
+	started := metav1.NewTime(now.Add(-time.Minute))
+	ready := metav1.NewTime(now.Add(-30 * time.Second))
 	device := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{
 		Namespace: "lab", Name: "device-a", UID: types.UID("device-uid"), ResourceVersion: "1",
 	}}
 	device.Status.NodeIdentity = &ciskov1.DeviceNodeIdentityStatus{
-		NodeName: "device-a", NodeUID: "node-uid", DeviceUID: "device-uid", PhysicalIdentity: "SERIAL-01",
+		NodeName: "device-a", NodeUID: "node-uid", DeviceUID: "device-uid", PhysicalIdentity: "serial-01",
 	}
 	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
 		DesiredRevision: revision, ObservedRevision: revision, DeploymentUID: "deployment-uid",
-		DeploymentGeneration: 3, PodUID: "network-pod-uid", PodStartTime: &now, PodReadyTime: &now,
+		DeploymentGeneration: 3, PodUID: "network-pod-uid", PodStartTime: &started, PodReadyTime: &ready,
 		ObservedAt: now,
 	}
 	observation := &ciskov1.DeviceNetworkObservationStatus{
@@ -159,58 +266,11 @@ func TestPublishNetworkObservationRequiresExactManagedWorkerBinding(t *testing.T
 		CollectionEndedAt: now, SampleSequence: 1, ObservedAt: now, Complete: true,
 		ProducerRevision: revision, DeviceIdentityHash: identityHash("serial-01"),
 	}
-	apiClient := newTopologyObservationClient(t, device)
-	if err := PublishNetworkObservation(context.Background(), apiClient,
-		types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, device.UID, observation); err != nil {
-		t.Fatalf("exact binding rejected: %v", err)
+	device.Spec = ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, Address: "192.0.2.10", Username: "admin", PhysicalIdentity: "serial-01"}
+	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{
+		ObservedAt: now, NodeReadyHeartbeatTime: now, DeviceConditionsHash: identityHash("conditions"),
 	}
-	var updated ciskov1.CiscoDevice
-	if err := apiClient.Get(context.Background(), types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, &updated); err != nil {
-		t.Fatal(err)
-	}
-	if updated.Status.HealthObservation == nil || updated.Status.HealthObservation.Network == nil {
-		t.Fatal("exact binding did not publish network observation")
-	}
-	if err := PublishNetworkObservation(context.Background(), apiClient,
-		types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, device.UID, observation); err == nil {
-		t.Fatal("replayed observation was accepted")
-	}
-	newer := observation.DeepCopy()
-	newer.SampleSequence = 2
-	if err := PublishNetworkObservation(context.Background(), apiClient,
-		types.NamespacedName{Namespace: device.Namespace, Name: device.Name}, device.UID, newer); err != nil {
-		t.Fatalf("newer observation rejected: %v", err)
-	}
-	for _, tc := range []struct {
-		name   string
-		mutate func(*ciskov1.CiscoDevice, *ciskov1.DeviceNetworkObservationStatus)
-	}{
-		{name: "missing binding", mutate: func(d *ciskov1.CiscoDevice, _ *ciskov1.DeviceNetworkObservationStatus) {
-			d.Status.NetworkWorkerRevision = nil
-		}},
-		{name: "stale revision", mutate: func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
-			o.ProducerRevision = "sha256:" + strings.Repeat("b", 64)
-		}},
-		{name: "wrong Pod", mutate: func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
-			o.WorkerPodUID = "old-pod-uid"
-		}},
-		{name: "wrong physical identity", mutate: func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
-			o.DeviceIdentityHash = identityHash("other-device")
-		}},
-		{name: "missing provenance", mutate: func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
-			o.SampleSequence = 0
-		}},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			d := device.DeepCopy()
-			o := observation.DeepCopy()
-			tc.mutate(d, o)
-			if err := PublishNetworkObservation(context.Background(), newTopologyObservationClient(t, d),
-				types.NamespacedName{Namespace: d.Namespace, Name: d.Name}, d.UID, o); err == nil {
-				t.Fatal("mismatched publisher evidence was accepted")
-			}
-		})
-	}
+	return device, observation
 }
 
 func newTopologyObservationClient(t *testing.T, device *ciskov1.CiscoDevice) client.Client {
