@@ -193,7 +193,9 @@ func TestPublishNetworkObservationRequiresExactManagedWorkerBinding(t *testing.T
 		{"wrong physical identity", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
 			o.DeviceIdentityHash = identityHash("other-device")
 		}, "device identity"},
-		{"missing provenance", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) { o.SampleSequence = 0 }, "missing collection provenance"},
+		{"missing provenance", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
+			o.CollectionStartedAt = metav1.Time{}
+		}, "missing collection provenance"},
 		{"reversed interval", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
 			o.CollectionEndedAt = metav1.NewTime(o.CollectionStartedAt.Add(-time.Second))
 		}, "interval is invalid"},
@@ -218,30 +220,47 @@ func TestPublishNetworkObservationRequiresExactManagedWorkerBinding(t *testing.T
 	}
 }
 
-// Characterizes the E01-B restart defect: the process-local counter starts at
-// one again in the same Pod. Rejection protects ordering, but does not prove
-// timely recovery. Replace this with bounded recovery coverage when the
-// manager-accepted producer session or durable sequence protocol lands.
-func TestPublishNetworkObservationRestartSequenceCharacterization(t *testing.T) {
+func TestPublishNetworkObservationRestartSequenceRecovery(t *testing.T) {
 	for _, replacement := range []bool{false, true} {
 		t.Run(fmt.Sprintf("replacementPod=%t", replacement), func(t *testing.T) {
 			d, o := topologyObservationFixture()
 			previous := o.DeepCopy()
 			previous.SampleSequence = 10000
 			d.Status.HealthObservation.Network = previous
+			o.SampleSequence = 0
 			if replacement {
 				d.Status.NetworkWorkerRevision.PodUID = "replacement-pod"
 				o.WorkerPodUID = "replacement-pod"
 			}
 			c := newTopologyObservationClient(t, d)
 			err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, o)
-			if replacement && err != nil {
-				t.Fatalf("new bound Pod cannot start at sequence one: %v", err)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if !replacement && (err == nil || !strings.Contains(err.Error(), "not newer than accepted sequence 10000")) {
-				t.Fatalf("same-Pod counter reset behavior changed: %v; review E01-B acceptance", err)
+			var got ciskov1.CiscoDevice
+			if err := c.Get(context.Background(), client.ObjectKeyFromObject(d), &got); err != nil {
+				t.Fatal(err)
+			}
+			want := uint64(1)
+			if !replacement {
+				want = 10001
+			}
+			if got.Status.HealthObservation == nil || got.Status.HealthObservation.Network == nil ||
+				got.Status.HealthObservation.Network.SampleSequence != want {
+				t.Fatalf("accepted sequence=%v, want %d", got.Status.HealthObservation.Network, want)
 			}
 		})
+	}
+}
+
+func TestPublishNetworkObservationRejectsSequenceExhaustion(t *testing.T) {
+	d, o := topologyObservationFixture()
+	d.Status.HealthObservation.Network = o.DeepCopy()
+	d.Status.HealthObservation.Network.SampleSequence = ^uint64(0)
+	o.SampleSequence = 0
+	c := newTopologyObservationClient(t, d)
+	if err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, o); err == nil || !strings.Contains(err.Error(), "exhausted") {
+		t.Fatalf("sequence exhaustion error = %v", err)
 	}
 }
 

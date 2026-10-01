@@ -6,13 +6,13 @@ November release work, **not a merge recommendation or completed roadmap**.
 No E00–E13 package has all its exit gates closed. Do not promote this branch
 on the strength of the physical software-transition results alone.
 
-Review update: source through `e7f3e8bf`, 1 October 2026. Follow the execution
-plan's **N1–N5 queue** before its broader orders 4–8. First repair same-Pod
-sequence reset/recovery (N1), qualify and extend native API enforcement (N2),
-finish timeout/schema/source/binding regressions (N3), and deploy a clean
-candidate for physical read-only acceptance (N4). E03 policy and E04 device
-boundary qualification follow (N5). The earlier saved physical evidence
-continues to refer to its historical images.
+Review update: the execution plan's **N1–N5 queue** remains authoritative.
+Restart-safe persisted sequence allocation (N1 sequence portion) and bounded
+diagnostic normalization (N3 schema portion) are now implemented and locally
+tested. Manager-owned acceptance, native API enforcement, timeout/source
+regressions, and clean-candidate physical read-only acceptance remain before
+N4/N5. The earlier saved physical evidence continues to refer to its
+historical images.
 
 ## Start here
 
@@ -40,7 +40,7 @@ git log -1 --format=fuller -- docs/topology-november-handoff.md
 | Latest `.101` downgrade | `665a7954-settled5`, 08:04–08:34 UTC, 1 October; `Succeeded`, gNOI `17.18.02.0.4112.1766116039`, settled drain/session, replacement Pods Ready on `.100` | Original collector **STOPPED** during app-log classification, before saving manager/network logs; no full end-to-end harness pass |
 | Drain callback repair | Exact released device-clean completion recognized after promotion to `SoftwareMutation`, settlement and Pod disappearance; regression tests retained | Released completion is acknowledgement-only, not authority for another device teardown. Broader lifecycle/fault/service qualification remains E07 |
 | Retained worker history | Wrong-bound worker skips forbidden leaf status updates | Missing/new binding, read failures, unresolved predecessors and real-API zero-dispatch tests still required |
-| Observation work | `4711d3c7`: separate write budget; `f9b76322`: publisher identity/order guards; `c5a2deeb`: native token Pod-UID comparison | Same-Pod restart blocks sequence recovery; client-side order checks are not API enforcement. Manager acceptance and genuine bound-token negatives remain N1/N2. |
+| Observation work | `4711d3c7`: separate write budget; `f9b76322`: publisher identity/order guards; current follow-up: persisted sequence allocation and bounded diagnostics; `c5a2deeb`: native token Pod-UID comparison | Client-side order checks are not API enforcement. Manager acceptance, genuine bound-token negatives, timeout/source regressions and physical qualification remain N1–N4. |
 | Graph helper | Structured hash/field bounds, remote-port reverse identity and two-input conflict correction (`4711d3c7`) | Three-way permutations and duplicate-device cases still need qualification; no production consumer or physical drift acceptance. |
 | Harness | Explicit source/target validation, direction-specific runs, binding observation, log-plane capture attempt, exact preceding cleanup-log correlation | Binding observation does not establish RPC order; offline marker correlation does not prove service health or complete drain safety |
 
@@ -127,8 +127,9 @@ ordering, and incomplete drain/service evidence. Also reproduce the transient
 multiple reconcile periods (E00-D). Do not bypass these guards, disable
 admission, widen accounts or force-delete Pods to obtain a green test.
 
-The current review adds publisher negative/preservation tests, a same-Pod vs
-replacement-Pod characterization, and `TestEnvtest_NetworkObservationStatusRoundTrip`.
+The current review adds publisher negative/preservation tests, same-Pod restart
+recovery/overflow coverage, bounded malformed-source publication, and
+`TestEnvtest_NetworkObservationStatusRoundTrip`.
 The latter runs CRD validation with an administrative client, without Helm
 admission policies. Do not count it as E01-C/E bound-token authorization.
 Keep local test exit codes and pass/skip counts: `go test` without `-tags

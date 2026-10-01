@@ -28,16 +28,18 @@ them; proposed API concepts are not apply-ready YAML.
 | Commit | Implemented | Qualification boundary |
 | --- | --- | --- |
 | `4711d3c7` | Separate 20-second collection and 5-second publication contexts; remote-port graph identity and two-input conflict diagnostic correction | Timeout fallback still needs end-to-end publisher testing. Graph helper has no runtime consumer; three-way conflict permutations remain untested. |
-| `f9b76322` | Publisher checks manager-recorded revision/Pod, physical hash, provenance presence and increasing sequence with an optimistic status patch | These are client-side checks. Same-Pod restart resets the process counter and can prevent publication for hours. No manager-owned acceptance record exists. |
+| `f9b76322` plus current follow-up | Publisher checks manager-recorded revision/Pod, physical hash and provenance, allocates the next sequence from persisted status, and patches with an optimistic status precondition | These are still client-side checks. Manager-owned acceptance, server-enforced ordering/freshness and real worker-token qualification remain. |
 | `c5a2deeb` | Native admission compares authenticated token Pod UID with manager proof and submitted Pod UID; compiled contract digest updated | Render checks establish contract consistency. They do not execute CEL or validate real worker tokens. Revision, readiness, sequence and time constraints are not enforced by this added expression. |
 
-At a 30-second sampling interval, a same-Pod restart after sequence 10,000
-rejects the first 10,000 new samples: roughly 83 hours before recovery.
-Repeated restarts can extend this further. A new manager-bound Pod can start
-at sequence one. The new `TestPublishNetworkObservationRestartSequenceCharacterization`
-records this distinction; its pass is **a reproduced defect, not restart
-acceptance**. Do not deploy the current counter behavior as the finished E01
-implementation.
+The process-local counter defect is now repaired in the publisher: a sample
+with no sequence reads the persisted high-water value from the live
+`CiscoDevice`, advances it under an optimistic resource-version patch, and
+retries bounded conflicts. A same-Pod restart after sequence 10,000 therefore
+resumes at 10,001; a replacement worker Pod starts at one. Overflow is
+rejected. `TestPublishNetworkObservationRestartSequenceRecovery` covers both
+paths. This closes sequence allocation, but does not yet close manager-owned
+acceptance, server-enforced ordering, concurrent-producer qualification, or
+real bound-token admission.
 
 The previously captured `/tmp/cvk-envtest.log` now contains successful provider
 and controller package results (176.478s and 13.318s). This is historical local
@@ -52,9 +54,9 @@ Execute these reviewable increments in order; retain the full E00–E13 scope:
 
 | Next | Implementation deliverable | Required tests and exit condition |
 | --- | --- | --- |
-| N1 / E01-B | Replace process-local sequence allocation with restart-safe persisted ordering. Read the current high-water value and binding through a live reader before collecting; collect a fresh sample; re-read and publish the next sequence with a resource-version precondition only while the preceding sample/binding still match. Retry unrelated manager status conflicts boundedly; discard/recollect if sample or binding changed, never renumber an old sample. Bound counter overflow. Add manager-owned acceptance of the exact Pod/revision/sequence/hash and original sample time; new opted-in checks require populated expected identity. | Same-Pod restart at sequence 10,000 resumes within two healthy 30-second cycles, without waiting to catch up. Cover two concurrent producers, stale cached reads, lost write acknowledgement, manager restart, Pod replacement, old-Pod replay, overflow and time regression; old evidence must never regain freshness. Replace the characterization test with the positive recovery regression. |
+| N1 / E01-B | **Sequence allocation implemented:** the publisher reads the persisted high-water value and binding from the live object, assigns the next sequence only after a fresh collection, patches with an optimistic resource-version precondition, retries bounded conflicts, and rejects overflow. Manager-owned acceptance of exact Pod/revision/sequence/hash and original sample time is still pending. | Same-Pod restart recovery and Pod replacement are covered by `TestPublishNetworkObservationRestartSequenceRecovery`; overflow is covered. Remaining N1 work is concurrent-producer/stale-reader/lost-ack/manager-restart/time-regression coverage plus manager acceptance and stale-evidence exclusion. |
 | N2 / E01-C/E | Extend native admission to validate submitted provenance and ordering against the old object, and protect manager acceptance. Audit metadata and the entire status delta, including optional fields. Preserve exactly two functional ServiceAccounts and RO/RW profiles. Define chart/binary/schema rollout and rollback order with matching preflight digests. | Install rendered policies on a disposable API server; wait for policy readiness/type-check results. Exercise actual bound tokens for correct, peer-device, replaced and missing-Pod callers; direct status patches must not bypass publisher checks. Test app/unrelated callers, RO mutation denials, absent optional health fields, forged readiness/revision/sequence/time, metadata changes, manager writes and old/new chart/binary combinations. Zero unauthorized writes/RPCs. |
-| N3 / E00/E01-A/B, E02-A | Prove timeout-to-incomplete publication, bound error text to CRD limits and preserve oldest-source times. Complete VRF/process/remote-port identity and rate-source fixtures. Finish delayed-binding/retained-leaf regressions and reproducible generation. | Context-aware hung source reaches the collection deadline, publishes valid incomplete evidence within the separate write budget, then prior complete evidence expires. Parent cancellation stops both phases. Real API accepts normalized malformed-source diagnostics; test 64/65 records, delimiter/length limits and measured-zero/absent/overflow rates. Retained predecessors dispatch zero RPCs. |
+| N3 / E00/E01-A/B, E02-A | **Diagnostic bounding implemented:** normalization errors are reduced to fixed reason classes and defensively capped at the CRD's 256-byte limit; malformed-source evidence remains incomplete and API-valid. Timeout-to-incomplete publication, oldest-source preservation, VRF/process/remote-port identity, rate fixtures and retained-leaf regressions remain pending. | The 1.35 envtest proves malformed duplicate interface/CDP input is accepted as bounded incomplete evidence without changing manager fields. Remaining N3 work is a context-aware hung-source test with a separate write deadline, prior-sample expiry, parent cancellation, 64/65 record limits, delimiter/length tests and rate-source qualification. |
 | N4 / E00, E01-D/E, E02-B | Build one clean candidate after N1–N3. Record source, chart/admission/CRD and resolved container digests. Re-establish exclusive lab ownership, service probes and recovery access; deploy and compare RO observations to physical CLI before disruption. | Save all three log planes, exact UID/revision bindings, fresh secure OS.Verify plus device inventory, and independent service baselines. The last Node listing reported `.101` on 17.18.3 despite the archived downgrade to 17.18.02: resolve through fresh device CLI/Verify, not assumed history. |
 | N5 / E03 and E04 | Implement administrator protection, overlapping budgets and evidence-bound expiring grants; qualify the device preparation/activation boundary on the isolated cohort. | Claim-time and recovery/soak checks deny new mutations after stale evidence or grant expiry. E04-A–D prove transfer, durable staging identity, restart and explicit activation in both directions before enabling E05/E06. |
 
@@ -78,7 +80,7 @@ deliverables.
 | Package | Roadmap | Work to execute | Prerequisites | Package status and remaining gate |
 | --- | --- | --- | --- | --- |
 | E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | In progress: combined physical rollouts and a sanitized durable evidence index are saved; complete log-plane capture, reproducible candidate, capability matrix and service baseline remain. |
-| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: publisher binding/sequence guards, separate write deadline and native Pod-UID expression landed; same-Pod restart recovery, manager acceptance, full API enforcement, VRF context and physical coverage remain (N1–N4). |
+| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: publisher binding/sequence guards, restart-safe persisted sequence allocation, bounded diagnostic reasons, separate write deadline and native Pod-UID expression landed; manager acceptance, full API enforcement, VRF context and physical coverage remain (N1–N4). |
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
 | E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: campaign-local gate exists; administrator protection, overlapping memberships, transfer pacing and evidence-bound expiring grants require implementation. |
 | E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Not started for the independent boundary: combined upgrade/downgrade evidence exists, but E04-A–D remain unqualified. |
@@ -559,8 +561,8 @@ characterization must not be counted as a passed future acceptance gate.
 | Test / lane | Current assertion | Remaining acceptance |
 | --- | --- | --- |
 | `TestPublishNetworkObservationRequiresExactManagedWorkerBinding` | Exact publication preserves manager status; 11 negative cases assert the specific rejection and unchanged persisted status; repeated sequence rejected and next sequence accepted | Add write spies, stale-reader/conflict/lost-response cases, collection time vs Pod start/readiness, and live-manager acceptance to N1. |
-| `TestPublishNetworkObservationRestartSequenceCharacterization` | Same Pod/sequence one is rejected after persisted 10,000; new manager-bound Pod/sequence one succeeds | Reproduces the current availability defect. Replace with end-to-end publisher recovery within two cycles and stale-process exclusion in N1. |
-| `TestEnvtest_NetworkObservationStatusRoundTrip` | Kubernetes 1.35 CRD accepts complete then incomplete samples and preserves manager fields. Duplicate interface/CDP inputs with 128-character names produce a combined reason over 256 characters: CRD rejects it and retains prior evidence. | Admin-client schema/persistence coverage plus characterization of the N3 diagnostic-length defect. Replace the malformed-input rejection with successful normalized incomplete publication after repair; test partially initialized manager health separately. Do not count as token/policy coverage. |
+| `TestPublishNetworkObservationRestartSequenceRecovery` | Same Pod resumes at 10,001 after persisted 10,000; a replacement manager-bound Pod starts at one; overflow is rejected | Add concurrent-producer, stale-reader/lost-ack, manager restart, time regression and manager-acceptance coverage in N1. |
+| `TestEnvtest_NetworkObservationStatusRoundTrip` | Kubernetes 1.35 CRD accepts complete then incomplete samples and preserves manager fields. Duplicate interface/CDP inputs are reduced to bounded reason classes and accepted as incomplete evidence. | Admin-client schema/persistence coverage is passing. It is not token/policy coverage; add actual admission and partially initialized manager-health tests in N2/N3. |
 | Helm render/preflight lane | Policy structure and compiled digest agree | N2 must install the exact rendered policies, inspect their type-check results, and test authenticated tokens against them. |
 | Required new N2 admission suite | Not implemented by this review | Correct/peer/stale/missing-Pod tokens; direct API replay and forged provenance; optional fields; manager acceptance immutability; app and RO mutation denial; chart/binary migration. Require a positive write for the authorized worker so universal denial cannot pass the suite. |
 | Required new N3 publisher timeout suite | Not implemented by this review | Actual collection cancellation followed by a successful incomplete status write under its independent deadline, parent cancellation and API-outage expiry; use clock/deadline injection where practical. |
@@ -577,13 +579,14 @@ KUBEBUILDER_ASSETS="$(setup-envtest use 1.35.0 -p path)" \
 git diff --check
 ```
 
-The focused race lane passed (six top-level tests, including eleven publisher
-negative cases and two restart cases). The new Kubernetes 1.35 round-trip
-test passed with exit code zero and no skips. `mkdocs build --strict` and
-`git diff --check` passed. Results apply to this documentation/test revision
-over `e7f3e8bf`. No runtime, chart, lab deployment or device software was changed
-by this review. Full E00-G still requires generation parity and the complete
-candidate CI/envtest matrix; the recorded local subset does not close it.
+The focused race lane and the full `./internal/provider` package passed,
+including publisher negative cases, restart recovery and overflow. The new
+Kubernetes 1.35 round-trip test passed with exit code zero and no skips.
+`mkdocs build --strict` and `git diff --check` passed. Runtime publisher and
+normalization code changed in this review; no chart, lab deployment or device
+software was changed. Full E00-G still requires generation parity and the
+complete candidate CI/envtest matrix; the recorded local subset does not close
+it.
 
 ## 5. E02 — supply measured path and platform-health inputs
 

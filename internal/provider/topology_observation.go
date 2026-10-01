@@ -13,6 +13,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -22,17 +23,20 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	maxNetworkObservationInterfaces  = 64
-	maxNetworkObservationNeighbors   = 64
-	networkObservationInterval       = 30 * time.Second
-	networkObservationTimeout        = 20 * time.Second
-	networkObservationPublishTimeout = 5 * time.Second
+	maxNetworkObservationInterfaces    = 64
+	maxNetworkObservationNeighbors     = 64
+	maxNetworkObservationUnknownReason = 256
+	networkObservationInterval         = 30 * time.Second
+	networkObservationTimeout          = 20 * time.Second
+	networkObservationPublishTimeout   = 5 * time.Second
+	networkObservationPublishAttempts  = 3
 )
 
 // RunNetworkObservationPublisher keeps the manager-owned summary fresh from
@@ -49,7 +53,6 @@ func RunNetworkObservationPublisher(
 	provider drivers.TopologyProvider,
 	workerPodUID ...string,
 ) {
-	var sampleSequence uint64
 	publish := func() {
 		collectionCtx, collectionCancel := context.WithTimeout(ctx, networkObservationTimeout)
 		observation, err := BuildNetworkObservation(collectionCtx, provider, physicalIdentity, producerRevision, time.Now(), workerPodUID...)
@@ -58,10 +61,8 @@ func RunNetworkObservationPublisher(
 			log.G(ctx).WithError(err).Warn("network topology observation failed")
 			return
 		}
-		sampleSequence++
-		observation.SampleSequence = sampleSequence
 		publishCtx, publishCancel := context.WithTimeout(ctx, networkObservationPublishTimeout)
-		err = PublishNetworkObservation(publishCtx, c, deviceKey, deviceUID, observation)
+		err = publishNetworkObservationWithRetry(publishCtx, c, deviceKey, deviceUID, observation)
 		publishCancel()
 		if err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation status update failed")
@@ -78,6 +79,32 @@ func RunNetworkObservationPublisher(
 			publish()
 		}
 	}
+}
+
+// publishNetworkObservationWithRetry retries only optimistic-concurrency
+// conflicts. The observation carries no sequence until PublishNetworkObservation
+// reads the live high-water mark, so a retry allocates the next sequence after
+// the competing writer rather than replaying a stale value.
+func publishNetworkObservationWithRetry(
+	ctx context.Context,
+	c client.Client,
+	deviceKey types.NamespacedName,
+	deviceUID types.UID,
+	observation *ciskov1.DeviceNetworkObservationStatus,
+) error {
+	var err error
+	for attempt := 0; attempt < networkObservationPublishAttempts; attempt++ {
+		err = PublishNetworkObservation(ctx, c, deviceKey, deviceUID, observation)
+		if !apierrors.IsConflict(err) || attempt == networkObservationPublishAttempts-1 {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+	}
+	return err
 }
 
 // BuildNetworkObservation turns a driver snapshot into a bounded status
@@ -141,11 +168,11 @@ func BuildNetworkObservation(
 	var normalizationFailures []string
 	status.Interfaces, err = normalizeInterfaces(interfaces)
 	if err != nil {
-		normalizationFailures = append(normalizationFailures, "interfaces: "+err.Error())
+		normalizationFailures = append(normalizationFailures, boundedNormalizationReason("interfaces", err))
 	}
 	status.Neighbors, err = normalizeNeighbors(cdp, ospf)
 	if err != nil {
-		normalizationFailures = append(normalizationFailures, "neighbors: "+err.Error())
+		normalizationFailures = append(normalizationFailures, boundedNormalizationReason("neighbors", err))
 	}
 	if len(normalizationFailures) != 0 {
 		status.Complete = false
@@ -154,8 +181,33 @@ func BuildNetworkObservation(
 		}
 		status.UnknownReason += strings.Join(normalizationFailures, "; ")
 	}
+	status.UnknownReason = truncateNetworkObservationReason(status.UnknownReason)
 	status.CollectionEndedAt = metav1.NewTime(time.Now().UTC())
 	return status, nil
+}
+
+// boundedNormalizationReason keeps untrusted interface and neighbor names out
+// of status while preserving an operator-useful reason class. The CRD caps this
+// field at 256 bytes, so truncation is a final defensive bound as well.
+func boundedNormalizationReason(source string, err error) string {
+	reason := strings.ToLower(err.Error())
+	switch {
+	case strings.Contains(reason, "duplicate"):
+		return source + ": duplicate identity"
+	case strings.Contains(reason, "unnamed"):
+		return source + ": unnamed identity"
+	case strings.Contains(reason, "limit"):
+		return source + ": observation limit exceeded"
+	default:
+		return source + ": normalization failed"
+	}
+}
+
+func truncateNetworkObservationReason(reason string) string {
+	if len(reason) <= maxNetworkObservationUnknownReason {
+		return reason
+	}
+	return reason[:maxNetworkObservationUnknownReason]
 }
 
 // PublishNetworkObservation patches only CiscoDevice.status.healthObservation.network.
@@ -203,7 +255,7 @@ func PublishNetworkObservation(
 		return fmt.Errorf("observation worker Pod UID %q does not match bound network worker Pod %q",
 			observation.WorkerPodUID, networkWorker.PodUID)
 	}
-	if observation.SampleSequence == 0 || observation.CollectionStartedAt.IsZero() || observation.CollectionEndedAt.IsZero() {
+	if observation.CollectionStartedAt.IsZero() || observation.CollectionEndedAt.IsZero() {
 		return fmt.Errorf("observation is missing collection provenance")
 	}
 	if observation.CollectionEndedAt.Before(&observation.CollectionStartedAt) {
@@ -215,6 +267,14 @@ func PublishNetworkObservation(
 	}
 	if observation.DeviceIdentityHash != identityHash(physicalIdentity) {
 		return fmt.Errorf("observation device identity does not match manager binding")
+	}
+	if observation.SampleSequence == 0 {
+		sequence, err := nextNetworkObservationSequence(device.Status.HealthObservation, observation.ProducerRevision, observation.WorkerPodUID)
+		if err != nil {
+			return err
+		}
+		observation = observation.DeepCopy()
+		observation.SampleSequence = sequence
 	}
 	if current := device.Status.HealthObservation; current != nil && current.Network != nil &&
 		current.Network.ProducerRevision == observation.ProducerRevision &&
@@ -229,6 +289,22 @@ func PublishNetworkObservation(
 	}
 	device.Status.HealthObservation.Network = observation.DeepCopy()
 	return c.Status().Patch(ctx, &device, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{}))
+}
+
+func nextNetworkObservationSequence(
+	health *ciskov1.DeviceHealthObservationStatus,
+	producerRevision string,
+	workerPodUID string,
+) (uint64, error) {
+	if health == nil || health.Network == nil ||
+		health.Network.ProducerRevision != producerRevision ||
+		health.Network.WorkerPodUID != workerPodUID {
+		return 1, nil
+	}
+	if health.Network.SampleSequence == math.MaxUint64 {
+		return 0, fmt.Errorf("observation sample sequence exhausted")
+	}
+	return health.Network.SampleSequence + 1, nil
 }
 
 func identityHash(identity string) string {

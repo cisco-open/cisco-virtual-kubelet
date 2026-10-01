@@ -7,14 +7,12 @@ package provider
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -67,10 +65,10 @@ func TestEnvtest_NetworkObservationStatusRoundTrip(t *testing.T) {
 			t.Fatal("manager status changed during publication")
 		}
 	}
-	// Characterizes N3: individually bounded malformed input can produce a
-	// combined diagnostic exceeding the schema limit. After error normalization
-	// lands, replace this rejection with successful bounded incomplete publication.
-	name := strings.Repeat("x", 128)
+	// Malformed source identities are reduced to bounded reason classes before
+	// publication; the API must accept the incomplete evidence and retain the
+	// prior manager-owned fields.
+	name := "peer-with-an-untrusted-long-name"
 	oversized, err := BuildNetworkObservation(ctx, observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: name}, {Name: name}},
 		cdp:        []common.CDPNeighbor{{DeviceID: name}, {DeviceID: name}},
@@ -78,18 +76,18 @@ func TestEnvtest_NetworkObservationStatusRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if oversized.Complete || len(oversized.UnknownReason) <= 256 {
-		t.Fatal("malformed-source behavior changed; update N3 acceptance and this characterization")
+	if oversized.Complete || oversized.UnknownReason == "" || len(oversized.UnknownReason) > 256 {
+		t.Fatalf("malformed-source evidence is not bounded incomplete: %#v", oversized)
 	}
-	oversized.SampleSequence = sample.SampleSequence + 1
-	if err := PublishNetworkObservation(ctx, c, key, d.UID, oversized); !apierrors.IsInvalid(err) {
-		t.Fatalf("oversized reason should be rejected by CRD: %v", err)
+	oversized.SampleSequence = 0
+	if err := PublishNetworkObservation(ctx, c, key, d.UID, oversized); err != nil {
+		t.Fatalf("bounded incomplete evidence should be accepted: %v", err)
 	}
 	var after ciskov1.CiscoDevice
 	if err := c.Get(ctx, key, &after); err != nil {
 		t.Fatal(err)
 	}
-	if !equality.Semantic.DeepEqual(after.Status.HealthObservation.Network, sample) {
-		t.Fatal("invalid write replaced last persisted sample")
+	if !equality.Semantic.DeepEqual(after.Status.HealthObservation.Network, oversized) {
+		t.Fatalf("bounded malformed sample was not persisted: %#v", after.Status.HealthObservation.Network)
 	}
 }
