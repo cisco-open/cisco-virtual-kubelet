@@ -159,8 +159,10 @@ func BuildNetworkObservation(
 }
 
 // PublishNetworkObservation patches only CiscoDevice.status.healthObservation.network.
-// It verifies the device UID and manager Node binding before writing, so a
-// worker from a replaced device incarnation cannot publish into its successor.
+// It verifies the device UID, manager Node binding, exact network-worker
+// revision/Pod binding, and physical identity before writing, so a worker from
+// a replaced device incarnation cannot publish into its successor. Accepted
+// samples from the same worker incarnation must advance monotonically.
 func PublishNetworkObservation(
 	ctx context.Context,
 	c client.Client,
@@ -180,6 +182,46 @@ func PublishNetworkObservation(
 	}
 	if device.Status.NodeIdentity == nil || device.Status.NodeIdentity.DeviceUID != string(device.UID) {
 		return fmt.Errorf("device is not manager-bound to a Node")
+	}
+	networkWorker := device.Status.NetworkWorkerRevision
+	if networkWorker == nil {
+		return fmt.Errorf("network worker binding is absent")
+	}
+	if networkWorker.DesiredRevision == "" || networkWorker.ObservedRevision == "" ||
+		networkWorker.DesiredRevision != networkWorker.ObservedRevision {
+		return fmt.Errorf("network worker binding is not at the desired revision")
+	}
+	if networkWorker.PodUID == "" || networkWorker.PodStartTime == nil || networkWorker.PodReadyTime == nil ||
+		networkWorker.PodReadyTime.Before(networkWorker.PodStartTime) {
+		return fmt.Errorf("network worker binding has no valid ready Pod identity")
+	}
+	if observation.ProducerRevision != networkWorker.ObservedRevision {
+		return fmt.Errorf("observation producer revision %q does not match bound network worker revision %q",
+			observation.ProducerRevision, networkWorker.ObservedRevision)
+	}
+	if observation.WorkerPodUID == "" || observation.WorkerPodUID != networkWorker.PodUID {
+		return fmt.Errorf("observation worker Pod UID %q does not match bound network worker Pod %q",
+			observation.WorkerPodUID, networkWorker.PodUID)
+	}
+	if observation.SampleSequence == 0 || observation.CollectionStartedAt.IsZero() || observation.CollectionEndedAt.IsZero() {
+		return fmt.Errorf("observation is missing collection provenance")
+	}
+	if observation.CollectionEndedAt.Before(&observation.CollectionStartedAt) {
+		return fmt.Errorf("observation collection interval is invalid")
+	}
+	physicalIdentity, err := topology.CanonicalPhysicalIdentity(device.Status.NodeIdentity.PhysicalIdentity)
+	if err != nil {
+		return fmt.Errorf("manager physical identity is invalid: %w", err)
+	}
+	if observation.DeviceIdentityHash != identityHash(physicalIdentity) {
+		return fmt.Errorf("observation device identity does not match manager binding")
+	}
+	if current := device.Status.HealthObservation; current != nil && current.Network != nil &&
+		current.Network.ProducerRevision == observation.ProducerRevision &&
+		current.Network.WorkerPodUID == observation.WorkerPodUID &&
+		current.Network.SampleSequence >= observation.SampleSequence {
+		return fmt.Errorf("observation sample sequence %d is not newer than accepted sequence %d",
+			observation.SampleSequence, current.Network.SampleSequence)
 	}
 	before := device.DeepCopy()
 	if device.Status.HealthObservation == nil {

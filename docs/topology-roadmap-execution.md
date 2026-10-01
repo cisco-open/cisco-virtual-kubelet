@@ -23,6 +23,25 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
+### Latest implementation increment (1 October 2026)
+
+Commit `4711d3c7` hardens the read-only observation boundary without changing
+the two-ServiceAccount model or granting mutation permission. The network
+worker now receives an independent five-second Kubernetes status-write budget
+after its twenty-second device-collection budget expires. Publication is
+rejected unless the manager has recorded the exact ready network-worker
+revision and Pod, the sample producer and Pod match that binding, and the
+sample's physical-identity hash matches the manager's canonical identity.
+
+Focused provider tests cover exact evidence, missing/stale/wrong-identity
+rejection, and monotonic replay rejection; provider/controller/topology/
+topologyhealth race tests pass. This is an E01 ownership/freshness increment,
+not proof of the complete E01 admission contract: Kubernetes admission must
+still authenticate the caller's bound Pod identity, cross-process worker
+restart/session semantics and real API-server qualification remain open.
+Existing workers converge by retrying after the manager publishes their
+binding; no device mutation path is widened.
+
 ## 1. Scope, ordering and completion accounting
 
 The main extension requires E00–E07 and E13's core acceptance: reliable
