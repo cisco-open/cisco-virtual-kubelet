@@ -13,6 +13,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,10 +45,13 @@ func TestEnvtest_NetworkObservationStatusRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	baseline := d.Status.DeepCopy()
-	for _, complete := range []bool{true, false} {
+	for index, complete := range []bool{true, false} {
 		sample.Complete = complete
 		if !complete {
 			sample.SampleSequence++
+			sample.CollectionStartedAt = metav1.NewTime(sample.CollectionStartedAt.Add(time.Second))
+			sample.CollectionEndedAt = metav1.NewTime(sample.CollectionEndedAt.Add(time.Second))
+			sample.ObservedAt = metav1.NewTime(sample.ObservedAt.Add(time.Second))
 			sample.UnknownReason = "unavailable sources: interfaces"
 		}
 		if err := PublishNetworkObservation(ctx, c, key, d.UID, sample); err != nil {
@@ -56,6 +60,9 @@ func TestEnvtest_NetworkObservationStatusRoundTrip(t *testing.T) {
 		var got ciskov1.CiscoDevice
 		if err := c.Get(ctx, key, &got); err != nil {
 			t.Fatal(err)
+		}
+		if index == 0 && got.Status.HealthObservation.Network.SampleSequence != sample.SampleSequence {
+			t.Fatalf("first sample sequence=%d, want %d", got.Status.HealthObservation.Network.SampleSequence, sample.SampleSequence)
 		}
 		if !equality.Semantic.DeepEqual(got.Status.HealthObservation.Network, sample) {
 			t.Fatalf("sample changed across API round trip: %#v", got.Status.HealthObservation.Network)
@@ -87,6 +94,13 @@ func TestEnvtest_NetworkObservationStatusRoundTrip(t *testing.T) {
 	if err := c.Get(ctx, key, &after); err != nil {
 		t.Fatal(err)
 	}
+	// Sequence allocation belongs to the persisted high-water mark. The API
+	// server also normalizes timestamp precision, so mirror those canonical
+	// values before comparing every other persisted field.
+	oversized.SampleSequence = after.Status.HealthObservation.Network.SampleSequence
+	oversized.CollectionStartedAt = after.Status.HealthObservation.Network.CollectionStartedAt
+	oversized.CollectionEndedAt = after.Status.HealthObservation.Network.CollectionEndedAt
+	oversized.ObservedAt = after.Status.HealthObservation.Network.ObservedAt
 	if !equality.Semantic.DeepEqual(after.Status.HealthObservation.Network, oversized) {
 		t.Fatalf("bounded malformed sample was not persisted: %#v", after.Status.HealthObservation.Network)
 	}

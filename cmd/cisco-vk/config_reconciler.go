@@ -715,7 +715,13 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	// injected only for the network-management worker, so app workers cannot
 	// enter this path accidentally.
 	if opts.ManagedTopology && opts.NetworkObservationProvider != nil {
-		go provider.RunNetworkObservationPublisher(ctx, mgr.GetClient(), client.ObjectKey{
+		// Ordering and binding checks need an uncached read: an informer-delayed
+		// high-water mark could assign a duplicate or stale observation sequence.
+		observationClient, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
+		if err != nil {
+			return fmt.Errorf("build direct network observation client: %w", err)
+		}
+		go provider.RunNetworkObservationPublisher(ctx, observationClient, client.ObjectKey{
 			Namespace: opts.DeviceNamespace, Name: deviceName,
 		}, types.UID(opts.DeviceUID), opts.Spec.PhysicalIdentity, opts.WorkerRevision, opts.NetworkObservationProvider, runtimeID)
 	}

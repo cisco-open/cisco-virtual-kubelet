@@ -83,6 +83,25 @@ func TestRolloutLeafAnnotationsPropagateOnlyValidatedCorrelation(t *testing.T) {
 	}
 }
 
+func TestEvaluateNetworkHealthRequiresBoundWorkerIdentity(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	health := &ciskov1.DeviceHealthObservationStatus{Network: &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-2 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-time.Second)),
+		SampleSequence:      1,
+		WorkerPodUID:        "network-pod",
+		ProducerRevision:    "sha256:worker",
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}}
+	policy := &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{Enabled: true, RequireCompleteEvidence: true}
+	decision := evaluateNetworkHealth(health, "serial-a", "", "network-pod", now, time.Minute, policy)
+	if decision.Allowed || decision.Reason != "ExpectedIdentityMissing" {
+		t.Fatalf("missing expected worker revision was accepted: %+v", decision)
+	}
+}
+
 func TestExpectedLeafSpecIncludesAPIServerDefaults(t *testing.T) {
 	target := policyFenceTarget("edge-a", "device-uid", "campaign-edge-a")
 	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})

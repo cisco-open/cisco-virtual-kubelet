@@ -112,6 +112,10 @@ type OSPFNeighbor struct {
 	Address    string
 	Interface  string
 	Area       string
+	// VRF and ProcessID distinguish otherwise identical adjacencies. Area is
+	// not a routing-instance identity and must not be used as one.
+	VRF       string
+	ProcessID string
 }
 
 // InterfaceStats contains operational statistics for a device interface

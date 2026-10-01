@@ -646,8 +646,7 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if !deviceConditionCurrentTrue(device, ciskov1.CiscoDeviceConditionGNOIConfigurationReady) {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("device gNOI configuration is not ready")
 	}
-	networkWorkerRevision, err := r.currentReadyWorkerRevision(ctx, device)
-	if err != nil {
+	if _, err := r.currentReadyWorkerRevision(ctx, device); err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("managed worker revision is not ready: %w", err)
 	}
 	readyCondition := nodeReadyCondition(&node)
@@ -685,15 +684,8 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
-	if networkPolicy := rollout.Spec.Plan.Health.Network; networkPolicy != nil && networkPolicy.Enabled {
-		networkWorkerPodUID := ""
-		if device.Status.NetworkWorkerRevision != nil {
-			networkWorkerPodUID = device.Status.NetworkWorkerRevision.PodUID
-		}
-		decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalID, networkWorkerRevision, networkWorkerPodUID, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
-		if !decision.Allowed {
-			return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("network health gate %s: %s", decision.Reason, decision.Message)
-		}
+	if err := r.revalidateNetworkEvidence(ctx, rollout, device, physicalID, now); err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
 	if device.Labels[managedprotocol.ImageFamilyLabel] != rollout.Spec.Plan.Image.ImageFamily {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("%s must equal imageFamily %q", managedprotocol.ImageFamilyLabel, rollout.Spec.Plan.Image.ImageFamily)
@@ -735,6 +727,9 @@ func evaluateNetworkHealth(
 	maxAge time.Duration,
 	policy *opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec,
 ) topologyhealth.Decision {
+	if strings.TrimSpace(expectedProducerRevision) == "" || strings.TrimSpace(expectedWorkerPodUID) == "" {
+		return topologyhealth.Decision{Reason: "ExpectedIdentityMissing", Message: "network gate requires a bound worker revision and Pod identity"}
+	}
 	if health == nil || health.Network == nil {
 		return topologyhealth.Decision{Reason: "EvidenceMissing", Message: "network worker has not published an observation"}
 	}
@@ -781,6 +776,39 @@ func evaluateNetworkHealth(
 		RequireCompleteEvidence:    policy.RequireCompleteEvidence,
 		ExpectedDeviceIdentityHash: identityHashForPhysicalID(physicalIdentity),
 	})
+}
+
+// revalidateNetworkEvidence uses a fresh API read path at planning and every
+// manager admission attempt. A previously healthy plan must not authorize a
+// later reservation after the worker identity or network evidence changed.
+func (r *IOSXESoftwareRolloutReconciler) revalidateNetworkEvidence(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	device *ciskov1.CiscoDevice,
+	physicalIdentity string,
+	now time.Time,
+) error {
+	networkPolicy := rollout.Spec.Plan.Health.Network
+	if networkPolicy == nil || !networkPolicy.Enabled {
+		return nil
+	}
+	workerRevision, err := r.currentReadyWorkerRevision(ctx, device)
+	if err != nil {
+		return fmt.Errorf("network health gate worker binding: %w", err)
+	}
+	if device.Status.NetworkWorkerRevision == nil || strings.TrimSpace(device.Status.NetworkWorkerRevision.PodUID) == "" {
+		return fmt.Errorf("network health gate requires a current network worker Pod identity")
+	}
+	freshnessSeconds := minPositive(
+		int(rollout.Status.EffectivePolicy.Policy.HealthFreshnessSeconds),
+		int(defaultInt32(rollout.Spec.Plan.Health.MaxObservationAgeSeconds, 300)),
+	)
+	decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalIdentity, workerRevision,
+		device.Status.NetworkWorkerRevision.PodUID, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
+	if !decision.Allowed {
+		return fmt.Errorf("network health gate %s: %s", decision.Reason, decision.Message)
+	}
+	return nil
 }
 
 func identityHashForPhysicalID(physicalIdentity string) string {

@@ -111,6 +111,7 @@ func (d *XEDriver) GetOSPFNeighbors(ctx context.Context) ([]common.OSPFNeighbor,
 						n := common.OSPFNeighbor{
 							Interface: intfName,
 							Area:      areaStr,
+							ProcessID: ospfProcessID(instance.ProcessId),
 						}
 						if nbr.NeighborId != nil {
 							n.NeighborID = *nbr.NeighborId
@@ -148,7 +149,10 @@ func (d *XEDriver) GetOSPFNeighbors(ctx context.Context) ([]common.OSPFNeighbor,
 						if nbr == nil {
 							continue
 						}
-						n := common.OSPFNeighbor{Interface: interfaceName, Area: areaStr, State: nbrStateToString(nbr.State)}
+						n := common.OSPFNeighbor{
+							Interface: interfaceName, Area: areaStr, State: nbrStateToString(nbr.State),
+							VRF: ospfVRF(instance.VrfName), ProcessID: ospfInstanceID(instance.InstanceId),
+						}
 						if nbr.NbrId != nil {
 							n.NeighborID = uint32ToIPv4(*nbr.NbrId)
 						}
@@ -164,6 +168,27 @@ func (d *XEDriver) GetOSPFNeighbors(ctx context.Context) ([]common.OSPFNeighbor,
 
 	log.G(ctx).Debugf("Discovered %d OSPF neighbors", len(neighbors))
 	return neighbors, nil
+}
+
+func ospfProcessID(value *uint16) string {
+	if value == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", *value)
+}
+
+func ospfInstanceID(value *uint32) string {
+	if value == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", *value)
+}
+
+func ospfVRF(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 // GetInterfaceStats queries the device for interface operational data via RESTCONF

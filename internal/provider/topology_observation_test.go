@@ -99,7 +99,7 @@ func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if observation.Complete || !strings.Contains(observation.UnknownReason, "duplicate interface") {
+	if observation.Complete || !strings.Contains(observation.UnknownReason, "duplicate identity") {
 		t.Fatalf("expected duplicate to be incomplete, got %#v", observation)
 	}
 }
@@ -141,6 +141,37 @@ func TestBuildNetworkObservationPublishesConservativeHeadroom(t *testing.T) {
 	}
 }
 
+func TestNormalizeNeighborsPreservesOSPFRoutingContext(t *testing.T) {
+	neighbors, err := normalizeNeighbors(nil, []common.OSPFNeighbor{{
+		NeighborID: "10.0.0.2", Interface: "Gi1/0/1", State: "full", Area: "0", VRF: "blue", ProcessID: "100",
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(neighbors) != 1 || neighbors[0].RoutingDomain != "vrf=blue,process=100,area=0" {
+		t.Fatalf("OSPF routing context = %#v", neighbors)
+	}
+}
+
+func TestNormalizeNeighborsKeepsDelimiterBearingAdjacenciesDistinct(t *testing.T) {
+	neighbors, err := normalizeNeighbors([]common.CDPNeighbor{
+		{DeviceID: "peer|one", LocalInterface: "Gi1"},
+		{DeviceID: "peer", LocalInterface: "one|Gi1"},
+	}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(neighbors) != 2 || neighbors[0].Identity == neighbors[1].Identity {
+		t.Fatalf("delimiter-bearing identities collided: %#v", neighbors)
+	}
+	if !strings.HasPrefix(neighbors[0].Identity, "sha256:") || !strings.HasPrefix(neighbors[1].Identity, "sha256:") {
+		t.Fatalf("delimiter-bearing identities must be canonical hashes: %#v", neighbors)
+	}
+	if got := ospfRoutingDomain(common.OSPFNeighbor{VRF: "blue,edge", ProcessID: "100=active", Area: "0"}); got != "vrf=blue%2Cedge,process=100%3Dactive,area=0" {
+		t.Fatalf("escaped OSPF routing domain = %q", got)
+	}
+}
+
 func TestPublishNetworkObservationRequiresExactManagedWorkerBinding(t *testing.T) {
 	device, observation := topologyObservationFixture()
 	apiClient := newTopologyObservationClient(t, device)
@@ -163,6 +194,9 @@ func TestPublishNetworkObservationRequiresExactManagedWorkerBinding(t *testing.T
 	}
 	newer := observation.DeepCopy()
 	newer.SampleSequence = 2
+	newer.CollectionStartedAt = metav1.NewTime(newer.CollectionStartedAt.Add(time.Second))
+	newer.CollectionEndedAt = metav1.NewTime(newer.CollectionEndedAt.Add(time.Second))
+	newer.ObservedAt = metav1.NewTime(newer.ObservedAt.Add(time.Second))
 	if err := PublishNetworkObservation(context.Background(), apiClient,
 		client.ObjectKeyFromObject(device), device.UID, newer); err != nil {
 		t.Fatalf("newer observation rejected: %v", err)
@@ -226,6 +260,9 @@ func TestPublishNetworkObservationRestartSequenceRecovery(t *testing.T) {
 			d, o := topologyObservationFixture()
 			previous := o.DeepCopy()
 			previous.SampleSequence = 10000
+			previous.CollectionStartedAt = metav1.NewTime(previous.CollectionStartedAt.Add(-time.Second))
+			previous.CollectionEndedAt = metav1.NewTime(previous.CollectionEndedAt.Add(-time.Second))
+			previous.ObservedAt = metav1.NewTime(previous.ObservedAt.Add(-time.Second))
 			d.Status.HealthObservation.Network = previous
 			o.SampleSequence = 0
 			if replacement {
@@ -258,9 +295,35 @@ func TestPublishNetworkObservationRejectsSequenceExhaustion(t *testing.T) {
 	d.Status.HealthObservation.Network = o.DeepCopy()
 	d.Status.HealthObservation.Network.SampleSequence = ^uint64(0)
 	o.SampleSequence = 0
+	o.CollectionStartedAt = metav1.NewTime(o.CollectionStartedAt.Add(time.Second))
+	o.CollectionEndedAt = metav1.NewTime(o.CollectionEndedAt.Add(time.Second))
+	o.ObservedAt = metav1.NewTime(o.ObservedAt.Add(time.Second))
 	c := newTopologyObservationClient(t, d)
 	if err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, o); err == nil || !strings.Contains(err.Error(), "exhausted") {
 		t.Fatalf("sequence exhaustion error = %v", err)
+	}
+}
+
+func TestPublishNetworkObservationRejectsOlderCollection(t *testing.T) {
+	d, o := topologyObservationFixture()
+	accepted := o.DeepCopy()
+	accepted.SampleSequence = 10
+	d.Status.HealthObservation.Network = accepted
+	older := o.DeepCopy()
+	older.SampleSequence = 0
+	older.CollectionStartedAt = metav1.NewTime(accepted.CollectionStartedAt.Add(-2 * time.Minute))
+	older.CollectionEndedAt = metav1.NewTime(accepted.CollectionEndedAt.Add(-time.Minute))
+	c := newTopologyObservationClient(t, d)
+	err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, older)
+	if err == nil || !strings.Contains(err.Error(), "not newer than accepted") {
+		t.Fatalf("older collection error = %v", err)
+	}
+	var got ciskov1.CiscoDevice
+	if err := c.Get(context.Background(), client.ObjectKeyFromObject(d), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !equality.Semantic.DeepEqual(got.Status.HealthObservation.Network, accepted) {
+		t.Fatalf("older collection changed accepted observation: %#v", got.Status.HealthObservation.Network)
 	}
 }
 

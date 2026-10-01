@@ -14,7 +14,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math"
+	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,7 +25,6 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +37,6 @@ const (
 	networkObservationInterval         = 30 * time.Second
 	networkObservationTimeout          = 20 * time.Second
 	networkObservationPublishTimeout   = 5 * time.Second
-	networkObservationPublishAttempts  = 3
 )
 
 // RunNetworkObservationPublisher keeps the manager-owned summary fresh from
@@ -62,7 +62,7 @@ func RunNetworkObservationPublisher(
 			return
 		}
 		publishCtx, publishCancel := context.WithTimeout(ctx, networkObservationPublishTimeout)
-		err = publishNetworkObservationWithRetry(publishCtx, c, deviceKey, deviceUID, observation)
+		err = publishNetworkObservation(publishCtx, c, deviceKey, deviceUID, observation)
 		publishCancel()
 		if err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation status update failed")
@@ -81,30 +81,18 @@ func RunNetworkObservationPublisher(
 	}
 }
 
-// publishNetworkObservationWithRetry retries only optimistic-concurrency
-// conflicts. The observation carries no sequence until PublishNetworkObservation
-// reads the live high-water mark, so a retry allocates the next sequence after
-// the competing writer rather than replaying a stale value.
-func publishNetworkObservationWithRetry(
+// publishNetworkObservation deliberately does not retry a conflict.
+// A collection has a fixed time interval: assigning it a new sequence after a
+// competing write could make an older measurement supersede a newer one. The
+// next publisher interval collects a new snapshot instead.
+func publishNetworkObservation(
 	ctx context.Context,
 	c client.Client,
 	deviceKey types.NamespacedName,
 	deviceUID types.UID,
 	observation *ciskov1.DeviceNetworkObservationStatus,
 ) error {
-	var err error
-	for attempt := 0; attempt < networkObservationPublishAttempts; attempt++ {
-		err = PublishNetworkObservation(ctx, c, deviceKey, deviceUID, observation)
-		if !apierrors.IsConflict(err) || attempt == networkObservationPublishAttempts-1 {
-			return err
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-	}
-	return err
+	return PublishNetworkObservation(ctx, c, deviceKey, deviceUID, observation)
 }
 
 // BuildNetworkObservation turns a driver snapshot into a bounded status
@@ -268,6 +256,12 @@ func PublishNetworkObservation(
 	if observation.DeviceIdentityHash != identityHash(physicalIdentity) {
 		return fmt.Errorf("observation device identity does not match manager binding")
 	}
+	current := currentNetworkObservation(device.Status.HealthObservation)
+	if current != nil && !observation.CollectionEndedAt.After(current.CollectionEndedAt.Time) {
+		return fmt.Errorf("observation collection ended at %s is not newer than accepted sample at %s",
+			observation.CollectionEndedAt.UTC().Format(time.RFC3339Nano),
+			current.CollectionEndedAt.UTC().Format(time.RFC3339Nano))
+	}
 	if observation.SampleSequence == 0 {
 		sequence, err := nextNetworkObservationSequence(device.Status.HealthObservation, observation.ProducerRevision, observation.WorkerPodUID)
 		if err != nil {
@@ -276,12 +270,10 @@ func PublishNetworkObservation(
 		observation = observation.DeepCopy()
 		observation.SampleSequence = sequence
 	}
-	if current := device.Status.HealthObservation; current != nil && current.Network != nil &&
-		current.Network.ProducerRevision == observation.ProducerRevision &&
-		current.Network.WorkerPodUID == observation.WorkerPodUID &&
-		current.Network.SampleSequence >= observation.SampleSequence {
+	if current != nil && current.ProducerRevision == observation.ProducerRevision &&
+		current.WorkerPodUID == observation.WorkerPodUID && current.SampleSequence >= observation.SampleSequence {
 		return fmt.Errorf("observation sample sequence %d is not newer than accepted sequence %d",
-			observation.SampleSequence, current.Network.SampleSequence)
+			observation.SampleSequence, current.SampleSequence)
 	}
 	before := device.DeepCopy()
 	if device.Status.HealthObservation == nil {
@@ -289,6 +281,13 @@ func PublishNetworkObservation(
 	}
 	device.Status.HealthObservation.Network = observation.DeepCopy()
 	return c.Status().Patch(ctx, &device, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{}))
+}
+
+func currentNetworkObservation(health *ciskov1.DeviceHealthObservationStatus) *ciskov1.DeviceNetworkObservationStatus {
+	if health == nil {
+		return nil
+	}
+	return health.Network
 }
 
 func nextNetworkObservationSequence(
@@ -363,7 +362,7 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 			return nil, fmt.Errorf("source returned an unnamed OSPF neighbor")
 		}
 		localInterface := strings.TrimSpace(value.Interface)
-		routingDomain := strings.TrimSpace(value.Area)
+		routingDomain := ospfRoutingDomain(value)
 		identity := neighborIdentity("ospf", id, localInterface, routingDomain)
 		if _, exists := byIdentity[identity]; exists {
 			return nil, fmt.Errorf("source returned duplicate OSPF adjacency %q", identity)
@@ -386,12 +385,44 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 	return out, nil
 }
 
-func neighborIdentity(source, id, localInterface, routingDomain string) string {
-	canonical := strings.Join([]string{source, id, localInterface, routingDomain}, "|")
-	if len(canonical) <= 128 {
-		return canonical
+// ospfRoutingDomain preserves the actual routing-instance and process context
+// when the driver supplies it. Area alone is retained only as a legacy
+// fallback; it is not treated as a VRF identity.
+func ospfRoutingDomain(value common.OSPFNeighbor) string {
+	parts := make([]string, 0, 3)
+	if vrf := strings.TrimSpace(value.VRF); vrf != "" {
+		parts = append(parts, "vrf="+url.QueryEscape(vrf))
 	}
-	sum := sha256.Sum256([]byte(canonical))
+	if processID := strings.TrimSpace(value.ProcessID); processID != "" {
+		parts = append(parts, "process="+url.QueryEscape(processID))
+	}
+	if area := strings.TrimSpace(value.Area); area != "" {
+		parts = append(parts, "area="+url.QueryEscape(area))
+	}
+	return strings.Join(parts, ",")
+}
+
+func neighborIdentity(source, id, localInterface, routingDomain string) string {
+	values := []string{source, id, localInterface, routingDomain}
+	legacy := strings.Join(values, "|")
+	// Keep existing readable identities when every component is unambiguous.
+	// A delimiter-bearing component instead uses a length-prefixed canonical
+	// form before hashing, so distinct adjacencies cannot collide by shifting a
+	// delimiter across fields.
+	hasDelimiter := false
+	for _, value := range values {
+		hasDelimiter = hasDelimiter || strings.Contains(value, "|")
+	}
+	if !hasDelimiter && len(legacy) <= 128 {
+		return legacy
+	}
+	var canonical strings.Builder
+	for _, value := range values {
+		canonical.WriteString(strconv.Itoa(len(value)))
+		canonical.WriteByte(':')
+		canonical.WriteString(value)
+	}
+	sum := sha256.Sum256([]byte(canonical.String()))
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
