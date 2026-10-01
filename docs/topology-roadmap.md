@@ -43,6 +43,13 @@ by a timed-out Activate(NoReboot) did **not** test an independent Install-only
 hold and does not establish whether the cohort supports durable preparation.
 See C0/C4 for recovery and the correct qualification sequence.
 
+Follow-up: clean candidate `3212f777` completed C0's exact-identity,
+observation-only recovery and C1's binding/freeze increment. Helm revision 119
+converged the C9K workers; `.103` passed its full health soak and released the
+maintenance taint and Lease through normal reconciliation. Continue with C2;
+do not interpret this closure as an Install-only, service-continuity or full
+roadmap pass.
+
 The original `/tmp/cvk-topology-awareness-options.md` was unavailable during
 this review. This plan reconstructs the remaining scope from the checked-in
 [topology guide](topology-awareness.md), the
@@ -88,7 +95,7 @@ remains the completion ledger.
 | T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired; clean `9e578131` candidate deployed to Ubuntu16 with all three physical target observations checked | E00: finish direct device CLI/secure OS.Verify, complete log-plane/service/path baselines and durable capability indexing. |
 | T1 | Restart-safe publisher, interval/schema safety, IOS-XE rate-presence fixtures and real bound-token admission suite advanced | C2 / E01–E02: manager acceptance, remaining concurrency/cross-device/mixed-version cases, source-age and physical rate/CLI qualification. |
 | T2 | Network check at plan freeze and manager admission; `11ae6704` fixes first-plan nil-status panic | C1/C3 / E03: full-path regression, worker claim-time/soak enforcement, administrator protection, overlapping groups, measured headroom and expiring grants; service-path tests. |
-| T3 | Combined lifecycle exists; `.103` NoReboot activation uncertain and fenced; independent prepare contract absent | C0/C4/C5 / E04–E05: audited recovery, true Install-only qualification, then durable receipts/ownership. |
+| T3 | Combined lifecycle exists; `3212f777` reconciled `.103`'s lost NoReboot outcome without replay; independent prepare contract absent | C4/C5 / E04–E05: true Install-only qualification, then durable receipts/ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
 | T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
 | T6 | Synthetic co-location/conflict evidence exists; full scheduler and physical group lifecycle absent | E08: raw group-field recognition before expanding drain, remaining scheduler scenarios, native controller recreation, physical service and group-aware drain tests. |

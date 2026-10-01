@@ -79,3 +79,33 @@ an activation-failure message, supervisor-specific requirements, stale
 manager control, incomplete mutation claims or changed object identity retain
 the quarantine. The fence was deliberately left in place at evidence-capture
 time so the candidate can prove that audited controller path end to end.
+
+## Candidate deployment and settlement
+
+Commit `3212f777` was built as `cvk-tas-extentions:3212f777` for linux/amd64.
+The imported OCI index digest was
+`sha256:4ae8c397767fc7ebc6df3be3ec592394e5947a96f33a2b4eb068640bd466f922`;
+the transferred archive SHA-256 was
+`4f399dd52941d5bfbd10671040c9f4fe67082abde05588ee8e1cb216efb546e9`.
+The matching chart was deployed as Helm revision 119 on Ubuntu16. The manager
+performed the app- and network-worker Recreate handoffs; all six physical-C9K
+worker Deployments became Ready on the candidate image.
+
+At 18:14:02 the exact replacement `.103` network worker performed one fresh
+secure `OS.Verify`. The leaf transitioned to `Succeeded`, recorded running
+version `17.18.03.0.5496.1776157760`, set `DeviceMutationSettled=True` with
+reason `OutcomeVerified`, and emitted `ActivationOutcomeRecovered`. Worker
+logs and the durable request markers showed no activation replay. The
+disruptive Lease holder and duration were cleared immediately after the
+status update.
+
+The parent retained its topology reservation and maintenance taint during the
+continuous health soak. At 18:25:50 it reached `Succeeded` with message `all
+targets completed and passed their post-mutation health gates`; the Node taint
+was removed and `MaintenanceReady=True/Idle`. The Node was Ready and reported
+17.18.3. The manager's final eight-minute acceptance window contained no
+`error`, `failed`, `forbidden` or `denied` log entry.
+
+This closes the specific C0 uncertainty-recovery incident. It does not qualify
+the independent Install-only boundary, workload/service continuity, or the
+remaining C2–C9 roadmap packages.

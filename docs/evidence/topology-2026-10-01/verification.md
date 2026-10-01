@@ -31,3 +31,28 @@ Run the E00-G/H and package-specific lanes on the next clean candidate.
 No PR creation, merge, release tag or production deployment is implied by
 committing/pushing this checkpoint. Recheck actual branch CI before proposing
 any future merge.
+
+## C0/C1 candidate follow-up — `3212f777`
+
+These results apply to the clean committed candidate, not the earlier
+checkpoint build:
+
+| Check | Result |
+| --- | --- |
+| `go test -race -count=1 ./...` | PASS |
+| Pinned Kubernetes 1.35 `make test-envtest` | PASS; provider and controller real-API suites |
+| `helm lint` and topology render contract | PASS |
+| Strict MkDocs build and exact license closure in an isolated hashed environment | PASS |
+| Kubernetes 1.35 managed shared-worker/bound-token integration | PASS |
+| Kubernetes 1.35 native topology scheduler/admission integration in a dedicated disposable cluster | PASS |
+| Evidence `shasum -a 256 -c SHA256SUMS` before this follow-up update | PASS |
+| Physical `.103` exact-target uncertainty recovery, soak and fence settlement | PASS; see [C0 audit](c0-103-activation-outcome-audit.md) |
+
+The initial topology integration invocation selected a stale disposable kind
+context and stopped at Helm ownership validation before tests ran. It did not
+target Ubuntu16. The lane was rerun successfully in a newly named Kubernetes
+1.35 cluster, which was deleted by explicit cleanup.
+
+Candidate-specific remote CI, two-pass generated-artifact parity, independent
+Install-only qualification, service/path traffic, accepted manager-owned
+network evidence and the remaining C2–C9 gates are still open.

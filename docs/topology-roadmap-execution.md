@@ -53,6 +53,31 @@ branch. The tested runtime remains `11ae6704`; `37db63c2` is a documentation
 checkpoint, not another deployed image. Historical six-rollout success must
 not be relabelled as acceptance of this candidate.
 
+### C0/C1 execution follow-up (`3212f777`, 18:25 UTC)
+
+C0's retained `.103` incident and C1's implementation increment are complete
+for this candidate. Exact IOS-XE CLI and secure gNOI evidence proved the
+validated 17.18.03 target committed and running. The new worker recovered the
+terminal outcome using read-only Verify, never replayed activation, released
+the disruptive Lease only after durable exact-target settlement, completed
+the parent's continuous health soak, and removed the maintenance taint through
+normal manager reconciliation. The full record is the
+[C0 outcome audit](evidence/topology-2026-10-01/c0-103-activation-outcome-audit.md).
+
+C1 added the managed DeviceOperation pre-binding wait with zero status/device
+dispatch, exact device/Pod binding enforcement, network-only worker Pod UID
+wiring, and a real network-enabled freeze regression with unpublished
+`status.effectivePolicy`. Repository-wide race, pinned envtest, Helm/render,
+strict docs/license, shared-worker admission and native topology integration
+lanes passed. Helm revision 119 converged all three C9K app and network workers
+to the exact clean image. Candidate remote CI, the delayed live-binding/API
+error submatrix and two-pass generator parity remain E00/C9 acceptance work;
+they do not reopen the resolved `.103` mutation outcome.
+
+The next implementation package is C2. C4 may proceed in parallel only on an
+isolated, unquarantined target with a structurally Install-only harness; the
+completed NoReboot recovery is not that qualification.
+
 ### Concrete completion queue — C0–C9
 
 Each row is a separately reviewable delivery increment, not a claim of
@@ -137,7 +162,7 @@ mutation safety or substitute for their integration gates.
 
 | Input / responsible execution lane | Required resolution | If unavailable |
 | --- | --- | --- |
-| `.103` uncertain state / C0 lifecycle recovery | Conclusive installed/next-boot/session evidence and audited settlement | Keep this device fenced; other independently safe development can continue |
+| `.103` uncertain state / C0 lifecycle recovery | **Resolved at `3212f777`:** conclusive installed/running/committed evidence and exact-identity audited settlement | Reopen quarantine on any conflicting later inventory; C4 still needs an independent Install-only test |
 | Real service paths and traffic / E00, C2–C3 | Record wiring, redundant vs singleton paths, load/probe endpoints, affected services and predeclared loss/rate tolerances | Accounting/fixture tests only; no forwarding or headroom qualification |
 | Portable applications / C6 | Supported signed image or qualifying SSD/USB storage, destination capacity, native owner and PDB, reachable probe | No cross-device app-continuity claim; do not relax signing policy |
 | Prepare capability / C4 | Install-only durable identity, trust/content verification and restart/removal behavior in both directions | E05/E06 physical acceptance blocked for that cohort; combined lifecycle remains distinct |
@@ -210,7 +235,7 @@ deliverables.
 | E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: restart-safe ordering, bounded publication, interval checks and native bound-token suite advanced through `11ae6704`; C2 still needs manager acceptance, complete identity/migration matrix, original-source age and physical CLI qualification. |
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
 | E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: campaign-local gate exists; administrator protection, overlapping memberships, transfer pacing and evidence-bound expiring grants require implementation. |
-| E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Investigated but unqualified: `11ae6704` Install succeeded, NoReboot activation timed out and `.103` is fenced. C4 must test a true Install-only hold, not infer incapability from the timeout; E04-A–D remain open. |
+| E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Investigated but unqualified: `3212f777` reconciled the earlier NoReboot timeout, but C4 must test a true Install-only hold; E04-A–D remain open. |
 | E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Not started: receipt/protocol/retained ownership absent; physical qualification depends on E04. |
 | E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Not started: independent authorization and phase accounting absent; physical qualification depends on E04–E05. |
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | In progress: fresh combined rollouts used `Drain`, with final Running workloads; per-target eviction/replacement/service timelines, hard placement and independent-activation integration remain. |

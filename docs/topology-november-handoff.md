@@ -18,6 +18,12 @@ Install-only preparation is still unqualified; the NoReboot timeout does not
 prove it unsupported. Manager acceptance, claim-time/soak network protection,
 durable staging and independent activation remain substantive implementation.
 
+Execution follow-up: `3212f777` subsequently completed the C0 `.103`
+observation-only recovery and C1 binding/freeze increment on Helm revision 119.
+The leaf, parent soak, Lease and maintenance taint settled normally with no
+activation replay. Resume at C2, while treating C4 Install-only qualification
+as an independent guarded investigation.
+
 ## Start here
 
 1. Read the [evidence index](evidence/topology-2026-10-01/README.md), especially

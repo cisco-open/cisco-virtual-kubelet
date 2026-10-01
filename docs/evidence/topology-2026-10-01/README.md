@@ -14,7 +14,7 @@ This is **partial qualification**, not a release acceptance certificate.
 | [settled4 `.100` downgrade](settled4-live-downgrade/report.md) | `STOPPED`: app-log force-delete classifier | Device transition/health results are retained; no blanket retrospective drain pass is assigned |
 | [settled5 `.101` downgrade](settled5-lab101-downgrade/report.md) | `STOPPED`: app-log force-delete classifier | Device/rollout success and ordered leaf drain records; offline preceding-log correlation passes, but collector was not rerun and manager/network log files are missing |
 | [`11ae6704` `.103` NoReboot boundary](11ae6704-noreboot-boundary.md) | `Failed/ActivationOutcomeUnknown`; later device audit proved 17.18.03 committed and running | OS.Install completed but IOS-XE timed out the NoReboot activation response. CVK correctly retained quarantine. A 17:51 UTC correlated CLI and secure gNOI audit proved the switch had reloaded and committed 17.18.03; this is still not an independently qualified staging boundary. |
-| [`.103` C0 outcome audit](c0-103-activation-outcome-audit.md) | Conclusive target-running evidence; fence deliberately retained pending tested controller recovery | Binds the leaf, device, Node, worker, Lease and two read-only operations; records both the IOS-XE and secure gNOI views and the stale Node-version discrepancy. |
+| [`.103` C0 outcome audit](c0-103-activation-outcome-audit.md) | Conclusive target-running evidence followed by tested observation-only recovery and healthy settlement | Binds the leaf, device, Node, workers and Lease; records both terminal views, exact candidate/image identity, no-replay recovery, full soak and final fence release. |
 
 The reports are original historical text, preserved without changing their
 conclusions. In particular, historical wording such as “binding observed
@@ -102,9 +102,9 @@ Pod-status cleanup behavior still warrants lifecycle regression coverage.
   solely from `Settled` or a missing taint.
 - No full three-device, two-direction run on one clean rebuilt checkpoint
   candidate using the final harness; no independently approved staged activation.
-- The `.103` device outcome is now known, but this checkpoint does not claim
-  fence settlement until the observation-only controller recovery is deployed
-  and demonstrates exact-identity closure without replaying activation.
+- The `.103` device outcome and exact-identity fence settlement are now
+  qualified for candidate `3212f777`; this does not qualify Install-only
+  preparation or the broader C2–C9 roadmap.
 - Dirty-build source provenance is incomplete. Saved source fingerprints
   identify this checkpoint, not all original image inputs.
 - Bound-token RO/peer-device admission, envtest/generation, new-binding and
