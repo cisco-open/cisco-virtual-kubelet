@@ -14,6 +14,7 @@ managed_short_account_render="$scratch_dir/managed-short-accounts.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
 managed_drain_render="$scratch_dir/managed-drain.yaml"
 managed_protection_render="$scratch_dir/managed-protection.yaml"
+managed_legacy_values_render="$scratch_dir/managed-legacy-values.yaml"
 managed_lease_namespace_render="$scratch_dir/managed-lease-namespace.yaml"
 strict_render_bundle="$scratch_dir/managed-and-examples.yaml"
 error_output="$scratch_dir/error.txt"
@@ -150,6 +151,13 @@ helm template cvk "$chart_dir" \
   --set rbac.profile=strict \
   --set-json 'topology.policy.requiredTopologyKeys=["topology.kubernetes.io/region","topology.kubernetes.io/zone","operations.cisco.vk/service-tier"]' \
   --set-json 'topology.policy.disruptionProtections=[{"name":"critical-services","reason":"CriticalService","selector":{"matchLabels":{"operations.cisco.vk/service-tier":"critical"},"matchExpressions":[]}}]' >"$managed_protection_render"
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set-json 'topology.policy.disruptionProtections=null' >"$managed_legacy_values_render"
 helm template cvk "$chart_dir" --namespace cisco-vk-system --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
   --set config.leaseNamespace=cvk-leases >"$managed_lease_namespace_render"
 
@@ -269,6 +277,10 @@ if grep -Fq '"workloadDrain"' "$managed_render"; then
 fi
 if grep -Fq '"disruptionProtections"' "$managed_render"; then
   echo "empty disruption protection changed the v1 administrator policy" >&2
+  exit 1
+fi
+if grep -Fq '"disruptionProtections"' "$managed_legacy_values_render"; then
+  echo "absent legacy disruption protection changed the v1 administrator policy" >&2
   exit 1
 fi
 grep -Fq '"disruptionProtections":[{"name":"critical-services","reason":"CriticalService","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-tier":"critical"}}}]' "$managed_protection_render"

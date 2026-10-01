@@ -80,7 +80,7 @@ limitations under the License.
       "maxLedgerBytes" .Values.topology.policy.maxLedgerBytes
       "ledgerName" $ledgerName
 }}
-{{- if gt (len .Values.topology.policy.disruptionProtections) 0 }}
+{{- if gt (len (.Values.topology.policy.disruptionProtections | default (list))) 0 }}
 {{- $_ := set $policy "disruptionProtections" .Values.topology.policy.disruptionProtections }}
 {{- end }}
 {{- if .Values.topology.policy.workloadDrain.enabled }}
