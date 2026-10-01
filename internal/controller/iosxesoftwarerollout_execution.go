@@ -2157,9 +2157,55 @@ func (r *IOSXESoftwareRolloutReconciler) targetPostMutationHealthy(
 		// conservatively count that session as unavailable.
 	}
 	if matched {
+		networkHealthy, detail, err := r.targetPostMutationNetworkHealthy(
+			ctx, rollout, currentPolicy, target, operationCompletedAt)
+		if err != nil || !networkHealthy {
+			return false, detail, err
+		}
 		return true, "target is healthy", nil
 	}
 	return false, "target is absent from the current managed fleet", nil
+}
+
+// targetPostMutationNetworkHealthy extends an opted-in network gate through
+// recovery and every soak reconciliation. It deliberately requires a sample
+// collected after the device operation completed: a still-fresh pre-mutation
+// sample cannot prove that required links, neighbors, or headroom recovered.
+// The caller keeps the reservation and resets soak continuity on failure.
+func (r *IOSXESoftwareRolloutReconciler) targetPostMutationNetworkHealthy(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	operationCompletedAt time.Time,
+) (bool, string, error) {
+	if rollout == nil || rollout.Spec.Plan.Health.Network == nil || !rollout.Spec.Plan.Health.Network.Enabled {
+		return true, "network health gate is not enabled", nil
+	}
+	if currentPolicy == nil {
+		return false, "administrator policy is unavailable for the network recovery gate", nil
+	}
+	var device ciskov1.CiscoDevice
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+		return false, "", fmt.Errorf("read post-mutation network target: %w", err)
+	}
+	if string(device.UID) != target.DeviceUID || device.Generation != target.DeviceGeneration {
+		return false, "post-mutation network target incarnation changed", nil
+	}
+	physicalIdentity, err := topology.CanonicalPhysicalIdentity(device.Spec.PhysicalIdentity)
+	if err != nil || physicalIdentity != target.PhysicalIdentity {
+		return false, "post-mutation network target physical identity changed", nil
+	}
+	if err := r.revalidateNetworkEvidence(ctx, rollout, &device, physicalIdentity,
+		currentPolicy.Config.HealthFreshnessSeconds, r.now()); err != nil {
+		return false, err.Error(), nil
+	}
+	accepted := device.Status.HealthObservation.AcceptedNetwork
+	if operationCompletedAt.IsZero() || accepted.CollectionStartedAt.IsZero() ||
+		!accepted.CollectionStartedAt.Time.After(operationCompletedAt) {
+		return false, "waiting for manager-accepted network evidence collected after the device operation", nil
+	}
+	return true, "post-mutation network evidence is current and healthy", nil
 }
 
 func isPostOperationObservation(observed, completed time.Time) bool {

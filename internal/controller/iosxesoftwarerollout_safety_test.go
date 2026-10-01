@@ -1204,6 +1204,87 @@ func TestStablePhysicalIdentityRequiresDeclarationBindingAndLiveAgreement(t *tes
 	}
 }
 
+func TestPostMutationNetworkHealthRequiresNewAcceptedSampleAndResetsOnFailure(t *testing.T) {
+	now := time.Date(2026, time.October, 1, 22, 0, 0, 0, time.UTC)
+	completed := now.Add(-10 * time.Second)
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "lab", Name: "device-a", UID: types.UID("device-uid"), Generation: 2,
+		},
+		Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, PhysicalIdentity: "SERIAL-A"},
+	}
+	objects := attachReadyManagedNetworkWorkerProof(t, device, now)
+	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(completed.Add(-2 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(completed.Add(-time.Second)),
+		ObservedAt:          metav1.NewTime(completed.Add(-time.Second)),
+		SampleSequence:      1,
+		WorkerPodUID:        device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:    device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}}
+	objects = append(objects, device)
+	apiClient := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objects...).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	rollout := &opsv1alpha1.IOSXESoftwareRollout{
+		ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace},
+		Spec: opsv1alpha1.IOSXESoftwareRolloutSpec{Plan: opsv1alpha1.IOSXESoftwareRolloutPlan{
+			Health: opsv1alpha1.IOSXESoftwareRolloutHealthSpec{
+				MaxObservationAgeSeconds: 60,
+				Network: &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+					Enabled: true, RequireCompleteEvidence: true,
+				},
+			},
+		}},
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{HealthFreshnessSeconds: 120}}
+	target := opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+		DeviceName: device.Name, DeviceUID: string(device.UID), DeviceGeneration: device.Generation,
+		PhysicalIdentity: "serial-a",
+	}
+
+	healthy, detail, err := reconciler.targetPostMutationNetworkHealthy(
+		context.Background(), rollout, policy, target, completed)
+	if err != nil || healthy || !strings.Contains(detail, "collected after") {
+		t.Fatalf("pre-operation sample result = healthy %t, detail %q, err %v", healthy, detail, err)
+	}
+
+	var current ciskov1.CiscoDevice
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	accepted := current.Status.HealthObservation.AcceptedNetwork
+	accepted.CollectionStartedAt = metav1.NewTime(completed.Add(time.Second))
+	accepted.CollectionEndedAt = metav1.NewTime(completed.Add(2 * time.Second))
+	accepted.ObservedAt = metav1.NewTime(completed.Add(2 * time.Second))
+	accepted.SampleSequence++
+	if err := apiClient.Update(context.Background(), &current); err != nil {
+		t.Fatal(err)
+	}
+	healthy, detail, err = reconciler.targetPostMutationNetworkHealthy(
+		context.Background(), rollout, policy, target, completed)
+	if err != nil || !healthy {
+		t.Fatalf("post-operation sample result = healthy %t, detail %q, err %v", healthy, detail, err)
+	}
+
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	current.Status.HealthObservation.AcceptedNetwork.Complete = false
+	current.Status.HealthObservation.AcceptedNetwork.UnknownReason = "required peer is not Full"
+	if err := apiClient.Update(context.Background(), &current); err != nil {
+		t.Fatal(err)
+	}
+	healthy, detail, err = reconciler.targetPostMutationNetworkHealthy(
+		context.Background(), rollout, policy, target, completed)
+	if err != nil || healthy || !strings.Contains(detail, "EvidenceIncomplete") {
+		t.Fatalf("failed-soak sample result = healthy %t, detail %q, err %v", healthy, detail, err)
+	}
+}
+
 func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 	const topologyKey = "topology.cisco.vk/site"
 	baseDevice := &ciskov1.CiscoDevice{
