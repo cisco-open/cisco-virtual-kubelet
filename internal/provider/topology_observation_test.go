@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,6 +25,32 @@ type observationTopologyProvider struct {
 	cdp        []common.CDPNeighbor
 	ospf       []common.OSPFNeighbor
 	err        error
+}
+
+type blockingObservationTopologyProvider struct {
+	release chan struct{}
+	started chan struct{}
+	once    sync.Once
+	calls   atomic.Int32
+}
+
+func (p *blockingObservationTopologyProvider) GetInterfaceStats(context.Context) ([]common.InterfaceStats, error) {
+	p.calls.Add(1)
+	p.once.Do(func() { close(p.started) })
+	<-p.release // Deliberately ignores context to model a stuck device client.
+	return nil, nil
+}
+func (p *blockingObservationTopologyProvider) GetCDPNeighbors(context.Context) ([]common.CDPNeighbor, error) {
+	return nil, nil
+}
+func (p *blockingObservationTopologyProvider) GetOSPFNeighbors(context.Context) ([]common.OSPFNeighbor, error) {
+	return nil, nil
+}
+func (p *blockingObservationTopologyProvider) GetInterfaceIPs(context.Context) ([]common.InterfaceIP, error) {
+	return nil, nil
+}
+func (p *blockingObservationTopologyProvider) GetHostedApps(context.Context) ([]common.HostedApp, error) {
+	return nil, nil
 }
 
 func (p observationTopologyProvider) GetCDPNeighbors(context.Context) ([]common.CDPNeighbor, error) {
@@ -77,6 +105,48 @@ func TestBuildNetworkObservationFailsClosedOnPartialSource(t *testing.T) {
 	}
 }
 
+func TestNetworkObservationCollectorBoundsHungProvider(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	provider := &blockingObservationTopologyProvider{release: make(chan struct{}), started: make(chan struct{})}
+	collector := &networkObservationCollector{}
+	timedOut, cancel := context.WithCancel(context.Background())
+	cancel()
+	observation, err := collector.collect(timedOut, provider, "serial-01", "sha256:worker", now, "pod-a")
+	if err != nil || observation.Complete || observation.UnknownReason != "collection deadline exceeded" {
+		t.Fatalf("timed-out collection = %#v, %v", observation, err)
+	}
+	select {
+	case <-provider.started:
+	case <-time.After(time.Second):
+		t.Fatal("hung provider did not start")
+	}
+	observation, err = collector.collect(timedOut, provider, "serial-01", "sha256:worker", now.Add(time.Minute), "pod-a")
+	if err != nil || observation.Complete || observation.UnknownReason != "collection remains in flight after deadline" {
+		t.Fatalf("in-flight collection = %#v, %v", observation, err)
+	}
+	if !observation.ObservedAt.Time.Equal(now) {
+		t.Fatalf("stuck collection advanced evidence time to %s, want %s", observation.ObservedAt.Time, now)
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("hung collection started %d providers, want one", provider.calls.Load())
+	}
+	close(provider.release)
+	deadline := time.Now().Add(time.Second)
+	for {
+		observation, err = collector.collect(context.Background(), provider, "serial-01", "sha256:worker", time.Now(), "pod-a")
+		if err == nil && observation.Complete {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("collector did not recover after the hung call returned: %#v, %v", observation, err)
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if provider.calls.Load() != 2 {
+		t.Fatalf("recovered collection calls=%d, want two", provider.calls.Load())
+	}
+}
+
 func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
 	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	interfaces := make([]common.InterfaceStats, 65)
@@ -91,6 +161,19 @@ func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
 	}
 	if observation.Complete || !strings.Contains(observation.UnknownReason, "limit") {
 		t.Fatalf("expected truncation to be incomplete, got %#v", observation)
+	}
+	neighbors := make([]common.CDPNeighbor, 65)
+	for i := range neighbors {
+		neighbors[i].DeviceID = fmt.Sprintf("peer-%d", i)
+	}
+	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		cdp: neighbors,
+	}, "SERIAL-01", "worker", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.Complete || !strings.Contains(observation.UnknownReason, "limit") {
+		t.Fatalf("expected neighbor truncation to be incomplete, got %#v", observation)
 	}
 
 	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
@@ -169,6 +252,27 @@ func TestNormalizeNeighborsKeepsDelimiterBearingAdjacenciesDistinct(t *testing.T
 	}
 	if got := ospfRoutingDomain(common.OSPFNeighbor{VRF: "blue,edge", ProcessID: "100=active", Area: "0"}); got != "vrf=blue%2Cedge,process=100%3Dactive,area=0" {
 		t.Fatalf("escaped OSPF routing domain = %q", got)
+	}
+}
+
+func TestBuildNetworkObservationFailsClosedOnOversizedStatusFields(t *testing.T) {
+	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		ospf: []common.OSPFNeighbor{{NeighborID: strings.Repeat("n", 129), State: "full"}},
+	}, "serial-01", "sha256:worker", time.Now(), "pod-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.Complete || observation.UnknownReason != "neighbors: field length invalid" {
+		t.Fatalf("oversized neighbor evidence = %#v", observation)
+	}
+	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
+		interfaces: []common.InterfaceStats{{Name: strings.Repeat("i", 129)}},
+	}, "serial-01", "sha256:worker", time.Now(), "pod-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if observation.Complete || observation.UnknownReason != "interfaces: field length invalid" {
+		t.Fatalf("oversized interface evidence = %#v", observation)
 	}
 }
 

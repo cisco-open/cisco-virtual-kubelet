@@ -39,6 +39,23 @@ const (
 	networkObservationPublishTimeout   = 5 * time.Second
 )
 
+type networkObservationCollectionResult struct {
+	observation *ciskov1.DeviceNetworkObservationStatus
+	err         error
+}
+
+// networkObservationCollector permits at most one provider collection at a
+// time. A driver that ignores context cannot be force-stopped by Go; after its
+// deadline we publish incomplete evidence and refuse to start another
+// collector until the original call returns. This bounds leaked work to one
+// call per network worker and prevents a hung device source from creating an
+// unbounded goroutine backlog.
+type networkObservationCollector struct {
+	result  <-chan networkObservationCollectionResult
+	started time.Time
+	expired bool
+}
+
 // RunNetworkObservationPublisher keeps the manager-owned summary fresh from
 // the network worker. Failed samples are published as incomplete evidence by
 // the next successful collection; a failed write is logged and retried at the
@@ -53,10 +70,14 @@ func RunNetworkObservationPublisher(
 	provider drivers.TopologyProvider,
 	workerPodUID ...string,
 ) {
+	collector := &networkObservationCollector{}
 	publish := func() {
 		collectionCtx, collectionCancel := context.WithTimeout(ctx, networkObservationTimeout)
-		observation, err := BuildNetworkObservation(collectionCtx, provider, physicalIdentity, producerRevision, time.Now(), workerPodUID...)
+		observation, err := collector.collect(collectionCtx, provider, physicalIdentity, producerRevision, time.Now(), workerPodUID...)
 		collectionCancel()
+		if ctx.Err() != nil {
+			return
+		}
 		if err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation failed")
 			return
@@ -79,6 +100,88 @@ func RunNetworkObservationPublisher(
 			publish()
 		}
 	}
+}
+
+func (c *networkObservationCollector) collect(
+	ctx context.Context,
+	provider drivers.TopologyProvider,
+	physicalIdentity string,
+	producerRevision string,
+	now time.Time,
+	workerPodUID ...string,
+) (*ciskov1.DeviceNetworkObservationStatus, error) {
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	if c.result != nil {
+		select {
+		case result := <-c.result:
+			c.result = nil
+			if !c.expired {
+				return result.observation, result.err
+			}
+			// The result returned after its deadline is stale by definition.
+			// Drop it and start a fresh collection below.
+			c.expired = false
+		default:
+			// Keep the original collection timestamp while it remains stuck. A
+			// periodic incomplete status must not look like newly collected,
+			// fresh evidence merely because the publisher ticked again.
+			return incompleteNetworkObservation(physicalIdentity, producerRevision, c.started, c.started,
+				"collection remains in flight after deadline", workerPodUID...)
+		}
+	}
+	result := make(chan networkObservationCollectionResult, 1)
+	c.result = result
+	c.started = now.UTC()
+	go func() {
+		observation, err := BuildNetworkObservation(ctx, provider, physicalIdentity, producerRevision, now, workerPodUID...)
+		result <- networkObservationCollectionResult{observation: observation, err: err}
+	}()
+	select {
+	case result := <-c.result:
+		c.result = nil
+		return result.observation, result.err
+	case <-ctx.Done():
+		c.expired = true
+		return incompleteNetworkObservation(physicalIdentity, producerRevision, c.started, now,
+			"collection deadline exceeded", workerPodUID...)
+	}
+}
+
+func incompleteNetworkObservation(
+	physicalIdentity string,
+	producerRevision string,
+	started, now time.Time,
+	reason string,
+	workerPodUID ...string,
+) (*ciskov1.DeviceNetworkObservationStatus, error) {
+	identity, err := topology.CanonicalPhysicalIdentity(physicalIdentity)
+	if err != nil {
+		return nil, fmt.Errorf("canonical physical identity: %w", err)
+	}
+	if strings.TrimSpace(producerRevision) == "" {
+		return nil, fmt.Errorf("producer revision is empty")
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	if started.IsZero() {
+		started = now
+	}
+	status := &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(started.UTC()), CollectionEndedAt: metav1.NewTime(now.UTC()),
+		ObservedAt: metav1.NewTime(now.UTC()), Complete: false,
+		UnknownReason: truncateNetworkObservationReason(reason), ProducerRevision: producerRevision,
+		DeviceIdentityHash: identityHash(identity),
+	}
+	if len(workerPodUID) > 0 {
+		status.WorkerPodUID = strings.TrimSpace(workerPodUID[0])
+		if len(status.WorkerPodUID) > 128 {
+			return nil, fmt.Errorf("worker Pod UID exceeds 128 characters")
+		}
+	}
+	return status, nil
 }
 
 // publishNetworkObservation deliberately does not retry a conflict.
@@ -186,6 +289,8 @@ func boundedNormalizationReason(source string, err error) string {
 		return source + ": unnamed identity"
 	case strings.Contains(reason, "limit"):
 		return source + ": observation limit exceeded"
+	case strings.Contains(reason, "exceeds maximum length"):
+		return source + ": field length invalid"
 	default:
 		return source + ": normalization failed"
 	}
@@ -321,6 +426,9 @@ func normalizeInterfaces(values []common.InterfaceStats) ([]ciskov1.DeviceNetwor
 		if name == "" {
 			return nil, fmt.Errorf("source returned an unnamed interface")
 		}
+		if err := requireNetworkObservationFieldLength("interface name", name, 128); err != nil {
+			return nil, err
+		}
 		if _, exists := byName[name]; exists {
 			return nil, fmt.Errorf("source returned duplicate interface %q", name)
 		}
@@ -348,6 +456,12 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 			return nil, fmt.Errorf("source returned an unnamed CDP neighbor")
 		}
 		localInterface := strings.TrimSpace(value.LocalInterface)
+		if err := requireNetworkObservationFieldLength("neighbor ID", id, 128); err != nil {
+			return nil, err
+		}
+		if err := requireNetworkObservationFieldLength("neighbor interface", localInterface, 128); err != nil {
+			return nil, err
+		}
 		identity := neighborIdentity("cdp", id, localInterface, "")
 		if _, exists := byIdentity[identity]; exists {
 			return nil, fmt.Errorf("source returned duplicate CDP adjacency %q", identity)
@@ -363,13 +477,26 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 		}
 		localInterface := strings.TrimSpace(value.Interface)
 		routingDomain := ospfRoutingDomain(value)
+		if err := requireNetworkObservationFieldLength("neighbor ID", id, 128); err != nil {
+			return nil, err
+		}
+		if err := requireNetworkObservationFieldLength("neighbor interface", localInterface, 128); err != nil {
+			return nil, err
+		}
+		if err := requireNetworkObservationFieldLength("OSPF routing domain", routingDomain, 64); err != nil {
+			return nil, err
+		}
+		state := strings.TrimSpace(value.State)
+		if err := requireNetworkObservationFieldLength("OSPF state", state, 32); err != nil {
+			return nil, err
+		}
 		identity := neighborIdentity("ospf", id, localInterface, routingDomain)
 		if _, exists := byIdentity[identity]; exists {
 			return nil, fmt.Errorf("source returned duplicate OSPF adjacency %q", identity)
 		}
 		byIdentity[identity] = ciskov1.DeviceNetworkNeighborObservation{
 			Identity: identity, ID: id, Interface: localInterface, RoutingDomain: routingDomain,
-			State: strings.TrimSpace(value.State), Source: "ospf",
+			State: state, Source: "ospf",
 		}
 	}
 	out := make([]ciskov1.DeviceNetworkNeighborObservation, 0, len(byIdentity))
@@ -383,6 +510,13 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 		return out[i].Identity < out[j].Identity
 	})
 	return out, nil
+}
+
+func requireNetworkObservationFieldLength(name, value string, maximum int) error {
+	if len(value) > maximum {
+		return fmt.Errorf("%s exceeds maximum length %d", name, maximum)
+	}
+	return nil
 }
 
 // ospfRoutingDomain preserves the actual routing-instance and process context
