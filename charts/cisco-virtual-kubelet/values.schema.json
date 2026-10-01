@@ -467,6 +467,69 @@
                 }
               }
             },
+            "riskGroups": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "selector", "maxConcurrentTransfers", "maxUnavailable"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+                  },
+                  "maxConcurrentTransfers": { "type": "integer", "minimum": 1, "maximum": 100 },
+                  "maxUnavailable": { "type": "integer", "minimum": 1, "maximum": 100 },
+                  "selector": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["matchLabels", "matchExpressions"],
+                    "anyOf": [
+                      { "properties": { "matchLabels": { "minProperties": 1 } } },
+                      { "properties": { "matchExpressions": { "minItems": 1 } } }
+                    ],
+                    "properties": {
+                      "matchLabels": {
+                        "type": "object",
+                        "maxProperties": 32,
+                        "propertyNames": { "$ref": "#/definitions/topologyKey" },
+                        "additionalProperties": {
+                          "type": "string",
+                          "maxLength": 63,
+                          "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                        }
+                      },
+                      "matchExpressions": {
+                        "type": "array",
+                        "maxItems": 32,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["key", "operator", "values"],
+                          "properties": {
+                            "key": { "$ref": "#/definitions/topologyKey" },
+                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                            "values": {
+                              "type": "array",
+                              "maxItems": 32,
+                              "uniqueItems": true,
+                              "items": {
+                                "type": "string",
+                                "maxLength": 63,
+                                "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
             "healthFreshnessSeconds": { "type": "integer", "minimum": 30, "maximum": 3600 },
             "maxCampaignTargets": { "type": "integer", "minimum": 1, "maximum": 100 },
             "maxActiveReservations": { "type": "integer", "minimum": 1, "maximum": 256 },

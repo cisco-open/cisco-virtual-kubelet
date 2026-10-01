@@ -273,6 +273,7 @@ func effectiveAdmissionPolicy(
 		MaxActiveRecords:             int(effective.Policy.MaxActiveReservations),
 		MaxSerializedBytes:           int(effective.Policy.MaxLedgerSizeBytes),
 		DomainTransferBudgets:        map[string]int{}, DomainBudgets: map[string]int{},
+		RiskGroupBudgets: map[string]topologyrollout.RiskGroupBudget{},
 	}
 	freshness := minPositive(int(effective.Policy.HealthFreshnessSeconds), int(defaultInt32(rollout.Spec.Plan.Health.MaxObservationAgeSeconds, 300)))
 	policy.RequiredHealthFreshBy = now.Add(-time.Duration(freshness) * time.Second)
@@ -282,6 +283,12 @@ func effectiveAdmissionPolicy(
 		}
 		if domain.MaxUnavailable != nil {
 			policy.DomainBudgets[domain.TopologyKey] = int(*domain.MaxUnavailable)
+		}
+	}
+	for _, group := range current.Config.RiskGroups {
+		policy.RiskGroupBudgets[group.Name] = topologyrollout.RiskGroupBudget{
+			MaxConcurrentTransfers: group.MaxConcurrentTransfers,
+			MaxUnavailable:         group.MaxUnavailable,
 		}
 	}
 	return policy, nil
@@ -888,6 +895,7 @@ func rolloutReservationRequest(
 		PolicyVersion: effectivePolicy.Version, PolicyEpoch: effectivePolicy.Epoch,
 		PhysicalID: target.PhysicalIdentity, DeviceUID: target.DeviceUID, NodeUID: target.NodeUID,
 		ChildNamespace: rollout.Namespace, ChildName: target.ChildName, Domains: targetDomains(target),
+		RiskGroups:                     target.RiskGroups,
 		CampaignMaxConcurrentTransfers: int(defaultInt32(rollout.Spec.Plan.Budgets.MaxConcurrentTransfers, 1)),
 		CampaignMaxUnavailable:         int(defaultInt32(rollout.Spec.Plan.Budgets.MaxUnavailable, 1)),
 		CampaignTransferLimits:         transferLimits, CampaignLimits: unavailableLimits,
@@ -1534,13 +1542,24 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateAdmission(
 	if err != nil {
 		return nil, "", err
 	}
+	if len(currentPolicy.Config.RiskGroups) > 0 {
+		membershipHash, err := topologyrollout.RiskGroupMembershipHash(members)
+		if err != nil {
+			return nil, "", err
+		}
+		if membershipHash != rollout.Status.FrozenPlan.RiskGroupMembershipHash {
+			return nil, "", fmt.Errorf("administrator risk-group membership changed after plan approval")
+		}
+	} else if rollout.Status.FrozenPlan.RiskGroupMembershipHash != "" {
+		return nil, "", fmt.Errorf("frozen risk-group membership is inconsistent with current policy")
+	}
 	var found bool
 	for _, member := range members {
 		if member.PhysicalID != target.PhysicalIdentity {
 			continue
 		}
 		if member.DeviceUID != target.DeviceUID || member.NodeUID != target.NodeUID ||
-			!domainsMatchTarget(member.Domains, target) {
+			!domainsMatchTarget(member.Domains, target) || !equalSortedStrings(member.RiskGroups, target.RiskGroups) {
 			return nil, "", fmt.Errorf("target identity or topology changed after plan approval")
 		}
 		if !member.HealthKnown || !member.Healthy || member.Maintenance || member.HealthObserved.Before(effectivePolicy.RequiredHealthFreshBy) {
@@ -1584,6 +1603,13 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateFrozenTarget(
 	if protection != nil {
 		return fmt.Errorf("%sProtected: administrator rule %q prohibits the current disruptive lifecycle",
 			protection.Reason, protection.Name)
+	}
+	currentRiskGroups, err := currentPolicy.RiskGroups(device.Labels)
+	if err != nil {
+		return fmt.Errorf("evaluate administrator risk groups: %w", err)
+	}
+	if !equalSortedStrings(currentRiskGroups, target.RiskGroups) {
+		return fmt.Errorf("frozen target risk-group membership changed")
 	}
 	if device.Status.NodeIdentity == nil || device.Status.TopologyProjection == nil ||
 		device.Status.NodeIdentity.NodeName != target.NodeName || device.Status.NodeIdentity.NodeUID != target.NodeUID ||
@@ -1764,6 +1790,18 @@ func domainsMatchTarget(domains map[string]string, target opsv1alpha1.IOSXESoftw
 	return true
 }
 
+func equalSortedStrings(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for i := range left {
+		if left[i] != right[i] {
+			return false
+		}
+	}
+	return true
+}
+
 func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 	ctx context.Context,
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
@@ -1821,6 +1859,10 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 				return nil, nil, fmt.Errorf("managed fleet member %s/%s lacks risk domain %q", device.Namespace, device.Name, key)
 			}
 		}
+		riskGroups, err := currentPolicy.RiskGroups(device.Labels)
+		if err != nil {
+			return nil, nil, fmt.Errorf("managed fleet risk groups for %s/%s: %w", device.Namespace, device.Name, err)
+		}
 		readyCondition := nodeReadyCondition(&node)
 		healthy := device.Status.Phase == "Ready" && readyCondition != nil && readyCondition.Status == corev1.ConditionTrue &&
 			deviceConditionCurrentTrue(device, ciskov1.CiscoDeviceConditionNodeIdentityReady) &&
@@ -1844,7 +1886,8 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 		maintenance := activeMaintenanceSession(device.Status.MaintenanceSession)
 		members = append(members, topologyrollout.Member{
 			PhysicalID: physicalID, DeviceUID: string(device.UID), NodeUID: identity.NodeUID,
-			Domains: domains, HealthKnown: observationErr == nil && !observed.IsZero(), Healthy: healthy,
+			Domains: domains, RiskGroups: riskGroups,
+			HealthKnown: observationErr == nil && !observed.IsZero(), Healthy: healthy,
 			Maintenance: maintenance, HealthObserved: observed,
 		})
 		workers[string(device.UID)] = managedNetworkWorkerUsername(&node)

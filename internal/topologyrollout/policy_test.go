@@ -151,6 +151,64 @@ func TestAdminPolicyHashesSeparateSemanticAndStructuralChanges(t *testing.T) {
 	}
 }
 
+func TestRiskGroupsValidateCanonicalizeAndOverlap(t *testing.T) {
+	base := validAdminPolicyConfig()
+	base.RiskGroups = []AdminRiskGroup{
+		{Name: "path-east", MaxConcurrentTransfers: 2, MaxUnavailable: 1,
+			Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}}},
+		{Name: "customer-a", MaxConcurrentTransfers: 1, MaxUnavailable: 1,
+			Selector: metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+				Key: "topology.cisco.vk/redundancy-group", Operator: metav1.LabelSelectorOpIn, Values: []string{"pair-b", "pair-a"},
+			}}}},
+	}
+	semantic, structural, err := AdminPolicyHashes(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := base.RiskGroups[0].Name; got != "path-east" {
+		t.Fatalf("hashing mutated input risk-group order: first = %q", got)
+	}
+	if got := strings.Join(base.RiskGroups[1].Selector.MatchExpressions[0].Values, ","); got != "pair-b,pair-a" {
+		t.Fatalf("hashing mutated input selector values: %q", got)
+	}
+	reordered := base
+	reordered.RiskGroups = []AdminRiskGroup{base.RiskGroups[1], base.RiskGroups[0]}
+	reordered.RiskGroups[0].Selector.MatchExpressions[0].Values = []string{"pair-a", "pair-b"}
+	semanticReordered, structuralReordered, err := AdminPolicyHashes(reordered)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if semantic != semanticReordered || structural != structuralReordered {
+		t.Fatal("order-only risk-group rewrite changed canonical hashes")
+	}
+	parsed := &ParsedAdminPolicy{Config: base}
+	groups, err := parsed.RiskGroups(map[string]string{
+		"topology.cisco.vk/site": "site-a", "topology.cisco.vk/redundancy-group": "pair-a",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(groups, ",") != "customer-a,path-east" {
+		t.Fatalf("overlapping groups = %v", groups)
+	}
+	changedBudget := base
+	changedBudget.RiskGroups = append([]AdminRiskGroup(nil), base.RiskGroups...)
+	changedBudget.RiskGroups[0].MaxUnavailable++
+	_, changedStructural, err := AdminPolicyHashes(changedBudget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changedStructural == structural {
+		t.Fatal("risk-group budget change must require a new approval")
+	}
+	invalid := base
+	invalid.RiskGroups = append([]AdminRiskGroup(nil), base.RiskGroups...)
+	invalid.RiskGroups[0].Selector = metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/not-required": "x"}}
+	if _, _, err := AdminPolicyHashes(invalid); err == nil || !strings.Contains(err.Error(), "requiredTopologyKeys") {
+		t.Fatalf("invalid selector error = %v", err)
+	}
+}
+
 func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 	tests := map[string]func(*AdminPolicyConfig){
 		"empty fleet selector": func(cfg *AdminPolicyConfig) { cfg.FleetSelector = metav1.LabelSelector{} },

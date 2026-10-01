@@ -1333,6 +1333,13 @@ spec:
                     - structuralHash
                     - uid
                     type: object
+                  riskGroupMembershipHash:
+                    description: |-
+                      RiskGroupMembershipHash binds approval to the exact physical membership
+                      of every administrator-declared overlapping risk group. It is omitted
+                      when no risk groups are configured.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
                   targets:
                     description: Targets contains the complete immutable target/topology
                       snapshot.
@@ -1416,6 +1423,15 @@ spec:
                           minLength: 1
                           pattern: ^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$
                           type: string
+                        riskGroups:
+                          description: |-
+                            RiskGroups contains the sorted administrator-declared overlapping groups
+                            which included this target when the plan was frozen.
+                          items:
+                            pattern: ^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$
+                            type: string
+                          maxItems: 16
+                          type: array
                         source:
                           description: |-
                             Source is the exact endpoint and Secret incarnation selected for this

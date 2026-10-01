@@ -371,18 +371,30 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 		CreatedAt: metav1.NewTime(now), CampaignGeneration: rollout.Generation,
 		Policy: policySnapshot, Targets: planned,
 	}
+	if len(policy.Config.RiskGroups) > 0 {
+		members, _, err := r.currentFleetMembers(ctx, rollout, policy, policy.AdmissionPolicy(now))
+		if err != nil {
+			return nil, nil, fmt.Errorf("freeze administrator risk-group membership: %w", err)
+		}
+		frozen.RiskGroupMembershipHash, err = topologyrollout.RiskGroupMembershipHash(members)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 	canonical := struct {
-		CampaignUID string                                          `json:"campaignUID"`
-		Generation  int64                                           `json:"generation"`
-		Plan        opsv1alpha1.IOSXESoftwareRolloutPlan            `json:"plan"`
-		Policy      opsv1alpha1.IOSXESoftwareRolloutPolicySnapshot  `json:"policy"`
-		Targets     []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget `json:"targets"`
+		CampaignUID             string                                          `json:"campaignUID"`
+		Generation              int64                                           `json:"generation"`
+		Plan                    opsv1alpha1.IOSXESoftwareRolloutPlan            `json:"plan"`
+		Policy                  opsv1alpha1.IOSXESoftwareRolloutPolicySnapshot  `json:"policy"`
+		RiskGroupMembershipHash string                                          `json:"riskGroupMembershipHash,omitempty"`
+		Targets                 []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget `json:"targets"`
 	}{
-		CampaignUID: string(rollout.UID),
-		Generation:  rollout.Generation,
-		Plan:        rollout.Spec.Plan,
-		Policy:      policySnapshot,
-		Targets:     planned,
+		CampaignUID:             string(rollout.UID),
+		Generation:              rollout.Generation,
+		Plan:                    rollout.Spec.Plan,
+		Policy:                  policySnapshot,
+		RiskGroupMembershipHash: frozen.RiskGroupMembershipHash,
+		Targets:                 planned,
 	}
 	encoded, err := json.Marshal(canonical)
 	if err != nil {
@@ -713,6 +725,10 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		topologyValues = append(topologyValues, opsv1alpha1.IOSXESoftwareRolloutTopologyValue{Key: key, Value: value})
 	}
 	sort.Slice(topologyValues, func(i, j int) bool { return topologyValues[i].Key < topologyValues[j].Key })
+	riskGroups, err := policy.RiskGroups(device.Labels)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("evaluate administrator risk groups: %w", err)
+	}
 	wave := int32(1)
 	if cohort != "" {
 		wave = 0
@@ -724,6 +740,7 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		ImageFamily: rollout.Spec.Plan.Image.ImageFamily, Source: source, QualificationCohort: qualificationCohort,
 		WorkerProtocolVersion: managedprotocol.Version,
 		ProjectionHash:        device.Status.TopologyProjection.EffectiveLabelHash, Topology: topologyValues,
+		RiskGroups:   riskGroups,
 		CanaryCohort: cohort, Wave: wave, ChildName: rolloutChildName(rollout, device),
 	}, nil
 }

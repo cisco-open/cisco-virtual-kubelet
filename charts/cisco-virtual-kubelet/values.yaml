@@ -172,6 +172,21 @@ topology:
     #        operations.cisco.vk/service-tier: critical
     #      matchExpressions: []
 
+    # Optional overlapping administrator risk groups. A device may match more
+    # than one selector; every matching unavailable/transfer ceiling is charged
+    # atomically across all campaigns, including unhealthy non-target peers.
+    # Exact physical membership is frozen into each approved plan, so label or
+    # fleet membership drift requires a new approval. Selector keys must be in
+    # requiredTopologyKeys.
+    riskGroups: []
+    #  - name: customer-a-path
+    #    maxConcurrentTransfers: 1
+    #    maxUnavailable: 1
+    #    selector:
+    #      matchLabels:
+    #        topology.cisco.vk/redundancy-group: customer-a
+    #      matchExpressions: []
+
     healthFreshnessSeconds: 300
     maxCampaignTargets: 100
     maxActiveReservations: 256

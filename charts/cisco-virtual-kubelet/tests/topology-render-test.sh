@@ -14,6 +14,7 @@ managed_short_account_render="$scratch_dir/managed-short-accounts.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
 managed_drain_render="$scratch_dir/managed-drain.yaml"
 managed_protection_render="$scratch_dir/managed-protection.yaml"
+managed_risk_group_render="$scratch_dir/managed-risk-group.yaml"
 managed_legacy_values_render="$scratch_dir/managed-legacy-values.yaml"
 managed_lease_namespace_render="$scratch_dir/managed-lease-namespace.yaml"
 strict_render_bundle="$scratch_dir/managed-and-examples.yaml"
@@ -157,7 +158,16 @@ helm template cvk "$chart_dir" \
   --set topology.enabled=true \
   --set controller.leaderElect=true \
   --set rbac.profile=strict \
-  --set-json 'topology.policy.disruptionProtections=null' >"$managed_legacy_values_render"
+  --set-json 'topology.policy.requiredTopologyKeys=["topology.kubernetes.io/region","topology.kubernetes.io/zone","operations.cisco.vk/service-group"]' \
+  --set-json 'topology.policy.riskGroups=[{"name":"customer-a","selector":{"matchLabels":{"operations.cisco.vk/service-group":"customer-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1}]' >"$managed_risk_group_render"
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set-json 'topology.policy.disruptionProtections=null' \
+  --set-json 'topology.policy.riskGroups=null' >"$managed_legacy_values_render"
 helm template cvk "$chart_dir" --namespace cisco-vk-system --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
   --set config.leaseNamespace=cvk-leases >"$managed_lease_namespace_render"
 
@@ -279,11 +289,20 @@ if grep -Fq '"disruptionProtections"' "$managed_render"; then
   echo "empty disruption protection changed the v1 administrator policy" >&2
   exit 1
 fi
+if grep -Fq '"riskGroups"' "$managed_render"; then
+  echo "empty risk groups changed the v1 administrator policy" >&2
+  exit 1
+fi
 if grep -Fq '"disruptionProtections"' "$managed_legacy_values_render"; then
   echo "absent legacy disruption protection changed the v1 administrator policy" >&2
   exit 1
 fi
+if grep -Fq '"riskGroups"' "$managed_legacy_values_render"; then
+  echo "absent legacy risk groups changed the v1 administrator policy" >&2
+  exit 1
+fi
 grep -Fq '"disruptionProtections":[{"name":"critical-services","reason":"CriticalService","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-tier":"critical"}}}]' "$managed_protection_render"
+grep -Fq '"riskGroups":[{"maxConcurrentTransfers":1,"maxUnavailable":1,"name":"customer-a","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-group":"customer-a"}}}]' "$managed_risk_group_render"
 grep -Fq '"workloadDrain":{' "$managed_drain_render"
 grep -Fq '"allowedNamespaces":["apps","edge-services"]' "$managed_drain_render"
 grep -Fq '"enabled":true' "$managed_drain_render"
@@ -1162,6 +1181,26 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   exit 1
 fi
 grep -Fq 'is not in requiredTopologyKeys' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.riskGroups=[{"name":"path-east","selector":{"matchLabels":{"operations.cisco.vk/service-group":"customer-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1}]' >"$error_output" 2>&1; then
+  echo "risk-group selector outside required keys rendered" >&2
+  exit 1
+fi
+grep -Fq 'is not in requiredTopologyKeys' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.riskGroups=[{"name":"path-east","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1},{"name":"path-east","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-b"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1}]' >"$error_output" 2>&1; then
+  echo "duplicate risk-group names rendered" >&2
+  exit 1
+fi
+grep -Fq 'contains duplicate name "path-east"' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \

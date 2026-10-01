@@ -83,6 +83,9 @@ limitations under the License.
 {{- if gt (len (.Values.topology.policy.disruptionProtections | default (list))) 0 }}
 {{- $_ := set $policy "disruptionProtections" .Values.topology.policy.disruptionProtections }}
 {{- end }}
+{{- if gt (len (.Values.topology.policy.riskGroups | default (list))) 0 }}
+{{- $_ := set $policy "riskGroups" .Values.topology.policy.riskGroups }}
+{{- end }}
 {{- if .Values.topology.policy.workloadDrain.enabled }}
 {{- if lt (int .Values.topology.policy.workloadDrain.maxTimeoutSeconds) (add (int .Values.topology.policy.workloadDrain.maxTerminationGraceSeconds) 120) }}
 {{- fail "topology.policy.workloadDrain.maxTimeoutSeconds must be at least maxTerminationGraceSeconds plus 120" }}

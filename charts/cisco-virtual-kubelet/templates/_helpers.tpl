@@ -560,6 +560,23 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+{{- $riskGroupNames := dict -}}
+{{- range $group := (.Values.topology.policy.riskGroups | default (list)) -}}
+{{- if hasKey $riskGroupNames $group.name -}}
+{{- fail (printf "topology.policy.riskGroups contains duplicate name %q" $group.name) -}}
+{{- end -}}
+{{- $_ := set $riskGroupNames $group.name true -}}
+{{- range $key, $_ := $group.selector.matchLabels -}}
+{{- if not (hasKey $required $key) -}}
+{{- fail (printf "topology.policy.riskGroups group %q selector key %q is not in requiredTopologyKeys" $group.name $key) -}}
+{{- end -}}
+{{- end -}}
+{{- range $expression := $group.selector.matchExpressions -}}
+{{- if not (hasKey $required $expression.key) -}}
+{{- fail (printf "topology.policy.riskGroups group %q selector key %q is not in requiredTopologyKeys" $group.name $expression.key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- $domainKeys := dict -}}
 {{- range $key, $_ := .Values.topology.policy.domainMaxConcurrentTransfers -}}
 {{- if not (hasKey $required $key) -}}

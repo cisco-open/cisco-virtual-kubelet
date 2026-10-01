@@ -1062,6 +1062,18 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err != nil {
 		t.Fatalf("freezeTarget() after worker handoff error = %v", err)
 	}
+	policy.Config.RiskGroups = []topologyrollout.AdminRiskGroup{{
+		Name: "path-east", MaxConcurrentTransfers: 1, MaxUnavailable: 1,
+		Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+	}}
+	riskTarget, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now)
+	if err != nil {
+		t.Fatalf("freezeTarget() with risk group error = %v", err)
+	}
+	if strings.Join(riskTarget.RiskGroups, ",") != "path-east" {
+		t.Fatalf("frozen target risk groups = %v", riskTarget.RiskGroups)
+	}
+	policy.Config.RiskGroups = nil
 	policy.Config.DisruptionProtections = []topologyrollout.AdminDisruptionProtection{{
 		Name: "critical-service", Reason: "CriticalService",
 		Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
@@ -1338,6 +1350,13 @@ func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 			policy.Config.RequiredTopologyKeys = []string{topologyKey}
 			policy.Config.DisruptionProtections = []topologyrollout.AdminDisruptionProtection{{
 				Name: "singleton-path", Reason: "SingletonPath",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+			}}
+		}},
+		{name: "administrator risk-group membership", mutate: func(*ciskov1.CiscoDevice) {}, mutatePolicy: func(policy *topologyrollout.ParsedAdminPolicy) {
+			policy.Config.RequiredTopologyKeys = []string{topologyKey}
+			policy.Config.RiskGroups = []topologyrollout.AdminRiskGroup{{
+				Name: "path-east", MaxConcurrentTransfers: 1, MaxUnavailable: 1,
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
 			}}
 		}},

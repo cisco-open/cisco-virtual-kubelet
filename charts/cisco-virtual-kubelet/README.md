@@ -109,6 +109,21 @@ topology:
     #     matchLabels:
     #       operations.cisco.vk/service-tier: critical
     #     matchExpressions: []
+    riskGroups: []
+    # - name: path-east
+    #   selector:
+    #     matchLabels:
+    #       topology.cisco.vk/path: east
+    #     matchExpressions: []
+    #   maxConcurrentTransfers: 1
+    #   maxUnavailable: 1
+    # - name: customer-a
+    #   selector:
+    #     matchLabels:
+    #       operations.cisco.vk/service-group: customer-a
+    #     matchExpressions: []
+    #   maxConcurrentTransfers: 1
+    #   maxUnavailable: 1
     healthFreshnessSeconds: 300
     maxCampaignTargets: 100
     maxActiveReservations: 256
@@ -182,6 +197,21 @@ match blocks the entire software lifecycle. Do not use labels alone to claim a
 path is redundant. A future prepare-only phase may bypass disruption
 protection only after it has a separate API, authorization, and physical
 non-disruption qualification.
+
+`riskGroups` defines administrator-owned failure or service-risk sets which
+may overlap normal topology domains and each other. Examples include devices
+on one forwarding path, devices serving the same customer, or members of a
+shared network service. Every selector key must be in
+`requiredTopologyKeys`, so ordinary device editors cannot change group
+membership after enrollment. Admission applies every matching group's
+transfer and unavailable ceilings in the same ledger compare-and-swap as the
+global and topology-domain budgets. It counts unhealthy non-target members
+and active reservations from every rollout, not only the current campaign.
+The approved plan freezes both each target's groups and the complete physical
+membership of all configured groups; any later membership or policy change
+requires a new plan and approval. Keep the selectors low-cardinality and use
+these budgets as explicit operator constraints, not as inferred proof that a
+network path is redundant.
 
 Every software-rollout target must also carry the protected,
 low-cardinality `operations.cisco.vk/qualification-cohort` label describing

@@ -78,6 +78,7 @@ type AdminPolicyConfig struct {
 	MaxLedgerBytes                      int                         `json:"maxLedgerBytes"`
 	WorkloadDrain                       *AdminWorkloadDrainPolicy   `json:"workloadDrain,omitempty"`
 	DisruptionProtections               []AdminDisruptionProtection `json:"disruptionProtections,omitempty"`
+	RiskGroups                          []AdminRiskGroup            `json:"riskGroups,omitempty"`
 	LedgerName                          string                      `json:"ledgerName"`
 }
 
@@ -89,6 +90,16 @@ type AdminDisruptionProtection struct {
 	Name     string               `json:"name"`
 	Reason   string               `json:"reason"`
 	Selector metav1.LabelSelector `json:"selector"`
+}
+
+// AdminRiskGroup defines one administrator-owned, possibly overlapping
+// failure or service-risk set. Membership is evaluated from protected
+// CiscoDevice labels and frozen separately from the selector policy.
+type AdminRiskGroup struct {
+	Name                   string               `json:"name"`
+	Selector               metav1.LabelSelector `json:"selector"`
+	MaxConcurrentTransfers int                  `json:"maxConcurrentTransfers"`
+	MaxUnavailable         int                  `json:"maxUnavailable"`
 }
 
 // AdminWorkloadDrainPolicy is an explicit administrator feature gate and set
@@ -312,6 +323,13 @@ func decodeAdminPolicyConfig(cm *corev1.ConfigMap) (AdminPolicyConfig, error) {
 }
 
 func (p *ParsedAdminPolicy) AdmissionPolicy(now time.Time) Policy {
+	riskGroups := make(map[string]RiskGroupBudget, len(p.Config.RiskGroups))
+	for _, group := range p.Config.RiskGroups {
+		riskGroups[group.Name] = RiskGroupBudget{
+			MaxConcurrentTransfers: group.MaxConcurrentTransfers,
+			MaxUnavailable:         group.MaxUnavailable,
+		}
+	}
 	return Policy{
 		UID:                          p.PolicyUID,
 		Version:                      p.ResourceVersion,
@@ -320,10 +338,35 @@ func (p *ParsedAdminPolicy) AdmissionPolicy(now time.Time) Policy {
 		GlobalMaxUnavailable:         p.Config.GlobalMaxUnavailable,
 		DomainTransferBudgets:        cloneIntMap(p.Config.DomainMaxConcurrentTransfers),
 		DomainBudgets:                cloneIntMap(p.Config.DomainMaxUnavailable),
+		RiskGroupBudgets:             riskGroups,
 		MaxActiveRecords:             p.Config.MaxActiveReservations,
 		MaxSerializedBytes:           p.Config.MaxLedgerBytes,
 		RequiredHealthFreshBy:        now.Add(-p.HealthFreshness),
 	}
+}
+
+// RiskGroups returns the sorted administrator risk-group memberships for one
+// exact set of protected device labels.
+func (p *ParsedAdminPolicy) RiskGroups(deviceLabels map[string]string) ([]string, error) {
+	if p == nil {
+		return nil, fmt.Errorf("administrator topology policy is required")
+	}
+	if err := validateRiskGroups(&p.Config); err != nil {
+		return nil, err
+	}
+	groups := make([]string, 0, len(p.Config.RiskGroups))
+	for i := range p.Config.RiskGroups {
+		group := &p.Config.RiskGroups[i]
+		selector, err := metav1.LabelSelectorAsSelector(&group.Selector)
+		if err != nil {
+			return nil, fmt.Errorf("risk group %q selector is invalid: %w", group.Name, err)
+		}
+		if selector.Matches(labels.Set(deviceLabels)) {
+			groups = append(groups, group.Name)
+		}
+	}
+	sort.Strings(groups)
+	return groups, nil
 }
 
 // ValidateWorkloadPolicy applies the administrator's fail-closed drain gate
@@ -444,6 +487,7 @@ func AdminPolicyHashes(cfg AdminPolicyConfig) (semantic, structural string, err 
 	if err := validateAdminPolicyConfig(&cfg); err != nil {
 		return "", "", err
 	}
+	cfg = cloneAdminPolicyConfig(cfg)
 	canonicalizePolicyCollections(&cfg)
 	semantic, err = hashCanonicalJSON(cfg)
 	if err != nil {
@@ -458,6 +502,7 @@ func AdminPolicyHashes(cfg AdminPolicyConfig) (semantic, structural string, err 
 		RequiredTopologyKeys                []string                    `json:"requiredTopologyKeys"`
 		ProjectedTopologyKeys               []string                    `json:"projectedTopologyKeys"`
 		DisruptionProtections               []AdminDisruptionProtection `json:"disruptionProtections,omitempty"`
+		RiskGroups                          []AdminRiskGroup            `json:"riskGroups,omitempty"`
 		TransferDomainKeys                  []string                    `json:"transferDomainKeys"`
 		UnavailableDomainKeys               []string                    `json:"unavailableDomainKeys"`
 		LedgerName                          string                      `json:"ledgerName"`
@@ -469,11 +514,43 @@ func AdminPolicyHashes(cfg AdminPolicyConfig) (semantic, structural string, err 
 		FleetSelector:                       cfg.FleetSelector,
 		RequiredTopologyKeys:                cfg.RequiredTopologyKeys, ProjectedTopologyKeys: cfg.ProjectedTopologyKeys,
 		DisruptionProtections: cfg.DisruptionProtections,
+		RiskGroups:            cfg.RiskGroups,
 		TransferDomainKeys:    sortedIntMapKeys(cfg.DomainMaxConcurrentTransfers),
 		UnavailableDomainKeys: sortedIntMapKeys(cfg.DomainMaxUnavailable), LedgerName: cfg.LedgerName,
 	}
 	structural, err = hashCanonicalJSON(structure)
 	return semantic, structural, err
+}
+
+// cloneAdminPolicyConfig prevents hash canonicalization from reordering the
+// live parsed policy through slice- and map-backed shallow struct copies.
+func cloneAdminPolicyConfig(in AdminPolicyConfig) AdminPolicyConfig {
+	out := in
+	out.FleetSelector = *in.FleetSelector.DeepCopy()
+	out.RequiredTopologyKeys = append([]string(nil), in.RequiredTopologyKeys...)
+	out.ProjectedTopologyKeys = append([]string(nil), in.ProjectedTopologyKeys...)
+	out.DomainMaxConcurrentTransfers = cloneIntMap(in.DomainMaxConcurrentTransfers)
+	out.DomainMaxUnavailable = cloneIntMap(in.DomainMaxUnavailable)
+	if in.WorkloadDrain != nil {
+		out.WorkloadDrain = &AdminWorkloadDrainPolicy{
+			Enabled:                    in.WorkloadDrain.Enabled,
+			AllowedNamespaces:          append([]string(nil), in.WorkloadDrain.AllowedNamespaces...),
+			MaxTimeoutSeconds:          in.WorkloadDrain.MaxTimeoutSeconds,
+			MaxPods:                    in.WorkloadDrain.MaxPods,
+			MaxTerminationGraceSeconds: in.WorkloadDrain.MaxTerminationGraceSeconds,
+		}
+	}
+	out.DisruptionProtections = make([]AdminDisruptionProtection, len(in.DisruptionProtections))
+	for i := range in.DisruptionProtections {
+		out.DisruptionProtections[i] = in.DisruptionProtections[i]
+		out.DisruptionProtections[i].Selector = *in.DisruptionProtections[i].Selector.DeepCopy()
+	}
+	out.RiskGroups = make([]AdminRiskGroup, len(in.RiskGroups))
+	for i := range in.RiskGroups {
+		out.RiskGroups[i] = in.RiskGroups[i]
+		out.RiskGroups[i].Selector = *in.RiskGroups[i].Selector.DeepCopy()
+	}
+	return out
 }
 
 func canonicalizePolicyCollections(cfg *AdminPolicyConfig) {
@@ -487,6 +564,12 @@ func canonicalizePolicyCollections(cfg *AdminPolicyConfig) {
 	}
 	sort.Slice(cfg.DisruptionProtections, func(i, j int) bool {
 		return cfg.DisruptionProtections[i].Name < cfg.DisruptionProtections[j].Name
+	})
+	for i := range cfg.RiskGroups {
+		canonicalizeLabelSelector(&cfg.RiskGroups[i].Selector)
+	}
+	sort.Slice(cfg.RiskGroups, func(i, j int) bool {
+		return cfg.RiskGroups[i].Name < cfg.RiskGroups[j].Name
 	})
 	canonicalizeLabelSelector(&cfg.FleetSelector)
 }
@@ -637,6 +720,9 @@ func validateAdminPolicyConfig(cfg *AdminPolicyConfig) error {
 	if err := validateDisruptionProtections(cfg); err != nil {
 		return err
 	}
+	if err := validateRiskGroups(cfg); err != nil {
+		return err
+	}
 	if problems := validation.IsDNS1123Subdomain(cfg.LedgerName); len(problems) > 0 {
 		return fmt.Errorf("ledgerName is invalid: %s", strings.Join(problems, "; "))
 	}
@@ -744,6 +830,64 @@ func validateDisruptionProtections(cfg *AdminPolicyConfig) error {
 		}
 		if _, err := metav1.LabelSelectorAsSelector(&rule.Selector); err != nil {
 			return fmt.Errorf("disruption protection %q selector is invalid: %w", rule.Name, err)
+		}
+	}
+	return nil
+}
+
+func validateRiskGroups(cfg *AdminPolicyConfig) error {
+	if len(cfg.RiskGroups) > 16 {
+		return fmt.Errorf("riskGroups may contain at most 16 groups")
+	}
+	required := make(map[string]struct{}, len(cfg.RequiredTopologyKeys))
+	for _, key := range cfg.RequiredTopologyKeys {
+		required[key] = struct{}{}
+	}
+	seen := make(map[string]struct{}, len(cfg.RiskGroups))
+	for i := range cfg.RiskGroups {
+		group := &cfg.RiskGroups[i]
+		if problems := validation.IsDNS1123Label(group.Name); len(problems) > 0 {
+			return fmt.Errorf("riskGroups[%d].name is invalid: %s", i, strings.Join(problems, "; "))
+		}
+		if _, duplicate := seen[group.Name]; duplicate {
+			return fmt.Errorf("riskGroups contains duplicate name %q", group.Name)
+		}
+		seen[group.Name] = struct{}{}
+		if group.MaxConcurrentTransfers < 1 || group.MaxConcurrentTransfers > DefaultMaxCampaignTargets {
+			return fmt.Errorf("risk group %q maxConcurrentTransfers must be between 1 and %d", group.Name, DefaultMaxCampaignTargets)
+		}
+		if group.MaxUnavailable < 1 || group.MaxUnavailable > DefaultMaxCampaignTargets {
+			return fmt.Errorf("risk group %q maxUnavailable must be between 1 and %d", group.Name, DefaultMaxCampaignTargets)
+		}
+		if len(group.Selector.MatchLabels) == 0 && len(group.Selector.MatchExpressions) == 0 {
+			return fmt.Errorf("risk group %q selector must be non-empty", group.Name)
+		}
+		if len(group.Selector.MatchLabels) > 32 || len(group.Selector.MatchExpressions) > 32 {
+			return fmt.Errorf("risk group %q selector supports at most 32 matchLabels and 32 matchExpressions", group.Name)
+		}
+		for key, value := range group.Selector.MatchLabels {
+			if _, ok := required[key]; !ok {
+				return fmt.Errorf("risk group %q selector key %q must be present in requiredTopologyKeys", group.Name, key)
+			}
+			if len(key) > 96 || len(value) > 63 {
+				return fmt.Errorf("risk group %q selector keys and values must be at most 96 and 63 characters", group.Name)
+			}
+		}
+		for _, requirement := range group.Selector.MatchExpressions {
+			if _, ok := required[requirement.Key]; !ok {
+				return fmt.Errorf("risk group %q selector key %q must be present in requiredTopologyKeys", group.Name, requirement.Key)
+			}
+			if len(requirement.Key) > 96 || len(requirement.Values) > 32 {
+				return fmt.Errorf("risk group %q expressions support 96-character keys and at most 32 values", group.Name)
+			}
+			for _, value := range requirement.Values {
+				if len(value) > 63 {
+					return fmt.Errorf("risk group %q expression values must be at most 63 characters", group.Name)
+				}
+			}
+		}
+		if _, err := metav1.LabelSelectorAsSelector(&group.Selector); err != nil {
+			return fmt.Errorf("risk group %q selector is invalid: %w", group.Name, err)
 		}
 	}
 	return nil

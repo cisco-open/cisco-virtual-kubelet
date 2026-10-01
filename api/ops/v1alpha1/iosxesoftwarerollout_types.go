@@ -776,6 +776,13 @@ type IOSXESoftwareRolloutFrozenPlanStatus struct {
 	// +kubebuilder:validation:Required
 	Policy IOSXESoftwareRolloutPolicySnapshot `json:"policy"`
 
+	// RiskGroupMembershipHash binds approval to the exact physical membership
+	// of every administrator-declared overlapping risk group. It is omitted
+	// when no risk groups are configured.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	RiskGroupMembershipHash string `json:"riskGroupMembershipHash,omitempty"`
+
 	// Targets contains the complete immutable target/topology snapshot.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
@@ -1044,6 +1051,13 @@ type IOSXESoftwareRolloutPlannedTarget struct {
 	// +listType=map
 	// +listMapKey=key
 	Topology []IOSXESoftwareRolloutTopologyValue `json:"topology"`
+
+	// RiskGroups contains the sorted administrator-declared overlapping groups
+	// which included this target when the plan was frozen.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:items:Pattern=`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`
+	RiskGroups []string `json:"riskGroups,omitempty"`
 
 	// CanaryCohort is non-empty for explicitly selected canaries.
 	// +kubebuilder:validation:Optional
