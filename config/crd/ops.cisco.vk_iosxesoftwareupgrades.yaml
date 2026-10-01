@@ -260,6 +260,15 @@ spec:
                 maximum: 10
                 minimum: 0
                 type: integer
+              maxTransferBytesPerSecond:
+                description: |-
+                  MaxTransferBytesPerSecond optionally paces both remote image resolution
+                  and the gNOI OS.Install byte stream. Managed rollouts derive and freeze
+                  this value from administrator-owned overlapping risk-group policy.
+                format: int64
+                maximum: 1099511627776
+                minimum: 1
+                type: integer
               rebootTimeoutSeconds:
                 default: 1800
                 description: |-
@@ -639,6 +648,7 @@ spec:
                       handshake.
                     enum:
                     - rollout-v1
+                    - rollout-byte-pacing-v1
                     type: string
                   reservationID:
                     description: ReservationID identifies the atomic device and domain

@@ -535,6 +535,21 @@ type countingImageResolver struct {
 	onResolve func()
 }
 
+type rateCapturingImageResolver struct {
+	countingImageResolver
+	opts ImageResolveOptions
+}
+
+func (r *rateCapturingImageResolver) ResolveWithOptions(
+	ctx context.Context,
+	namespace string,
+	source opsv1alpha1.UpgradeImageSource,
+	opts ImageResolveOptions,
+) (*ResolvedImage, error) {
+	r.opts = opts
+	return r.Resolve(ctx, namespace, source)
+}
+
 func (r *countingImageResolver) Resolve(context.Context, string, opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
 	r.calls++
 	if r.onResolve != nil {
@@ -3181,6 +3196,57 @@ func TestImageResolutionUsesRemainingInstallDeadline(t *testing.T) {
 	}
 	if resolver.remaining < 29*time.Second || resolver.remaining > 30*time.Second {
 		t.Fatalf("resolver deadline remaining=%s, want approximately 30s", resolver.remaining)
+	}
+}
+
+func TestConfiguredTransferPacingFailsClosedForUnsupportedResolver(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.14.01a"
+	up := newUpgrade("upgrade-pacing-unsupported", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+			URL: "https://example.invalid/cat9k.bin", SHA256: strings.Repeat("a", 64),
+		}
+		up.Spec.MaxTransferBytesPerSecond = 1_000_000
+		up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	})
+	resolver := &countingImageResolver{}
+	r := newReconciler(t, rig, up)
+	r.ImageResolver = resolver
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseValidationFailed || got.Status.FailureReason != "TransferPacingUnsupported" {
+		t.Fatalf("phase=%q reason=%q msg=%q", got.Status.Phase, got.Status.FailureReason, got.Status.Message)
+	}
+	if resolver.calls != 0 || rig.os.installCalls != 0 {
+		t.Fatalf("Resolve calls=%d Install calls=%d, want no unpaced transfer", resolver.calls, rig.os.installCalls)
+	}
+}
+
+func TestConfiguredTransferPacingIsPassedToResolverAndInstall(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.14.01a"
+	up := newUpgrade("upgrade-pacing-enforced", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+			URL: "https://example.invalid/cat9k.bin", SHA256: strings.Repeat("a", 64),
+		}
+		up.Spec.MaxTransferBytesPerSecond = 1_000_000_000
+		up.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	})
+	resolver := &rateCapturingImageResolver{}
+	r := newReconciler(t, rig, up)
+	r.ImageResolver = resolver
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseActivating {
+		t.Fatalf("phase=%q reason=%q msg=%q", got.Status.Phase, got.Status.FailureReason, got.Status.Message)
+	}
+	if resolver.opts.MaxTransferBytesPerSecond != up.Spec.MaxTransferBytesPerSecond {
+		t.Fatalf("resolver rate = %d, want %d", resolver.opts.MaxTransferBytesPerSecond, up.Spec.MaxTransferBytesPerSecond)
+	}
+	if resolver.calls != 1 || rig.os.installCalls != 1 {
+		t.Fatalf("Resolve calls=%d Install calls=%d, want 1/1", resolver.calls, rig.os.installCalls)
 	}
 }
 

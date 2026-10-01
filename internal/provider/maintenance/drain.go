@@ -952,7 +952,7 @@ func validateDrainLeafBindingWithRevisionRollover(
 			admission.State != opsv1alpha1.UpgradeManagerAdmissionRevoked) {
 		return nil, fmt.Errorf("managed drain leaf admission state %q is not authorized", admission.State)
 	}
-	if admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolRolloutV1 ||
+	if admission.ProtocolVersion != opsv1alpha1.ExpectedManagedUpgradeProtocol(leaf.Spec.MaxTransferBytesPerSecond) ||
 		(!recovering && admission.RevocationReason != "") ||
 		(admission.State == opsv1alpha1.UpgradeManagerAdmissionRevoked) != (admission.RevocationReason != "") ||
 		admission.ControlRevision == nil ||

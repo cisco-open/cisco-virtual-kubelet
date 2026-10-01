@@ -732,7 +732,7 @@ func validateMaintenanceLeafBinding(
 	control := leaf.Status.ManagerControl
 	worker := leaf.Status.WorkerControl
 	if admission == nil || control == nil || worker == nil || admission.LeafUID != string(leaf.UID) ||
-		admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolVersion(managedprotocol.Version) ||
+		admission.ProtocolVersion != opsv1alpha1.ExpectedManagedUpgradeProtocol(leaf.Spec.MaxTransferBytesPerSecond) ||
 		admission.DeviceUID != string(device.UID) || admission.NodeUID != string(node.UID) ||
 		admission.ReservationID == "" || admission.LedgerUID == "" || admission.PlanHash == "" ||
 		admission.ControlRevision == nil || *admission.ControlRevision > revision ||

@@ -852,7 +852,7 @@ func TestDefaultImageResolverCacheHitRevalidationIsStable(t *testing.T) {
 func TestMaterializeRemoteImageCleansTempOnCancellation(t *testing.T) {
 	cacheDir := t.TempDir()
 	payload := []byte("partial image")
-	_, err := materializeRemoteImage("test image", sha256Hex(payload), cacheDir, 1024, func(w io.Writer) (int64, error) {
+	_, err := materializeRemoteImage(context.Background(), "test image", sha256Hex(payload), cacheDir, 1024, func(w io.Writer) (int64, error) {
 		n, writeErr := w.Write(payload[:4])
 		if writeErr != nil {
 			return int64(n), writeErr
@@ -875,7 +875,7 @@ func TestPublishMaterializedImageRejectsHijackedTempPath(t *testing.T) {
 	cacheDir := t.TempDir()
 	payload := []byte("verified image")
 	digest := sha256Hex(payload)
-	materialized, err := materializeRemoteImage("test image", digest, cacheDir, 1024, func(w io.Writer) (int64, error) {
+	materialized, err := materializeRemoteImage(context.Background(), "test image", digest, cacheDir, 1024, func(w io.Writer) (int64, error) {
 		return io.Copy(w, bytes.NewReader(payload))
 	})
 	if err != nil {

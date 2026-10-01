@@ -1059,6 +1059,14 @@ type IOSXESoftwareRolloutPlannedTarget struct {
 	// +kubebuilder:validation:items:Pattern=`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`
 	RiskGroups []string `json:"riskGroups,omitempty"`
 
+	// MaxTransferBytesPerSecond is the conservative worker-enforced byte rate
+	// derived from every matching administrator risk-group aggregate ceiling.
+	// Zero means no administrator pacing policy covered this target.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1099511627776
+	MaxTransferBytesPerSecond int64 `json:"maxTransferBytesPerSecond,omitempty"`
+
 	// CanaryCohort is non-empty for explicitly selected canaries.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxLength=63

@@ -117,6 +117,7 @@ topology:
     #     matchExpressions: []
     #   maxConcurrentTransfers: 1
     #   maxUnavailable: 1
+    #   maxAggregateTransferBytesPerSecond: 12500000 # optional 100 Mbit/s path ceiling
     # - name: customer-a
     #   selector:
     #     matchLabels:
@@ -212,6 +213,18 @@ membership of all configured groups; any later membership or policy change
 requires a new plan and approval. Keep the selectors low-cardinality and use
 these budgets as explicit operator constraints, not as inferred proof that a
 network path is redundant.
+
+An optional `maxAggregateTransferBytesPerSecond` turns a risk group into a
+shared-path bandwidth boundary. The manager divides the aggregate ceiling by
+`maxConcurrentTransfers`, freezes the strictest matching share into each
+approved target, and the worker applies deadline-based pacing to both the remote
+source download and gNOI OS.Install upload. Devices matching multiple groups
+receive the lowest applicable share. Omitting the field preserves unpaced
+legacy behaviour; an opted-in operation fails closed if its resolver cannot
+enforce the source-side ceiling. Paced leaves use a distinct manager/worker
+admission protocol, so an older worker rejects them instead of silently
+ignoring the additive rate field. Size maintenance windows for the paced
+image transfer plus device validation and activation time.
 
 Every software-rollout target must also carry the protected,
 low-cardinality `operations.cisco.vk/qualification-cohort` label describing

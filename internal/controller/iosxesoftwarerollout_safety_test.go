@@ -1063,7 +1063,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 		t.Fatalf("freezeTarget() after worker handoff error = %v", err)
 	}
 	policy.Config.RiskGroups = []topologyrollout.AdminRiskGroup{{
-		Name: "path-east", MaxConcurrentTransfers: 1, MaxUnavailable: 1,
+		Name: "path-east", MaxConcurrentTransfers: 1, MaxUnavailable: 1, MaxAggregateTransferBytesPerSecond: 4_000_000,
 		Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
 	}}
 	riskTarget, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now)
@@ -1072,6 +1072,9 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	}
 	if strings.Join(riskTarget.RiskGroups, ",") != "path-east" {
 		t.Fatalf("frozen target risk groups = %v", riskTarget.RiskGroups)
+	}
+	if riskTarget.MaxTransferBytesPerSecond != 4_000_000 {
+		t.Fatalf("frozen target transfer rate = %d, want 4000000", riskTarget.MaxTransferBytesPerSecond)
 	}
 	policy.Config.RiskGroups = nil
 	policy.Config.DisruptionProtections = []topologyrollout.AdminDisruptionProtection{{

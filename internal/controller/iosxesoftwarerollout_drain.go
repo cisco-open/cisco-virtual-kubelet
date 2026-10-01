@@ -2194,7 +2194,7 @@ func validateSettledSuccessorBinding(
 	// before its original maintenance session settles, so its retained
 	// admission revision is monotonic rather than identical. The PDB protocol
 	// binds all three revisions exactly below.
-	if admission == nil || admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolRolloutV1 ||
+	if admission == nil || admission.ProtocolVersion != opsv1alpha1.ExpectedManagedUpgradeProtocol(successor.Spec.MaxTransferBytesPerSecond) ||
 		admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
 		admission.LeafUID != string(successor.UID) || admission.DeviceUID != target.DeviceUID ||
 		admission.NodeUID != target.NodeUID || session.Operation.UID != admission.LeafUID ||

@@ -159,7 +159,7 @@ helm template cvk "$chart_dir" \
   --set controller.leaderElect=true \
   --set rbac.profile=strict \
   --set-json 'topology.policy.requiredTopologyKeys=["topology.kubernetes.io/region","topology.kubernetes.io/zone","operations.cisco.vk/service-group"]' \
-  --set-json 'topology.policy.riskGroups=[{"name":"customer-a","selector":{"matchLabels":{"operations.cisco.vk/service-group":"customer-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1}]' >"$managed_risk_group_render"
+  --set-json 'topology.policy.riskGroups=[{"name":"customer-a","selector":{"matchLabels":{"operations.cisco.vk/service-group":"customer-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1,"maxAggregateTransferBytesPerSecond":12500000}]' >"$managed_risk_group_render"
 helm template cvk "$chart_dir" \
   --namespace cisco-vk-system \
   --kube-version 1.35.0 \
@@ -302,7 +302,7 @@ if grep -Fq '"riskGroups"' "$managed_legacy_values_render"; then
   exit 1
 fi
 grep -Fq '"disruptionProtections":[{"name":"critical-services","reason":"CriticalService","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-tier":"critical"}}}]' "$managed_protection_render"
-grep -Fq '"riskGroups":[{"maxConcurrentTransfers":1,"maxUnavailable":1,"name":"customer-a","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-group":"customer-a"}}}]' "$managed_risk_group_render"
+grep -Fq '"riskGroups":[{"maxAggregateTransferBytesPerSecond":12500000,"maxConcurrentTransfers":1,"maxUnavailable":1,"name":"customer-a","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-group":"customer-a"}}}]' "$managed_risk_group_render"
 grep -Fq '"workloadDrain":{' "$managed_drain_render"
 grep -Fq '"allowedNamespaces":["apps","edge-services"]' "$managed_drain_render"
 grep -Fq '"enabled":true' "$managed_drain_render"
@@ -1201,6 +1201,16 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   exit 1
 fi
 grep -Fq 'contains duplicate name "path-east"' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.riskGroups=[{"name":"path-east","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-a"},"matchExpressions":[]},"maxConcurrentTransfers":2,"maxUnavailable":1,"maxAggregateTransferBytesPerSecond":1}]' >"$error_output" 2>&1; then
+  echo "risk-group aggregate transfer rate below its slot count rendered" >&2
+  exit 1
+fi
+grep -Fq 'must provide at least one byte per second for every transfer slot' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \

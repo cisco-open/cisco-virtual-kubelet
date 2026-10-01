@@ -483,6 +483,7 @@
                   },
                   "maxConcurrentTransfers": { "type": "integer", "minimum": 1, "maximum": 100 },
                   "maxUnavailable": { "type": "integer", "minimum": 1, "maximum": 100 },
+                  "maxAggregateTransferBytesPerSecond": { "type": "integer", "minimum": 1, "maximum": 1099511627776 },
                   "selector": {
                     "type": "object",
                     "additionalProperties": false,

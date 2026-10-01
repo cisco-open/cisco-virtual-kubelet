@@ -126,7 +126,7 @@ remains the completion ledger.
 | --- | --- | --- |
 | T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired; clean `9e578131` candidate deployed to Ubuntu16 with all three physical target observations checked | E00: finish direct device CLI/secure OS.Verify, complete log-plane/service/path baselines and durable capability indexing. |
 | T1 | Manager-accepted Pod-bound evidence, restart-safe publisher, interval/schema safety, directional-rate provenance/recomputation, concurrency/lost-response tests and real bound-token admission suite passed; physical k3s schema compatibility corrected | C2 / E01–E02: controlled loaded-path accuracy with an independent source, redundant-hardware capability, reverse mixed-version/rollback and candidate CI. |
-| T2 | Network checks at plan freeze and manager admission; evidence-bound expiring grant and monotonic renewal; uncached exact-sample worker recheck before each new mutation claim; bounded administrator critical-service/singleton-path prohibitions; overlapping risk groups with exact physical membership and cross-campaign CAS accounting; post-operation accepted-evidence recovery and continuous-soak enforcement; real-API negative coverage and physical exact-candidate/secure-gNOI validation | C3 / E03: byte pacing, controlled measured headroom and physical redundant/singleton/critical/congested service-path tests. |
+| T2 | Network checks at plan freeze and manager admission; evidence-bound expiring grant and monotonic renewal; uncached exact-sample worker recheck before each new mutation claim; bounded administrator critical-service/singleton-path prohibitions; overlapping risk groups with exact physical membership and cross-campaign CAS accounting; administrator aggregate-rate policy with worker pacing; post-operation accepted-evidence recovery and continuous-soak enforcement; real-API negative coverage and physical exact-candidate/secure-gNOI validation | C3 / E03: measured physical pacing/headroom and redundant/singleton/critical/congested service-path tests. |
 | T3 | Combined lifecycle exists; `3212f777` reconciled `.103`'s lost NoReboot outcome without replay; independent prepare contract absent | C4/C5 / E04–E05: true Install-only qualification, then durable receipts/ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
 | T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
@@ -148,7 +148,7 @@ target/source identities, both worker planes and manager logs, service/claim
 timelines and reproducible tooling. Test binding ordering and the full
 network-enabled freeze path, then complete accepted-observation and
 claim-time enforcement. These trust-boundary increments are now complete;
-continue with the remaining E03 pacing policy and physical failed-path
+continue with the remaining E03 physical pacing/headroom and failed-path
 recovery scenarios. Qualify
 the actual Install-only boundary alongside E03 policy, then implement E05/E06. Broader drain testing still requires
 device-clean, replacement and service proof. Another successful combined

@@ -69,6 +69,21 @@ type ImageResolver interface {
 	Resolve(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error)
 }
 
+// ImageResolveOptions contains enforcement requirements which materially
+// affect transfer semantics. A managed worker fails closed rather than
+// silently ignoring a configured byte-rate ceiling.
+type ImageResolveOptions struct {
+	MaxTransferBytesPerSecond int64
+}
+
+// RateLimitedImageResolver is implemented by resolvers that can pace the
+// source-to-worker segment. It extends ImageResolver without breaking legacy
+// injected resolvers used by unpaced standalone upgrades.
+type RateLimitedImageResolver interface {
+	ImageResolver
+	ResolveWithOptions(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource, opts ImageResolveOptions) (*ResolvedImage, error)
+}
+
 // DefaultImageResolver dispatches on the populated byte source. URL →
 // remote fetch into a temp file with SHA256 verification; ConfigMapRef →
 // read binaryData["image"] and compute its content digest. Preinstalled and
@@ -159,6 +174,18 @@ func NewDefaultImageResolver(k8s client.Reader, httpClient *http.Client) *Defaul
 }
 
 func (r *DefaultImageResolver) Resolve(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource) (*ResolvedImage, error) {
+	return r.ResolveWithOptions(ctx, namespace, src, ImageResolveOptions{})
+}
+
+// ResolveWithOptions enforces source-to-worker transfer pacing before bytes
+// are committed to the verified local cache.
+func (r *DefaultImageResolver) ResolveWithOptions(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource, opts ImageResolveOptions) (*ResolvedImage, error) {
+	if opts.MaxTransferBytesPerSecond < 0 || opts.MaxTransferBytesPerSecond > 1<<40 {
+		return nil, fmt.Errorf("image resolver transfer rate must be between 1 and %d when set", int64(1<<40))
+	}
+	if opts.MaxTransferBytesPerSecond > 0 {
+		ctx = withTransferRate(ctx, opts.MaxTransferBytesPerSecond)
+	}
 	maxImageBytes, err := r.imageSizeLimit()
 	if err != nil {
 		return nil, err
@@ -350,7 +377,7 @@ func (r *DefaultImageResolver) resolveHTTPURL(ctx context.Context, u *url.URL, s
 	if err := validateImageSize("image source HTTP Content-Length", resp.ContentLength, maxImageBytes); err != nil {
 		return nil, err
 	}
-	return materializeRemoteImage("image source HTTP", sha256Hex, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(ctx, "image source HTTP", sha256Hex, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
 		body := &retryableHTTPBodyReader{reader: resp.Body, endpoint: redactURL(u)}
 		return io.Copy(w, body)
 	})
@@ -463,7 +490,7 @@ func (r *DefaultImageResolver) resolveTFTPURL(ctx context.Context, u *url.URL, s
 	c.SetTimeout(defaultTFTPTimeout)
 	c.RequestTSize(true)
 
-	return materializeRemoteImage("image source TFTP", sha256Hex, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(ctx, "image source TFTP", sha256Hex, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
 		if err := ctx.Err(); err != nil {
 			return 0, classifyConnectionFailure(err)
 		}
@@ -544,7 +571,7 @@ func (r *DefaultImageResolver) resolveFTPURL(ctx context.Context, namespace stri
 		return nil, classifyFTPFailure(fmt.Errorf("%s retrieve %s: %w", label, path, err))
 	}
 	defer func() { _ = resp.Close() }()
-	return materializeRemoteImage(label, src.SHA256, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(ctx, label, src.SHA256, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
 		return io.Copy(w, &classifiedReader{reader: resp, classify: retryableConnectionError})
 	})
 }
@@ -562,7 +589,7 @@ func (r *DefaultImageResolver) resolveSCPURL(ctx context.Context, namespace stri
 	defer func() { _ = client.Close() }()
 	stopCancel := context.AfterFunc(ctx, func() { _ = client.Close() })
 	defer stopCancel()
-	return materializeRemoteImage(label, src.SHA256, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(ctx, label, src.SHA256, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
 		n, err := scpDownload(ctx, client, path, w, maxImageBytes)
 		return n, classifyConnectionFailure(err)
 	})
@@ -601,7 +628,7 @@ func (r *DefaultImageResolver) resolveSFTPURL(ctx context.Context, namespace str
 		return nil, classifySFTPFailure(fmt.Errorf("%s open %s: %w", label, path, err))
 	}
 	defer func() { _ = file.Close() }()
-	return materializeRemoteImage(label, src.SHA256, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
+	return materializeRemoteImage(ctx, label, src.SHA256, cacheDir, maxImageBytes, func(w io.Writer) (int64, error) {
 		return io.Copy(w, &classifiedReader{reader: file, classify: retryableSFTPError})
 	})
 }
@@ -612,7 +639,7 @@ type materializedImage struct {
 	size int64
 }
 
-func materializeRemoteImage(label, sha256Hex, cacheDir string, maxImageBytes int64, fetch func(io.Writer) (int64, error)) (*materializedImage, error) {
+func materializeRemoteImage(ctx context.Context, label, sha256Hex, cacheDir string, maxImageBytes int64, fetch func(io.Writer) (int64, error)) (*materializedImage, error) {
 	tmp, err := os.CreateTemp(cacheDir, cacheTempPrefix+"*")
 	if err != nil {
 		return nil, fmt.Errorf("%s: temp file: %w", label, err)
@@ -628,7 +655,17 @@ func materializeRemoteImage(label, sha256Hex, cacheDir string, maxImageBytes int
 		return fail(fmt.Errorf("%s: secure temp file: %w", label, err))
 	}
 	hash := sha256.New()
-	limited := &maxBytesWriter{Writer: io.MultiWriter(tmp, hash), Max: maxImageBytes, Label: label}
+	var destination io.Writer = io.MultiWriter(tmp, hash)
+	if transferRate := transferRateFromContext(ctx); transferRate > 0 {
+		destination, err = newPacedWriter(ctx, destination, transferRate)
+		if err != nil {
+			return fail(fmt.Errorf("%s: configure transfer pacing: %w", label, err))
+		}
+	}
+	// Keep the size guard outside pacing so an oversized response is rejected
+	// immediately rather than spending time pacing bytes that can never be
+	// accepted or published.
+	limited := &maxBytesWriter{Writer: destination, Max: maxImageBytes, Label: label}
 	_, err = fetch(limited)
 	if err != nil {
 		return fail(fmt.Errorf("%s: stream into temp file: %w", label, err))
@@ -907,15 +944,11 @@ func (w *maxBytesWriter) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("%w: %s exceeds %d bytes", errImageTooLarge, w.Label, w.Max)
 	}
 	if int64(len(p)) > remaining {
-		n, err := w.Writer.Write(p[:remaining])
-		w.Written += int64(n)
-		if err != nil {
-			return n, err
-		}
-		if int64(n) != remaining {
-			return n, io.ErrShortWrite
-		}
-		return n, fmt.Errorf("%w: %s exceeds %d bytes", errImageTooLarge, w.Label, w.Max)
+		// The entire materialization is discarded on overflow, so reject the
+		// first over-limit chunk before forwarding any of it. This also keeps an
+		// attacker-controlled oversized response from consuming pacing time for
+		// bytes that can never be accepted.
+		return 0, fmt.Errorf("%w: %s exceeds %d bytes", errImageTooLarge, w.Label, w.Max)
 	}
 	n, err := w.Writer.Write(p)
 	w.Written += int64(n)

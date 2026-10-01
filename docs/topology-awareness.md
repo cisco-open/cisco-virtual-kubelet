@@ -1187,7 +1187,9 @@ singleton or critical-service protection.
 
 Administrator policy may additionally define up to 16 `riskGroups`. Each
 group has a DNS-label name, a non-empty Kubernetes selector restricted to
-`requiredTopologyKeys`, `maxConcurrentTransfers`, and `maxUnavailable`. A
+`requiredTopologyKeys`, `maxConcurrentTransfers`, and `maxUnavailable`. It may
+also set `maxAggregateTransferBytesPerSecond` for a known shared distribution
+or forwarding path. A
 device may match multiple groups. The frozen plan records each target's sorted
 groups and a SHA-256 digest of the complete relevant physical membership.
 Before admission, the manager recomputes that membership and requires an exact
@@ -1197,6 +1199,22 @@ against every applicable group. All groups must pass. Changing a selector,
 budget, or membership requires a new plan and approval. Risk groups are
 explicit operator constraints; they do not prove that a forwarding path is
 redundant or healthy.
+
+For each matching group with an aggregate byte ceiling, the manager derives a
+conservative per-transfer share by dividing that ceiling by the group's
+`maxConcurrentTransfers`. The lowest share across overlapping groups is frozen
+in the approved target and copied into the immutable leaf. The worker enforces
+that value independently while materializing remote image bytes and while
+streaming the verified image through gNOI OS.Install. Cache hits skip the
+source-network segment but never the device segment. A resolver that cannot
+enforce an opted-in source limit is rejected before install; an omitted limit
+preserves existing behavior. A paced leaf requires the
+`rollout-byte-pacing-v1` manager/worker admission protocol, which makes a
+rolling deployment fail closed when an older worker does not understand the
+new rate field. The ceiling applies only to CVK-owned traffic and does not
+replace measured headroom or service-path validation. Ensure the install
+timeout and maintenance window accommodate the paced image size plus device
+validation and activation.
 
 ### Admission and execution behavior
 
@@ -1217,6 +1235,8 @@ For each target, the manager checks:
 - global and every independent domain transfer/unavailability ceiling;
 - every matching administrator risk-group transfer/unavailability ceiling,
   including non-target health and reservations from other campaigns;
+- the strictest frozen risk-group byte-rate share on every applicable image
+  transfer segment;
 - existing unhealthy or maintained fleet members, including non-targets; and
 - no conflicting device mutation.
 

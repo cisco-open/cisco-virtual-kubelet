@@ -182,6 +182,9 @@ topology:
     #  - name: customer-a-path
     #    maxConcurrentTransfers: 1
     #    maxUnavailable: 1
+    #    # Optional aggregate link ceiling. The manager freezes a conservative
+    #    # per-transfer share and workers pace both source fetch and gNOI upload.
+    #    maxAggregateTransferBytesPerSecond: 12500000 # 100 Mbit/s
     #    selector:
     #      matchLabels:
     #        topology.cisco.vk/redundancy-group: customer-a

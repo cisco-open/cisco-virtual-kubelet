@@ -940,6 +940,27 @@ func TestEnvtest_IOSXESoftwareUpgradeInstallTimeoutDefaultAndBounds(t *testing.T
 			t.Errorf("apiserver admitted installTimeoutSeconds=%d", tc.value)
 		}
 	}
+
+	for _, tc := range []struct {
+		name     string
+		value    int64
+		wantPass bool
+	}{
+		{name: "paced-minimum", value: 1, wantPass: true},
+		{name: "paced-maximum", value: 1 << 40, wantPass: true},
+		{name: "paced-negative", value: -1},
+		{name: "paced-above-maximum", value: 1<<40 + 1},
+	} {
+		candidate := newUpgrade(tc.name, "envtest-upgrade-install-timeout", "26.01.01")
+		candidate.Spec.MaxTransferBytesPerSecond = tc.value
+		err := c.Create(ctx, candidate)
+		if tc.wantPass && err != nil {
+			t.Errorf("apiserver rejected maxTransferBytesPerSecond=%d: %v", tc.value, err)
+		}
+		if !tc.wantPass && err == nil {
+			t.Errorf("apiserver admitted maxTransferBytesPerSecond=%d", tc.value)
+		}
+	}
 }
 
 func TestEnvtest_IOSXESoftwareUpgradeLegacyWireCompatibility(t *testing.T) {

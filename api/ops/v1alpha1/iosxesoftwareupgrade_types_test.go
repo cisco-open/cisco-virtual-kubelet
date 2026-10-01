@@ -23,6 +23,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestExpectedManagedUpgradeProtocol(t *testing.T) {
+	if got := ExpectedManagedUpgradeProtocol(0); got != ManagedUpgradeProtocolRolloutV1 {
+		t.Fatalf("unpaced protocol = %q", got)
+	}
+	if got := ExpectedManagedUpgradeProtocol(1); got != ManagedUpgradeProtocolRolloutBytePacingV1 {
+		t.Fatalf("paced protocol = %q", got)
+	}
+}
+
 func TestUpgradeImageSourceIntentJSON(t *testing.T) {
 	validSHA := strings.Repeat("a", 64)
 	tests := []struct {

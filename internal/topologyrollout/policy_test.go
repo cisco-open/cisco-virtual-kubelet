@@ -154,9 +154,9 @@ func TestAdminPolicyHashesSeparateSemanticAndStructuralChanges(t *testing.T) {
 func TestRiskGroupsValidateCanonicalizeAndOverlap(t *testing.T) {
 	base := validAdminPolicyConfig()
 	base.RiskGroups = []AdminRiskGroup{
-		{Name: "path-east", MaxConcurrentTransfers: 2, MaxUnavailable: 1,
+		{Name: "path-east", MaxConcurrentTransfers: 2, MaxUnavailable: 1, MaxAggregateTransferBytesPerSecond: 20_000_000,
 			Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}}},
-		{Name: "customer-a", MaxConcurrentTransfers: 1, MaxUnavailable: 1,
+		{Name: "customer-a", MaxConcurrentTransfers: 1, MaxUnavailable: 1, MaxAggregateTransferBytesPerSecond: 8_000_000,
 			Selector: metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
 				Key: "topology.cisco.vk/redundancy-group", Operator: metav1.LabelSelectorOpIn, Values: []string{"pair-b", "pair-a"},
 			}}}},
@@ -191,6 +191,15 @@ func TestRiskGroupsValidateCanonicalizeAndOverlap(t *testing.T) {
 	if strings.Join(groups, ",") != "customer-a,path-east" {
 		t.Fatalf("overlapping groups = %v", groups)
 	}
+	transferRate, err := parsed.MaxTransferBytesPerSecond(map[string]string{
+		"topology.cisco.vk/site": "site-a", "topology.cisco.vk/redundancy-group": "pair-a",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if transferRate != 8_000_000 {
+		t.Fatalf("effective per-transfer rate = %d, want strictest overlapping share 8000000", transferRate)
+	}
 	changedBudget := base
 	changedBudget.RiskGroups = append([]AdminRiskGroup(nil), base.RiskGroups...)
 	changedBudget.RiskGroups[0].MaxUnavailable++
@@ -200,6 +209,16 @@ func TestRiskGroupsValidateCanonicalizeAndOverlap(t *testing.T) {
 	}
 	if changedStructural == structural {
 		t.Fatal("risk-group budget change must require a new approval")
+	}
+	changedRate := base
+	changedRate.RiskGroups = append([]AdminRiskGroup(nil), base.RiskGroups...)
+	changedRate.RiskGroups[0].MaxAggregateTransferBytesPerSecond++
+	_, changedRateStructural, err := AdminPolicyHashes(changedRate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changedRateStructural == structural {
+		t.Fatal("risk-group aggregate transfer rate change must require a new approval")
 	}
 	invalid := base
 	invalid.RiskGroups = append([]AdminRiskGroup(nil), base.RiskGroups...)
@@ -305,6 +324,12 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}},
 			}
 			cfg.DisruptionProtections = []AdminDisruptionProtection{rule, rule}
+		},
+		"risk group aggregate rate below slots": func(cfg *AdminPolicyConfig) {
+			cfg.RiskGroups = []AdminRiskGroup{{
+				Name: "path", MaxConcurrentTransfers: 2, MaxUnavailable: 1, MaxAggregateTransferBytesPerSecond: 1,
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}},
+			}}
 		},
 	}
 	for name, mutate := range tests {

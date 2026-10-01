@@ -566,6 +566,11 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- fail (printf "topology.policy.riskGroups contains duplicate name %q" $group.name) -}}
 {{- end -}}
 {{- $_ := set $riskGroupNames $group.name true -}}
+{{- if hasKey $group "maxAggregateTransferBytesPerSecond" -}}
+{{- if lt (int64 $group.maxAggregateTransferBytesPerSecond) (int64 $group.maxConcurrentTransfers) -}}
+{{- fail (printf "topology.policy.riskGroups group %q maxAggregateTransferBytesPerSecond must provide at least one byte per second for every transfer slot" $group.name) -}}
+{{- end -}}
+{{- end -}}
 {{- range $key, $_ := $group.selector.matchLabels -}}
 {{- if not (hasKey $required $key) -}}
 {{- fail (printf "topology.policy.riskGroups group %q selector key %q is not in requiredTopologyKeys" $group.name $key) -}}

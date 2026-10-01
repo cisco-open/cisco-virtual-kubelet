@@ -96,10 +96,11 @@ type AdminDisruptionProtection struct {
 // failure or service-risk set. Membership is evaluated from protected
 // CiscoDevice labels and frozen separately from the selector policy.
 type AdminRiskGroup struct {
-	Name                   string               `json:"name"`
-	Selector               metav1.LabelSelector `json:"selector"`
-	MaxConcurrentTransfers int                  `json:"maxConcurrentTransfers"`
-	MaxUnavailable         int                  `json:"maxUnavailable"`
+	Name                               string               `json:"name"`
+	Selector                           metav1.LabelSelector `json:"selector"`
+	MaxConcurrentTransfers             int                  `json:"maxConcurrentTransfers"`
+	MaxUnavailable                     int                  `json:"maxUnavailable"`
+	MaxAggregateTransferBytesPerSecond int64                `json:"maxAggregateTransferBytesPerSecond,omitempty"`
 }
 
 // AdminWorkloadDrainPolicy is an explicit administrator feature gate and set
@@ -367,6 +368,39 @@ func (p *ParsedAdminPolicy) RiskGroups(deviceLabels map[string]string) ([]string
 	}
 	sort.Strings(groups)
 	return groups, nil
+}
+
+// MaxTransferBytesPerSecond returns the conservative per-transfer share of
+// every matching risk group's optional aggregate byte-rate ceiling. Dividing
+// by the group's maximum number of concurrent transfers guarantees that the
+// aggregate remains bounded even when every reserved slot is active. A zero
+// result preserves the legacy unpaced behaviour.
+func (p *ParsedAdminPolicy) MaxTransferBytesPerSecond(deviceLabels map[string]string) (int64, error) {
+	if p == nil {
+		return 0, fmt.Errorf("administrator topology policy is required")
+	}
+	if err := validateRiskGroups(&p.Config); err != nil {
+		return 0, err
+	}
+	var effective int64
+	for i := range p.Config.RiskGroups {
+		group := &p.Config.RiskGroups[i]
+		if group.MaxAggregateTransferBytesPerSecond == 0 {
+			continue
+		}
+		selector, err := metav1.LabelSelectorAsSelector(&group.Selector)
+		if err != nil {
+			return 0, fmt.Errorf("risk group %q selector is invalid: %w", group.Name, err)
+		}
+		if !selector.Matches(labels.Set(deviceLabels)) {
+			continue
+		}
+		share := group.MaxAggregateTransferBytesPerSecond / int64(group.MaxConcurrentTransfers)
+		if effective == 0 || share < effective {
+			effective = share
+		}
+	}
+	return effective, nil
 }
 
 // ValidateWorkloadPolicy applies the administrator's fail-closed drain gate
@@ -858,6 +892,13 @@ func validateRiskGroups(cfg *AdminPolicyConfig) error {
 		}
 		if group.MaxUnavailable < 1 || group.MaxUnavailable > DefaultMaxCampaignTargets {
 			return fmt.Errorf("risk group %q maxUnavailable must be between 1 and %d", group.Name, DefaultMaxCampaignTargets)
+		}
+		if group.MaxAggregateTransferBytesPerSecond < 0 || group.MaxAggregateTransferBytesPerSecond > 1<<40 {
+			return fmt.Errorf("risk group %q maxAggregateTransferBytesPerSecond must be between 1 and %d when set", group.Name, int64(1<<40))
+		}
+		if group.MaxAggregateTransferBytesPerSecond > 0 &&
+			group.MaxAggregateTransferBytesPerSecond < int64(group.MaxConcurrentTransfers) {
+			return fmt.Errorf("risk group %q maxAggregateTransferBytesPerSecond must provide at least one byte per second for every transfer slot", group.Name)
 		}
 		if len(group.Selector.MatchLabels) == 0 && len(group.Selector.MatchExpressions) == 0 {
 			return fmt.Errorf("risk group %q selector must be non-empty", group.Name)

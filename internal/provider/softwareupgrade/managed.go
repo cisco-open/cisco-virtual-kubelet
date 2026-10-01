@@ -402,8 +402,9 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 	if admission == nil {
 		return fmt.Errorf("status.managerAdmission is absent")
 	}
-	if admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolVersion(managedprotocol.Version) {
-		return fmt.Errorf("manager protocol %q does not match worker protocol %q", admission.ProtocolVersion, managedprotocol.Version)
+	expectedProtocol := opsv1alpha1.ExpectedManagedUpgradeProtocol(up.Spec.MaxTransferBytesPerSecond)
+	if admission.ProtocolVersion != expectedProtocol {
+		return fmt.Errorf("manager protocol %q does not match required leaf protocol %q", admission.ProtocolVersion, expectedProtocol)
 	}
 	if up.UID == "" || admission.LeafUID != string(up.UID) {
 		return fmt.Errorf("manager leaf UID %q does not match metadata.uid %q", admission.LeafUID, up.UID)

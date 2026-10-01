@@ -609,6 +609,9 @@ func TestManagedLeafRejectsAdmissionAndNodeIdentityMismatch(t *testing.T) {
 		{name: "protocol", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *corev1.Node) {
 			up.Status.ManagerAdmission.ProtocolVersion = "future"
 		}},
+		{name: "legacy protocol on paced leaf", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *corev1.Node) {
+			up.Spec.MaxTransferBytesPerSecond = 1_000_000
+		}},
 		{name: "leaf UID", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *corev1.Node) {
 			up.Status.ManagerAdmission.LeafUID = "recreated-leaf"
 		}},

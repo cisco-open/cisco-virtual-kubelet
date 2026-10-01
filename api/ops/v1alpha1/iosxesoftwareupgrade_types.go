@@ -143,6 +143,14 @@ type IOSXESoftwareUpgradeSpec struct {
 	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)+([a-z])?$`
 	TargetVersion string `json:"targetVersion"`
 
+	// MaxTransferBytesPerSecond optionally paces both remote image resolution
+	// and the gNOI OS.Install byte stream. Managed rollouts derive and freeze
+	// this value from administrator-owned overlapping risk-group policy.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1099511627776
+	MaxTransferBytesPerSecond int64 `json:"maxTransferBytesPerSecond,omitempty"`
+
 	// Strategy controls whether Activate performs the reload itself
 	// (default Reload), requests the currently unsupported ISSU strategy, or stages without
 	// rebooting (NoReboot).
@@ -355,12 +363,23 @@ type UpgradeWindow struct {
 // ManagedUpgradeProtocolVersion identifies the manager/worker handshake that
 // gates every new device mutation for a campaign-created leaf.
 //
-// +kubebuilder:validation:Enum=rollout-v1
+// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1
 type ManagedUpgradeProtocolVersion string
 
 const (
-	ManagedUpgradeProtocolRolloutV1 ManagedUpgradeProtocolVersion = "rollout-v1"
+	ManagedUpgradeProtocolRolloutV1           ManagedUpgradeProtocolVersion = "rollout-v1"
+	ManagedUpgradeProtocolRolloutBytePacingV1 ManagedUpgradeProtocolVersion = "rollout-byte-pacing-v1"
 )
+
+// ExpectedManagedUpgradeProtocol selects the narrowest manager/worker
+// handshake required by immutable leaf intent. Older workers reject the
+// pacing protocol instead of silently ignoring the additive rate field.
+func ExpectedManagedUpgradeProtocol(maxTransferBytesPerSecond int64) ManagedUpgradeProtocolVersion {
+	if maxTransferBytesPerSecond > 0 {
+		return ManagedUpgradeProtocolRolloutBytePacingV1
+	}
+	return ManagedUpgradeProtocolRolloutV1
+}
 
 // UpgradeManagerAdmissionState is the manager-owned mutation grant state.
 // Missing admission means denied for a managed device. It remains optional on

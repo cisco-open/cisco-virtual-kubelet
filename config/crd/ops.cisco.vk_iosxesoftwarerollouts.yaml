@@ -1391,6 +1391,15 @@ spec:
                           maxLength: 63
                           minLength: 1
                           type: string
+                        maxTransferBytesPerSecond:
+                          description: |-
+                            MaxTransferBytesPerSecond is the conservative worker-enforced byte rate
+                            derived from every matching administrator risk-group aggregate ceiling.
+                            Zero means no administrator pacing policy covered this target.
+                          format: int64
+                          maximum: 1099511627776
+                          minimum: 1
+                          type: integer
                         nodeName:
                           description: NodeName is the controller-resolved Node identity.
                           maxLength: 63

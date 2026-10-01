@@ -729,6 +729,10 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("evaluate administrator risk groups: %w", err)
 	}
+	maxTransferBytesPerSecond, err := policy.MaxTransferBytesPerSecond(device.Labels)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("evaluate administrator transfer pacing: %w", err)
+	}
 	wave := int32(1)
 	if cohort != "" {
 		wave = 0
@@ -740,7 +744,7 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		ImageFamily: rollout.Spec.Plan.Image.ImageFamily, Source: source, QualificationCohort: qualificationCohort,
 		WorkerProtocolVersion: managedprotocol.Version,
 		ProjectionHash:        device.Status.TopologyProjection.EffectiveLabelHash, Topology: topologyValues,
-		RiskGroups:   riskGroups,
+		RiskGroups: riskGroups, MaxTransferBytesPerSecond: maxTransferBytesPerSecond,
 		CanaryCohort: cohort, Wave: wave, ChildName: rolloutChildName(rollout, device),
 	}, nil
 }

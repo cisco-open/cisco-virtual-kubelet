@@ -696,16 +696,17 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 		strategy = opsv1alpha1.UpgradeStrategyNoReboot
 	}
 	return opsv1alpha1.IOSXESoftwareUpgradeSpec{
-		DeviceRef:             configv1alpha1.DeviceRef{Name: target.DeviceName},
-		ImageSource:           imageSource,
-		TargetVersion:         rollout.Spec.Plan.TargetVersion,
-		Strategy:              strategy,
-		RollbackOnFailure:     &rollback,
-		MaintenanceWindow:     rollout.Spec.Plan.MaintenanceWindow.DeepCopy(),
-		ResumePolicy:          "Retry",
-		MaxRetries:            3,
-		InstallTimeoutSeconds: defaultInt32(rollout.Spec.Plan.InstallTimeoutSeconds, 3600),
-		RebootTimeoutSeconds:  defaultInt32(rollout.Spec.Plan.RebootTimeoutSeconds, 1800),
+		DeviceRef:                 configv1alpha1.DeviceRef{Name: target.DeviceName},
+		ImageSource:               imageSource,
+		TargetVersion:             rollout.Spec.Plan.TargetVersion,
+		MaxTransferBytesPerSecond: target.MaxTransferBytesPerSecond,
+		Strategy:                  strategy,
+		RollbackOnFailure:         &rollback,
+		MaintenanceWindow:         rollout.Spec.Plan.MaintenanceWindow.DeepCopy(),
+		ResumePolicy:              "Retry",
+		MaxRetries:                3,
+		InstallTimeoutSeconds:     defaultInt32(rollout.Spec.Plan.InstallTimeoutSeconds, 3600),
+		RebootTimeoutSeconds:      defaultInt32(rollout.Spec.Plan.RebootTimeoutSeconds, 1800),
 	}
 }
 
@@ -1068,7 +1069,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureChildAdmission(
 		}
 		revision := rollout.Spec.Control.Revision
 		current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-			ProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+			ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
 			State:           opsv1alpha1.UpgradeManagerAdmissionPending,
 			CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 			PolicyUID:             policySnapshot.UID,
@@ -1099,7 +1100,7 @@ func validateManagerAdmission(
 		return err
 	}
 	admission := leaf.Status.ManagerAdmission
-	if admission == nil || admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolRolloutV1 ||
+	if admission == nil || admission.ProtocolVersion != opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond) ||
 		admission.CampaignUID != string(rollout.UID) || admission.PlanHash != rollout.Status.FrozenPlan.Hash ||
 		admission.PolicyUID != rollout.Status.FrozenPlan.Policy.UID ||
 		strings.TrimSpace(admission.PolicyResourceVersion) == "" || admission.PolicyEpoch < 1 || admission.PolicyEpoch > policyEpoch ||
@@ -1610,6 +1611,10 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateFrozenTarget(
 	}
 	if !equalSortedStrings(currentRiskGroups, target.RiskGroups) {
 		return fmt.Errorf("frozen target risk-group membership changed")
+	}
+	currentTransferRate, err := currentPolicy.MaxTransferBytesPerSecond(device.Labels)
+	if err != nil || currentTransferRate != target.MaxTransferBytesPerSecond {
+		return fmt.Errorf("frozen target transfer pacing changed")
 	}
 	if device.Status.NodeIdentity == nil || device.Status.TopologyProjection == nil ||
 		device.Status.NodeIdentity.NodeName != target.NodeName || device.Status.NodeIdentity.NodeUID != target.NodeUID ||
@@ -2430,7 +2435,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFenceForTarget(
 		if current.Status.ManagerAdmission == nil {
 			revision := rollout.Spec.Control.Revision
 			current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-				ProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+				ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
 				State:           opsv1alpha1.UpgradeManagerAdmissionRevoked,
 				CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 				PolicyUID: effective.Policy.UID, PolicyResourceVersion: effective.Policy.ResourceVersion,
@@ -2581,7 +2586,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureFailureFences(
 			if current.Status.ManagerAdmission == nil {
 				revision := rollout.Spec.Control.Revision
 				current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-					ProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+					ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
 					State:           opsv1alpha1.UpgradeManagerAdmissionRevoked,
 					CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 					PolicyUID: policySnapshot.UID, PolicyResourceVersion: policySnapshot.ResourceVersion,
@@ -2762,7 +2767,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureRetainedFenceForTarget(
 		if current.Status.ManagerAdmission == nil {
 			controlRevision := revision
 			current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-				ProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+				ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
 				State:           opsv1alpha1.UpgradeManagerAdmissionRevoked,
 				CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 				PolicyUID:             policySnapshot.UID,

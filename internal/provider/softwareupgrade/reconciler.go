@@ -1655,7 +1655,7 @@ func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) boo
 	}
 	admission := up.Status.ManagerAdmission
 	control := up.Status.ManagerControl
-	return admission != nil && admission.ProtocolVersion == opsv1alpha1.ManagedUpgradeProtocolRolloutV1 &&
+	return admission != nil && admission.ProtocolVersion == opsv1alpha1.ExpectedManagedUpgradeProtocol(up.Spec.MaxTransferBytesPerSecond) &&
 		admission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
 		admission.RevocationReason == "" && admission.LeafUID == string(up.UID) &&
 		admission.CampaignUID != "" && admission.CampaignUID == up.Annotations[managedprotocol.AnnotationCampaignUID] &&
@@ -1977,7 +1977,20 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			)
 		}
 	}
-	resolved, err := r.ImageResolver.Resolve(resolveCtx, up.Namespace, up.Spec.ImageSource)
+	var resolved *ResolvedImage
+	if up.Spec.MaxTransferBytesPerSecond > 0 {
+		resolver, supportsRateLimit := r.ImageResolver.(RateLimitedImageResolver)
+		if !supportsRateLimit {
+			cancelResolve()
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "TransferPacingUnsupported",
+				"configured image resolver cannot enforce the required source transfer rate", r.now())
+		}
+		resolved, err = resolver.ResolveWithOptions(resolveCtx, up.Namespace, up.Spec.ImageSource, ImageResolveOptions{
+			MaxTransferBytesPerSecond: up.Spec.MaxTransferBytesPerSecond,
+		})
+	} else {
+		resolved, err = r.ImageResolver.Resolve(resolveCtx, up.Namespace, up.Spec.ImageSource)
+	}
 	resolveDeadlineExceeded := errors.Is(resolveCtx.Err(), context.DeadlineExceeded)
 	cancelResolve()
 	// Resolution may download and hash a multi-gigabyte image. Refresh the
@@ -2073,7 +2086,14 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		Warn("dispatching gNOI OS.Install")
 	installCtx, cancel := context.WithTimeout(ctx, remainingInstallTime(up, now))
 	defer cancel()
-	progress, err := gnoiClient.Install(installCtx, resolved.Reader, gnoi.InstallOpts{
+	installReader := resolved.Reader
+	if up.Spec.MaxTransferBytesPerSecond > 0 {
+		installReader, err = NewPacedReader(installCtx, installReader, up.Spec.MaxTransferBytesPerSecond)
+		if err != nil {
+			return r.handleInstallErr(ctx, up, fmt.Errorf("configure gNOI transfer pacing: %w", err), r.now())
+		}
+	}
+	progress, err := gnoiClient.Install(installCtx, installReader, gnoi.InstallOpts{
 		// An empty version forces the target to consume the digest-verified
 		// bytes instead of satisfying this content source from a same-version
 		// package that was already present on the device.
