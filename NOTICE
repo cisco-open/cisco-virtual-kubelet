@@ -1,0 +1,10 @@
+Cisco Virtual Kubelet Website
+Copyright 2026 Cisco Systems, Inc.
+
+Cisco-authored website code is licensed under the Apache License, Version 2.0.
+See the LICENSE file for the full license text. Third-party components retain
+their applicable upstream terms.
+
+The deployed static site includes third-party production dependencies and the
+Geist font files. Their complete notices and license texts are generated from
+the locked production dependency closure in THIRD_PARTY_LICENSES.txt.

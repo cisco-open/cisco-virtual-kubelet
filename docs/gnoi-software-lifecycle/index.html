@@ -1,0 +1,3032 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/gnoi-software-lifecycle/">
+      
+      
+        <link rel="prev" href="../gnoi-iosxe-upgrade-runbook/">
+      
+      
+        <link rel="next" href="../operations/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Design and Reference - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#software-lifecycle-management" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Design and Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.10.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.10.0 (release candidate)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.10.0-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    October release readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../releases/v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../topology-awareness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed Topology and Rollouts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../gnoi-iosxe-upgrade-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IOS-XE Upgrade and Downgrade Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design and Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design and Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#responsibility-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Responsibility Split
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secure-ios-xe-gnxi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secure IOS-XE gNXI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secure IOS-XE gNXI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provisioning-the-ios-xe-gnoi-os-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provisioning the IOS-XE gNOI OS service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invalid-secret-recovery-and-certificate-lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invalid Secret recovery and certificate lifetime
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-only-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read-Only Operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-class-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write-Class Actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Write-Class Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-device-mutation-coordination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared device-mutation coordination
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#software-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Software Lifecycle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Software Lifecycle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#image-resolver-storage-and-transport-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image resolver storage and transport security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operator-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operator Workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#responsibility-split" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Responsibility Split
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#secure-ios-xe-gnxi" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Secure IOS-XE gNXI
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Secure IOS-XE gNXI">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#provisioning-the-ios-xe-gnoi-os-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Provisioning the IOS-XE gNOI OS service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#invalid-secret-recovery-and-certificate-lifetime" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invalid Secret recovery and certificate lifetime
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#connection-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#read-only-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read-Only Operations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#write-class-actions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Write-Class Actions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Write-Class Actions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared-device-mutation-coordination" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared device-mutation coordination
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#software-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Software Lifecycle
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Software Lifecycle">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#image-resolver-storage-and-transport-security" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Image resolver storage and transport security
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#upgrade-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade Examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operator-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operator Workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="software-lifecycle-management">Software Lifecycle Management</h1>
+<div class="admonition tip">
+<p class="admonition-title">Start with the operator runbook</p>
+<p>For a linear, copyable procedure that distinguishes required manifests
+from optional audit probes, configures IOS-XE certificates, performs both
+upgrade and planned downgrade, and explains the provider logs, use the
+<a href="../gnoi-iosxe-upgrade-runbook/">IOS-XE gNOI Upgrade and Downgrade Runbook</a>.
+This page is the detailed design and API reference.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Beta</p>
+<p>The gNOI operations, write-class actions, and software lifecycle features
+described on this page are <strong>Beta</strong>. They are functional and tested on
+supported platforms but carry <code>v1alpha1</code> API versions and schemas that
+may change between releases. Write-class gNOI actions and software
+upgrades are disabled by default and require explicit runtime gates before
+use. Evaluate in non-production environments first.</p>
+</div>
+<p>This section covers the gNOI control plane for device operations and IOS-XE
+software lifecycle management. It is separate from the pod app-hosting
+lifecycle: pods still use RESTCONF app-hosting RPCs, while gNOI handles
+device-level probes, file access, reboot, factory reset, and OS upgrade.</p>
+<h2 id="responsibility-split">Responsibility Split</h2>
+<p>CVK separates gNOI workflows by trust level so operators can grant narrow RBAC.</p>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>CRD</th>
+<th>Purpose</th>
+<th>Runtime gate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read-only operations</td>
+<td><code>DeviceOperation</code></td>
+<td>Show commands, config diff, packet capture, and read-only gNOI probes</td>
+<td>none beyond normal CRD/RBAC access</td>
+</tr>
+<tr>
+<td>Write-class actions</td>
+<td><code>IOSXEOperationalAction</code></td>
+<td>Certificate provisioning, reboot, process control, file writes/removal, and factory reset</td>
+<td><code>--enable-write-class-gnoi</code> or <code>CISCO_VK_ENABLE_WRITE_CLASS_GNOI</code></td>
+</tr>
+<tr>
+<td>Software lifecycle</td>
+<td><code>IOSXESoftwareUpgrade</code></td>
+<td>Install, activate, verify, and rollback IOS-XE software</td>
+<td><code>--enable-iosxesoftwareupgrade</code> or <code>CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE</code></td>
+</tr>
+</tbody>
+</table>
+<p>The write-class and software-upgrade gates are intentionally separate. Enabling
+read-only gNOI does not enable reboot, file writes, factory reset, or OS
+activation.
+Enabling either mutation gate also changes the per-device worker Deployment to
+<code>Recreate</code>, preventing overlap during managed Deployment rollouts. This is not
+physical-device fencing: manual Pod deletion, duplicate device registrations,
+or another controller installation still require operational coordination.
+Expect a brief node-management interruption when that
+worker rolls; <code>RollingUpdate</code> is restored after both gates are disabled (or
+gNOI is globally disabled) and cleanup rollouts have removed both signer-bearing
+and mutation-enabled worker generations. Disabling a gate therefore still uses
+<code>Recreate</code> for the disabling rollout; it does not allow the old enabled worker
+to overlap its replacement.</p>
+<p>Helm exposes the same controls under the <code>gnoi</code> values block:</p>
+<table>
+<thead>
+<tr>
+<th>Helm value</th>
+<th>Environment rendered into VK pods</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gnoi.insecure</code></td>
+<td><code>CISCO_VK_GNOI_INSECURE=1</code></td>
+<td>Force the legacy insecure IOS-XE gNXI listener for non-opt-in configurations. It cannot override explicit <code>transportSecurity: tls</code>; legacy Basic metadata may expose credentials.</td>
+</tr>
+<tr>
+<td><code>gnoi.port</code></td>
+<td><code>CISCO_VK_GNOI_PORT=&lt;port&gt;</code></td>
+<td>Pin the gNOI listener port. Empty preserves legacy inference (<code>50052</code> insecure, <code>9339</code> secure, or an existing nonstandard device port). The chart accepts only <code>1</code>–<code>65535</code>; an invalid direct environment override fails gNOI setup.</td>
+</tr>
+<tr>
+<td><code>gnoi.disabled</code></td>
+<td><code>CISCO_VK_GNOI_DISABLED=1</code></td>
+<td>Prevent the per-device gNOI client from being constructed.</td>
+</tr>
+<tr>
+<td><code>gnoi.enableSoftwareUpgrade</code></td>
+<td><code>CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1</code></td>
+<td>Enable <code>IOSXESoftwareUpgrade</code> reconciliation.</td>
+</tr>
+<tr>
+<td><code>gnoi.softwareUpgrade.maxImageBytes</code></td>
+<td><code>CISCO_VK_UPGRADE_MAX_IMAGE_BYTES=&lt;bytes&gt;</code></td>
+<td>Set the hard per-image limit for URL and ConfigMap sources. The default is 8 GiB (<code>8589934592</code> bytes); the environment value must be a positive base-10 byte count.</td>
+</tr>
+<tr>
+<td><code>gnoi.enableWriteClass</code></td>
+<td><code>CISCO_VK_ENABLE_WRITE_CLASS_GNOI=1</code></td>
+<td>Enable destructive/write-class <code>IOSXEOperationalAction</code> reconciliation.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="secure-ios-xe-gnxi">Secure IOS-XE gNXI</h2>
+<p>IOS-XE 17.18.x password authentication uses the secure gNXI listener (port
+<code>9339</code> by default). For an identity that is already provisioned, use:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>gnxi
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>gnxi enable-gnoi
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>gnxi secure-trustpoint &lt;server-trustpoint&gt;
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>gnxi secure-server
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>gnxi secure-password-auth
+</span></code></pre></div>
+<p>That example assumes an identity is already bound to the secure trustpoint. Do
+not also run <code>secure-init</code> on that path. For the initial gNOI
+Certificate-service bootstrap, use <code>gnxi</code>, <code>gnxi enable-gnoi</code>,
+<code>gnxi secure-init</code>, and <code>gnxi secure-password-auth</code>; <code>secure-init</code> supplies the
+temporary secure identity, so <code>secure-server</code> and a pre-existing
+<code>secure-trustpoint</code> are not additional bootstrap prerequisites.
+Without <code>enable-gnoi</code>, IOS-XE accepts <code>secure-init</code> syntactically but leaves the
+Certificate Management service disabled. IOS-XE binds the first newly
+installed certificate ID as the service trustpoint; verify the resulting
+binding with <code>show gnxi state detail</code>.</p>
+<p>Do not add <code>gnxi secure-client-auth</code> for password-only authentication. That
+command asks IOS-XE to authenticate a client certificate and is appropriate
+only when you have deliberately configured mutual TLS and mounted a client
+certificate and key into the VK pod.</p>
+<p>Select the listener independently of the RESTCONF port in the <code>CiscoDevice</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1-gnoi-tls</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Opaque</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">ca.crt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="no">&lt;CA that issued the certificate presented by secure gNXI&gt;</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="no">-----END CERTIFICATE-----</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="c1"># For deliberate mutual TLS, add both tls.crt and tls.key.</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="nn">---</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cisco.vk/v1alpha1</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CiscoDevice</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1</span>
+</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">  </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">XE</span>
+</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">  </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1.example.net</span>
+</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">admin</span>
+</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">  </span><span class="nt">credentialSecretRef</span><span class="p">:</span>
+</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1-creds</span><span class="w">       </span><span class="c1"># Secret contains only the key "password"</span>
+</span><span id="__span-1-25"><a id="__codelineno-1-25" name="__codelineno-1-25" href="#__codelineno-1-25"></a><span class="w">  </span><span class="nt">gnoi</span><span class="p">:</span>
+</span><span id="__span-1-26"><a id="__codelineno-1-26" name="__codelineno-1-26" href="#__codelineno-1-26"></a><span class="w">    </span><span class="nt">transportSecurity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tls</span>
+</span><span id="__span-1-27"><a id="__codelineno-1-27" name="__codelineno-1-27" href="#__codelineno-1-27"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9339</span>
+</span><span id="__span-1-28"><a id="__codelineno-1-28" name="__codelineno-1-28" href="#__codelineno-1-28"></a><span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+</span><span id="__span-1-29"><a id="__codelineno-1-29" name="__codelineno-1-29" href="#__codelineno-1-29"></a><span class="w">      </span><span class="nt">secretRef</span><span class="p">:</span>
+</span><span id="__span-1-30"><a id="__codelineno-1-30" name="__codelineno-1-30" href="#__codelineno-1-30"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1-gnoi-tls</span>
+</span><span id="__span-1-31"><a id="__codelineno-1-31" name="__codelineno-1-31" href="#__codelineno-1-31"></a><span class="w">  </span><span class="nt">xe</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+</span></code></pre></div>
+<p>The Secret must be in the <code>CiscoDevice</code> namespace. <code>ca.crt</code> is required;
+<code>tls.crt</code> and <code>tls.key</code> are an optional pair. The controller validates those
+fixed keys, projects only them read-only, and restarts the worker after a valid
+Secret change when gNOI is enabled in per-device topology. With global gNOI
+disablement, the existing worker omits this projection and does not roll for
+trust-Secret changes. Aggregated config-only topology has no per-device worker.
+Host paths, <code>enabled</code>, and <code>insecureSkipVerify</code> are not valid under
+<code>spec.gnoi.tls</code>.</p>
+<p>A direct local configuration uses <code>device.gnoi.tls.caFile</code> and may set both
+<code>certFile</code> and <code>keyFile</code>; <code>secretRef</code> is Kubernetes-only. In either mode the
+TLS block requires <code>transportSecurity: tls</code>. Omit the dedicated block to use
+the system root pool or verified shared TLS. If IOS-XE certificate provisioning
+is configured, omit it because the provisioning Secret supplies isolated
+bootstrap and steady-state gNOI trust automatically.</p>
+<p>The explicit IOS-XE 17.18 secure-password-auth mode does <strong>not</strong> use an HTTP
+Basic <code>Authorization</code> header. CVK derives per-RPC credentials without
+duplicating the password in configuration or logs:</p>
+<table>
+<thead>
+<tr>
+<th>gRPC metadata key</th>
+<th>Value source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>username</code></td>
+<td><code>CiscoDevice.spec.username</code></td>
+</tr>
+<tr>
+<td><code>password</code></td>
+<td>The resolved device password (<code>credentialSecretRef</code> in controller mode; legacy inline/local sources remain supported for compatibility)</td>
+</tr>
+</tbody>
+</table>
+<p>Both keys are attached to unary and streaming gNOI RPCs only over TLS, matching
+Cisco's <a href="https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/prog/configuration/1718/b-1718-programmability-cg/gnoi.html">IOS-XE 17.18 gNOI authentication guidance</a>.
+This behavior is enabled only by explicit <code>gnoi.transportSecurity: tls</code>, so
+pre-existing gNOI configurations retain their former HTTP Basic metadata
+contract. That legacy contract can expose credentials on a plaintext listener;
+it is retained solely for compatibility and cannot be used for certificate
+provisioning. Migrate those devices to explicit verified TLS.</p>
+<h3 id="provisioning-the-ios-xe-gnoi-os-service">Provisioning the IOS-XE gNOI OS service</h3>
+<p>Password metadata authenticates the controller, but it does not move IOS-XE's
+gNXI service into the <code>Provisioned</code> state required by <code>OS.Verify</code>, <code>OS.Install</code>,
+and <code>OS.Activate</code>. <code>GNOIOSVerify</code> is always read-only: a not-provisioned result
+never triggers certificate installation. Provisioning happens only when an
+operator creates a write-class <code>IOSXEOperationalAction</code> with kind
+<code>ProvisionCertificate</code>.</p>
+<p>Provisioning uses IOS-XE's target-generated CSR flow, so the device private key
+never leaves IOS-XE. Configure <code>spec.xe.gnoi.certificateProvisioning</code> with a
+dedicated same-namespace Secret. <code>tls.crt</code> and <code>ca.crt</code> are always required.
+The built-in <code>ProvisionCertificate</code> action is registered only while write-class
+gNOI is enabled and a valid <code>ca.key</code> is mounted—even when <code>OS.Verify</code> would make
+that particular action a no-op. <code>bootstrap.crt</code> is needed only when the
+temporary certificate cannot pass normal CA and hostname validation. That
+Secret is also the gNOI client's isolated trust source before and after
+installation; do not also configure <code>spec.gnoi.tls</code>. This separation allows
+unrelated shared transports to retain their own TLS policy without weakening
+gNOI verification:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1-gnoi-identity</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">namespace</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">edge</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Opaque</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">tls.crt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">    </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">    </span><span class="no">&lt;CA-signed device certificate used as the CSR profile template&gt;</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="no">-----END CERTIFICATE-----</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">  </span><span class="nt">ca.crt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">    </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">    </span><span class="no">&lt;any independent gNXI/gNMI peer-trust CA that must be preserved&gt;</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">    </span><span class="no">-----END CERTIFICATE-----</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">    </span><span class="no">&lt;device leaf issuer chain; intermediate first and root last&gt;</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">    </span><span class="no">-----END CERTIFICATE-----</span>
+</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">  </span><span class="c1"># Optional at rest; required for a new ProvisionCertificate install.</span>
+</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">  </span><span class="nt">ca.key</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">    </span><span class="no">-----BEGIN RSA PRIVATE KEY-----</span>
+</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">    </span><span class="no">&lt;unencrypted key for the dedicated intermediate that issued tls.crt&gt;</span>
+</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">    </span><span class="no">-----END RSA PRIVATE KEY-----</span>
+</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">  </span><span class="c1"># Optional exact leaf pin for IOS-XE's temporary bootstrap identity.</span>
+</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">  </span><span class="nt">bootstrap.crt</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
+</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">    </span><span class="no">-----BEGIN CERTIFICATE-----</span>
+</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">    </span><span class="no">&lt;exact certificate currently presented by the secure gNXI listener&gt;</span>
+</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">    </span><span class="no">-----END CERTIFICATE-----</span>
+</span></code></pre></div>
+<div class="admonition danger">
+<p class="admonition-title">Do not copy the signer into a kubectl annotation</p>
+<p>Do not use client-side <code>kubectl apply</code> for a Secret manifest containing
+<code>ca.key</code>. It stores the submitted manifest in the
+<code>kubectl.kubernetes.io/last-applied-configuration</code> annotation, where the
+key would survive a later <code>.data.ca.key</code> deletion. Use the approved secret
+manager, direct <code>kubectl create secret</code>, or server-side apply. The
+<a href="../gnoi-iosxe-upgrade-runbook/#remove-bootstrap-secrets-immediately">key-free cleanup procedure</a>
+also removes a legacy last-applied annotation without printing its value.</p>
+</div>
+<p><code>tls.crt</code> is a profile template, not the certificate installed on IOS-XE. It
+must be a valid server certificate for <code>spec.address</code> and provide the CSR fields
+IOS-XE 17.18.04 requires: C, ST, O, OU, and an IP SAN. CVK uses its CN when
+present and otherwise uses <code>spec.address</code>. It must chain through a dedicated
+intermediate CA rather than directly to a root. When present, the unencrypted
+RSA <code>ca.key</code> must match that intermediate; root CA private keys are rejected.</p>
+<p>The certificate workflow uses an explicit <code>CertificateSigner</code> boundary. CVK
+validates the target-generated CSR before signing and validates the returned
+certificate against the CSR and configured profile before sending it to IOS-XE.
+The only signer included in this repository is the transitional local adapter
+for <code>ca.key</code>. It can sign a new target CSR for a corrected immutable action
+after a definitive failure before <code>Cert.Install</code>; the action controller still
+submits each create-only network Install at most once. No external CA, KMS, or
+HSM signer backend is implemented or configurable here.</p>
+<p>Reference generic transport settings from <code>spec.gnoi</code> and IOS-XE provisioning
+policy from <code>spec.xe.gnoi</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">address</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1.example.net</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">gnoi</span><span class="p">:</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">transportSecurity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tls</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9339</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">xe</span><span class="p">:</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">    </span><span class="nt">gnoi</span><span class="p">:</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">certificateProvisioning</span><span class="p">:</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="nt">certificateID</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cvk-gnoi-os</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="nt">replaceTargetCABundle</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">        </span><span class="nt">secretRef</span><span class="p">:</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="w">          </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-1-gnoi-identity</span>
+</span></code></pre></div>
+<p><code>spec.gnoi.tls</code> and <code>spec.xe.gnoi.certificateProvisioning</code> are mutually
+exclusive trust sources. Admission and local/runtime validation reject both
+together, or either one without explicit <code>transportSecurity: tls</code>.</p>
+<p>CVK requires a target-generated RSA key of at least 2048 bits. Every certificate
+in <code>ca.crt</code> must be a CA, the bundle must validate the template, and it must be
+the <strong>complete desired replacement</strong> for IOS-XE's shared gNXI/gNMI trust bundle,
+including peer CAs needed by existing mTLS clients. Order independent roots
+first, then each issuer chain with its root last. Setting
+<code>replaceTargetCABundle: true</code> acknowledges this replacement.</p>
+<p><code>bootstrap.crt</code> is an exact, validity-checked leaf pin, not a trust anchor. CVK
+first attempts normal CA and hostname verification, falls back to the pin only
+before the new CA-valid identity has been observed, and never adds the pinned
+certificate to a CA pool. Omit it when the certificate already validates
+normally.</p>
+<div class="admonition danger">
+<p class="admonition-title">Protect the signing key</p>
+<p>Use a dedicated, narrowly scoped intermediate CA. Enable Kubernetes Secret
+encryption at rest, restrict Secret reads and pod exec, and audit both. The
+signing key and bootstrap pin are projected read-only only while
+write-class gNOI is enabled and a non-empty <code>ca.key</code> is present, but
+projection is not an authorization boundary: the standard VK
+ClusterRole can read Secrets cluster-wide to serve scheduled pod volumes.
+Any principal that can use the VK service account, read the Secret, or enter
+the signer-bearing pod can use the key. The built-in local signer retains
+the parsed key for the lifetime of that process so a definitive pre-Install
+failure can be corrected with a new immutable action. Key bytes are not
+copied into ConfigMaps, environment, status, events, or logs. Remove
+<code>ca.key</code> promptly after provisioning; a key-free rollout is required to
+remove it from process memory. The Deployment uses a non-overlapping
+<code>Recreate</code> strategy while a signer can be resident, for that cleanup
+rollout, and whenever write-class gNOI actions or IOS-XE software upgrades
+are enabled. This prevents overlapping generations during managed
+Deployment rollouts; it does not fence manual Pod replacement or a second
+registration of the physical device. Normal rolling updates resume only after signer
+cleanup is complete, both mutation gates or gNOI globally are disabled,
+and no old mutation-enabled worker generation remains.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">IOS-XE gNXI service restart</p>
+<p>CVK confines its configuration and credentials to gNOI, but IOS-XE shares
+the provisioned identity and CA bundle with gNMI. gNOI Install replaces
+that complete target-side CA bundle, can restart gNXI, and changes the
+certificate presented to external gNMI clients. Put every peer CA that
+must remain trusted in <code>ca.crt</code>, ensure clients trust the new server CA,
+and schedule provisioning as a device-management change. RESTCONF,
+NETCONF, and the VK's other TLS settings are not modified by CVK.</p>
+</div>
+<p>Use this explicit workflow:</p>
+<div class="admonition danger">
+<p class="admonition-title">Complete mixed-version rollouts first</p>
+<p>If upgrading from a preview build that accepted <code>ProvisionCertificate</code>
+without an intent block, complete or delete those legacy actions, apply the
+updated CRD, and fully roll the manager and every per-device worker before
+creating an intent-bound action. Do not provision during a mixed-version
+window: an older worker cannot enforce the certificate ID and digest.</p>
+</div>
+<ol>
+<li>Enable <code>gnxi enable-gnoi</code> and <code>gnxi secure-init</code>, configure the Secret and
+   <code>spec.xe.gnoi.certificateProvisioning</code> block, and enable the write-class
+   gNOI runtime gate.</li>
+<li>Run <code>GNOICertGet</code> to test TLS and password metadata. Run <code>GNOIOSVerify</code> if
+   desired to confirm the not-provisioned response; it does not mutate IOS-XE.</li>
+<li>
+<p>Compute the immutable public-material digest from the exact files used to
+   populate the Secret. The order has no separator: <code>tls.crt</code> bytes first,
+   immediately followed by <code>ca.crt</code> bytes.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="o">(</span>cat<span class="w"> </span>tls.crt<span class="p">;</span><span class="w"> </span>cat<span class="w"> </span>ca.crt<span class="o">)</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sha256sum
+</span></code></pre></div>
+</li>
+</ol>
+<p>Create the action below with that lowercase digest. The worker compares both
+   fields with its loaded bundle before it acquires a gNOI client or marks the
+   action Running, so a Secret/config rollout race is rejected without touching
+   the device. Installation proceeds only when <code>OS.Verify</code> returns the exact
+   not-provisioned error. If <code>OS.Verify</code> already succeeds, the action returns
+   <code>serviceAlreadyProvisioned</code> with <code>certificateChanged: false</code> and performs no
+   certificate inventory or Install call. Its requested ID and digest are only
+   an echo of operator intent, not proof of the active device identity. A
+   conflicting certificate ID observed during an install attempt fails closed.</p>
+<div class="language-text highlight"><pre><span></span><code>```yaml
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXEOperationalAction
+metadata:
+  name: provision-cat9000-1-gnoi
+  namespace: edge
+spec:
+  deviceRef:
+    name: cat9000-1
+  confirm: cat9000-1
+  action:
+    kind: ProvisionCertificate
+    provisionCertificate:
+      certificateID: cvk-gnoi-os
+      # Replace with the digest computed above.
+      publicMaterialSHA256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+```
+</code></pre></div>
+<ol>
+<li>A mutating action reports <code>provisioned</code> with <code>certificateChanged: true</code> only
+   after a fresh connection proves that the exact installed certificate is its
+   active TLS leaf and a subsequent <code>OS.Verify</code> succeeds over that same peer;
+   the result includes the certificate ID, public-material digest, and running
+   IOS-XE version. If <code>OS.Verify</code> worked before mutation, the no-op result is
+   <code>serviceAlreadyProvisioned</code> with <code>certificateChanged: false</code>; its requested
+   fields remain intent only. CVK retries post-install read-only checks during
+   the expected gNXI restart but never retries the create-only Install.
+   Also require <code>show gnxi state detail</code> to report <code>State: Provisioned</code>. If the
+   action fails with <code>CertificateInstallIndeterminate</code>, do not immediately
+   create another action: use <code>GNOICertGet</code> and inspect device PKI state to
+   determine whether the certificate ID was committed.</li>
+<li>Follow the <a href="../gnoi-iosxe-upgrade-runbook/#remove-bootstrap-secrets-immediately">key-free cleanup
+   procedure</a>
+   to remove <code>ca.key</code>, <code>bootstrap.crt</code>, and any client-side last-applied copy;
+   wait until the Deployment template records the new Secret resourceVersion
+   before waiting for the non-overlapping rollout. <code>Recreate</code> remains in
+   effect while write-class actions or software upgrades are enabled, so
+   disable each mutation gate when it is no longer needed (or disable gNOI
+   globally) to restore normal rolling updates. Keep <code>tls.crt</code>, <code>ca.crt</code>, and
+   the provisioning block so read-only gNOI can validate the installed
+   identity.</li>
+</ol>
+<p>Changing a generic <code>spec.gnoi.tls</code> Secret first validates the new material and,
+when gNOI is enabled in per-device topology, rolls the worker so new connections
+use it; it never changes device state. A provisioning Secret update also rolls
+that worker, but it does not rotate an installed IOS-XE identity. With global
+gNOI disablement, the per-device worker remains but ignores both trust Secrets;
+aggregated config-only topology has no per-device worker. Install is
+create-only: CVK does not rotate, revoke, or overwrite an existing certificate
+ID.
+Controller-managed provisioning requires the per-device worker; the aggregated
+config-only topology does not run gNOI lifecycle reconcilers.</p>
+<h3 id="invalid-secret-recovery-and-certificate-lifetime">Invalid Secret recovery and certificate lifetime</h3>
+<p>A missing referenced Secret or locally rejected gNOI material sets the affected
+<code>CiscoDevice</code> condition <code>GNOIConfigurationReady=False</code>. Provisioning validation
+includes certificate validity dates. Generic <code>gnoi.tls</code> validation checks
+parseable CA material and an optional matching client certificate/key pair;
+it does not check validity dates, so this condition is not an expiry monitor.
+TLS handshakes still enforce peer certificate validity. The manager reconciles
+that worker with gNOI disabled and removes its trust/signer projections; a
+required key-cleanup rollout still uses <code>Recreate</code>. Invalid public certificate
+material therefore cannot prevent removal of a previously loaded signing key.
+Unrelated credential/configuration reconciliation continues. Repairing the
+Secret restores gNOI through a worker rollout. A transient Kubernetes API read
+failure is different: it retries without treating unknown Secret state as a
+confirmed invalid configuration. This condition validates local configuration,
+not the device's gNOI reachability or provisioning state.</p>
+<p>Certificate renewal remains an operator-owned PKI operation. <code>ProvisionCertificate</code>
+is create-only, not a renewal controller; changing the profile <code>tls.crt</code> does
+not rotate the installed device certificate. Assign a renewal owner and a
+maintenance/recovery procedure before production use. <code>GNOICertGet</code> exposes
+parseable X.509 <code>NotBefore</code>, <code>NotAfter</code>, and <code>FingerprintSHA256</code> inventory fields
+and updates <a href="../observability/#gnoi-lifecycle-metrics">certificate freshness/expiry metrics</a>.
+Run a fresh inventory probe periodically and before each change. Inventory can
+include inactive certificates; verify which certificate is actually bound to
+the secure gNXI trustpoint before renewal or deletion. An external signing
+service can implement the signer boundary in a future change; there is no
+configured external-signer or automatic rotation implementation today.</p>
+<h2 id="connection-model">Connection Model</h2>
+<p>The IOS-XE <code>gnoiruntime.Provider</code> owns a dedicated per-device,
+workload-classed gRPC pool for gNOI; command wiring supplies configuration and
+credentials but does not own the runtime workflow. Current production wiring
+uses these classes:</p>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Used by</th>
+<th>Why it is separate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ClassControl</code></td>
+<td>Unary and short-stream gNOI RPCs such as time, ping, reboot status, cert get, and OS verify</td>
+<td>Keeps small control RPCs responsive.</td>
+</tr>
+<tr>
+<td><code>ClassBulkTransfer</code></td>
+<td>OS install and file put/get</td>
+<td>Prevents large file transfers from back-pressuring control traffic.</td>
+</tr>
+</tbody>
+</table>
+<p>gNMI configuration and telemetry currently dial independently. Although the
+pool defines <code>ClassTelemetry</code> and the transports accept injected connections,
+production wiring does not compose them with the gNOI pool and callers must
+not assume shared transport or authentication state.</p>
+<p>The gNOI client validates IOS-XE filesystem prefixes for file paths and caches
+per-service capability probes. gNMI capabilities do not enumerate gNOI
+services, so CVK learns support by observing gNOI responses. A
+<code>codes.Unimplemented</code> response marks that service unsupported in the in-process
+cache and later calls fail fast with <code>ErrServiceUnsupported</code> until the cache
+expires or the process restarts.</p>
+<p>Certificate installation is not a capability of that base provider. A separate
+<code>gnoiruntime.Provisioner</code> is made available to the operational-action
+reconciler only when the provisioning configuration is present and write-class
+gNOI is enabled. Even then, it runs only for an explicitly confirmed,
+create-only <code>ProvisionCertificate</code> action after <code>OS.Verify</code> returns the exact
+not-provisioned response.</p>
+<p>IOS-XE support varies by release and platform. In particular, System or File
+RPCs can return <code>Unimplemented</code> even when TLS and authentication are correct.
+For a read-only secure-listener smoke test before IOS-XE is provisioned, use
+<code>GNOICertGet</code>. After the device reports <code>State: Provisioned</code>, prefer
+<code>GNOIOSVerify</code> over <code>GNOITime</code> because System service support varies by
+platform.</p>
+<h2 id="read-only-operations">Read-Only Operations</h2>
+<p><code>DeviceOperation</code> contains the low-trust operational surface. gNOI-backed kinds
+return structured output through the same status path as read-only show
+commands and packet captures.</p>
+<table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>gNOI service</th>
+<th>Typical use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GNOIPing</code></td>
+<td>System</td>
+<td>Reachability probe from the device.</td>
+</tr>
+<tr>
+<td><code>GNOITraceroute</code></td>
+<td>System</td>
+<td>Hop-by-hop path check from the device.</td>
+</tr>
+<tr>
+<td><code>GNOITime</code></td>
+<td>System</td>
+<td>Device clock check.</td>
+</tr>
+<tr>
+<td><code>GNOIFileGet</code></td>
+<td>File</td>
+<td>Read a bounded file preview or spill to ConfigMap.</td>
+</tr>
+<tr>
+<td><code>GNOIFileStat</code></td>
+<td>File</td>
+<td>Validate staged files and metadata.</td>
+</tr>
+<tr>
+<td><code>GNOICertGet</code></td>
+<td>Cert</td>
+<td>List installed certificates.</td>
+</tr>
+<tr>
+<td><code>GNOICanGenerateCSR</code></td>
+<td>Cert</td>
+<td>Check CSR support for a key/certificate profile.</td>
+</tr>
+<tr>
+<td><code>GNOIRebootStatus</code></td>
+<td>System</td>
+<td>Inspect pending or active reboot state.</td>
+</tr>
+<tr>
+<td><code>GNOIOSVerify</code></td>
+<td>OS</td>
+<td>Verify the current running version and activation state.</td>
+</tr>
+</tbody>
+</table>
+<p>For concrete examples, see the <a href="../operations/">DeviceOperation runbook</a>.</p>
+<h2 id="write-class-actions">Write-Class Actions</h2>
+<p><code>IOSXEOperationalAction</code> supports one-shot device-mutating gNOI actions:
+<code>Reboot</code>, <code>CancelReboot</code>, <code>KillProcess</code>, <code>FilePut</code>, <code>FileRemove</code>, and
+<code>FactoryReset</code>, plus the certificate bootstrap action <code>ProvisionCertificate</code>.</p>
+<p>Every action targets exactly one <code>CiscoDevice</code> and must set <code>spec.confirm</code> to
+the target device name. The spec is immutable after creation, the request must
+contain exactly the args block matching <code>spec.action.kind</code>, and a <code>Running</code>
+action is not dispatched a second time after controller restart. This gives the
+operation an audit trail without turning transient controller restarts into
+duplicate destructive RPCs.</p>
+<p><code>FilePut</code> is intentionally ConfigMap-backed in the current API: the bytes come
+from <code>binaryData["content"]</code> in a same-namespace ConfigMap. File write/remove
+paths must use IOS-XE filesystem prefixes such as <code>flash:</code>, <code>bootflash:</code>,
+<code>harddisk:</code>, <code>usbflash0:</code>, or <code>usbflash1:</code>.</p>
+<h3 id="shared-device-mutation-coordination">Shared device-mutation coordination</h3>
+<p>Write-class actions and software upgrades contend for one platform-neutral
+<code>device-disruptive-mutation</code> Kubernetes Lease per namespaced <code>CiscoDevice</code>.
+This serialization boundary lives above the IOS-XE backend so future NX-OS and
+IOS XR mutation workflows can join it without importing IOS-XE code. The Lease
+is stored in <code>CONFIG_LEASE_NAMESPACE</code> when configured, otherwise in the worker
+namespace, and has a fixed 26-hour safety TTL in this release.</p>
+<p>Definitively completed mutations release the Lease. Every action that fails
+after invocation retains it until expiry because an error cannot prove that the
+device rejected the request; uncertain upgrade terminals do the same.
+Successful <code>Reboot</code> and <code>FactoryReset</code> also retain it because their
+acknowledgements do not prove convergence. A delayed reboot extends the hold
+through its delay plus the fixed safety TTL. <code>CancelReboot</code> is the only bypass
+and never releases another operation's Lease. Deleting an invoked action
+keeps its finalizer through the bounded RPC-and-persistence window. If the
+outcome remains unknown, CVK records <code>ActionOutcomeUnknown</code>, removes the
+finalizer so deletion can complete, and retains the Lease until expiry.
+Deleting an upgrade cannot cancel device work and therefore leaves any
+required quarantine in place. Manual or external device changes are outside
+this Kubernetes fence and must still be coordinated operationally.</p>
+<p>The identity is the <strong>namespace and CiscoDevice name</strong>, not its IP address.
+Register each physical device once and coordinate ownership across clusters;
+different names or clusters do not share a fence.</p>
+<p>Per-device IOS-XE workers also coordinate ordinary configuration writes and
+app-hosting mutations with that Lease. Read-only probes and report-only config
+remain available. Before dispatching disruptive gNOI work, CVK adds the owned
+<code>cisco.vk/device-maintenance=gnoi:NoSchedule</code> Node taint. It prevents new
+scheduler placement, does not evict existing Pods, and is removed only after
+the disruptive Lease is released or expires. Direct <code>nodeName</code> assignments do
+not bypass the device-write guard. Disabling mutation gates does not discard
+an existing quarantine. Operator-owned taints are preserved.</p>
+<p>That description remains the default <code>BlockIfRunning</code> and standalone behavior.
+Managed IOS-XE campaigns have a separate, disabled-by-default PDB-aware drain
+preview. It extends the same maintenance session: the manager owns a cordon
+and taint, eviction uses only <code>policy/v1</code> Eviction, selected provider teardown
+acquires and renews the ordinary mutation Lease through device teardown and a
+fresh inventory, and promotion to disruptive gNOI waits for device-clean and
+replacement-workload evidence. A conclusive cleanup releases that Lease;
+ambiguous teardown, incomplete inventory, lost authorization, or a failed
+release retains it as a fail-closed quarantine. The path does not add a parallel
+Lease or bypass PDBs. See
+<a href="../topology-awareness/#opt-in-pdb-aware-drain-development-preview">Opt-in PDB-aware drain</a>
+for the exact workload subset, RBAC, recovery, and qualification limits.</p>
+<p>Taint removal is observed on a 30-second polling interval; setting it before
+dispatch is synchronous. The compatibility scan lists both mutation kinds in
+the device namespace, so large fleets should measure Kubernetes API cost and
+use appropriately scoped namespaces rather than assuming constant fleet-wide
+overhead.</p>
+<p>The safety observer needs namespace-scoped <code>list</code> permission on both mutation
+CRDs even when their runtime gates are off; the strict-RBAC chart grants that
+read-only access without enabling their controllers or write/status verbs.</p>
+<p>Ordinary write transactions renew a shorter Lease while running, with a
+30-minute execution bound. An error, cancellation, or lost worker retains the
+remaining 31-minute Lease instead of assuming device work stopped. This is a
+bounded recovery assumption, not proof that asynchronous IOS-XE work has
+finished. Investigate device-side install/app-hosting state before resuming
+after expiry. A Kubernetes/API outage fails closed for coordinated writes.</p>
+<h2 id="software-lifecycle">Software Lifecycle</h2>
+<p><code>IOSXESoftwareUpgrade</code> manages the device OS lifecycle as an auditable
+Kubernetes object. Operators provide exactly one image source:</p>
+<div class="admonition warning">
+<p class="admonition-title">Per-device topology required</p>
+<p><code>IOSXESoftwareUpgrade</code> and <code>IOSXEOperationalAction</code> are reconciled inside
+the IOS-XE per-device worker. They are unavailable when
+<code>aggregator.enabled=true</code>; set <code>aggregator.enabled=false</code> before enabling
+either mutation gate.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Required fields</th>
+<th>Use case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>URL</td>
+<td><code>imageSource.url</code> and <code>imageSource.sha256</code></td>
+<td>CVK fetches and verifies <code>http</code>, <code>https</code>, <code>tftp</code>, <code>ftp</code>, <code>scp</code>, or <code>sftp</code> content, then streams the bytes with gNOI <code>OS.Install</code>.</td>
+</tr>
+<tr>
+<td>URL with credentials</td>
+<td>URL fields plus <code>imageSource.urlSecretRef</code></td>
+<td>Same byte-stream flow for authenticated FTP/SCP/SFTP. The explicitly opted-in Secret must authorize the URL's exact scheme, host, and port. SCP/SFTP also require verified host keys unless the separately gated lab bypass is enabled.</td>
+</tr>
+<tr>
+<td>ConfigMap</td>
+<td><code>imageSource.configMapRef</code></td>
+<td>CVK hashes <code>binaryData["image"]</code>, then streams it with gNOI <code>OS.Install</code>. Kubernetes size limits make this suitable only for small test artifacts.</td>
+</tr>
+<tr>
+<td>Preinstalled</td>
+<td><code>imageSource.preinstalled: {}</code></td>
+<td>Activate <code>targetVersion</code> only when it resolves to one exact, activatable entry in the native install inventory. No bytes are transferred or registered.</td>
+</tr>
+<tr>
+<td>Device file</td>
+<td><code>imageSource.deviceFile.path</code> and <code>.sha256</code></td>
+<td>Verify a file already on IOS-XE with gNOI <code>File.Get</code>, register it through the IOS-XE RESTCONF install RPC, then activate the exact resulting inventory version through gNOI.</td>
+</tr>
+<tr>
+<td>Legacy local path</td>
+<td><code>imageSource.localPath</code> and optional <code>localPathSHA256</code></td>
+<td>Deprecated compatibility form of <code>preinstalled</code>. The path is never submitted to an install command; use <code>deviceFile</code> to register a file.</td>
+</tr>
+</tbody>
+</table>
+<p>URL and ConfigMap content is handled by CVK; IOS-XE is not asked to fetch the
+URL. CVK persists the algorithm-qualified digest, and the resolved size when
+known, before starting <code>OS.Install</code>. A later reconciliation fails if resolution
+produces different content rather than silently changing bytes for the same CR.</p>
+<p>FTP, SCP, and SFTP transfer credentials are accepted only from an
+endpoint-bound Secret. URL userinfo such as
+<code>sftp://user:password@host/image.bin</code> is rejected. Query strings and fragments
+remain part of the immutable URL stored in the upgrade CR, although CVK redacts
+them from its own errors; do not put credentials or bearer tokens there. The
+Secret owner must opt in with
+<code>cisco.vk/purpose=software-image-source</code> and provide all three endpoint fields;
+scheme and DNS host comparisons are case-insensitive, a trailing DNS dot is
+ignored, IP addresses and ports are normalized, and an omitted URL port uses
+the protocol default (<code>21</code> for FTP and <code>22</code> for SCP/SFTP):</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">iosxe-image-source</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">labels</span><span class="p">:</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="nt">cisco.vk/purpose</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">software-image-source</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Opaque</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="nt">stringData</span><span class="p">:</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">  </span><span class="nt">allowedScheme</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">sftp</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span><span class="nt">allowedHost</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">images.example.net</span>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span><span class="nt">allowedPort</span><span class="p">:</span><span class="w"> </span><span class="s">"22"</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span><span class="nt">username</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">image-reader</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">  </span><span class="nt">password</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">replace-me</span>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span><span class="c1"># For key authentication, use privateKey and optional passphrase instead.</span>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">  </span><span class="c1"># SCP/SFTP also require knownHosts (or known_hosts).</span>
+</span></code></pre></div>
+<p>An upgrade author cannot use that Secret with a different scheme, host, or
+port. Treat permission to create or modify a purpose-labelled image-source
+Secret as credential-administration authority; keep it separate from ordinary
+upgrade-CR creation RBAC.</p>
+<p><code>preinstalled</code> and deprecated <code>localPath</code> are inventory-only intents. A file
+merely appearing in <code>dir flash:</code> is not an installed version and will not be
+activated. If <code>localPathSHA256</code> is supplied, CVK verifies the file before it
+inspects inventory, but the hash does not opt the request into registration.</p>
+<p><code>deviceFile</code> registration is currently an IOS-XE-only driver capability and
+requires the RESTCONF transport. Paths are limited to validated <code>flash:</code>,
+<code>bootflash:</code>, or <code>harddisk:</code> locations. CVK verifies the required SHA-256
+digest before invoking IOS-XE's install-by-path RPC with install-only behavior;
+activation remains in the generic gNOI lifecycle. There is no CLI or SSH
+fallback. Unsupported transports, an unavailable lifecycle backend, ambiguous
+version matches, source-path conflicts, and non-activatable inventory states
+fail closed before activation. An activatable or in-progress target that exists
+before this CR records its staging request is also rejected as uncorrelated.
+After the marker is recorded, only the matching operation ID returned by the
+correlated device-file observer can authorize activation; a generic inventory
+match is not sufficient provenance.</p>
+<h3 id="image-resolver-storage-and-transport-security">Image resolver storage and transport security</h3>
+<p>URL and ConfigMap sources have a hard per-image limit of 8 GiB by default.
+Set <code>gnoi.softwareUpgrade.maxImageBytes</code> in Helm, or set
+<code>CISCO_VK_UPGRADE_MAX_IMAGE_BYTES</code> directly to a positive base-10 byte count,
+to choose a lower or higher limit. Helm puts the value on the manager and the
+controller propagates it to per-device VK pods. The aggregated config-only
+topology does not run the lifecycle resolver. Invalid values fail resolution;
+a declared HTTP size, remote file size, SCP header, or live byte stream that
+exceeds the limit is rejected before the current cache file can grow beyond
+that limit.</p>
+<p>URL downloads are streamed and SHA-256 verified into a mode-<code>0600</code> temporary
+file inside <code>/tmp/cvk-upgrade-cache</code>, then atomically promoted to their
+digest-keyed cache path. The verified file descriptor is reused for gNOI
+transfer, so first resolution does not make a second full-image copy. Before
+resolving a different digest, CVK removes the prior managed cache entry and any
+orphaned CVK temporary files left by a crashed resolver; unrelated directory
+entries are preserved. At most one completed image digest is retained per
+resolver directory. A pod restart clears the <code>emptyDir</code>. Budget slightly more
+than the largest permitted image plus normal pod overhead, and size node
+ephemeral storage and any <code>ephemeral-storage</code> requests/limits accordingly—a
+kubelet eviction or full filesystem interrupts the transfer even when the image
+itself is below the configured maximum.</p>
+<p>The resolver has a four-hour cap per materialization attempt, while the
+lifecycle bounds all attempts by the remaining <code>installTimeoutSeconds</code>; with
+defaults, the effective overall limit is therefore one hour. Transient HTTP,
+Kubernetes API, and supported file-transfer connection failures are retried
+only inside that overall pre-install deadline. Invalid credentials, endpoint
+authorization, host-key or TLS verification, source validation, size, digest,
+and unsafe-cache failures remain terminal. HTTP requests inherit the attempt
+deadline; FTP data and control connections receive deadlines and are closed on
+cancellation; SCP and SFTP sessions are closed on cancellation; and TFTP
+additionally retains its bounded transport retry policy. A failed attempt
+removes its partial temporary file and does not create a cache entry.</p>
+<p>The cache directory is forced to mode <code>0700</code>; cache and temporary image files
+are mode <code>0600</code>. Symlinks and other non-regular cache entries are rejected, and
+CVK streams from the same open file descriptor it verified rather than
+reopening the pathname. These controls protect against accidental cross-user
+access and pathname substitution inside the pod; they do not protect against a
+principal with pod exec, node-root, or equivalent access.</p>
+<p>Choose the URL transport separately from content integrity. SHA-256 detects
+content changes but does not provide confidentiality, endpoint authentication,
+or credential protection. <code>http</code>, <code>ftp</code>, and <code>tftp</code> are plaintext (<code>ftp</code> also
+exposes its password on the network); reserve them for isolated, trusted
+management networks. Prefer <code>https</code>, <code>sftp</code>, or <code>scp</code> in production. SFTP and
+SCP require a trusted <code>knownHosts</code> entry unless both the URL carries
+<code>?insecureSkipHostKey=true</code> (or <code>?insecure=true</code>) and a custom/local deployment
+sets <code>CISCO_VK_UPGRADE_ALLOW_INSECURE_SSH=true</code>. The stock Helm chart does not
+expose this lab-only bypass. The default HTTP client follows redirects, so
+control and audit redirect targets as part of repository policy.</p>
+<p>Manager-created leaves from an opt-in <code>IOSXESoftwareRollout</code> use the stricter
+managed-source policy documented in
+<a href="../topology-awareness/#secure-gnoi-and-image-source-prerequisites">Managed topology and topology-aware IOS-XE rollouts</a>.
+That path accepts only anonymous, verified HTTPS or endpoint-bound SFTP;
+rejects query strings, fragments, redirects, environment proxies, and custom
+HTTP transports; resolves DNS once and dials the validated address; rejects
+unsafe or mixed DNS results; rejects private HTTPS; and permits private SFTP
+only with the bound Secret. These restrictions do not silently change direct
+standalone <code>IOSXESoftwareUpgrade</code> compatibility.</p>
+<p>The upgrade strategy controls activation:</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Reload</code></td>
+<td>Default. Calls gNOI <code>OS.Activate</code> with reboot allowed, then waits for the device to return and verifies the running version.</td>
+</tr>
+<tr>
+<td><code>ISSU</code></td>
+<td>Currently rejected during preflight. CVK will not advertise a non-disruptive upgrade until the platform backend can verify that IOS-XE actually selected an ISSU path.</td>
+</tr>
+<tr>
+<td><code>NoReboot</code></td>
+<td>Calls gNOI <code>OS.Activate</code> with <code>NoReboot=true</code>, then performs <code>OS.Verify</code>. If the old version remains active, the terminal phase is <code>StagedForNextBoot</code>; only an independently authorized reboot can complete the transition. It does not prove ISSU, hitless forwarding, or readiness after that reboot.</td>
+</tr>
+</tbody>
+</table>
+<p>The normal lifecycle is:</p>
+<table>
+<thead>
+<tr>
+<th>Phase</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Pending</code></td>
+<td>CR accepted; no device operation started yet. The maintenance window gates initial work.</td>
+</tr>
+<tr>
+<td><code>Resolving</code></td>
+<td>gNOI preflight runs and source intent or exact native inventory is resolved.</td>
+</tr>
+<tr>
+<td><code>Staging</code></td>
+<td>An IOS-XE device file is submitted once for native install-inventory registration.</td>
+</tr>
+<tr>
+<td><code>Transferring</code></td>
+<td>URL or ConfigMap content is materialized, digest-pinned, and streamed with gNOI <code>OS.Install</code>.</td>
+</tr>
+<tr>
+<td><code>TransferInterrupted</code></td>
+<td>A dispatched gNOI install has an indeterminate outcome and is observed without replay until its deadline.</td>
+</tr>
+<tr>
+<td><code>Validating</code></td>
+<td>gNOI install or native registration is observed until an exact inventory version is activatable.</td>
+</tr>
+<tr>
+<td><code>Activating</code></td>
+<td>gNOI OS activation is requested.</td>
+</tr>
+<tr>
+<td><code>AwaitingReachability</code></td>
+<td>Device may be rebooting after activation.</td>
+</tr>
+<tr>
+<td><code>Verifying</code></td>
+<td>Running version and activation result are verified.</td>
+</tr>
+<tr>
+<td><code>RollingBack</code></td>
+<td>Previous version is being re-activated after a verify mismatch.</td>
+</tr>
+<tr>
+<td><code>Succeeded</code></td>
+<td>Final <code>OS.Verify</code> proves the requested version is running (including the unusual case where a <code>NoReboot</code> request already resulted in the target).</td>
+</tr>
+<tr>
+<td><code>StagedForNextBoot</code></td>
+<td><code>NoReboot</code> was accepted, <code>OS.Verify</code> still reports the captured previous version, and a separately authorized reboot is required.</td>
+</tr>
+</tbody>
+</table>
+<p>Terminal failure phases include <code>Failed</code>, <code>PreflightFailed</code>,
+<code>ValidationFailed</code>, <code>RolledBack</code>, and <code>RebootTimeout</code>.</p>
+<p><code>OS.Activate</code> reboots the device when the chosen strategy requires it; CVK does
+not issue a separate <code>System.Reboot</code> after activation. With rollback enabled,
+CVK re-activates the previously observed running version only after the
+lifecycle backend proves that exact version remains activatable.</p>
+<p>When <code>OS.Verify</code> requires individual-supervisor handling, byte-stream sources
+install the active supervisor first and the standby second, using the same
+install deadline. The standby must return exactly the same validated version as
+the primary, not merely a value matching the requested prefix. Activation is
+deliberately reversed: standby first, then the active supervisor, with
+verification between steps. <code>NoReboot</code> is rejected for this path because CVK
+cannot prove the required boot sequence. Automatic rollback is also refused if
+a safe, separately verified per-supervisor rollback sequence cannot be
+established. The durable per-supervisor request and completion markers prevent
+replay after a controller restart.</p>
+<p>The reconciler records staging, activation, and rollback intent before issuing
+each device-mutating RPC and does not replay a recorded request after a restart
+or an ambiguous transport result. This is intentionally at-most-once, not
+exactly-once: a controller failure after the status write but before device
+receipt can leave the outcome unknown and require operator inspection. In
+particular, an ambiguous <code>NoReboot</code> response is terminal rather than retried.</p>
+<p>The controller persists <code>status.executionModel: AtMostOnceV1</code> before a new
+upgrade leaves its safe initial state. During an upgrade from an earlier
+controller, an unmarked <code>Pending</code> or <code>Resolving</code> object is adopted because no
+device mutation could yet have been submitted. An unmarked <code>Staging</code>,
+<code>Transferring</code>, <code>TransferInterrupted</code>, <code>Validating</code>, <code>Activating</code>,
+<code>AwaitingReachability</code>, <code>Verifying</code>, or <code>RollingBack</code> object instead terminates
+as <code>ValidationFailed</code> with reason <code>LegacyStateOutcomeUnknown</code>; CVK retains the
+shared mutation Lease and never guesses whether it should replay the request.
+Inspect IOS XE and wait for the quarantine Lease to expire before authorizing a
+replacement operation. The deprecated <code>spec.resumePolicy</code>, <code>spec.maxRetries</code>,
+and <code>status.retryCount</code> fields remain accepted for stored objects and older
+manifests. Admission still supplies the historical <code>Retry</code> and <code>3</code> defaults so
+objects remain usable after a controller rollback, but the current reconciler
+ignores all three fields; they do not enable mutation retries. The released
+<code>Cancelled</code> phase is retained as a terminal compatibility value.
+An unknown non-empty execution-model value is treated as state from a newer
+controller: CVK preserves its status verbatim, installs the cleanup finalizer,
+holds the shared Lease, and performs no device RPC until a compatible
+controller is restored.
+Future controllers that add a phase capable of device mutation must write a
+new execution-model value with it; this pairing lets an older controller
+recognize and fence the entire newer state without interpreting its phase.</p>
+<p>For this one-release migration, every mutation controller scans both
+<code>IOSXESoftwareUpgrade</code> and <code>IOSXEOperationalAction</code> in the device namespace
+before claiming the shared Lease. All replicas select the same deterministic
+legacy holder, so a released in-flight upgrade or action is fenced even when
+its own controller gate is disabled; an API-list or RBAC error fails closed.
+The guard also recognizes released invoked actions for a bounded 26-hour
+outcome window, extended by any accepted reboot delay. This IOS-XE legacy
+horizon is owned by the compatibility adapter and is not shortened by another
+driver's normal Lease policy.</p>
+<p>Important defaults:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th style="text-align: right;">Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>strategy</code></td>
+<td style="text-align: right;"><code>Reload</code></td>
+<td><code>NoReboot</code> requests activation without an immediate reload; it is not a non-disruptive guarantee.</td>
+</tr>
+<tr>
+<td><code>rollbackOnFailure</code></td>
+<td style="text-align: right;"><code>true</code></td>
+<td>Attempts to restore the previously observed version after verify mismatch when a safe rollback sequence can be proven.</td>
+</tr>
+<tr>
+<td><code>installTimeoutSeconds</code></td>
+<td style="text-align: right;"><code>3600</code></td>
+<td>Bounds two consecutive windows: pre-install gNOI readiness, source resolution, and device-file <code>File.Get</code>; then, starting at the first <code>OS.Install</code> or native-registration claim, all per-supervisor installs/registration and inventory convergence share a fresh window. Repeated work within either window receives only its remaining time.</td>
+</tr>
+<tr>
+<td><code>rebootTimeoutSeconds</code></td>
+<td style="text-align: right;"><code>1800</code></td>
+<td>Separately bounds initial activation-control readiness (<code>activationControlStartTime</code>), then activation/reachability/final verification from the first actual activation claim. Rollback receives an independent timer when <code>RollingBack</code> begins, including pre-dispatch reachability. Each RPC uses only the remaining sequence time.</td>
+</tr>
+</tbody>
+</table>
+<p><code>ActivationControlTimeout</code> and <code>RollbackDidNotConverge</code> retain the shared Lease
+when a mutation was durably claimed, just like an uncertain install outcome.
+This quarantine prevents a new CVK mutation from overlapping device work whose
+completion cannot be proven.</p>
+<p>After a durable activation claim, even a definitive authentication or
+authorization error from a later <code>OS.Verify</code> cannot prove that activation
+stopped. Terminal outcomes release the fence only when device mutation is
+known settled; <code>DeviceMutationSettled=True</code> records that evidence. Never infer
+that a terminal <code>Failed</code> phase alone means another mutation is safe. Before
+any activation claim, an expired maintenance window is checked even if the
+gNOI control client remains unavailable.</p>
+<p><code>targetVersion</code> accepts IOS-XE version shapes such as <code>17.15.01a</code>,
+<code>26.01.01</code>, <code>26.01.01.0.340</code>, and <code>17.18.02.0.4112.1766116039</code>. Verification
+uses a prefix-aware comparison, so operators may use the shortest unambiguous
+form for the staged image.</p>
+<h2 id="upgrade-examples">Upgrade Examples</h2>
+<p>For the complete upgrade and planned-downgrade manifests, the certificate
+prerequisites, and commands that correlate CR status with worker logs, follow
+the <a href="../gnoi-iosxe-upgrade-runbook/">IOS-XE upgrade and downgrade runbook</a>.</p>
+<p>Each CR is immutable and starts one upgrade after preflight. <code>notBefore</code> delays
+initial work; <code>notAfter</code> is rechecked before every not-yet-claimed device
+mutation, but cannot cancel a submitted or in-flight RPC. The shared mutation
+Lease allows only one CVK-managed write action or upgrade to own the device at
+a time; a quarantined prior outcome can intentionally block a new request until
+the Lease expires.</p>
+<p>Stream verified URL content through gNOI:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ops.cisco.vk/v1alpha1</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">IOSXESoftwareUpgrade</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="nt">metadata</span><span class="p">:</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-4-to-26-01-01</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">  </span><span class="nt">deviceRef</span><span class="p">:</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-4</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="w">  </span><span class="nt">imageSource</span><span class="p">:</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">https://images.example.net/cat9k_iosxe.26.01.01.SPA.bin</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">    </span><span class="nt">sha256</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span><span class="nt">targetVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">26.01.01</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Reload</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="w">  </span><span class="nt">rollbackOnFailure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="w">  </span><span class="nt">installTimeoutSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">  </span><span class="nt">rebootTimeoutSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span>
+</span></code></pre></div>
+<p>Activate an exact version already in install inventory:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">deviceRef</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-4</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">  </span><span class="nt">imageSource</span><span class="p">:</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">preinstalled</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="nt">targetVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">26.01.01</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Reload</span>
+</span></code></pre></div>
+<p>Register a verified IOS-XE device file, then activate it:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nt">spec</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">deviceRef</span><span class="p">:</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">cat9000-4</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">  </span><span class="nt">imageSource</span><span class="p">:</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">deviceFile</span><span class="p">:</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">      </span><span class="nt">path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">flash:cat9k_iosxe.26.01.01.SPA.bin</span>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">      </span><span class="nt">sha256</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">7de3c6875e3c1c96d5920e8542c72b1bcb5d913d99645ef5687f44dd4024cdf4</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">  </span><span class="nt">targetVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">26.01.01</span>
+</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">  </span><span class="nt">strategy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Reload</span>
+</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span><span class="nt">installTimeoutSeconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3600</span>
+</span></code></pre></div>
+<p>Monitor status and events with:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>kubectl<span class="w"> </span>get<span class="w"> </span>iosxesoftwareupgrade<span class="w"> </span>-A<span class="w"> </span>-w
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>kubectl<span class="w"> </span>describe<span class="w"> </span>iosxesoftwareupgrade<span class="w"> </span>&lt;name&gt;<span class="w"> </span>-n<span class="w"> </span>&lt;namespace&gt;
+</span></code></pre></div>
+<p>Before treating <code>NoReboot</code> as part of a maintenance procedure, independently
+validate the platform-specific boot state and recovery plan. CVK does not claim
+that this option is a non-disruptive upgrade.</p>
+<h2 id="operator-workflow">Operator Workflow</h2>
+<ol>
+<li>Follow the <a href="../gnoi-iosxe-upgrade-runbook/">IOS-XE upgrade and downgrade
+   runbook</a> for the device's distinct bootstrap
+   or already-provisioned secure-gNXI path. Require <code>show gnxi state detail</code> to
+   report <code>State: Provisioned</code> before software lifecycle work. Use the
+   plaintext listener only for explicit legacy lab compatibility.</li>
+<li>Enable the software upgrade gate on the per-device VK pod via Helm
+   (<code>gnoi.enableSoftwareUpgrade: true</code>) or the env var
+   <code>CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE=1</code>. Confirm that
+   <code>gnoi.softwareUpgrade.maxImageBytes</code> and pod/node ephemeral-storage capacity
+   accommodate one cached image plus normal overhead before creating an upgrade.</li>
+<li>Grant RBAC: upgrade operators need <code>create</code>/<code>get</code>/<code>watch</code> on
+   <code>IOSXESoftwareUpgrade</code>. Read-only users get <code>DeviceOperation</code> only.</li>
+<li>Compute the image sha256 and prepare the manifest (see examples above).</li>
+<li>Apply the manifest and monitor with <code>kubectl get iosxesoftwareupgrade -w</code>.</li>
+<li>After <code>Succeeded</code> or <code>StagedForNextBoot</code>, retain the CR as an immutable audit
+   record or delete it when it is no longer needed. For <code>StagedForNextBoot</code>,
+   authorize and observe the required reboot separately; the upgrade CR does
+   not claim that the target is running.</li>
+</ol>
+<p>For <code>DeviceOperation</code> show-command and diagnostic examples see the
+<a href="../operations/">Operations Runbook</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../gnoi-iosxe-upgrade-runbook/" class="md-footer__link md-footer__link--prev" aria-label="Previous: IOS-XE Upgrade and Downgrade Runbook">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                IOS-XE Upgrade and Downgrade Runbook
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../operations/" class="md-footer__link md-footer__link--next" aria-label="Next: Device Operations Runbook">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Device Operations Runbook
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>

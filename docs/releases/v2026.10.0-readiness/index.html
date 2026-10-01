@@ -1,0 +1,2166 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A Virtual Kubelet provider for App-Hosting workloads on Cisco IOS-XE devices, with Beta support for Cisco Nexus NX-OS switches.">
+      
+      
+      
+        <link rel="canonical" href="https://cisco-open.github.io/cisco-virtual-kubelet/docs/releases/v2026.10.0-readiness/">
+      
+      
+        <link rel="prev" href="../v2026.10.0/">
+      
+      
+        <link rel="next" href="../v2026.9.2/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>October release readiness - Cisco Virtual Kubelet</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#october-release-readiness-ledger" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-header__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Cisco Virtual Kubelet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              October release readiness
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="/cisco-virtual-kubelet/" title="Cisco Virtual Kubelet" class="md-nav__button md-logo" aria-label="Cisco Virtual Kubelet" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Cisco Virtual Kubelet
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/cisco-open/cisco-virtual-kubelet" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    cisco-open/cisco-virtual-kubelet
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Welcome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Notes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Release Notes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v2026.10.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.10.0 (release candidate)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    October release readiness
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    October release readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope-and-version-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope and version alignment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scope and version alignment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#end-user-documentation-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End-user documentation coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#local-checks-on-the-preparation-worktree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local checks on the preparation worktree
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Local checks on the preparation worktree">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#security-findings-and-disposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security findings and disposition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outstanding-gono-go-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outstanding go/no-go gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-actions-in-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next actions, in order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#final-release-record-maintainer-fills-before-taggingpublishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Final release record — maintainer fills before tagging/publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v2026.9.2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.2
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v2026.9.1/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.1 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../v2026.9.0/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v2026.9.0 (unpublished)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ARCHITECTURE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../topology-awareness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Managed Topology and Rollouts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../controller-extension-guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network Controller Extensions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cisco-vk-cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../CONFIGURATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CiscoDevice Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../netascode-config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Network as Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../netascode-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NetAsCode Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../crds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CRD Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/families/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../family-parity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Family Parity Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/families-nxos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Family Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nxos-recovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    NX-OS Configuration Recovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-cat8000v/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 8000V
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-cat9000/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Catalyst 9000
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-ir1101/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IR1100 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration-ie3500/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IE3500 Series
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../yang-version-support/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    YANG Version Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../environment-variables/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment Variables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Software Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Software Lifecycle
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gnoi-iosxe-upgrade-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IOS-XE Upgrade and Downgrade Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gnoi-software-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design and Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../operations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Device Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Telemetry
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Telemetry
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../telemetry/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    MDT Subscriptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../telemetry-cardinality/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardinality Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lifecycle Correlation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Observability
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Observability
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Security
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../production-readiness/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Readiness
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../API/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#scope-and-version-alignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope and version alignment
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Scope and version alignment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#end-user-documentation-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        End-user documentation coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#local-checks-on-the-preparation-worktree" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Local checks on the preparation worktree
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Local checks on the preparation worktree">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#security-findings-and-disposition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Security findings and disposition
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#outstanding-gono-go-gates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Outstanding go/no-go gates
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-actions-in-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next actions, in order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#final-release-record-maintainer-fills-before-taggingpublishing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Final release record — maintainer fills before tagging/publishing
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="october-release-readiness-ledger">October release readiness ledger</h1>
+<p>Reviewed: <strong>1 October 2026</strong>. Target: <strong>v2026.10.0</strong>, chart <strong>2026.10.0</strong>.
+Status: <strong>release preparation — do not tag or publish yet</strong>.</p>
+<p>Preparation base: <code>15c14d7d662661b53f76c457a8b0606b7b97481e</code> on <code>main</code>.
+Previous published release: <code>v2026.9.2</code>. This ledger describes local release
+preparation, not passing CI for an immutable final candidate. Record the
+final reviewed/merged SHA and evidence links below before publication.
+Preparation branch: <code>pr/johalley/october-release</code>.</p>
+<h2 id="scope-and-version-alignment">Scope and version alignment</h2>
+<ul>
+<li>Chart source <code>appVersion</code>, install/upgrade examples, website and maintainer
+  runbook target <code>v2026.10.0</code>. The source chart retains <code>version: 0.1.0</code>;
+  tag automation stamps packaged chart <code>2026.10.0</code>.</li>
+<li>The <a href="../v2026.10.0/">curated release notes</a> cover the September-to-October
+  delta, including secure gNOI provisioning, topology projection, combined
+  rollouts, source selection and opt-in development-preview drain.</li>
+<li>Existing installations apply the complete reviewed chart CRD directory:
+  new <code>IOSXESoftwareRollout</code>, changed <code>CiscoDevice</code>, <code>IOSXESoftwareUpgrade</code>
+  and <code>IOSXEOperationalAction</code>, plus the unchanged shipped CRDs. Back up
+  schemas <strong>and data</strong>; validate migration and admission before enabling gates.</li>
+<li>November's staged activation, network-policy/observation, graph, scale and
+  wider topology work stays on <code>pr/johalley/tas-extentions</code>. No branch merge
+  or cherry-pick is part of this preparation.</li>
+<li>Examples explicitly require publication; use the published September
+  artifacts until then. Do not create another September tag or publish its
+  rejected drafts. Recovery after an October tag requires <code>v2026.10.1</code>.</li>
+</ul>
+<h3 id="end-user-documentation-coverage">End-user documentation coverage</h3>
+<table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>October updates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>README</td>
+<td>Feature summary, operator task/boundary table, native scheduling versus rollout admission, release and migration links</td>
+</tr>
+<tr>
+<td>MkDocs</td>
+<td>Welcome/maturity tables, managed-mode architecture responsibilities, release notes and readiness navigation, install/CLI/CRD upgrade examples</td>
+</tr>
+<tr>
+<td>Dynamic website</td>
+<td>Hero and metadata, topology placement/rollout/secure gNOI/preview drain cards, functional identity boundary, app-hosting diagram scope and release links</td>
+</tr>
+</tbody>
+</table>
+<p>All three overviews distinguish implemented October capabilities from deferred
+November work, experimental TAS and preview drain. Declared topology is not
+proof of healthy forwarding paths, spare capacity or uninterrupted service.</p>
+<h2 id="local-checks-on-the-preparation-worktree">Local checks on the preparation worktree</h2>
+<p>These results are preflight evidence only and must be repeated/linked from
+the protected release PR and final candidate. Go tests include cached results.
+Local toolchain: Go 1.26.7, Python 3.10.13 for script tests, Helm 4.1.3,
+MkDocs 1.6.1. Final docs/license validation used an isolated Python 3.13.2
+environment with hash-verified <code>requirements.txt</code>; the ambient Python failed
+the locked-version check and was not used as license evidence. Python 3.13.15
+was unavailable through the local interpreter manager. Release-pinned Helm
+3.21.4/4.2.4 and CI Python 3.13.15 must still be qualified.</p>
+<table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Local result</th>
+<th>Release boundary</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>go test -race ./...</code></td>
+<td>PASS</td>
+<td>Root runtime suite; not real-API or hardware acceptance</td>
+</tr>
+<tr>
+<td><code>go vet ./...</code>, <code>go mod verify</code>, build controller/plugin</td>
+<td>PASS</td>
+<td>Does not build/sign both release image architectures</td>
+</tr>
+<tr>
+<td><code>make crd-gen deepcopy-gen rbac-gen helm-sync-crds</code>, twice; <code>make parity-matrix config-docs</code></td>
+<td>PASS, no generated diff</td>
+<td>Existing controller-gen v0.16.5 works on this main baseline; November tooling observations must not be transferred blindly</td>
+</tr>
+<tr>
+<td><code>helm lint</code> and <code>charts/cisco-virtual-kubelet/tests/topology-render-test.sh</code></td>
+<td>PASS</td>
+<td>Ambient Helm 4.1.3; repeat pinned Helm lanes and actual install/upgrade</td>
+</tr>
+<tr>
+<td><code>make test-envtest</code> with Kubernetes 1.35 assets</td>
+<td>PASS: provider and controller real-apiserver suites</td>
+<td>Local API/admission evidence; hosted CI must repeat on the final merged SHA</td>
+</tr>
+<tr>
+<td><code>charts/cisco-virtual-kubelet/tests/topology-kind-test.sh</code> on disposable Kubernetes 1.35 kind</td>
+<td>PASS</td>
+<td>Native topology admission/default-scheduler evidence; no physical forwarding qualification</td>
+</tr>
+<tr>
+<td><code>charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh --cluster-name cvk-october-shared</code></td>
+<td>PASS</td>
+<td>Shared app-hosting/network-management identity, stale-token, drain and deletion-boundary evidence</td>
+</tr>
+<tr>
+<td>Release contract / plugin packaging / Krew rendering unit tests</td>
+<td>PASS: 16 / 15 / 9 tests</td>
+<td>New regressions verify October metadata, CRD upgrade scope, tag-pinned note rendering and feature/limitation coverage across all three overviews</td>
+</tr>
+<tr>
+<td>Root <code>govulncheck@v1.7.0</code></td>
+<td>Exit 0, no reachable vulnerable symbols</td>
+<td>Two imported-package and one required-module findings remain for image/security review; see below</td>
+</tr>
+<tr>
+<td>Terraform module <code>govulncheck@v1.7.0</code></td>
+<td>PASS, no vulnerabilities reported</td>
+<td>Repeat on final candidate</td>
+</tr>
+<tr>
+<td>Website lint/build and license checks</td>
+<td>PASS after patch-level dependency remediation; rendered feature cards inspected in browser</td>
+<td>Static build is not a signature or publication check</td>
+</tr>
+<tr>
+<td><code>npm audit --audit-level=high</code></td>
+<td>PASS, zero findings after remediation</td>
+<td>Recheck advisory database at release time</td>
+</tr>
+<tr>
+<td>Strict MkDocs, deployed-runtime licenses and workflow lint</td>
+<td>PASS with locked Python dependencies; actionlint v1.7.12 passed</td>
+<td>GitHub release notes also rendered successfully with tag-pinned local links</td>
+</tr>
+</tbody>
+</table>
+<h3 id="security-findings-and-disposition">Security findings and disposition</h3>
+<p>The initial website audit failed. Preparation updates <code>next</code> and
+<code>eslint-config-next</code> from 16.3.4 to 16.3.8, and locks <code>brace-expansion</code> to
+5.0.12 and <code>dompurify</code> to 3.4.16; the website license inventory was regenerated.
+Relevant advisories:
+<a href="https://github.com/advisories/GHSA-vcvr-r3jv-pc5j">Next.js</a>,
+<a href="https://github.com/advisories/GHSA-q2hr-2g5m-vwhr">brace-expansion</a>,
+<a href="https://github.com/advisories/GHSA-p98j-92pf-mc4p">DOMPurify</a>.
+These dependency findings are not a claim that the static site exposed every
+affected execution path. The pinned Mermaid browser bundle was not replaced;
+its audited vendored DOMPurify version remains separately inventoried.</p>
+<p>Root Go scan findings not on reported reachable symbol paths:</p>
+<table>
+<thead>
+<tr>
+<th>Advisory</th>
+<th>Found / scanner-reported fix</th>
+<th>Required disposition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GO-2026-6107</td>
+<td>etcd client/pkg v3.6.5 / v3.6.14</td>
+<td>Review release-binary/image inventory and fix or document non-applicability; hard fixed HIGH/CRITICAL image gate cannot be waived by a source reachability result</td>
+</tr>
+<tr>
+<td>GO-2026-6094</td>
+<td>cel-go v0.29.0 / v0.30.0</td>
+<td>Same review; retain CEL/API compatibility tests if updated</td>
+</tr>
+<tr>
+<td>GO-2026-5932</td>
+<td>x/crypto v0.56.0, openpgp; no fix listed</td>
+<td>Confirm unused openpgp is absent from shipped executable paths; record security disposition</td>
+</tr>
+</tbody>
+</table>
+<p>This preparation does not silently update Kubernetes/etcd/CEL runtime
+dependencies or mark image scanning complete. An unresolved applicable
+finding remains a no-go.</p>
+<h2 id="outstanding-gono-go-gates">Outstanding go/no-go gates</h2>
+<table>
+<thead>
+<tr>
+<th>Gate</th>
+<th>Required evidence / action</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Reviewed preparation commit</td>
+<td>Protected PR from <code>pr/johalley/october-release</code> into main; record final merged SHA, reviews and all required checks from RELEASE.md</td>
+<td>PR #195 checks PASS; review/merge and final SHA still pending</td>
+</tr>
+<tr>
+<td>Baseline real API and admission</td>
+<td>Kubernetes 1.35 envtest/kind, default scheduler, native admission, functional-account permissions, wrong/stale worker denials, migration from September</td>
+<td>PASS locally on this candidate: envtest, topology/default-scheduler integration and shared-worker admission suites; repeat/attach protected evidence after any PR change</td>
+</tr>
+<tr>
+<td>Independent optional TAS lane</td>
+<td>Version/feature-gate-pinned experimental scheduler conformance; accurately describe fixture vs physical coverage</td>
+<td>PASS: protected <code>native-tas-conformance</code> on <a href="https://github.com/cisco-open/cisco-virtual-kubelet/pull/195">PR #195</a>; fixture conformance is not full physical CVK group lifecycle</td>
+</tr>
+<tr>
+<td>Hardware qualification</td>
+<td>Cat8kv/Cat9k protected checks on final revision; <code>.100</code>, <code>.101</code>, <code>.103</code> combined upgrade and downgrade with complete manifests, worker/device logs and final ownership/guard/Lease/ledger state</td>
+<td>Pending: approval-driven hosted lab contexts have not run on PR #195; do not rerun destructively from this checklist without confirming current lab ownership/window</td>
+</tr>
+<tr>
+<td>Preview drain disposition</td>
+<td>Reproduce delayed callback/stale Running status/evidence-abort behavior on the October candidate; review minimal fix or explicit release-scope decision; verify supported automatic relocation with probes</td>
+<td>Open publication hold: proposed scope is disabled-by-default development preview only; requires maintainer decision and no production-continuity claim</td>
+</tr>
+<tr>
+<td>Remaining security/artifact checks</td>
+<td>Both Linux image scans, SBOMs, license inventory, pinned tool verification, actual plugin execution on each platform</td>
+<td>Pre-merge smoke image scans, govulncheck, website/MkDocs licenses and dependency audit PASS; release-stage SBOM/signature/plugin artifact verification remains pending</td>
+</tr>
+<tr>
+<td>Install/upgrade/rollback</td>
+<td>Fresh install and September migration, stored CR compatibility, retained-operation recovery and guard restoration</td>
+<td>Pending exact candidate</td>
+</tr>
+<tr>
+<td>Release authorization</td>
+<td>Approved signing identity and a second maintainer's exact-commit/draft-ID authorization, as specified in RELEASE.md</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>Staging/publish verification</td>
+<td>Exactly 16 signed/verified draft assets, chart/image digests, alias promotion, post-stage checks, then manual publish</td>
+<td>Not started; no draft or tag created</td>
+</tr>
+</tbody>
+</table>
+<p>Later dirty development builds are archived in the separate
+<a href="https://github.com/cisco-open/cisco-virtual-kubelet/blob/5d6ac97b1af0196f3b5df5ff778848eef2db4457/docs/evidence/topology-2026-10-01/README.md">November checkpoint</a>.
+Their successful device transitions and stopped collectors are useful for
+triage, <strong>not</strong> qualification of this main candidate. Do not import its broad
+unfinished runtime changes into October just to claim a green result.</p>
+<h2 id="next-actions-in-order">Next actions, in order</h2>
+<ol>
+<li>Review the locally validated preparation diff on
+   <code>pr/johalley/october-release</code> through the protected release PR process;
+   do not push directly to main or tag the preparation branch.</li>
+<li>Resolve the security/image and preview-drain dispositions in bounded,
+   reviewed changes. If code changes, rerun local and relevant API tests.</li>
+<li>Run all protected checks and physical qualification on the candidate;
+   attach durable sanitized evidence. Resolve failures; do not reuse checks
+   from another SHA or dirty image.</li>
+<li>Merge the preparation PR and freeze the exact main commit. Fill in the
+   record below. Render the curated notes with
+   <code>.github/scripts/render_github_release_notes.py</code> for <code>v2026.10.0</code>.</li>
+<li>Follow <a href="https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/RELEASE.md">the release runbook</a>: draft first, second
+   maintainer authorization, signed immutable tag, artifact verification,
+   then manual publication. Never conflate preparing notes with publishing.</li>
+</ol>
+<h2 id="final-release-record-maintainer-fills-before-taggingpublishing">Final release record — maintainer fills before tagging/publishing</h2>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Preparation PR / approvals</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>Final main SHA / clean source</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>Protected CI / API / hardware evidence</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>Security and drain disposition</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>Draft ID / reviewed rendered notes</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>Independent maintainer authorization</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>Signed tag / signing identity</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>OCI image/chart digests, scans, SBOM/signature verification</td>
+<td>Pending</td>
+</tr>
+<tr>
+<td>16-asset verification and publication</td>
+<td>Pending</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../v2026.10.0/" class="md-footer__link md-footer__link--prev" aria-label="Previous: v2026.10.0 (release candidate)">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                v2026.10.0 (release candidate)
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../v2026.9.2/" class="md-footer__link md-footer__link--next" aria-label="Next: v2026.9.2">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                v2026.9.2
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright © 2025-2026 Cisco Systems, Inc. All Rights Reserved. · <a href="/cisco-virtual-kubelet/LICENSE">Project license</a> · <a href="/cisco-virtual-kubelet/docs/MKDOCS_THIRD_PARTY_LICENSES.txt">MkDocs third-party licenses</a>
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["content.code.copy", "search.share", "navigation.footer", "navigation.instant.progress", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script>if(!window.ResizeObserver){document.write('<script src="../../r.js?v=2290b5c60e0cdc62851fb687800237273ac53797595b1b133860c4f1386de378"><\/script>')}</script>
+      <script src="../../assets/javascripts/bundle.7e847d798e28dffc.min.js"></script>
+      
+    
+  </body>
+</html>
