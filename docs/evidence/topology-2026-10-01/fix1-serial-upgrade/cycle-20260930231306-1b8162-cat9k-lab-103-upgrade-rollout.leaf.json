@@ -1,0 +1,215 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "IOSXESoftwareUpgrade",
+  "metadata": {
+    "annotations": {
+      "topology.cisco.vk/app-worker-config-revision": "sha256:498803a02ed9851c3d302b290df60466b8ea0829457a10ca30a5c85b0f72e695",
+      "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-103-vk-7f8457f55d-d6lld",
+      "topology.cisco.vk/app-worker-pod-uid": "31e1b77b-3f1a-49f3-b10a-0fe7a8e28739",
+      "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+      "topology.cisco.vk/campaign-name": "cycle-20260930231306-1b8162-cat9k-lab-103-upgrade-rollout",
+      "topology.cisco.vk/campaign-namespace": "cvk-live",
+      "topology.cisco.vk/campaign-uid": "123f2965-7e74-4355-bc4d-70ba084ce8d6",
+      "topology.cisco.vk/device-generation": "7",
+      "topology.cisco.vk/device-name": "cat9k-lab-103",
+      "topology.cisco.vk/device-namespace": "cvk-live",
+      "topology.cisco.vk/device-uid": "782dc4b2-7e43-4188-8436-87633f0bf4fb",
+      "topology.cisco.vk/ledger-uid": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+      "topology.cisco.vk/managed": "true",
+      "topology.cisco.vk/network-worker-pod-name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-7fb86b89cd-bwrss",
+      "topology.cisco.vk/network-worker-pod-uid": "64deb9ab-850d-492f-8749-38efaec22b85",
+      "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+      "topology.cisco.vk/node-name": "cat9k-lab-103",
+      "topology.cisco.vk/node-uid": "404b46d4-fcb4-4fd1-bdda-b499d0fe3d83",
+      "topology.cisco.vk/plan-hash": "sha256:03fd35393dceb134d96a0357d90cfd436b8d401ec35b9a1280563790b832d611",
+      "topology.cisco.vk/reservation-id": "2157df151c70c2dff42180d233b15f16",
+      "topology.cisco.vk/source-secret-uid": "05d5617d-d807-4388-902f-9148c667fcc3",
+      "topology.cisco.vk/worker-protocol": "rollout-v1",
+      "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+    },
+    "creationTimestamp": "2026-10-01T00:10:50Z",
+    "finalizers": [
+      "ops.cisco.vk/iosxesoftwareupgrade-cleanup"
+    ],
+    "generation": 1,
+    "labels": {
+      "topology.cisco.vk/campaign-uid": "123f2965-7e74-4355-bc4d-70ba084ce8d6"
+    },
+    "name": "cycle-20260930231306-1b8162-cat9k-lab-103-upgrade-rollout-cat9k-lab-103-2157df15",
+    "namespace": "cvk-live",
+    "resourceVersion": "9430877",
+    "uid": "910ac1ed-7fbb-4e5a-bf92-ac29f83bc479"
+  },
+  "spec": {
+    "deviceRef": {
+      "name": "cat9k-lab-103"
+    },
+    "imageSource": {
+      "sha256": "df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049",
+      "url": "sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.03.SPA.bin",
+      "urlSecretRef": {
+        "name": "pr194-iosxe-image-source"
+      }
+    },
+    "installTimeoutSeconds": 14400,
+    "maxRetries": 3,
+    "rebootTimeoutSeconds": 3600,
+    "resumePolicy": "Retry",
+    "rollbackOnFailure": true,
+    "strategy": "Reload",
+    "targetVersion": "17.18.03"
+  },
+  "status": {
+    "activationStartTime": "2026-10-01T00:14:41Z",
+    "completionTime": "2026-10-01T00:22:14Z",
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-01T00:22:14Z",
+        "message": "upgrade complete",
+        "observedGeneration": 1,
+        "reason": "Succeeded",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T00:14:41Z",
+        "message": "image transfer or supervisor synchronization completed and the install stream closed cleanly",
+        "observedGeneration": 1,
+        "reason": "Transferred",
+        "status": "True",
+        "type": "Transferred"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T00:12:25Z",
+        "message": "resolved and pinned sha256:df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049 (1249368115 bytes); ready for gNOI OS.Install",
+        "observedGeneration": 1,
+        "reason": "ImagePinned",
+        "status": "True",
+        "type": "ImageResolved"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T00:22:14Z",
+        "message": "upgrade complete",
+        "observedGeneration": 1,
+        "reason": "OutcomeVerified",
+        "status": "True",
+        "type": "DeviceMutationSettled"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T00:14:41Z",
+        "message": "device validated image version 17.18.03.0.5496.1776157760",
+        "observedGeneration": 1,
+        "reason": "Validated",
+        "status": "True",
+        "type": "Validated"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T00:16:12Z",
+        "message": "gNOI OS.Activate did not return cleanly after requesting version 17.18.03.0.5496.1776157760 on the active supervisor: gnoi OS.Activate: rpc error: code = DeadlineExceeded desc = Deadline Exceeded; waiting up to 3600s for the device to report the target version",
+        "observedGeneration": 1,
+        "reason": "ActivationResponseLost",
+        "status": "True",
+        "type": "Activated"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T00:22:13Z",
+        "message": "device is reachable on target version 17.18.03.0.5496.1776157760",
+        "observedGeneration": 1,
+        "reason": "DeviceReachable",
+        "status": "True",
+        "type": "DeviceReachable"
+      },
+      {
+        "lastTransitionTime": "2026-10-01T00:22:14Z",
+        "message": "gNOI OS.Verify reports target version 17.18.03.0.5496.1776157760",
+        "observedGeneration": 1,
+        "reason": "Verified",
+        "status": "True",
+        "type": "Verified"
+      }
+    ],
+    "executionModel": "AtMostOnceV1",
+    "installStartTime": "2026-10-01T00:12:25Z",
+    "managedMutationClaims": [
+      {
+        "claimedAt": "2026-10-01T00:14:41Z",
+        "controlRevision": 0,
+        "policyEpoch": 1,
+        "reservationID": "2157df151c70c2dff42180d233b15f16",
+        "stage": "PrimaryActivation"
+      },
+      {
+        "claimedAt": "2026-10-01T00:12:25Z",
+        "controlRevision": 0,
+        "policyEpoch": 1,
+        "reservationID": "2157df151c70c2dff42180d233b15f16",
+        "stage": "PrimaryInstall"
+      }
+    ],
+    "managerAdmission": {
+      "campaignUID": "123f2965-7e74-4355-bc4d-70ba084ce8d6",
+      "controlRevision": 0,
+      "deviceGeneration": 7,
+      "deviceUID": "782dc4b2-7e43-4188-8436-87633f0bf4fb",
+      "leafUID": "910ac1ed-7fbb-4e5a-bf92-ac29f83bc479",
+      "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+      "nodeUID": "404b46d4-fcb4-4fd1-bdda-b499d0fe3d83",
+      "physicalIdentity": "foc2416u0mv",
+      "planHash": "sha256:03fd35393dceb134d96a0357d90cfd436b8d401ec35b9a1280563790b832d611",
+      "policyEpoch": 1,
+      "policyResourceVersion": "9307543",
+      "policyUID": "525ff87f-b74a-44c4-b54e-408e63a3a2e7",
+      "protocolVersion": "rollout-v1",
+      "reservationID": "2157df151c70c2dff42180d233b15f16",
+      "state": "Settled",
+      "topologyLockID": "405353e479d85d45d3ef58380ba9b600",
+      "updatedAt": "2026-10-01T00:33:15Z"
+    },
+    "managerControl": {
+      "reason": "CampaignControl",
+      "revision": 0,
+      "updatedAt": "2026-10-01T00:10:46Z"
+    },
+    "managerDrain": {
+      "controlRevision": 0,
+      "drainDeadline": "2026-10-01T00:21:01Z",
+      "maintenanceTaintPresentBefore": false,
+      "nodeUID": "404b46d4-fcb4-4fd1-bdda-b499d0fe3d83",
+      "nodeUnschedulableBefore": false,
+      "policyEpoch": 1,
+      "protocolVersion": "pdb-drain-v1",
+      "recoveryDeadline": "2026-10-01T00:34:15Z",
+      "reservationID": "2157df151c70c2dff42180d233b15f16",
+      "sessionToken": "[REDACTED sha256:08057069332161e0982aa6f422433682f962cefb275fe2aa1acd4d9f6f759d11]",
+      "startedAt": "2026-10-01T00:11:01Z",
+      "state": "Settled",
+      "updatedAt": "2026-10-01T00:33:15Z"
+    },
+    "message": "upgrade complete",
+    "observedGeneration": 1,
+    "phase": "Succeeded",
+    "previousVersion": "17.18.02.0.4112.1766116039",
+    "primarySupervisorActivationRequested": true,
+    "primarySupervisorInstallRequested": true,
+    "primarySupervisorInstalled": true,
+    "runningVersion": "17.18.03.0.5496.1776157760",
+    "sourceDigest": "sha256:df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049",
+    "sourceSize": 1249368115,
+    "startTime": "2026-10-01T00:11:44Z",
+    "transferProgress": {
+      "bytesTransferred": 1249368115,
+      "percent": 100,
+      "totalBytes": 1249368115
+    },
+    "validatedVersion": "17.18.03.0.5496.1776157760",
+    "workerControl": {
+      "effectiveState": "Settled",
+      "message": "managed upgrade has a terminal and conclusively settled worker outcome",
+      "observedAdmissionState": "Settled",
+      "observedControlRevision": 0,
+      "observedPolicyEpoch": 1,
+      "observedWorkerConfigRevision": "sha256:f6ad09c5b97b4ff4ec34076da02ddd1385aea901168ab908cbef4531000e7bc6",
+      "updatedAt": "2026-10-01T00:33:16Z"
+    }
+  }
+}

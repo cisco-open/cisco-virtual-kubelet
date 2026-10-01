@@ -1,0 +1,72 @@
+{
+  "metadata": {
+    "creationTimestamp": "2026-06-17T20:44:39Z",
+    "name": "cat9k-live",
+    "resourceVersion": "9435960",
+    "uid": "1600578e-9e93-4164-9e47-b0c277a28d5e"
+  },
+  "spec": {
+    "taints": []
+  },
+  "status": {
+    "addresses": [
+      {
+        "address": "198.51.100.100",
+        "type": "InternalIP"
+      }
+    ],
+    "allocatable": {
+      "memory": "2Gi",
+      "pods": "2",
+      "storage": "112487Mi"
+    },
+    "capacity": {
+      "memory": "2Gi",
+      "pods": "2",
+      "storage": "112487Mi"
+    },
+    "conditions": [
+      {
+        "lastHeartbeatTime": "2026-10-01T01:03:47Z",
+        "lastTransitionTime": "2026-10-01T00:52:47Z",
+        "message": "Cisco IOx is enabled and reachable",
+        "reason": "KubeletReady",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-01T01:03:47Z",
+        "lastTransitionTime": "2026-09-30T19:43:26Z",
+        "message": "worker is enforcing the rollout-v1 status-only Node writer contract",
+        "reason": "StatusOnlyRolloutV1",
+        "status": "True",
+        "type": "CiscoVirtualKubeletManagedReady"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-01T01:03:47Z",
+        "lastTransitionTime": "2026-09-30T19:43:26Z",
+        "message": "Sufficient storage available",
+        "reason": "StorageAvailable",
+        "status": "False",
+        "type": "DiskPressure"
+      }
+    ],
+    "daemonEndpoints": {
+      "kubeletEndpoint": {
+        "Port": 0
+      }
+    },
+    "nodeInfo": {
+      "architecture": "C9300-24P",
+      "bootID": "",
+      "containerRuntimeVersion": "",
+      "kernelVersion": "17.18.2",
+      "kubeProxyVersion": "",
+      "kubeletVersion": "v1.12.0",
+      "machineID": "FOC2520L6E8",
+      "operatingSystem": "Cisco",
+      "osImage": "IOS-XE",
+      "systemUUID": "FOC2520L6E8"
+    }
+  }
+}

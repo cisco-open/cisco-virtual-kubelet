@@ -427,6 +427,23 @@ func TestManagedLeafGateAcknowledgesExactBinding(t *testing.T) {
 	}
 }
 
+func TestManagedLeafGateDoesNotWriteRetainedPredecessor(t *testing.T) {
+	up := managedTestLeaf("retained-predecessor")
+	r := newManagedTestReconciler(t, up, nil)
+	r.WorkerPodUID = "replacement-pod-uid"
+
+	decision, updated, err := r.syncManagedLeafGate(context.Background(), up, managedTestTime)
+	if err != nil {
+		t.Fatalf("syncManagedLeafGate() error = %v", err)
+	}
+	if !decision.bindingDenied || updated {
+		t.Fatalf("decision=%+v updated=%t; want read-only predecessor handling", decision, updated)
+	}
+	if up.Status.WorkerControl != nil {
+		t.Fatalf("retained predecessor received a worker-control write: %#v", up.Status.WorkerControl)
+	}
+}
+
 func TestManagedLeafRequiresEveryManagedAnnotation(t *testing.T) {
 	keys := []string{
 		managedprotocol.AnnotationManaged,

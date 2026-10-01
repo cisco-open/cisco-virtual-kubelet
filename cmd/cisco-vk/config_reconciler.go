@@ -709,7 +709,12 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	if err := telemetryReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("telemetry SetupWithManager: %w", err)
 	}
-	if opts.ManagedTopology && !opts.ReadOnly && opts.NetworkObservationProvider != nil {
+	// Network read-only workers still publish their bounded, read-only
+	// observation. ReadOnly disables every mutation reconciler above; it must
+	// not disable the telemetry needed for topology gates. The provider is
+	// injected only for the network-management worker, so app workers cannot
+	// enter this path accidentally.
+	if opts.ManagedTopology && opts.NetworkObservationProvider != nil {
 		go provider.RunNetworkObservationPublisher(ctx, mgr.GetClient(), client.ObjectKey{
 			Namespace: opts.DeviceNamespace, Name: deviceName,
 		}, types.UID(opts.DeviceUID), opts.Spec.PhysicalIdentity, opts.WorkerRevision, opts.NetworkObservationProvider, runtimeID)

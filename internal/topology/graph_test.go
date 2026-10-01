@@ -134,3 +134,32 @@ func TestBuildGraphReportsKnownPeerAsymmetryAndInputLimits(t *testing.T) {
 		t.Fatal("input neighbor limit was not enforced")
 	}
 }
+
+func TestBuildGraphHashSeparatesDelimiterBearingFields(t *testing.T) {
+	left, err := BuildGraph([]GraphObservation{{
+		PhysicalID: "leaf-a", Complete: true,
+		Neighbors: []GraphNeighbor{{PeerID: "leaf-b|leaf-c", Source: "cdp", Interface: "Gi1", State: "up"}},
+	}}, GraphPolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := BuildGraph([]GraphObservation{{
+		PhysicalID: "leaf-a", Complete: true,
+		Neighbors: []GraphNeighbor{{PeerID: "leaf-b", Source: "cdp", Interface: "Gi1|leaf-c", State: "up"}},
+	}}, GraphPolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left.EvidenceHash == right.EvidenceHash {
+		t.Fatalf("delimiter-bearing fields collided: %s", left.EvidenceHash)
+	}
+}
+
+func TestBuildGraphRejectsOverlongState(t *testing.T) {
+	if _, err := BuildGraph([]GraphObservation{{
+		PhysicalID: "leaf-a", Complete: true,
+		Neighbors: []GraphNeighbor{{PeerID: "leaf-b", State: strings.Repeat("x", MaxGraphFieldLength+1)}},
+	}}, GraphPolicy{}); err == nil {
+		t.Fatal("overlong adjacency state was accepted")
+	}
+}

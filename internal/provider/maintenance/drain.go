@@ -92,6 +92,13 @@ func (c *Coordinator) ResolveDrainDeletePod(
 			if callerMarked {
 				return requested, PodDeleteDrainTeardown, nil
 			}
+			// The upstream delete queue can deliver a second callback after
+			// Kubernetes has already removed the exact Pod object. Preserve
+			// ordinary-delete compatibility unless the retained leaf/session
+			// records prove this was the same released device-clean completion.
+			if released, completionErr := c.authorizeReleasedDrainCompletion(readCtx, requested, time.Now()); completionErr == nil && released {
+				return requested, PodDeleteReleasedCompletion, nil
+			}
 			return requested, PodDeleteOrdinary, nil
 		}
 		return nil, PodDeleteOrdinary, fmt.Errorf("read live Pod before managed delete routing: %w", err)
@@ -382,9 +389,11 @@ func (c *Coordinator) authorizeReleasedDrainCompletion(
 	}
 	session := device.Status.MaintenanceSession
 	if session == nil || session.ProtocolVersion != ciskov1.DeviceMaintenanceProtocolPDBDrainV1 ||
-		session.Purpose != ciskov1.DeviceMaintenancePurposeWorkloadDrain ||
+		(session.Purpose != ciskov1.DeviceMaintenancePurposeWorkloadDrain &&
+			session.Purpose != ciskov1.DeviceMaintenancePurposeSoftwareMutation) ||
 		(session.Phase != ciskov1.DeviceMaintenanceSessionActive &&
-			session.Phase != ciskov1.DeviceMaintenanceSessionRecovering) ||
+			session.Phase != ciskov1.DeviceMaintenanceSessionRecovering &&
+			session.Phase != ciskov1.DeviceMaintenanceSessionSettled) ||
 		pod.Spec.NodeName != c.NodeName {
 		return false, nil
 	}
@@ -468,10 +477,13 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 	}
 
 	session := device.Status.MaintenanceSession
+	releasedPurpose := mode == drainDeleteReleasedCompletion &&
+		session != nil && session.Purpose == ciskov1.DeviceMaintenancePurposeSoftwareMutation
 	if session == nil || session.ProtocolVersion != ciskov1.DeviceMaintenanceProtocolPDBDrainV1 ||
-		session.Purpose != ciskov1.DeviceMaintenancePurposeWorkloadDrain ||
+		(session.Purpose != ciskov1.DeviceMaintenancePurposeWorkloadDrain && !releasedPurpose) ||
 		(session.Phase != ciskov1.DeviceMaintenanceSessionActive &&
-			session.Phase != ciskov1.DeviceMaintenanceSessionRecovering) {
+			session.Phase != ciskov1.DeviceMaintenanceSessionRecovering &&
+			(mode != drainDeleteReleasedCompletion || session.Phase != ciskov1.DeviceMaintenanceSessionSettled)) {
 		return drainDeleteAuthority{}, fmt.Errorf("managed drain has no active workload-drain maintenance session")
 	}
 	if session.AcknowledgedAt == nil || session.AcknowledgedAt.IsZero() || session.RequestedAt.IsZero() ||
@@ -500,6 +512,7 @@ func (c *Coordinator) authorizeDrainDeleteWithRevisionRollover(
 		&leaf, &device, &node, session, c.WorkerRevision,
 		allowStaleRecoveryRevision || mode == drainDeleteReleasedCompletion,
 		mode == drainDeleteDeviceTeardown,
+		mode == drainDeleteReleasedCompletion,
 	)
 	if err != nil {
 		return drainDeleteAuthority{}, err
@@ -897,7 +910,7 @@ func validateDrainLeafBinding(
 	session *ciskov1.DeviceMaintenanceSessionStatus,
 	workerRevision string,
 ) (*opsv1alpha1.UpgradeManagerDrainStatus, error) {
-	return validateDrainLeafBindingWithRevisionRollover(leaf, device, node, session, workerRevision, false, true)
+	return validateDrainLeafBindingWithRevisionRollover(leaf, device, node, session, workerRevision, false, true, false)
 }
 
 func validateDrainLeafBindingWithRevisionRollover(
@@ -908,6 +921,7 @@ func validateDrainLeafBindingWithRevisionRollover(
 	workerRevision string,
 	allowStaleRecoveryRevision bool,
 	requireCurrentWorker bool,
+	releasedCompletion bool,
 ) (*opsv1alpha1.UpgradeManagerDrainStatus, error) {
 	admission := leaf.Status.ManagerAdmission
 	control := leaf.Status.ManagerControl
@@ -917,15 +931,22 @@ func validateDrainLeafBindingWithRevisionRollover(
 		return nil, fmt.Errorf("managed drain leaf authority is incomplete")
 	}
 	if drain.ProtocolVersion != opsv1alpha1.ManagedDrainProtocolPDBV1 ||
-		(drain.State != opsv1alpha1.UpgradeManagerDrainEvicting &&
-			drain.State != opsv1alpha1.UpgradeManagerDrainRecovering) {
+		(!releasedCompletion && drain.State != opsv1alpha1.UpgradeManagerDrainEvicting &&
+			drain.State != opsv1alpha1.UpgradeManagerDrainRecovering) ||
+		(releasedCompletion && drain.State != opsv1alpha1.UpgradeManagerDrainEvicting &&
+			drain.State != opsv1alpha1.UpgradeManagerDrainRecovering &&
+			drain.State != opsv1alpha1.UpgradeManagerDrainDrained &&
+			drain.State != opsv1alpha1.UpgradeManagerDrainPromoting &&
+			drain.State != opsv1alpha1.UpgradeManagerDrainPromoted &&
+			drain.State != opsv1alpha1.UpgradeManagerDrainSettled) {
 		return nil, fmt.Errorf("managed drain state %q does not authorize Pod teardown", drain.State)
 	}
 	recovering := drain.State == opsv1alpha1.UpgradeManagerDrainRecovering
 	staleRecoveryRevision := allowStaleRecoveryRevision && recovering &&
 		session.ControlRevision < control.Revision
 	if (!recovering && admission.State != opsv1alpha1.UpgradeManagerAdmissionPending &&
-		admission.State != opsv1alpha1.UpgradeManagerAdmissionGranted) ||
+		admission.State != opsv1alpha1.UpgradeManagerAdmissionGranted &&
+		(!releasedCompletion || admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled)) ||
 		(recovering && admission.State != opsv1alpha1.UpgradeManagerAdmissionPending &&
 			admission.State != opsv1alpha1.UpgradeManagerAdmissionGranted &&
 			admission.State != opsv1alpha1.UpgradeManagerAdmissionRevoked) {
@@ -991,10 +1012,10 @@ func validateDrainLeafBindingWithRevisionRollover(
 			drain.RecoveryDeadline.After(drain.UpdatedAt.Add(drainDuration+drainRecoveryExtraLimit)) {
 			return nil, fmt.Errorf("managed drain recovery deadline exceeds its bounded renewal window")
 		}
-	} else if drain.RecoveryDeadline != nil {
+	} else if drain.RecoveryDeadline != nil && !releasedCompletion {
 		return nil, fmt.Errorf("managed drain recovery deadline is present outside recovery")
 	}
-	if !staleRecoveryRevision &&
+	if !releasedCompletion && !staleRecoveryRevision &&
 		(drain.State == opsv1alpha1.UpgradeManagerDrainEvicting) !=
 			(session.Phase == ciskov1.DeviceMaintenanceSessionActive) {
 		return nil, fmt.Errorf("managed drain and maintenance-session phases disagree")
@@ -1131,7 +1152,8 @@ func validateReleasedDrainPodCompletion(
 		}
 	}
 	if selected.Phase != opsv1alpha1.UpgradeDrainPodDeviceClean &&
-		selected.Phase != opsv1alpha1.UpgradeDrainPodReleased {
+		selected.Phase != opsv1alpha1.UpgradeDrainPodReleased &&
+		selected.Phase != opsv1alpha1.UpgradeDrainPodComplete {
 		return fmt.Errorf("managed drain Pod phase %q is not device-clean completion", selected.Phase)
 	}
 	if selected.ProtectedAt == nil || selected.ProtectedAt.IsZero() ||
@@ -1145,7 +1167,8 @@ func validateReleasedDrainPodCompletion(
 		selected.DeviceCleanInventoryRevision <= selected.DeletionObservedInventoryRevision {
 		return fmt.Errorf("released managed drain Pod lacks ordered accepted-eviction and device-clean evidence")
 	}
-	if selected.Phase == opsv1alpha1.UpgradeDrainPodReleased &&
+	if (selected.Phase == opsv1alpha1.UpgradeDrainPodReleased ||
+		selected.Phase == opsv1alpha1.UpgradeDrainPodComplete) &&
 		(selected.ReleasedAt == nil || selected.ReleasedAt.IsZero() ||
 			selected.ReleasedAt.Before(selected.DeviceCleanAt)) {
 		return fmt.Errorf("released managed drain Pod lacks ordered release evidence")

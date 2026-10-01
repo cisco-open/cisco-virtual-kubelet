@@ -1,0 +1,75 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "DeviceOperation",
+  "metadata": {
+    "annotations": {
+      "topology.cisco.vk/device-name": "cat9k-lab-101",
+      "topology.cisco.vk/device-namespace": "cvk-live",
+      "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+      "topology.cisco.vk/managed": "true",
+      "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-779dd78868-rpsxd",
+      "topology.cisco.vk/network-worker-pod-uid": "3405a78b-52eb-44aa-84a6-eb23f89695e7",
+      "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+    },
+    "creationTimestamp": "2026-09-30T23:43:51Z",
+    "generation": 1,
+    "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-before-health",
+    "namespace": "cvk-live",
+    "resourceVersion": "9422722",
+    "uid": "06602e5b-7d72-4936-8c4e-724063102282"
+  },
+  "spec": {
+    "deviceRef": {
+      "name": "cat9k-lab-101"
+    },
+    "operation": {
+      "commands": [
+        "show version",
+        "show install summary",
+        "show gnxi state detail",
+        "show platform software status control-processor brief",
+        "show app-hosting list"
+      ],
+      "kind": "ShowCommand"
+    }
+  },
+  "status": {
+    "completionTime": "2026-09-30T23:43:52Z",
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-09-30T23:43:52Z",
+        "message": "5 command(s) completed",
+        "observedGeneration": 1,
+        "reason": "Succeeded",
+        "status": "True",
+        "type": "Ready"
+      }
+    ],
+    "message": "5 command(s) completed",
+    "observedGeneration": 1,
+    "outputs": [
+      {
+        "command": "show version",
+        "output": "Cisco IOS XE Software, Version 17.18.02\nCisco IOS Software [IOSXE], Catalyst L3 Switch Software (CAT9K_IOSXE), Version 17.18.2, RELEASE SOFTWARE (fc3)\nTechnical Support: http://www.cisco.com/techsupport\nCopyright (c) 1986-2025 by Cisco Systems, Inc.\nCompiled Fri 19-Dec-25 03:36 by mcpre\n\n\nCisco IOS-XE software, Copyright (c) 2005-2025 by cisco Systems, Inc.\nAll rights reserved.  Certain components of Cisco IOS-XE software are\nlicensed under the GNU General Public License (\"GPL\") Version 2.0.  The\nsoftware code licensed under GPL Version 2.0 is free software that comes\nwith ABSOLUTELY NO WARRANTY.  You can redistribute and/or modify such\nGPL code under the terms of GPL Version 2.0.  For more details, see the\ndocumentation or \"License Notice\" file accompanying the IOS-XE software,\nor the applicable URL provided on the flyer accompanying the IOS-XE\nsoftware.\n\n\nROM: IOS-XE ROMMONBOOTLDR: System Bootstrap, Version 26.1.1r[FC1], RELEASE SOFTWARE (P)\n\nC9K-2 uptime is 1 hour, 40 minutes\nUptime for this control processor is 1 hour, 42 minutes\nSystem returned to ROM by Image Install at 19:27:16 UTC Thu Feb 5 2026\nSystem image file is \"flash:packages.conf\"\nLast reload reason: Image Install\n\n\n\nThis product contains cryptographic features and is subject to United\nStates and local country laws governing import, export, transfer and\nuse. Delivery of Cisco cryptographic products does not imply\nthird-party authority to import, export, distribute or use encryption.\nImporters, exporters, distributors and users are responsible for\ncompliance with U.S. and local country laws. By using this product you\nagree to comply with applicable laws and regulations. If you are unable\nto comply with U.S. and local laws, return this product immediately.\n\nA summary of U.S. laws governing Cisco cryptographic products may be found at:\nhttp://www.cisco.com/wwl/export/crypto/tool/stqrg.html\n\nIf you require further assistance please contact us by sending email to\nexport@cisco.com.\n\n\nTechnology Package License Information: \n\n------------------------------------------------------------------------------\nTechnology-package                                     Technology-package\nCurrent                        Type                       Next reboot  \n------------------------------------------------------------------------------\nnetwork-advantage   \tSmart License                 \t network-advantage   \ndna-advantage       \tSubscription Smart License    \t dna-advantage                 \n\n\nSmart Licensing Status: Smart Licensing Using Policy\n\ncisco C9300-24P (X86) processor with 1049141K/6147K bytes of memory.\nProcessor board ID FOC2520L6H1\n3 Virtual Ethernet interfaces\n28 Gigabit Ethernet interfaces\n8 Ten Gigabit Ethernet interfaces\n2 TwentyFive Gigabit Ethernet interfaces\n2 Forty Gigabit Ethernet interfaces\n2048K bytes of non-volatile configuration memory.\n8388608K bytes of physical memory.\n1638400K bytes of Crash Files at crashinfo:.\n11264000K bytes of Flash at flash:.\n117219783K bytes of USB Flash at usbflash1:.\n\nBase Ethernet MAC Address          : 4c:5d:3c:bb:03:00\nMotherboard Assembly Number        : 73-19912-04\nMotherboard Serial Number          : FOC251915W5\nModel Revision Number              : A0\nMotherboard Revision Number        : A0\nModel Number                       : C9300-24P\nSystem Serial Number               : FOC2520L6H1\nCLEI Code Number                   : INM2T10ARE\n\n\nSwitch Ports Model              SW Version        SW Image              Mode   \n------ ----- -----              ----------        ----------            ----   \n*    1 41    C9300-24P          17.18.02          CAT9K_IOSXE           INSTALL"
+      },
+      {
+        "command": "show install summary",
+        "output": "[ Switch 1 ] Installed Package(s) Information:\nState (St): I - Inactive, U - Activated & Uncommitted,\n            C - Activated & Committed, D - Deactivated & Uncommitted\n--------------------------------------------------------------------------------\nType  St   Filename/Version\n--------------------------------------------------------------------------------\nIMG   C    17.18.02.0.4112\n\n--------------------------------------------------------------------------------\nAuto abort timer: inactive\n--------------------------------------------------------------------------------"
+      },
+      {
+        "command": "show gnxi state detail",
+        "output": "Settings\n========\n  Server: Enabled\n  Server port: 50052\n  Secure server: Enabled\n  Secure server port: 9339\n  Secure client authentication: Disabled\n  Secure trustpoint: cvk-gnoi-c9k101-20260909\n  Secure client trustpoint: \n  Secure password authentication: Enabled\n\nGNMI\n====\n  Admin state: Enabled\n  Oper status: Up\n  State: Provisioned\n\n  gRPC Server\n  -----------\n    Admin state: Enabled\n    Oper status: Up\n\n  Configuration service\n  ---------------------\n    Admin state: Enabled\n    Oper status: Up\n\n  Telemetry service\n  -----------------\n    Admin state: Enabled\n    Oper status: Up\n\nGNOI\n====\n\n  Cert Management service\n  -----------------\n    Admin state: Enabled\n    Oper status: Up\n\n  OS Image service\n  ----------------\n    Admin state: Enabled\n    Oper status: Up\n    Supported: Supported\n\n  Factory Reset service\n  ---------------------\n    Admin state: Enabled\n    Oper status: Up\n    Supported: Supported\n\ngRPC Tunnel\n===========\n  Admin state: Enabled\n  Oper status: Up"
+      },
+      {
+        "command": "show platform software status control-processor brief",
+        "output": "Load Average\n Slot  Status  1-Min  5-Min 15-Min\n1-RP0 Healthy   0.31   0.37   0.44\n\nMemory (kB)\n Slot  Status    Total     Used (Pct)     Free (Pct) Committed (Pct)\n1-RP0 Healthy  7678300  3796436 (49%)  3881864 (51%)   6218240 (81%)\n\nCPU Utilization\n Slot  CPU   User System   Nice   Idle    IRQ   SIRQ IOwait\n1-RP0    0   1.40   1.50   0.00  97.10   0.00   0.00   0.00\n         1   3.20   1.30   0.00  95.49   0.00   0.00   0.00\n         2   3.00   1.90   0.00  95.10   0.00   0.00   0.00\n         3   2.30   1.50   0.00  96.19   0.00   0.00   0.00\n         4   1.90   1.40   0.00  96.69   0.00   0.00   0.00\n         5   3.40   1.80   0.00  94.80   0.00   0.00   0.00\n         6   2.10   1.40   0.00  96.50   0.00   0.00   0.00\n         7   3.00   1.70   0.00  95.30   0.00   0.00   0.00"
+      },
+      {
+        "command": "show app-hosting list",
+        "output": "App id                                   State\n---------------------------------------------------------\ncvk0000_87287bd689e74f2c81b7be03d6d821d0 RUNNING\ncvk0000_bdd08bc53347410fbd2f3415394dd23c RUNNING"
+      }
+    ],
+    "phase": "Succeeded",
+    "startTime": "2026-09-30T23:43:52Z"
+  }
+}

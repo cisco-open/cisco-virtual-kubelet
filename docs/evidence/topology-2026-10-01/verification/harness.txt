@@ -1,0 +1,7 @@
+Command: python3 -m unittest discover -s scripts/tests -p 'test_iosxe_gnoi_lab_cycle*.py'
+Exit code: 0
+..........................
+----------------------------------------------------------------------
+Ran 26 tests in 0.035s
+
+OK

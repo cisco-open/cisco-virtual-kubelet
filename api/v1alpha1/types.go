@@ -622,16 +622,17 @@ type DeviceHealthObservationStatus struct {
 //
 // +kubebuilder:validation:XValidation:rule="self.complete || has(self.unknownReason)",message="incomplete network evidence requires an unknown reason"
 type DeviceNetworkObservationStatus struct {
-	// WorkerPodUID binds this sample to the exact network-management Pod
-	// incarnation that collected it. The manager compares it with the
-	// manager-authenticated NetworkWorkerRevision before using the sample for
-	// disruptive admission.
+	// WorkerPodUID records the network-management Pod incarnation that collected
+	// this sample. The manager must compare it with its independently observed
+	// worker proof before using the sample for disruptive admission; the field
+	// alone is not authentication.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxLength=128
 	WorkerPodUID string `json:"workerPodUID,omitempty"`
 
-	// CollectionStartedAt and CollectionEndedAt delimit the authenticated
-	// worker collection interval. They make slow or unexpectedly long device
+	// CollectionStartedAt and CollectionEndedAt delimit the worker-reported
+	// collection interval. The manager validates this provenance before using
+	// it. They make slow or unexpectedly long device
 	// reads visible to rollout diagnostics without retaining raw CLI output.
 	// +kubebuilder:validation:Optional
 	CollectionStartedAt metav1.Time `json:"collectionStartedAt,omitempty"`
@@ -671,8 +672,8 @@ type DeviceNetworkObservationStatus struct {
 	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
 	DeviceIdentityHash string `json:"deviceIdentityHash"`
 
-	// Interfaces and Neighbors are bounded and sorted by the manager before
-	// persistence. Duplicate identities are rejected during validation.
+	// Interfaces and Neighbors are bounded and normalized by the worker; the
+	// manager validates ownership and duplicate identities before persistence.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxItems=64
 	// +listType=map

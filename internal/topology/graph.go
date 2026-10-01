@@ -175,7 +175,7 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 				return Graph{}, fmt.Errorf("topology graph input has more than %d neighbors", maxInputNeighbors)
 			}
 			peer := strings.TrimSpace(neighbor.PeerID)
-			if len(peer) > MaxGraphFieldLength || len(neighbor.Interface) > MaxGraphFieldLength || len(neighbor.RoutingDomain) > MaxGraphFieldLength || len(neighbor.Source) > MaxGraphFieldLength || len(neighbor.Identity) > MaxGraphFieldLength {
+			if len(peer) > MaxGraphFieldLength || len(neighbor.Interface) > MaxGraphFieldLength || len(neighbor.RoutingDomain) > MaxGraphFieldLength || len(neighbor.Source) > MaxGraphFieldLength || len(neighbor.Identity) > MaxGraphFieldLength || len(neighbor.State) > MaxGraphFieldLength {
 				return Graph{}, fmt.Errorf("topology adjacency field exceeds %d bytes", MaxGraphFieldLength)
 			}
 			identity := strings.TrimSpace(neighbor.Identity)
@@ -335,21 +335,18 @@ func canonicalJSON(value any) string {
 }
 
 func graphHash(graph Graph) string {
-	// The graph is already sorted and bounded. Hashing its canonical diagnostic
-	// text gives callers a compact drift/provenance token without exposing it
-	// as an authorization credential.
-	var builder strings.Builder
-	fmt.Fprintf(&builder, "complete|%t\n", graph.Complete)
-	for _, node := range graph.Nodes {
-		fmt.Fprintf(&builder, "n|%s\n", node)
-	}
-	for _, edge := range graph.Edges {
-		fmt.Fprintf(&builder, "e|%s|%s|%s|%s|%s|%s|%s\n", edge.Local, edge.Peer, edge.Identity, edge.Source, edge.Interface, edge.RoutingDomain, edge.State)
-	}
-	for _, diagnostic := range graph.Diagnostics {
-		fmt.Fprintf(&builder, "d|%s|%s|%s|%s|%s\n", diagnostic.Code, diagnostic.Local, diagnostic.Peer, diagnostic.Severity, diagnostic.Message)
-	}
-	digest := sha256.Sum256([]byte(builder.String()))
+	// The graph is already sorted and bounded. Hash structured JSON rather
+	// than delimiter-separated text: a peer containing a pipe or newline must
+	// not collide with a different graph. This is a drift/provenance token, not
+	// an authorization credential.
+	payload := struct {
+		Complete    bool              `json:"complete"`
+		Nodes       []string          `json:"nodes"`
+		Edges       []GraphEdge       `json:"edges"`
+		Diagnostics []GraphDiagnostic `json:"diagnostics"`
+	}{graph.Complete, graph.Nodes, graph.Edges, graph.Diagnostics}
+	encoded, _ := json.Marshal(payload)
+	digest := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(digest[:])
 }
 

@@ -1,0 +1,88 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "IOSXESoftwareRollout",
+  "metadata": {
+    "name": "cycle-20261001003405-6721c9-cat9k-live-downgrade-rollout",
+    "namespace": "cvk-live"
+  },
+  "spec": {
+    "control": {
+      "revision": 0
+    },
+    "plan": {
+      "budgets": {
+        "domains": [
+          {
+            "maxConcurrentTransfers": 1,
+            "topologyKey": "distribution.cisco.vk/cache-domain"
+          },
+          {
+            "maxUnavailable": 1,
+            "topologyKey": "operations.cisco.vk/redundancy-domain"
+          }
+        ],
+        "maxConcurrentTransfers": 1,
+        "maxUnavailable": 1
+      },
+      "canaries": [
+        {
+          "devices": [
+            "cat9k-live"
+          ],
+          "name": "c9300-24p"
+        }
+      ],
+      "health": {
+        "canarySoakSeconds": 0,
+        "maxObservationAgeSeconds": 300,
+        "network": {
+          "enabled": true,
+          "requireCompleteEvidence": true
+        },
+        "waveSoakSeconds": 0
+      },
+      "image": {
+        "imageFamily": "cat9k",
+        "sha256": "c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355",
+        "sources": [
+          {
+            "name": "lab-source",
+            "priority": 10,
+            "url": "sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.02.SPA.bin",
+            "urlSecretRef": {
+              "name": "pr194-iosxe-image-source"
+            }
+          }
+        ]
+      },
+      "installTimeoutSeconds": 14400,
+      "pauseAfterCanary": false,
+      "rebootTimeoutSeconds": 3600,
+      "requestedAt": "2026-10-01T00:35:57.569692Z",
+      "requestedBy": "system:admin",
+      "rollbackOnFailure": true,
+      "strategy": "Reload",
+      "targetVersion": "17.18.02",
+      "targets": {
+        "allowAll": false,
+        "maxTargets": 1,
+        "selector": {
+          "matchLabels": {
+            "topology.cisco.vk/lab-node": "cat9k-live"
+          }
+        }
+      },
+      "workloads": {
+        "drain": {
+          "maxPods": 2,
+          "maxTerminationGraceSeconds": 60,
+          "namespaces": [
+            "cvk-pr194-workloads"
+          ],
+          "timeoutSeconds": 600
+        },
+        "policy": "Drain"
+      }
+    }
+  }
+}

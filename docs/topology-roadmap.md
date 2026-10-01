@@ -1,7 +1,9 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete**, reviewed against `0884666e` (runtime changes through
-`0884666e`) on 30 September 2026.
+Status: **incomplete; checkpointed for November resumption**, 1 October 2026.
+Start with the [November handoff](topology-november-handoff.md) and
+[versioned evidence](evidence/topology-2026-10-01/README.md). The checkpoint
+preserves runtime/harness changes after `665a7954`; it is not a release candidate.
 Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
 #190, #191, #192, #193, and #194 merged. Implementation and qualification
@@ -15,9 +17,10 @@ physical prerequisites, evidence and completion gates for every outstanding
 area. Its work-package IDs must be used when reporting progress. Updating a
 status description does not implement or qualify the corresponding feature.
 
-The next useful increment is network-aware admission and an independently
-approved activation step. Operators should be able to prepare an image in
-advance, understand which devices are safe to interrupt, and activate only
+The next implementation checkpoint is trustworthy network evidence and
+claim-time enforcement, followed by an independently approved activation
+step on a physically qualified platform. Operators should be able to prepare
+an image in advance, understand which devices are safe to interrupt, and activate only
 within an approved window while validating recovery. Broader workload
 relocation, cache optimization, and additional platforms follow their own
 qualification gates.
@@ -30,24 +33,46 @@ supersedes neither the current runtime contract nor release qualification.
 
 ### Execution status for this branch
 
-The foundation is implemented and has historical physical combined upgrade
-and downgrade evidence. No E00–E13 work package yet satisfies every exit gate;
-the extension still needs substantial policy, lifecycle and integration code
-as well as tests. The latest recorded lab deployment (Ubuntu16 revision 96,
-`0884666e`) qualifies read-only observation publication/convergence on all
-three C9Ks, including collection provenance fields and Pod-UID equality with
-the manager's worker proof. It does not qualify separate preparation/activation
-or full service drain. This review performed no new physical
-upgrade/downgrade operations.
+The foundation is implemented. The Ubuntu16 physical regression used image
+`cvk-tas-extentions:665a7954-fix1` for six single-target campaigns, followed by
+a settled `.101` downgrade from 17.18.03 to 17.18.02 using
+`665a7954-settled5`. The follow-up completed transfer, activation, gNOI Verify,
+health/recovery soak, PDB-aware replacement and settled maintenance. Its
+original evidence collector stopped on Virtual Kubelet's generic delayed API
+cleanup marker. Offline classification now requires preceding exact
+namespace/name/UID-correlated CVK device-clean and `ProviderDeleteSuccess`
+records. The stopped process was not rerun with this classifier.
 
-| Slice | Reviewed status at `0884666e` | Required execution |
+No E00–E13 package yet satisfies every exit gate. Separate staging/activation,
+application/forwarding continuity and full drain qualification remain open.
+The corrected harness now validates explicit source URLs/digests, waits for
+manager-owned operation binding, resolves rollout targets for in-flight taint
+observation, captures manager/network/app logs and reports only the executed
+direction. The settled follow-up still records `Force deleting pod in running
+state` during delayed API cleanup, but each marker is correlated to the same
+Pod UID's clean-delete acknowledgement and provider success; this is not
+evidence of forced device teardown. E07 service/traffic, hard-placement and
+restart/fault gates remain open. Transient new-object admission denials also
+require the binding-order regression already added to the next test gate.
+
+The physical image embeds `665a7954`, but was built with uncommitted changes;
+the embedded base SHA does not identify all tested source. This checkpoint
+also contains later harness/documentation edits, not deployed runtime proof.
+The 30 September
+remote review found no branch PR/CI runs; this review does not establish a
+new remote status. Build a clean, reviewable candidate and verify its CI before
+final acceptance. The [execution plan](topology-roadmap-execution.md) records
+the evidence corrections, immediate repairs and test-by-test exit gates and
+remains the completion ledger.
+
+| Slice | Reviewed status at `665a7954` | Required execution |
 | --- | --- | --- |
-| T0 | Partial physical baseline | E00: reconstruct revision-bound evidence and capability matrix; verify current ownership, images, packages and paths. |
-| T1 | Observation corrections and collection metadata published; acceptance/capacity gaps remain | E01–E02: exact producer/sequence acceptance, VRF/process context, absent-rate validity, schema migration, controlled traffic and supervisor qualification. `938a488f`, `9523720c`, and `6bd7d471` supply the current partial implementation. |
-| T2 | Partial gate only | E03: implement administrator protection, overlapping groups, measured headroom and expiring evidence-bound grants; qualify service-path scenarios. |
+| T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired | E00: reproduce candidate/tooling from a clean build, finish capability/service/path baselines and durable evidence indexing. |
+| T1 | Observation corrections and collection metadata published; acceptance/capacity gaps remain | E01–E02: exact producer/sequence acceptance, bound-token write ownership, network RO publication, VRF/process context, rate qualification, schema migration, controlled traffic and supervisor qualification. `938a488f`, `9523720c`, `6bd7d471` and `0884666e` supply the current partial implementation. |
+| T2 | Network check at plan freeze, not yet claim-time/soak enforcement | E03: revalidate accepted network evidence at execution/recovery boundaries; implement administrator protection, overlapping groups, measured headroom and expiring grants; qualify service-path scenarios. |
 | T3 | Combined lifecycle exists; new preparation contract absent | E04–E05: qualify the device boundary, implement and test durable staged receipts and ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
-| T5 | Partial physical evidence for existing drain subset | E07: prove application reachability and supported drain in both directions, add qualified hard placement and test recovery. The latest downgrade scaled workloads down manually and used `BlockIfRunning`. |
+| T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
 | T6 | Synthetic co-location/conflict evidence exists; full scheduler and physical group lifecycle absent | E08: raw group-field recognition before expanding drain, remaining scheduler scenarios, native controller recreation, physical service and group-aware drain tests. |
 | T7 | Existing ephemeral cache only | E09: measure both transfer segments; implement durable prefetch/PVC cache only when its decision gate passes, then qualify failures. |
 | T8 | Pure graph helper added; no runtime consumer | E10: correct identity, determinism, freshness, hashing and input/diagnostic bounds; add manager/CLI integration and physical drift tests. Existing tests cover a subset of the helper contract. |
@@ -59,6 +84,26 @@ with later roadmap deliverables. Existing test passes and physical upgrade
 results remain useful evidence for the scenarios actually exercised; they do
 not establish the missing contracts or the full physical acceptance matrix.
 E13 supplies the final integrated acceptance gate after implementation.
+
+Before another disruptive qualification, complete E00-F/G/H: preserve the
+truthful direction-specific reports and exact target/source validation now
+implemented; repair the unsafe drain/provider path; retain both worker planes
+and manager evidence, service/guard/claim timelines, pinned tooling and
+new-object binding-order tests. Repair/test observation write ownership,
+freshness/replay (including same-Pod process restart), RO publication and
+retained old-worker leaves. The current 20-second collection fix also needs a
+separate bounded publication budget for timeout/incomplete evidence. Then
+qualify the device's actual stage/activation boundary alongside E03 policy,
+and implement E05/E06. Each increment has its own code/API/physical gate;
+another successful combined reload alone cannot close those contracts.
+
+Full completion also requires lab inputs beyond three C9Ks: measured forwarding
+paths/load, portable supported applications and independent probes, capable
+staging hardware/releases, an appropriate second platform/image pair, and
+durable evidence storage. Supervisor claims need relevant redundant hardware.
+Resolve these during E00/E04/E11, not at final acceptance. Missing inputs keep
+their positive tests blocked; they do not prevent independent implementation
+and fixture work or justify silently narrowing the roadmap.
 
 ## 1. Baseline and remaining scope
 
@@ -207,11 +252,12 @@ completeness and errors. Keep a small summary under `CiscoDevice.status` and
 reuse the existing status/admission ownership rules. Add a separate evidence
 resource only if measured size or ownership constraints require it.
 
-The manager records acceptance and applies freshness bounds, including the
-oldest contributing sample and clock-skew checks. Worker-supplied timestamps
-cannot extend evidence indefinitely. Identity consistency authenticates the
-producer, not the truth of a compromised device or worker. Preserve the
-current shared-account trust boundary in the threat model.
+The target contract requires the manager to record acceptance and apply
+freshness bounds, including the oldest contributing sample and clock-skew
+checks. Worker-supplied timestamps cannot extend evidence indefinitely.
+Authenticated request identity can establish the producer, not the truth of
+a compromised device or worker. Preserve the current shared-account trust
+boundary in the threat model.
 
 Observe through the network worker using the existing transports. OTEL remains
 an optional export of evidence, never a required authorization dependency.
@@ -221,10 +267,13 @@ The observation bridge now carries direction-specific rate presence/validity;
 missing or overflowing IOS-XE rate leaves remain Unknown while measured zero
 is valid. E02 still needs YANG representation fixtures and an independent
 idle/load qualification before capacity policy relies on the percentage.
-Collection timestamps and a process-local sequence now exist, and the opted-in
-rollout gate checks the expected worker revision, sequence and interval. Pod
-UID binding, persisted sequence ordering and manager acceptance history remain
-open.
+Collection timestamps, a process-local sequence and worker Pod UID now exist.
+The opted-in planning gate checks revision/Pod equality when the expected
+identity is present, sequence presence and interval bounds. Manager acceptance,
+persisted sequence ordering, authenticated observation write ownership and
+claim-time/recovery enforcement remain open. Pod UID does not distinguish a
+container restart inside that Pod; a new process must not silently reset the
+accepted sequence. Empty expected identity must not bypass opted-in checks.
 
 ### Policy and admission
 
@@ -482,10 +531,12 @@ confidence. Preserve unknown/unmanaged neighbors and asymmetric observations;
 CDP names alone are not authenticated chassis identity. Model interface/VRF
 context where needed rather than merging unrelated paths.
 
-The current pure helper applies freshness, source-aware canonical JSON keys,
-conflicting-duplicate detection and hard input/output bounds, but it is not
-yet called by the manager. Integrate it only after the manager-owned status and
-CLI contract is defined.
+The current pure helper has optional freshness checks, source-aware JSON keys,
+duplicate detection and input/output limits, but no manager caller. Uncommitted
+changes replace the complete hash with structured JSON and bound adjacency
+state. Require a regression that fails under the old delimiter encoding;
+conflicting-peer diagnostics, reverse-port matching and accepted sample
+provenance still need correction before the manager-owned status and CLI consumer.
 
 Compare that graph with declared risk groups and expected adjacency sets. Show
 missing peers, changed uplinks, new single points of failure and stale data.

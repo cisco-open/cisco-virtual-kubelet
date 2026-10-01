@@ -187,6 +187,12 @@ rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
+  # Read-only network workers may publish only the bounded network
+  # observation subtree under admission. Exact authenticated Pod-to-device
+  # ownership still requires E01 qualification; RBAC alone does not confine it.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices/status"]
+    verbs: ["get", "update", "patch"]
   - apiGroups: ["config.cisco.vk"]
     resources:
       - iosxedevicegroupconfigs

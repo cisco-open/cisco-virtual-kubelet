@@ -390,7 +390,7 @@ func releasedDrainCompletionFixture(
 		selected.DeletionObservedInventoryRevision = 3
 		selected.DeviceCleanAt = &clean
 		selected.DeviceCleanInventoryRevision = 4
-		if phase == opsv1alpha1.UpgradeDrainPodReleased {
+		if phase == opsv1alpha1.UpgradeDrainPodReleased || phase == opsv1alpha1.UpgradeDrainPodComplete {
 			selected.ReleasedAt = &released
 		}
 		o.pod.DeletionTimestamp = &observed
@@ -1279,6 +1279,7 @@ func TestResolveDrainDeletePodRoutesDeviceCleanCompletion(t *testing.T) {
 	for _, phase := range []opsv1alpha1.UpgradeDrainPodPhase{
 		opsv1alpha1.UpgradeDrainPodDeviceClean,
 		opsv1alpha1.UpgradeDrainPodReleased,
+		opsv1alpha1.UpgradeDrainPodComplete,
 	} {
 		for _, staleMarkedCallback := range []bool{false, true} {
 			t.Run(string(phase)+"/stale-marked="+strconv.FormatBool(staleMarkedCallback), func(t *testing.T) {
@@ -1299,6 +1300,67 @@ func TestResolveDrainDeletePodRoutesDeviceCleanCompletion(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestResolveDrainDeletePodRoutesSettledDeviceCleanCompletion(t *testing.T) {
+	for _, purpose := range []ciskov1.DeviceMaintenancePurpose{
+		ciskov1.DeviceMaintenancePurposeWorkloadDrain,
+		ciskov1.DeviceMaintenancePurposeSoftwareMutation,
+	} {
+		t.Run(string(purpose), func(t *testing.T) {
+			c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+				o.device.Status.MaintenanceSession.Phase = ciskov1.DeviceMaintenanceSessionSettled
+				o.device.Status.MaintenanceSession.Purpose = purpose
+				o.leaf.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainSettled
+				o.leaf.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionSettled
+			})
+
+			resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+			if err != nil || disposition != PodDeleteReleasedCompletion || resolved == nil {
+				t.Fatalf("settled completion resolution = (pod=%#v, disposition=%v, err=%v), want released completion", resolved, disposition, err)
+			}
+		})
+	}
+}
+
+func TestResolveDrainDeletePodRoutesSoftwareMutationCompletion(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+		o.device.Status.MaintenanceSession.Purpose = ciskov1.DeviceMaintenancePurposeSoftwareMutation
+	})
+
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+	if err != nil || disposition != PodDeleteReleasedCompletion || resolved == nil {
+		t.Fatalf("software-mutation completion resolution = (pod=%#v, disposition=%v, err=%v), want released completion", resolved, disposition, err)
+	}
+}
+
+func TestResolveDrainDeletePodRoutesReleasedCompletionAfterPodDisappears(t *testing.T) {
+	c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodReleased, func(o *drainFixtureObjects) {
+		o.device.Status.MaintenanceSession.Purpose = ciskov1.DeviceMaintenancePurposeSoftwareMutation
+		o.device.Status.MaintenanceSession.Phase = ciskov1.DeviceMaintenanceSessionSettled
+		o.leaf.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainSettled
+		o.leaf.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionSettled
+	})
+	// Updating a deleting fake-client object with its finalizer removed may
+	// complete the deletion immediately. Fetch the live object first so the
+	// update uses the current resourceVersion, and tolerate the subsequent
+	// Delete seeing the already-removed object.
+	var live corev1.Pod
+	if err := c.Client.Get(context.Background(), client.ObjectKeyFromObject(objects.pod), &live); err != nil {
+		t.Fatal(err)
+	}
+	live.Finalizers = nil
+	if err := c.Client.Update(context.Background(), &live); err != nil && !apierrors.IsNotFound(err) {
+		t.Fatal(err)
+	}
+	if err := c.Client.Delete(context.Background(), &live); err != nil && !apierrors.IsNotFound(err) {
+		t.Fatal(err)
+	}
+
+	resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+	if err != nil || disposition != PodDeleteReleasedCompletion || resolved == nil {
+		t.Fatalf("disappeared completion resolution = (pod=%#v, disposition=%v, err=%v), want released completion", resolved, disposition, err)
 	}
 }
 
@@ -1351,7 +1413,7 @@ func TestResolveDrainDeletePodCompletionRequiresAcceptedDeviceCleanEvidence(t *t
 		mutate func(*opsv1alpha1.UpgradeDrainPodStatus)
 	}{
 		{name: "termination observed", phase: opsv1alpha1.UpgradeDrainPodTerminationObserved},
-		{name: "complete", phase: opsv1alpha1.UpgradeDrainPodComplete},
+		{name: "selected", phase: opsv1alpha1.UpgradeDrainPodSelected},
 		{name: "missing protected time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.ProtectedAt = nil }},
 		{name: "missing eviction time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.EvictionRequestedAt = nil }},
 		{name: "missing deletion time", phase: opsv1alpha1.UpgradeDrainPodReleased, mutate: func(p *opsv1alpha1.UpgradeDrainPodStatus) { p.DeletionObservedAt = nil }},

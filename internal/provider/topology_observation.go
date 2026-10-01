@@ -31,6 +31,7 @@ const (
 	maxNetworkObservationInterfaces = 64
 	maxNetworkObservationNeighbors  = 64
 	networkObservationInterval      = 30 * time.Second
+	networkObservationTimeout       = 20 * time.Second
 )
 
 // RunNetworkObservationPublisher keeps the manager-owned summary fresh from
@@ -49,14 +50,16 @@ func RunNetworkObservationPublisher(
 ) {
 	var sampleSequence uint64
 	publish := func() {
-		observation, err := BuildNetworkObservation(ctx, provider, physicalIdentity, producerRevision, time.Now(), workerPodUID...)
+		cycleCtx, cancel := context.WithTimeout(ctx, networkObservationTimeout)
+		defer cancel()
+		observation, err := BuildNetworkObservation(cycleCtx, provider, physicalIdentity, producerRevision, time.Now(), workerPodUID...)
 		if err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation failed")
 			return
 		}
 		sampleSequence++
 		observation.SampleSequence = sampleSequence
-		if err := PublishNetworkObservation(ctx, c, deviceKey, deviceUID, observation); err != nil {
+		if err := PublishNetworkObservation(cycleCtx, c, deviceKey, deviceUID, observation); err != nil {
 			log.G(ctx).WithError(err).Warn("network topology observation status update failed")
 		}
 	}

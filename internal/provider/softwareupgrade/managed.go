@@ -40,6 +40,7 @@ const managedAdmissionPoll = 15 * time.Second
 
 type managedLeafDecision struct {
 	applies         bool
+	bindingDenied   bool
 	allowProgress   bool
 	allowClaim      bool
 	admissionState  opsv1alpha1.UpgradeManagerAdmissionState
@@ -79,6 +80,16 @@ func (r *Reconciler) syncManagedLeafGate(
 			return err
 		}
 		decision = r.evaluateManagedLeaf(ctx, &current)
+		// A retained leaf from a predecessor worker can remain in the API
+		// while its old Pod is being fenced. Its status mutation is correctly
+		// denied by the admission policy because this worker is not the exact
+		// bound Pod. Do not turn that expected denial into a reconcile hot loop;
+		// settled history is observed read-only and unresolved claims remain
+		// fenced for the manager's recovery path.
+		if decision.bindingDenied {
+			*up = *current.DeepCopy()
+			return nil
+		}
 		desired := workerControlForDecision(&current, decision, now)
 		if reflect.DeepEqual(current.Status.WorkerControl, desired) {
 			*up = *current.DeepCopy()
@@ -126,6 +137,7 @@ func (r *Reconciler) evaluateManagedLeaf(ctx context.Context, up *opsv1alpha1.IO
 		return decision
 	}
 	if err := r.validateManagedLeafBinding(ctx, up); err != nil {
+		decision.bindingDenied = true
 		decision.message = boundedWorkerMessage("managed upgrade binding denied: " + err.Error())
 		return decision
 	}
