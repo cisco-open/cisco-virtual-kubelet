@@ -42,6 +42,17 @@ restart/session semantics and real API-server qualification remain open.
 Existing workers converge by retrying after the manager publishes their
 binding; no device mutation path is widened.
 
+The chart's native `ValidatingAdmissionPolicy` now adds the same bound-token
+Pod-UID check used by the functional worker policies: a network worker status
+request is denied unless the authenticated token's
+`authentication.kubernetes.io/pod-uid` equals both the manager-recorded
+network-worker Pod and the submitted observation. The preflight contract
+digest and Helm render shape were updated together, and the render contract
+plus `cmd/cisco-vk` tests pass. This closes the chart-side caller/Pod identity
+check for clusters that issue bound service-account tokens; a real API-server
+negative test and cluster-version capability check are still required before
+calling E01 admission qualified.
+
 ## 1. Scope, ordering and completion accounting
 
 The main extension requires E00–E07 and E13's core acceptance: reliable

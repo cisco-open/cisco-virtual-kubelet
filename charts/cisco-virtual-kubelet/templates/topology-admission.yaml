@@ -722,6 +722,10 @@ spec:
             object.status.healthObservation.conditionObservations == oldObject.status.healthObservation.conditionObservations))) &&
          object.status.phase == oldObject.status.phase &&
          object.status.workerTopology == oldObject.status.workerTopology)
+    - name: networkObservationPodUIDs
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
     - name: newProtectedLabels
       expression: >-
         object != null && has(object.metadata.labels) ?
@@ -970,6 +974,15 @@ spec:
          (!has(object.status) || !has(object.status.maintenanceSession) ||
           object.status.maintenanceSession == oldObject.status.maintenanceSession))
       message: manager-owned CiscoDevice identity, topology, health, app/network worker revisions, handoff, lock, and maintenance status cannot be forged
+    - expression: >-
+        variables.manager || !variables.networkObservationOnly ||
+        (has(object.status.networkWorkerRevision) &&
+         has(object.status.healthObservation) &&
+         has(object.status.healthObservation.network) &&
+         variables.networkObservationPodUIDs.size() == 1 &&
+         object.status.networkWorkerRevision.podUID == variables.networkObservationPodUIDs[0] &&
+         object.status.healthObservation.network.workerPodUID == variables.networkObservationPodUIDs[0])
+      message: network observation status requires the authenticated bound network-worker Pod UID
     - expression: >-
         !has(request.subResource) || request.subResource != 'status' ||
         ((!has(oldObject.status) ||
