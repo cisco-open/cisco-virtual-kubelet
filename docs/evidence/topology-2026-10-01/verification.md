@@ -120,3 +120,23 @@ were Ready, schedulable and untainted. The settled three-minute manager/worker
 log window contained no errors. See the
 [C3 evidence record](c3-claim-time-network-authority.md) for exact artifact
 hashes, operation UIDs and the remaining E03 limitations.
+
+## C3 administrator disruption-protection follow-up — `617b1cfc`
+
+The full race suite, pinned Kubernetes 1.35 envtest suite, topology render
+contract and strict MkDocs build passed. Tests cover bounded policy validation,
+deterministic overlapping matches, order-stable hashes, planning refusal,
+pre-execution policy tightening and absent legacy Helm values.
+
+The initial physical `--reuse-values` upgrade found a nil-list template defect
+and failed before apply. The repaired exact candidate deployed as Helm revision
+124; the manager and all six C9K workers converged to `617b1cfc`, while the
+retained policy document continued to omit the empty optional field. All three
+Nodes remained Ready, schedulable and untainted; accepted samples matched the
+current network-worker Pod UIDs; three secure read-only gNOI Verify operations
+succeeded. See the
+[administrator-protection record](c3-administrator-disruption-protections.md).
+
+No live protection rule or device mutation was used. Physical redundant,
+singleton, critical-service and congested-path cases, overlapping groups,
+transfer pacing and continuous recovery/soak enforcement remain open.

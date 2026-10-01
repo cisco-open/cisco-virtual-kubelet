@@ -1,6 +1,6 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **implemented and reviewed through `9c48a98c`; roadmap not complete**, 1 October 2026.
+Status: **implemented and reviewed through `617b1cfc`; roadmap not complete**, 1 October 2026.
 Start with the current checkpoint and C0–C9 execution queue below. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
 and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
@@ -140,11 +140,25 @@ Ready and untainted, and the settled log window was clean. No image mutation
 was performed solely to exercise a negative fence. See the
 [C3 qualification record](evidence/topology-2026-10-01/c3-claim-time-network-authority.md).
 
-C3/E03 remains open for administrator-required checks, critical-service
-protection, overlapping risk groups, byte pacing, continuous recovery/soak
-policy and the physical redundant/singleton/critical/congested service-path
-matrix. C2's controlled loaded-rate and compatibility prerequisites also
-remain open.
+C3/E03 remains open for overlapping risk groups, byte pacing, continuous
+recovery/soak policy and the physical redundant/singleton/critical/congested
+service-path matrix. C2's controlled loaded-rate and compatibility
+prerequisites also remain open.
+
+### C3 administrator-protection follow-up (`617b1cfc`, 21:00 UTC)
+
+Bounded administrator-owned `CriticalService` and `SingletonPath` selector
+rules now fail closed during target freeze and current-policy revalidation
+before execution. Rules use only protected required topology keys, are included
+in both policy hashes and preserve the previous hash/wire document when
+omitted. Unit/race, pinned envtest, chart and documentation suites passed.
+Physical retained-value deployment found and repaired a nil-list Helm upgrade
+defect before any resource was applied. Helm revision 124 then converged the
+manager and all six C9K workers to exact candidate `617b1cfc`; current accepted
+observations and three secure read-only gNOI Verify operations passed. No live
+protection rule or software mutation was used. E03 remains open for overlapping
+risk groups, pacing, recovery/soak enforcement and qualified physical
+redundant/singleton/critical/congested service-path scenarios.
 
 ### Concrete completion queue — C0–C9
 
@@ -164,7 +178,7 @@ separately bound roles; they must not be granted implicitly to those workers.
 | **C0 — preserve and recover** / E00, E04, E13 | Archive `.103` rollout/leaf/Lease, manifests, approval, current/previous logs and available device history before rotation. Add a read-only uncertainty diagnosis and an audited resolution path tied to the exact leaf/device/claim identities. Inspect installed/active/committed/next-boot state and in-progress sessions. Retain quarantine unless a qualified procedure proves settlement. | First run recovery unit/API tests for lost response, conflicting inventory, restart, stale actor and operation UID mismatch. On `.103`, correlate secure Verify with `show version`, `show boot`, `show install summary`, supported install detail/log commands and console history. Release fences only through the tested resolution path after conclusive settlement and health proof. If still unknown, leave `.103` blocked; no automatic replay, lease expiry takeover or forced cleanup. |
 | **C1 — stable base deployment** / E00, E01 | Fix new-leaf/DeviceOperation reconciliation ordering: absent manager binding waits boundedly without forbidden status writes or transport calls; wrong binding remains denied. Add a real freeze/Reconcile test for the `11ae6704` nil-status case. Validate generator, schema, Helm policy and embedded contract digest together. | Run E00-E–H with exact write/RPC spies, wrong/new/missing binding, API read error, retained uncertain predecessors and worker replacement. Fresh network-enabled plan reaches AwaitingApproval, emits no leaf before approval and blocks stale evidence after approval. Two generation passes produce no additional drift. Deploy a clean pinned image only after local/native admission gates; capture all worker identities and zero unexplained denial loops. |
 | **C2 — accepted measured evidence** / E01–E02 | Add manager-owned acceptance of worker samples, protected separately from worker publication, and make consumers use accepted evidence. Bind Pod/revision, sequence/hash and original sample age without moving device reads into the manager. Finish adjacency identity/migration and directional-rate qualification. | E01-A–E/E02-A–C: concurrent producers, stale reads, lost acknowledgements, same-Pod and manager restart, oldest-source expiry, wrong-device bound tokens, RO/RW, old/new schema/chart/binary and rollback. Compare all three devices' CLI to observations; measure idle/loaded ingress and egress against an independent source with tolerance declared before testing. Unsupported supervisor health stays Unknown. |
-| **C3 — execution-time network safety** / E03 | Evidence-bound expiring grants, monotonic renewal and uncached worker enforcement before each new claim are complete. Add administrator-required checks/critical-service prohibitions, overlapping risk groups including non-target peers, byte pacing and continuous recovery/soak evaluation; retain reservations for work already accepted. | Claim-time expiry/replacement/rotation and native tuple-transition tests pass. Complete tightened-policy/API-lag/restart/recovery cases and E03-C–F physical tests with measured redundant, single-path, critical-service and congested-path scenarios; reset soak on failed health. Labels alone do not qualify redundancy. |
+| **C3 — execution-time network safety** / E03 | Evidence-bound expiring grants, monotonic renewal, uncached worker enforcement and bounded administrator critical-service/singleton-path prohibitions are complete. Add overlapping risk groups including non-target peers, byte pacing and continuous recovery/soak evaluation; retain reservations for work already accepted. | Claim-time expiry/replacement/rotation, native tuple transitions and planning/pre-execution protection tests pass. Complete tightened-policy/API-lag/restart/recovery cases and E03-C–F physical tests with measured redundant, single-path, critical-service and congested-path scenarios; reset soak on failed health. Labels alone do not qualify redundancy. |
 | **C4 — independent Install qualification** / E04 | Build a narrowly scoped, guarded qualification mode/harness that ends after successful Install/Validated and has **no reachable Activate or reboot call**. Keep mutation ownership while investigating. Do not use the existing `strategy: NoReboot` as prepare-only. Independently inspect installed identity and durability after observer/worker restart. | E04-A–D on an isolated, unquarantined target: record baseline/console/service probes, exact digest/version and inventory before/after, hold across restart, detect external removal/replacement and qualify both image directions. C0 settlement is required before using `.103`. Capability discovery/harness fixtures may precede C2/C3; any physical mutation still needs E00 safety, ownership and impact scope. Lack of durable identity is an explicit cohort blocker, not a fabricated pass. |
 | **C5 — durable prepare and separate activation** / E05–E06 | After C4 defines platform semantics, implement versioned prepare-only protocol, immutable staged receipt and retained staged ownership; then distinct append-only activation authorization, phase windows and atomic transfer/staged/disruption reservations. Bind receipt to device/Node/leaf identities, source digest/exact installed version, trust/policy and supervisor scope. | E05-A–C/E06-A–E: native admission rejects receipt/approval forgery and RO/app mutation; stage survives manager/worker restart and a closed activation window; changed image/trust/policy invalidates authority. Test cancellation, expiry, crash-before/after dispatch, lost response and restart without replay. Upgrade and downgrade both require the separate authorized activation and measured recovery before budget release. A running old version alone never creates a valid receipt. |
 | **C6 — workload continuity and eligibility** / E07, E08-A | Add raw group-field recognition/fail-closed guard before widening drain. Implement supported Deployment/ReplicaSet hard node affinity/selectors/topology spread without relaxing original constraints. Preserve PDB, device-clean acknowledgement and native replacement readiness before disruptive activation. | E07-A–D: capacity/placement failures and PDB 429 block; restart/cancel preserve exact ownership; no forced eviction. Run portable supported applications and continuous endpoint probes through both image directions. Unsigned apps without the required C9K SSD/USB storage are expected unsupported, not an upgrade failure. Full independent-activation integration follows C5. |
@@ -302,7 +316,7 @@ deliverables.
 | E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | In progress: clean candidates through `11ae6704` deployed; C0 must preserve/diagnose `.103` uncertainty; C1 must finish binding-order and freeze regressions. Complete source/image, CLI/Verify and service evidence still required. |
 | E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: restart-safe ordering, bounded publication, interval checks and native bound-token suite advanced through `11ae6704`; C2 still needs manager acceptance, complete identity/migration matrix, original-source age and physical CLI qualification. |
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
-| E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: evidence-bound expiring grants, monotonic renewal and uncached pre-claim enforcement are implemented; administrator protection, overlapping memberships, transfer pacing, recovery/soak policy and physical service-path acceptance remain. |
+| E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: evidence-bound expiring grants, monotonic renewal, uncached pre-claim enforcement and bounded administrator critical-service/singleton-path prohibitions are implemented; overlapping memberships, transfer pacing, recovery/soak policy and physical service-path acceptance remain. |
 | E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Investigated but unqualified: `3212f777` reconciled the earlier NoReboot timeout, but C4 must test a true Install-only hold; E04-A–D remain open. |
 | E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Not started: receipt/protocol/retained ownership absent; physical qualification depends on E04. |
 | E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Not started: independent authorization and phase accounting absent; physical qualification depends on E04–E05. |
@@ -351,7 +365,7 @@ lab findings remain qualified by their recorded image.
 | --- | --- | --- |
 | First: E01 producer and freshness acceptance | Publisher reads/writes the live API, rejects an older collection and never retries it with a later sequence. The rollout adapter rejects an empty expected worker identity. No independent manager acceptance or oldest-source time exists. | N1: manager-owned acceptance and strict required identity at server admission. E01-B/C must reject replay without delaying legitimate restart recovery. |
 | First: E01 authenticated write ownership | Native policy now binds authenticated Pod UID to manager proof and sample, requires the exact manager-recorded ready worker revision, and rejects non-monotonic same-worker sequence/end-time provenance. The current bound-token cases, including replacement fencing, are server-qualified; peer-device and mixed-version paths remain. | N2: complete the real bound-token matrix, protected acceptance and full-field/metadata delta audit. Preserve the two functional accounts and test chart/binary migration. |
-| First: E03 claim-time and recovery checks | `9c48a98c` adds an exact evidence-bound expiring manager grant, monotonic renewal and uncached worker revalidation before every new mutation claim. Already accepted work remains recoverable. | Extend administrator/group policy through recovery and soak. E03-F must still cover plan-to-approval delay, install-to-activation delay, API/cache lag and post-operation network failure; assert zero new forbidden RPCs without abandoning accepted work. Do not advertise the completed claim check as continuous service protection. |
+| First: E03 claim-time and recovery checks | `9c48a98c` adds an exact evidence-bound expiring manager grant, monotonic renewal and uncached worker revalidation before every new mutation claim. `617b1cfc` adds bounded administrator critical-service/singleton-path prohibitions. Already accepted work remains recoverable. | Extend overlapping-group policy through recovery and soak. E03-F must still cover plan-to-approval delay, install-to-activation delay, API/cache lag and post-operation network failure; assert zero new forbidden RPCs without abandoning accepted work. Do not advertise the completed claim check as continuous service protection. |
 | First: E01 read-only mode and collection bounds | RO publisher/status RBAC and separate 20-second collection/5-second write contexts are implemented. Normalization errors include input strings without bounding the combined reason to 256 characters. | N3: timeout-to-incomplete publisher regression, schema-valid error normalization and prior-sample expiry. N2/N4: integrated RO startup, status authorization and denial of every device mutation path. |
 | First: E00/E13 retained-leaf reconciliation | Uncommitted `bindingDenied` handling skips a status write on failed binding; one unit test checks the replacement-Pod case. This is separate from new-object binding delays still seen by DeviceOperation and leaf reconcilers. | Test settled and unresolved predecessors with a status-write spy and zero RPC assertions, including missing binding/API-read errors and manager recovery. For new objects, wait boundedly for the exact manager binding before status/transport work; preserve real wrong-Pod denial. Require real-API and lab regression without deleting retained history. |
 | First: E01 adjacency identity and compatibility | New identities include source, peer and local interface; delimiter-bearing fields use length-prefixed hashed identities and CRD-bound fields are length-checked. IOS-XE now carries OSPF VRF/process/area context when exposed by the operational YANG model; `RequiredNeighbors` still selects only a peer string and blocks when it resolves to multiple adjacencies. | Add remote-interface context and specify an unambiguous selector/migration for legitimate multi-adjacency peers. Test old/new workers and the map-to-atomic CRD transition. Do not describe the list topology change as purely additive. |
@@ -856,9 +870,12 @@ admission/RBAC and operator diagnostics.
 
 ### Required updates
 
-1. Add bounded administrator-required network checks and explicit disruptive
-   activation prohibition for critical/single-homed services. Campaign input
-   may only tighten restrictions; define monotonic policy transitions.
+1. Implemented through `617b1cfc`: bounded administrator-required
+   critical-service and singleton-path prohibitions apply at planning and
+   immediately before execution. The current combined lifecycle is blocked as
+   a whole. Future independently qualified preparation may bypass disruption
+   protection only through the separate E04–E06 contract; campaign input must
+   never relax administrator restrictions.
 2. Add overlapping administrator-declared risk groups with exact physical
    membership. Freeze relevant membership/policy into plans and include
    non-target unhealthy members and all campaigns in one CAS admission.
