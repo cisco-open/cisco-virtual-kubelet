@@ -50,6 +50,15 @@ maintenance taint and Lease through normal reconciliation. Continue with C2;
 do not interpret this closure as an Install-only, service-continuity or full
 roadmap pass.
 
+The first C2 trust-boundary increment is complete at `90bc690c`: workers write
+only raw bounded network samples, the manager owns a separately admission-
+protected accepted copy, and rollout freshness begins at original collection
+start. Kubernetes 1.35 bound-token tests and read-only CLI comparison on all
+three physical C9Ks passed, including manager restart. C2 remains open for
+controlled loaded directional-rate accuracy, redundant-supervisor capability
+and the complete mixed-version/concurrency matrix; see the
+[qualification record](evidence/topology-2026-10-01/c2-manager-accepted-network-evidence.md).
+
 The original `/tmp/cvk-topology-awareness-options.md` was unavailable during
 this review. This plan reconstructs the remaining scope from the checked-in
 [topology guide](topology-awareness.md), the

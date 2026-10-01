@@ -1765,19 +1765,26 @@ spec:
         requireNeighborsFull: true
 ```
 
-The network-management worker publishes only a bounded summary under
+The network-management worker publishes only a bounded producer sample under
 `CiscoDevice.status.healthObservation.network`; it does not publish raw CLI,
-credentials, or arbitrary topology. The manager verifies freshness, source
-completeness flag, physical-identity binding, duplicate-free evidence and the
-requested interface/neighbor checks immediately before admission. Missing or
-stale evidence blocks the rollout with a reason such as `EvidenceStale`,
-`AlternatePathUnavailable`, or `DeviceIdentityMismatch`. The gate is nil by
-default, so existing campaigns retain their behavior. The audit identified
-gaps in that completeness flag: normalization can discard or merge records,
-and the newer OSPF reader path does not enumerate adjacencies. E01 must fix
-these issues before the summary qualifies as complete topology evidence.
-Headroom is currently unpopulated; measured congestion support requires E02
-and E03.
+credentials, or arbitrary topology. That raw field is not rollout authority.
+The manager validates the exact device incarnation, physical-identity hash,
+current worker revision and Pod UID, positive sequence, original collection
+interval and duplicate-free interface/adjacency identities. Only then does it
+copy the sample to the manager-owned
+`CiscoDevice.status.healthObservation.acceptedNetwork`. Native admission lets
+the worker change the raw field but rejects worker changes to the accepted
+field. Rollouts consume only the accepted copy and calculate freshness from
+the start of collection, so a late status write or manager restart cannot
+refresh old evidence.
+
+Missing, unaccepted or stale evidence blocks the rollout with a reason such as
+`EvidenceMissing`, `EvidenceStale`, `AlternatePathUnavailable`, or
+`DeviceIdentityMismatch`. The gate is nil by default, so existing campaigns
+retain their behavior. Physical idle-state CLI comparison is recorded, but
+loaded directional-rate accuracy and redundant-supervisor health remain
+unqualified until their declared E02 test fixtures exist; these signals must
+not be inferred from labels or an unrelated successful device read.
 
 The following remain intentionally bounded or deferred:
 

@@ -56,3 +56,33 @@ target Ubuntu16. The lane was rerun successfully in a newly named Kubernetes
 Candidate-specific remote CI, two-pass generated-artifact parity, independent
 Install-only qualification, service/path traffic, accepted manager-owned
 network evidence and the remaining C2–C9 gates are still open.
+
+## C2 accepted-evidence follow-up — `90bc690c`
+
+These results qualify the manager-owned network-evidence trust boundary. They
+do not qualify measured loaded traffic, supervisor redundancy or a disruptive
+software transition:
+
+| Check | Result |
+| --- | --- |
+| `go test -race -count=1 ./...` | PASS |
+| Pinned Kubernetes 1.35 `make test-envtest` | PASS |
+| Two-pass generated CRD/deep-copy parity | PASS; identical tree digest |
+| Helm lint and topology render/embedded-policy contract | PASS |
+| Kubernetes 1.35 managed shared-worker/bound-token integration | PASS; a genuine Pod-bound worker token could not forge `acceptedNetwork` |
+| Physical deployment identity | PASS; Helm revision 120 and all six C9K app/network workers ran candidate `90bc690c` |
+| Exact Pod/device/revision acceptance on `.100`, `.101`, `.103` | PASS; manager accepted current raw samples on all three switches |
+| Read-only IOS-XE CLI comparison | PASS for interface state, CDP count/identity and absence of OSPF neighbors |
+| Manager restart | PASS; accepted evidence survived and advanced with the same worker Pod bindings |
+| Post-convergence health | PASS; Nodes Ready, sessions Settled, mutation Leases empty and no steady-state manager/worker authorization errors |
+
+The acceptance timestamp cannot make old telemetry fresh: freshness is
+calculated from the collection start. Rollout gates consume only the accepted
+copy. The exact operation UIDs, revisions and physical observations are in the
+[C2 evidence record](c2-manager-accepted-network-evidence.md).
+
+C2 remains open for a controlled idle/loaded traffic source with a declared
+tolerance, redundant-supervisor hardware/capability coverage, the complete
+old/new manager-worker-chart compatibility matrix and the remaining
+concurrent/lost-response API cases. C3 headroom logic must not be qualified
+from the current rate samples until that fixture passes.

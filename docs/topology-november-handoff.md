@@ -21,8 +21,10 @@ durable staging and independent activation remain substantive implementation.
 Execution follow-up: `3212f777` subsequently completed the C0 `.103`
 observation-only recovery and C1 binding/freeze increment on Helm revision 119.
 The leaf, parent soak, Lease and maintenance taint settled normally with no
-activation replay. Resume at C2, while treating C4 Install-only qualification
-as an independent guarded investigation.
+activation replay. C2 now has a physically qualified manager-acceptance trust
+boundary at `90bc690c`; resume with its measured-load/rollback remainder before
+C3. Treat C4 Install-only qualification as an independent guarded
+investigation.
 
 ## Start here
 
@@ -50,7 +52,7 @@ git log -1 --format=fuller -- docs/topology-november-handoff.md
 | Latest `.101` downgrade | `665a7954-settled5`, 08:04–08:34 UTC, 1 October; `Succeeded`, gNOI `17.18.02.0.4112.1766116039`, settled drain/session, replacement Pods Ready on `.100` | Original collector **STOPPED** during app-log classification, before saving manager/network logs; no full end-to-end harness pass |
 | Drain callback repair | Exact released device-clean completion recognized after promotion to `SoftwareMutation`, settlement and Pod disappearance; regression tests retained | Released completion is acknowledgement-only, not authority for another device teardown. Broader lifecycle/fault/service qualification remains E07 |
 | Retained worker history | Wrong-bound worker skips forbidden leaf status updates | Missing/new binding, read failures, unresolved predecessors and real-API zero-dispatch tests still required |
-| Observation work | Restart-safe allocation, bounded diagnostics and native Pod-UID checks, followed by `bc155820` interval/schema safety and a saved full native bound-token suite pass | Manager acceptance, remaining concurrency/cross-device/mixed-version cases and physical qualification remain C2. See current checkpoint for exact test limitations. |
+| Observation work | Restart-safe allocation, bounded diagnostics and native Pod-UID checks, followed by manager-owned acceptance at `90bc690c`, native bound-token denial, three-device CLI comparison and manager-restart qualification | Loaded directional-rate accuracy, remaining concurrency/lost-response and mixed-version rollback cases, plus redundant-supervisor qualification remain C2. |
 | Clean candidate qualification | `9e578131` image and Helm revision 112 deployed on Ubuntu16; all three physical targets reported Ready, complete UID-bound observations and healthy topology/gNOI conditions; `.103` replacement worker advanced from sequence one to three | Read-only evidence only. Direct CLI/secure OS.Verify, complete log planes, claim-time enforcement and E04 preparation/activation remain open. See [`9e578131-observation-validation.md`](evidence/topology-2026-10-01/9e578131-observation-validation.md). |
 | Graph helper | Structured hash/field bounds, remote-port reverse identity and two-input conflict correction (`4711d3c7`) | Three-way permutations and duplicate-device cases still need qualification; no production consumer or physical drift acceptance. |
 | Harness | Explicit source/target validation, direction-specific runs, binding observation, log-plane capture attempt, exact preceding cleanup-log correlation | Binding observation does not establish RPC order; offline marker correlation does not prove service health or complete drain safety |

@@ -78,6 +78,26 @@ The next implementation package is C2. C4 may proceed in parallel only on an
 isolated, unquarantined target with a structurally Install-only harness; the
 completed NoReboot recovery is not that qualification.
 
+### C2 acceptance-boundary follow-up (`90bc690c`, 18:56 UTC)
+
+The first C2 increment is implemented and physically qualified. Worker-owned
+`healthObservation.network` is now raw input; the manager separately owns
+`acceptedNetwork`, validates exact device/revision/Pod/sequence/hash/interval
+provenance and preserves collection-start freshness. Rollout consumers use
+only the accepted field. Native Kubernetes 1.35 admission proved that a real
+bound worker token cannot forge acceptance, and the full race/envtest/render
+matrix passed. Helm revision 120 converged the manager and all six C9K workers
+to `90bc690c`. All three devices produced complete accepted samples matching
+fresh IOS XE interface/CDP CLI, survived a manager restart and remained Ready,
+untainted and mutation-settled. See the
+[C2 qualification record](evidence/topology-2026-10-01/c2-manager-accepted-network-evidence.md).
+
+C2 is not closed: controlled loaded ingress/egress comparison has no declared
+traffic source or tolerance, redundant-supervisor hardware is unavailable,
+and the complete concurrent/lost-response plus old/new rollback matrix remains
+open. C3 must not treat headroom or supervisor state as qualified disruption
+authority until those gates pass.
+
 ### Concrete completion queue — C0–C9
 
 Each row is a separately reviewable delivery increment, not a claim of
