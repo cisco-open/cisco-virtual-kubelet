@@ -13,6 +13,7 @@ This is **partial qualification**, not a release acceptance certificate.
 | [settled2 `.100` upgrade](settled2-live-upgrade-clean/report.md) | `STOPPED`: ready worker image identity not proven | Device reached 17.18.03. Worker identity gate did not pass; the source directory name `clean` is historical, not a clean-build attestation |
 | [settled4 `.100` downgrade](settled4-live-downgrade/report.md) | `STOPPED`: app-log force-delete classifier | Device transition/health results are retained; no blanket retrospective drain pass is assigned |
 | [settled5 `.101` downgrade](settled5-lab101-downgrade/report.md) | `STOPPED`: app-log force-delete classifier | Device/rollout success and ordered leaf drain records; offline preceding-log correlation passes, but collector was not rerun and manager/network log files are missing |
+| [`11ae6704` `.103` NoReboot boundary](11ae6704-noreboot-boundary.md) | `Failed/ActivationOutcomeUnknown` | OS.Install completed but IOS-XE timed out the NoReboot activation response. CVK retained quarantine and a read-only Verify found 17.18.02 still running; this is evidence against claiming a qualified independent staging boundary. |
 
 The reports are original historical text, preserved without changing their
 conclusions. In particular, historical wording such as “binding observed
