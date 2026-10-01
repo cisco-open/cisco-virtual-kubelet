@@ -731,21 +731,22 @@ func evaluateNetworkHealth(
 	if strings.TrimSpace(expectedProducerRevision) == "" || strings.TrimSpace(expectedWorkerPodUID) == "" {
 		return topologyhealth.Decision{Reason: "ExpectedIdentityMissing", Message: "network gate requires a bound worker revision and Pod identity"}
 	}
-	if health == nil || health.Network == nil {
-		return topologyhealth.Decision{Reason: "EvidenceMissing", Message: "network worker has not published an observation"}
+	if health == nil || health.AcceptedNetwork == nil {
+		return topologyhealth.Decision{Reason: "EvidenceMissing", Message: "manager has not accepted a network observation"}
 	}
+	accepted := health.AcceptedNetwork
 	observation := topologyhealth.Observation{
-		CollectionStartedAt: health.Network.CollectionStartedAt.Time,
-		CollectionEndedAt:   health.Network.CollectionEndedAt.Time,
-		SampleSequence:      health.Network.SampleSequence,
-		WorkerPodUID:        health.Network.WorkerPodUID,
-		ObservedAt:          health.Network.ObservedAt.Time,
-		Complete:            health.Network.Complete,
-		UnknownReason:       health.Network.UnknownReason,
-		ProducerRevision:    health.Network.ProducerRevision,
-		DeviceIdentityHash:  health.Network.DeviceIdentityHash,
+		CollectionStartedAt: accepted.CollectionStartedAt.Time,
+		CollectionEndedAt:   accepted.CollectionEndedAt.Time,
+		SampleSequence:      accepted.SampleSequence,
+		WorkerPodUID:        accepted.WorkerPodUID,
+		ObservedAt:          accepted.ObservedAt.Time,
+		Complete:            accepted.Complete,
+		UnknownReason:       accepted.UnknownReason,
+		ProducerRevision:    accepted.ProducerRevision,
+		DeviceIdentityHash:  accepted.DeviceIdentityHash,
 	}
-	for _, item := range health.Network.Interfaces {
+	for _, item := range accepted.Interfaces {
 		var headroom *float64
 		if item.HeadroomPercent != nil {
 			value := float64(*item.HeadroomPercent)
@@ -755,7 +756,7 @@ func evaluateNetworkHealth(
 			Name: item.Name, OperUp: item.OperUp, HeadroomPct: headroom,
 		})
 	}
-	for _, item := range health.Network.Neighbors {
+	for _, item := range accepted.Neighbors {
 		observation.Neighbors = append(observation.Neighbors, topologyhealth.NeighborObservation{
 			Identity: item.Identity, ID: item.ID, Interface: item.Interface,
 			RoutingDomain: item.RoutingDomain, State: item.State, Source: item.Source,

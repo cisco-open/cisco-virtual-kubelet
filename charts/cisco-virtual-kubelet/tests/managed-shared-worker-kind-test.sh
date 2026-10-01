@@ -1099,6 +1099,17 @@ expect_denied "bound network worker replayed observation sequence" \
   2026-10-01T00:00:04Z 2026-10-01T00:00:05Z
 patch_network_observation "$network_observation_revision" 2 \
   2026-10-01T00:00:04Z 2026-10-01T00:00:05Z >/dev/null
+# The manager may copy an authenticated sample into the separate accepted
+# subtree. The same genuine bound worker token must not be able to create or
+# alter that acceptance record, even though it owns the adjacent raw sample.
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p "{\"status\":{\"healthObservation\":{\"acceptedNetwork\":{\"workerPodUID\":\"${network_pod_uid}\",\"collectionStartedAt\":\"2026-10-01T00:00:04Z\",\"collectionEndedAt\":\"2026-10-01T00:00:05Z\",\"sampleSequence\":2,\"observedAt\":\"2026-10-01T00:00:05Z\",\"complete\":true,\"producerRevision\":\"${network_observation_revision}\",\"deviceIdentityHash\":\"${network_observation_hash}\"}}}}" >/dev/null
+expect_denied "bound network worker cannot forge manager acceptance" \
+  "manager-owned CiscoDevice identity, topology, health" \
+  kubectl --kubeconfig "$bound_network_kubeconfig" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p '{"status":{"healthObservation":{"acceptedNetwork":{"sampleSequence":999}}}}'
 expect_denied "bound network worker timestamp before collection" \
   "network observation requires the bound revision and strictly newer collection provenance" \
   patch_network_observation_with_observed_at "$network_observation_revision" 3 \

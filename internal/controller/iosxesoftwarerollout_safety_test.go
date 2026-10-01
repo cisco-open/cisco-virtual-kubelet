@@ -85,7 +85,7 @@ func TestRolloutLeafAnnotationsPropagateOnlyValidatedCorrelation(t *testing.T) {
 
 func TestEvaluateNetworkHealthRequiresBoundWorkerIdentity(t *testing.T) {
 	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
-	health := &ciskov1.DeviceHealthObservationStatus{Network: &ciskov1.DeviceNetworkObservationStatus{
+	health := &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: &ciskov1.DeviceNetworkObservationStatus{
 		CollectionStartedAt: metav1.NewTime(now.Add(-2 * time.Second)),
 		CollectionEndedAt:   metav1.NewTime(now.Add(-time.Second)),
 		ObservedAt:          metav1.NewTime(now.Add(-time.Second)),
@@ -922,7 +922,7 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	rollout.Spec.Plan.Health.Network = &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
 		Enabled: true, RequireCompleteEvidence: true,
 	}
-	device.Status.HealthObservation.Network = &ciskov1.DeviceNetworkObservationStatus{
+	device.Status.HealthObservation.AcceptedNetwork = &ciskov1.DeviceNetworkObservationStatus{
 		CollectionStartedAt: metav1.NewTime(now.Add(-2 * time.Second)),
 		CollectionEndedAt:   metav1.NewTime(now.Add(-time.Second)),
 		ObservedAt:          metav1.NewTime(now.Add(-2 * time.Second)),

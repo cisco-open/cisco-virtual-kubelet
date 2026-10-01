@@ -111,7 +111,14 @@ func Evaluate(now time.Time, observation Observation, policy Policy) Decision {
 	if observation.ObservedAt.After(now.Add(30 * time.Second)) {
 		return blocked("EvidenceClockSkew", "network observation is in the future", observation)
 	}
-	if policy.MaxAge > 0 && now.Sub(observation.ObservedAt) > policy.MaxAge {
+	freshnessTime := observation.ObservedAt
+	if policy.RequireSampleProvenance && observation.CollectionStartedAt.Before(freshnessTime) {
+		// Freshness starts when collection began, not when a later source read,
+		// status write, or manager acceptance completed. Slow or delayed evidence
+		// must never gain a new disruption window merely by arriving later.
+		freshnessTime = observation.CollectionStartedAt
+	}
+	if policy.MaxAge > 0 && now.Sub(freshnessTime) > policy.MaxAge {
 		return blocked("EvidenceStale", "network observation is older than the configured freshness bound", observation)
 	}
 	// The CRD rejects blank requiredInterfaces for newly-created policy. Keep

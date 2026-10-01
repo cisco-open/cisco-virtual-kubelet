@@ -608,17 +608,26 @@ type DeviceHealthObservationStatus struct {
 	// +listMapKey=type
 	ConditionObservations []DeviceConditionObservationStatus `json:"conditionObservations,omitempty"`
 
-	// Network is an optional bounded observation from the network-management
-	// worker. It is evidence only; rollout admission applies its own freshness
-	// and policy checks and never treats an absent observation as healthy.
+	// Network is an optional bounded sample published by the network-management
+	// worker. It is untrusted producer input until the manager validates its
+	// device, worker, Pod, sequence, and collection provenance and copies it to
+	// AcceptedNetwork. Rollout admission never consumes this field directly.
 	// +kubebuilder:validation:Optional
 	Network *DeviceNetworkObservationStatus `json:"network,omitempty"`
+
+	// AcceptedNetwork is the manager-owned copy of the latest Network sample
+	// whose provenance matches the current device and network-worker binding.
+	// The original collection times are preserved so manager processing cannot
+	// make stale device evidence appear fresh.
+	// +kubebuilder:validation:Optional
+	AcceptedNetwork *DeviceNetworkObservationStatus `json:"acceptedNetwork,omitempty"`
 }
 
-// DeviceNetworkObservationStatus is a compact, manager-authenticated summary
-// of topology and path-health evidence. Full device output stays in telemetry
-// or diagnostic result sinks; status carries only the bounded inputs needed by
-// an explicitly opted-in rollout gate.
+// DeviceNetworkObservationStatus is a compact topology and path-health sample.
+// Full device output stays in telemetry or diagnostic result sinks; status
+// carries only the bounded inputs needed by an explicitly opted-in rollout
+// gate. A value is trusted only when present in the manager-owned
+// AcceptedNetwork field.
 //
 // +kubebuilder:validation:XValidation:rule="self.complete || has(self.unknownReason)",message="incomplete network evidence requires an unknown reason"
 type DeviceNetworkObservationStatus struct {

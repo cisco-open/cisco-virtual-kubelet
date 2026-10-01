@@ -39,6 +39,7 @@ import (
 	configengine "github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
 
 const podNodeNameIndex = "spec.nodeName"
@@ -375,11 +376,75 @@ func (r *CiscoDeviceReconciler) updateManagedWorkerStatuses(ctx context.Context,
 		}
 		current.Status.WorkerRevision = appStatus
 		current.Status.NetworkWorkerRevision = networkStatus
+		acceptManagedNetworkObservation(current)
 		return r.applyCiscoDeviceConditionObserved(current, condition)
 	}); err != nil {
 		return fmt.Errorf("update managed functional worker status: %w", err)
 	}
 	return nil
+}
+
+// acceptManagedNetworkObservation promotes only a sample whose immutable
+// producer provenance matches the manager's current device and worker proof.
+// Invalid or superseded producer input clears the accepted copy, failing the
+// rollout gate closed without modifying the worker-owned raw sample.
+func acceptManagedNetworkObservation(device *ciskov1.CiscoDevice) {
+	if device == nil || device.Status.HealthObservation == nil {
+		return
+	}
+	health := device.Status.HealthObservation
+	sample := health.Network
+	binding := device.Status.NetworkWorkerRevision
+	identity := device.Status.NodeIdentity
+	if sample == nil || binding == nil || identity == nil ||
+		identity.DeviceUID != string(device.UID) ||
+		binding.DesiredRevision == "" || binding.ObservedRevision == "" ||
+		binding.DesiredRevision != binding.ObservedRevision || binding.PodUID == "" ||
+		binding.PodStartTime == nil || binding.PodReadyTime == nil ||
+		binding.PodReadyTime.Before(binding.PodStartTime) ||
+		sample.ProducerRevision != binding.ObservedRevision ||
+		sample.WorkerPodUID != binding.PodUID || sample.SampleSequence == 0 ||
+		sample.CollectionStartedAt.IsZero() || sample.CollectionEndedAt.IsZero() ||
+		sample.CollectionEndedAt.Before(&sample.CollectionStartedAt) ||
+		sample.CollectionStartedAt.Before(binding.PodStartTime) ||
+		sample.ObservedAt.IsZero() || sample.ObservedAt.Before(&sample.CollectionStartedAt) ||
+		sample.ObservedAt.After(sample.CollectionEndedAt.Time) {
+		health.AcceptedNetwork = nil
+		return
+	}
+	physicalIdentity, err := topology.CanonicalPhysicalIdentity(identity.PhysicalIdentity)
+	if err != nil || sample.DeviceIdentityHash != identityHashForPhysicalID(physicalIdentity) ||
+		!validAcceptedNetworkIdentities(sample) {
+		health.AcceptedNetwork = nil
+		return
+	}
+	health.AcceptedNetwork = sample.DeepCopy()
+}
+
+func validAcceptedNetworkIdentities(sample *ciskov1.DeviceNetworkObservationStatus) bool {
+	interfaces := make(map[string]struct{}, len(sample.Interfaces))
+	for i := range sample.Interfaces {
+		name := strings.TrimSpace(sample.Interfaces[i].Name)
+		if name == "" {
+			return false
+		}
+		if _, duplicate := interfaces[name]; duplicate {
+			return false
+		}
+		interfaces[name] = struct{}{}
+	}
+	neighbors := make(map[string]struct{}, len(sample.Neighbors))
+	for i := range sample.Neighbors {
+		identity := strings.TrimSpace(sample.Neighbors[i].Identity)
+		if identity == "" {
+			return false
+		}
+		if _, duplicate := neighbors[identity]; duplicate {
+			return false
+		}
+		neighbors[identity] = struct{}{}
+	}
+	return true
 }
 
 // updateManagedDeviceStatusWithRetry serializes controller-owned status changes

@@ -723,7 +723,12 @@ spec:
              has(oldObject.status.healthObservation.conditionObservations)) &&
             (!has(object.status.healthObservation.conditionObservations) ||
              object.status.healthObservation.conditionObservations ==
-               oldObject.status.healthObservation.conditionObservations)))) &&
+               oldObject.status.healthObservation.conditionObservations) &&
+            (has(object.status.healthObservation.acceptedNetwork) ==
+             has(oldObject.status.healthObservation.acceptedNetwork)) &&
+            (!has(object.status.healthObservation.acceptedNetwork) ||
+             object.status.healthObservation.acceptedNetwork ==
+               oldObject.status.healthObservation.acceptedNetwork)))) &&
          (has(object.status.phase) == has(oldObject.status.phase)) &&
          (!has(object.status.phase) || object.status.phase == oldObject.status.phase) &&
          (has(object.status.workerTopology) == has(oldObject.status.workerTopology)) &&

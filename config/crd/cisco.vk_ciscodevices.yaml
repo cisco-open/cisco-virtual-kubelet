@@ -805,6 +805,140 @@ spec:
                   compatible heartbeat proves continuity but does not advance authenticated
                   health freshness.
                 properties:
+                  acceptedNetwork:
+                    description: |-
+                      AcceptedNetwork is the manager-owned copy of the latest Network sample
+                      whose provenance matches the current device and network-worker binding.
+                      The original collection times are preserved so manager processing cannot
+                      make stale device evidence appear fresh.
+                    properties:
+                      collectionEndedAt:
+                        format: date-time
+                        type: string
+                      collectionStartedAt:
+                        description: |-
+                          CollectionStartedAt and CollectionEndedAt delimit the worker-reported
+                          collection interval. The manager validates this provenance before using
+                          it. They make slow or unexpectedly long device
+                          reads visible to rollout diagnostics without retaining raw CLI output.
+                        format: date-time
+                        type: string
+                      complete:
+                        description: Complete is false when any required source was
+                          unavailable or partial.
+                        type: boolean
+                      deviceIdentityHash:
+                        description: |-
+                          DeviceIdentityHash binds the observation to the manager's physical-device
+                          identity without copying raw inventory into status.
+                        pattern: ^sha256:[a-f0-9]{64}$
+                        type: string
+                      interfaces:
+                        description: |-
+                          Interfaces and Neighbors are bounded and normalized by the worker; the
+                          manager validates ownership and duplicate identities before persistence.
+                        items:
+                          properties:
+                            headroomPercent:
+                              description: |-
+                                HeadroomPercent is omitted when the driver cannot provide a trustworthy
+                                sample; zero is therefore a real measured value, not Unknown.
+                              format: int32
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                            name:
+                              maxLength: 128
+                              type: string
+                            operUp:
+                              type: boolean
+                          required:
+                          - name
+                          - operUp
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - name
+                        x-kubernetes-list-type: map
+                      neighbors:
+                        description: |-
+                          Atomic is intentional: multiple source-qualified adjacencies may share
+                          the same human-facing peer ID, and the network worker owns this complete
+                          bounded snapshot rather than merging individual entries.
+                        items:
+                          properties:
+                            id:
+                              maxLength: 128
+                              type: string
+                            identity:
+                              description: |-
+                                Identity is a canonical source-plus-adjacency key. It intentionally
+                                includes the discovery source and local routing context so equal device
+                                names from separate VRFs or interfaces cannot be silently merged.
+                              maxLength: 128
+                              type: string
+                            interface:
+                              maxLength: 128
+                              type: string
+                            routingDomain:
+                              maxLength: 64
+                              type: string
+                            source:
+                              maxLength: 32
+                              type: string
+                            state:
+                              maxLength: 32
+                              type: string
+                          required:
+                          - id
+                          - state
+                          type: object
+                        maxItems: 64
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      observedAt:
+                        description: ObservedAt is the worker collection time, validated
+                          by the manager.
+                        format: date-time
+                        type: string
+                      producerRevision:
+                        description: ProducerRevision identifies the current network
+                          worker incarnation.
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                      sampleSequence:
+                        description: |-
+                          SampleSequence is monotonic for one worker incarnation and resets when
+                          that worker is replaced. The manager binds the producer revision before
+                          using a sample for admission; a zero value is retained for older workers.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      unknownReason:
+                        description: |-
+                          UnknownReason explains why Complete is false without including device
+                          output or credentials.
+                        maxLength: 256
+                        type: string
+                      workerPodUID:
+                        description: |-
+                          WorkerPodUID records the network-management Pod incarnation that collected
+                          this sample. The manager must compare it with its independently observed
+                          worker proof before using the sample for disruptive admission; the field
+                          alone is not authentication.
+                        maxLength: 128
+                        type: string
+                    required:
+                    - complete
+                    - deviceIdentityHash
+                    - observedAt
+                    - producerRevision
+                    type: object
+                    x-kubernetes-validations:
+                    - message: incomplete network evidence requires an unknown reason
+                      rule: self.complete || has(self.unknownReason)
                   conditionObservations:
                     description: |-
                       ConditionObservations carries independent producer observation times for
@@ -855,9 +989,10 @@ spec:
                     type: string
                   network:
                     description: |-
-                      Network is an optional bounded observation from the network-management
-                      worker. It is evidence only; rollout admission applies its own freshness
-                      and policy checks and never treats an absent observation as healthy.
+                      Network is an optional bounded sample published by the network-management
+                      worker. It is untrusted producer input until the manager validates its
+                      device, worker, Pod, sequence, and collection provenance and copies it to
+                      AcceptedNetwork. Rollout admission never consumes this field directly.
                     properties:
                       collectionEndedAt:
                         format: date-time

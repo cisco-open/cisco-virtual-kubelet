@@ -149,3 +149,25 @@ func TestEvaluateRejectsMissingOrUnexpectedSampleProvenance(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluateFreshnessUsesOldestCollectionTime(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	observation := Observation{
+		CollectionStartedAt: now.Add(-6 * time.Minute),
+		CollectionEndedAt:   now.Add(-time.Second),
+		ObservedAt:          now.Add(-time.Second),
+		SampleSequence:      1,
+		WorkerPodUID:        "pod-a",
+		ProducerRevision:    "sha256:worker-a",
+		DeviceIdentityHash:  "sha256:" + strings.Repeat("a", 64),
+		Complete:            true,
+	}
+	decision := Evaluate(now, observation, Policy{
+		RequireSampleProvenance: true,
+		MaxCollectionDuration:   10 * time.Minute,
+		MaxAge:                  5 * time.Minute,
+	})
+	if decision.Allowed || decision.Reason != "EvidenceStale" {
+		t.Fatalf("late-arriving old collection was accepted: %+v", decision)
+	}
+}
