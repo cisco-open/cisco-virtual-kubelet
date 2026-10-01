@@ -76,8 +76,8 @@ remains the completion ledger.
 
 | Slice | Reviewed status through `e7f3e8bf` (physical evidence retains its original revision) | Required execution |
 | --- | --- | --- |
-| T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired | E00: reproduce candidate/tooling from a clean build, finish capability/service/path baselines and durable evidence indexing. |
-| T1 | Publisher identity and sequence guards, restart-safe persisted sequence allocation, bounded diagnostics, independent write deadline and native Pod-UID admission expression are implemented | E01–E02/N1–N4: manager acceptance, API-enforced provenance, genuine worker-token tests, VRF/process context, rates, schema migration and physical qualification. |
+| T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired; clean `9e578131` candidate deployed to Ubuntu16 with all three physical target observations checked | E00: finish direct device CLI/secure OS.Verify, complete log-plane/service/path baselines and durable capability indexing. |
+| T1 | Publisher identity and sequence guards, restart-safe persisted sequence allocation, bounded diagnostics, independent write deadline and native Pod-UID admission expression are implemented; replacement-worker recovery is observed on `.103` | E01–E02/N1–N4: manager acceptance, API-enforced provenance, genuine worker-token tests, VRF/process context, rates, schema migration and physical CLI/secure Verify qualification. |
 | T2 | Network check at plan freeze, not yet claim-time/soak enforcement | E03: revalidate accepted network evidence at execution/recovery boundaries; implement administrator protection, overlapping groups, measured headroom and expiring grants; qualify service-path scenarios. |
 | T3 | Combined lifecycle exists; new preparation contract absent | E04–E05: qualify the device boundary, implement and test durable staged receipts and ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
