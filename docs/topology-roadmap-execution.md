@@ -1,6 +1,6 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **reviewed through `37db63c2`; roadmap not complete**, 1 October 2026.
+Status: **implemented and reviewed through `95077ba7`; roadmap not complete**, 1 October 2026.
 Start with the current checkpoint and C0–C9 execution queue below. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
 and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
@@ -94,9 +94,32 @@ untainted and mutation-settled. See the
 
 C2 is not closed: controlled loaded ingress/egress comparison has no declared
 traffic source or tolerance, redundant-supervisor hardware is unavailable,
-and the complete concurrent/lost-response plus old/new rollback matrix remains
+and the reverse old-manager/new-worker plus explicit rollback matrix remains
 open. C3 must not treat headroom or supervisor state as qualified disruption
-authority until those gates pass.
+authority until those gates pass. Publisher concurrency and lost-response
+coverage are completed by the follow-up below.
+
+### C2 rate-provenance follow-up (`95077ba7`, 19:48 UTC)
+
+Directional capacity/rates and their IOS-XE model source are now retained in
+raw and accepted observations; the manager independently recomputes every
+derived headroom value. Optimistic-lock concurrency, lost-response replay,
+same-Pod monotonicity and producer replacement have explicit tests. Physical
+execution found an OpenAPI signed-bound rounding defect that local Kubernetes
+1.35 did not expose; `95077ba7` uses the JSON-safe `2^53-1` ceiling and locks it
+with a generated-schema regression test.
+
+Helm revision 122 converged the manager and all six workers on the exact clean
+candidate. All three C9Ks published and received manager acceptance for
+44–46 rate-qualified interfaces, survived a manager-only restart and remained
+Ready and untainted. The manager-new/old-worker transition failed closed. See
+the [C2 rate-provenance record](evidence/topology-2026-10-01/c2-rate-provenance-followup.md).
+
+C2 remains open for controlled non-management-path load with a predeclared
+tolerance, appropriate redundant hardware, reverse old-manager/new-worker and
+explicit rollback qualification. These prerequisites keep headroom out of C3
+disruption authority; they do not reopen the completed publisher concurrency
+and lost-response tests.
 
 ### Concrete completion queue — C0–C9
 

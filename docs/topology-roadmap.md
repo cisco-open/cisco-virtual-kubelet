@@ -1,6 +1,6 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete; reviewed through `37db63c2`**, 1 October 2026.
+Status: **incomplete; implemented and reviewed through `95077ba7`**, 1 October 2026.
 Start with the [November handoff](topology-november-handoff.md) and
 [versioned evidence](evidence/topology-2026-10-01/README.md). The checkpoint
 preserves runtime/harness changes after `665a7954`; it is not a release candidate.
@@ -27,9 +27,10 @@ qualification gates.
 
 Start with the execution plan's [**C0–C9 queue**](topology-roadmap-execution.md#concrete-completion-queue-c0c9).
 Restart-safe sequence allocation, bounded diagnostics, collection-interval
-validation and a genuine bound-token admission suite have advanced. Do not
-reimplement those fixes. Manager-owned acceptance, complete cross-device and
-mixed-version qualification and execution-time network safety remain open.
+validation, manager-owned acceptance, rate provenance and a genuine
+bound-token admission suite have advanced. Do not reimplement those fixes.
+Controlled loaded-path and reverse mixed-version qualification plus
+execution-time network safety remain open.
 First preserve and reconcile `.103`'s uncertain NoReboot activation, fix new
 operation binding ordering and add full-path planning regressions. The
 existing nil-status test checks only a helper, not the failing freeze path.
@@ -56,7 +57,10 @@ protected accepted copy, and rollout freshness begins at original collection
 start. Kubernetes 1.35 bound-token tests and read-only CLI comparison on all
 three physical C9Ks passed, including manager restart. C2 remains open for
 controlled loaded directional-rate accuracy, redundant-supervisor capability
-and the complete mixed-version/concurrency matrix; see the
+and reverse mixed-version/rollback cases. Candidate `95077ba7` adds raw rate
+provenance, independent manager recomputation and publisher concurrency/lost-
+response coverage, and corrects a CRD integer-bound issue found by physical
+execution; see the
 [qualification record](evidence/topology-2026-10-01/c2-manager-accepted-network-evidence.md).
 
 The original `/tmp/cvk-topology-awareness-options.md` was unavailable during
@@ -99,10 +103,10 @@ final acceptance. The [execution plan](topology-roadmap-execution.md) records
 the evidence corrections, immediate repairs and test-by-test exit gates and
 remains the completion ledger.
 
-| Slice | Reviewed status through `37db63c2` (physical evidence retains its original revision) | Required execution |
+| Slice | Reviewed status through `95077ba7` (physical evidence retains its original revision) | Required execution |
 | --- | --- | --- |
 | T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired; clean `9e578131` candidate deployed to Ubuntu16 with all three physical target observations checked | E00: finish direct device CLI/secure OS.Verify, complete log-plane/service/path baselines and durable capability indexing. |
-| T1 | Restart-safe publisher, interval/schema safety, IOS-XE rate-presence fixtures and real bound-token admission suite advanced | C2 / E01–E02: manager acceptance, remaining concurrency/cross-device/mixed-version cases, source-age and physical rate/CLI qualification. |
+| T1 | Manager-accepted Pod-bound evidence, restart-safe publisher, interval/schema safety, directional-rate provenance/recomputation, concurrency/lost-response tests and real bound-token admission suite passed; physical k3s schema compatibility corrected | C2 / E01–E02: controlled loaded-path accuracy with an independent source, redundant-hardware capability, reverse mixed-version/rollback and candidate CI. |
 | T2 | Network check at plan freeze and manager admission; `11ae6704` fixes first-plan nil-status panic | C1/C3 / E03: full-path regression, worker claim-time/soak enforcement, administrator protection, overlapping groups, measured headroom and expiring grants; service-path tests. |
 | T3 | Combined lifecycle exists; `3212f777` reconciled `.103`'s lost NoReboot outcome without replay; independent prepare contract absent | C4/C5 / E04–E05: true Install-only qualification, then durable receipts/ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |

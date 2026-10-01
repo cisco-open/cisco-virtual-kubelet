@@ -16,6 +16,7 @@ This is **partial qualification**, not a release acceptance certificate.
 | [`11ae6704` `.103` NoReboot boundary](11ae6704-noreboot-boundary.md) | `Failed/ActivationOutcomeUnknown`; later device audit proved 17.18.03 committed and running | OS.Install completed but IOS-XE timed out the NoReboot activation response. CVK correctly retained quarantine. A 17:51 UTC correlated CLI and secure gNOI audit proved the switch had reloaded and committed 17.18.03; this is still not an independently qualified staging boundary. |
 | [`.103` C0 outcome audit](c0-103-activation-outcome-audit.md) | Conclusive target-running evidence followed by tested observation-only recovery and healthy settlement | Binds the leaf, device, Node, workers and Lease; records both terminal views, exact candidate/image identity, no-replay recovery, full soak and final fence release. |
 | [C2 manager-accepted network evidence](c2-manager-accepted-network-evidence.md) | PASS for the accepted-evidence trust boundary and read-only physical comparison on all three C9Ks | Candidate `90bc690c` separates worker-reported raw samples from manager-accepted evidence, binds acceptance to the current Pod/device/revision, rejects forgery in a native API-server test and survives a manager restart. Loaded-rate accuracy, redundant-supervisor coverage and the full compatibility matrix remain open. |
+| [C2 rate-provenance follow-up](c2-rate-provenance-followup.md) | PASS for bounded raw-rate provenance, manager recomputation, sequence/lost-response tests and physical k3s compatibility | Candidate `95077ba7` corrected an OpenAPI integer-bound failure found in the physical lab, converged all six C9K workers, accepted 44–46 rate-qualified interfaces per switch and survived a manager restart. Controlled loaded-path accuracy and reverse compatibility/rollback remain open. |
 
 The reports are original historical text, preserved without changing their
 conclusions. In particular, historical wording such as “binding observed
@@ -109,10 +110,10 @@ Pod-status cleanup behavior still warrants lifecycle regression coverage.
 - Dirty-build source provenance is incomplete. Saved source fingerprints
   identify this checkpoint, not all original image inputs.
 - The C2 accepted-evidence boundary now has bound-token forgery, envtest,
-  generation, current-binding and manager-restart coverage. Controlled
-  idle/loaded-rate accuracy, redundant-supervisor hardware, the full old/new
-  compatibility matrix and remaining concurrent/lost-response cases remain
-  open. Optional TAS and another hardware platform need their own evidence;
+  generation, current-binding, concurrent-writer, lost-response and
+  manager-restart coverage. Controlled idle/loaded-rate accuracy,
+  redundant-supervisor hardware and the reverse old/new compatibility and
+  rollback cases remain open. Optional TAS and another hardware platform need their own evidence;
   ordinary three-switch rollouts do not qualify them.
 
 These gaps map to E00–E13 in the [execution plan](../../topology-roadmap-execution.md).

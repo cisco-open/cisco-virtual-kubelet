@@ -82,7 +82,24 @@ copy. The exact operation UIDs, revisions and physical observations are in the
 [C2 evidence record](c2-manager-accepted-network-evidence.md).
 
 C2 remains open for a controlled idle/loaded traffic source with a declared
-tolerance, redundant-supervisor hardware/capability coverage, the complete
-old/new manager-worker-chart compatibility matrix and the remaining
-concurrent/lost-response API cases. C3 headroom logic must not be qualified
-from the current rate samples until that fixture passes.
+tolerance, redundant-supervisor hardware/capability coverage, and the reverse
+old-manager/new-worker plus explicit rollback compatibility cases. C3
+headroom logic must not be qualified from the current rate samples until that
+fixture passes.
+
+## C2 rate-provenance compatibility follow-up — `95077ba7`
+
+The full race suite, pinned Kubernetes 1.35 envtest suite, focused
+provider/controller/IOS-XE tests, Helm/render checks, deterministic generation
+and Kubernetes 1.35 bound-token lane passed. Physical execution on k3s
+`v1.35.8+k3s1` exposed an unsafe rounded OpenAPI maximum in the preceding
+candidate; `95077ba7` corrects it to JSON-safe `2^53-1` and adds a generated
+schema regression test.
+
+Helm revision 122 converged the manager and all six physical C9K workers to
+the exact candidate. Raw and accepted samples matched each current producer
+Pod and carried 44–46 capacity/directional-rate/source records. Three
+read-only interface operations succeeded and the manager-only restart kept
+the workers stable while accepted sequences advanced. See the
+[rate-provenance record](c2-rate-provenance-followup.md) for exact hashes,
+operation UIDs and remaining limitations.
