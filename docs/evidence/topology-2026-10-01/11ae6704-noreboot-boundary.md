@@ -31,19 +31,38 @@ was frozen before its separate plan approval was added.
    retained the device-maintenance taint and mutation lease.
 5. A separate read-only, secure gNOI `OS.Verify` subsequently returned running
    version `17.18.02.0.4112.1766116039`, with no activation-failure message.
+6. At 17:50–17:51 UTC, after the switch had become reachable again, exact
+   manager-bound read-only operations established a different, later state:
+   IOS-XE `show version` reported 17.18.03, an Image Install reload and a
+   35-minute uptime; `show install summary` reported 17.18.03.0.5496 as
+   activated and committed; `show boot` selected `flash:packages.conf`; and
+   secure gNOI `OS.Verify` reported `17.18.03.0.5496.1776157760` with no
+   activation failure. The correlated record is
+   [the C0 outcome audit](c0-103-activation-outcome-audit.md).
 
 ## Interpretation
 
-The read-only result establishes only that the device was still running the
-old version at the time of observation. It does **not** prove whether the
-timed-out NoReboot request reached the device, whether a next-boot selection
-was made, or whether the installed image is durable and content-identical.
+The first read-only result establishes only that the device was still running
+the old version at that observation time. The later correlated audit proves
+that the timed-out operation ultimately changed the running and committed
+software to the exact validated target. It also proves that this IOS-XE cohort
+may reload after `Activate(NoReboot=true)`; therefore `NoReboot` must not be
+presented as a preparation-only or no-downtime boundary.
 
-Accordingly, the retained quarantine is correct. Do not clear the lease or
-submit an activation/retry manually. This C9K/IOS-XE cohort is not eligible
-for E04/E05/E06 positive staging claims until CVK has a durable receipt,
-explicit audit/recovery flow, and a platform procedure that can prove the
-installed/next-boot state after a lost response.
+Retaining quarantine until that conclusive later observation was correct. Do
+not clear the lease manually or submit another activation. The controller
+recovery must consume a fresh exact-target `OS.Verify`, validate the original
+leaf/device/manager-claim identities, record an audited terminal correction
+and release ownership without replaying activation. Node Ready and its stale
+reported 17.18.2 remain insufficient device-inventory evidence.
+
+This test invoked Activate, so it did **not** test E04's hold between Install
+and Activate. It neither qualifies independent staging nor proves the cohort
+incapable of it. E04 must first prove the device boundary using a guarded
+Install-only path with no reachable activation call. E05 can then implement
+and qualify the durable receipt against the proven semantics; the receipt
+must not be a circular prerequisite for E04's device investigation. See the
+[C0/C4 execution steps](../../topology-roadmap-execution.md#concrete-completion-queue-c0c9).
 
 ## Artifacts retained in the lab
 

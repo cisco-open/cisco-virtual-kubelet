@@ -243,6 +243,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	unsupportedModel := unsupportedExecutionModel(&up)
 	terminalLegacyRisk := !unsupportedModel && terminalUpgradePhase(up.Status.Phase) &&
 		mutationguard.UpgradeRequiresQuarantineAt(&up, now)
+	terminalUnsettled := !unsupportedModel && terminalUpgradePhase(up.Status.Phase) &&
+		retainMutationLeaseUntilExpiry(&up)
+	if terminalUnsettled && up.Status.FailureReason == "ActivationOutcomeUnknown" {
+		return r.observeTerminalActivationOutcome(ctx, &up, now)
+	}
 	if !unsupportedModel && terminalUpgradePhase(up.Status.Phase) && !terminalLegacyRisk {
 		if !retainMutationLeaseUntilExpiry(&up) {
 			if err := r.releaseMutationLease(ctx, &up); err != nil {
@@ -302,6 +307,113 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		// Terminal phases: nothing to do.
 		return reconcile.Result{}, nil
 	}
+}
+
+// observeTerminalActivationOutcome is the only recovery path from a lost
+// NoReboot Activate response. It is observation-only: the activation request
+// is never replayed. A fresh OS.Verify may settle the quarantine only when the
+// exact target is now running and no activation failure or unsupported
+// supervisor requirement is reported. Every other result preserves the
+// terminal leaf, maintenance guard, mutation Lease, and manager reservation.
+func (r *Reconciler) observeTerminalActivationOutcome(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	now time.Time,
+) (reconcile.Result, error) {
+	if up.Spec.Strategy != opsv1alpha1.UpgradeStrategyNoReboot ||
+		!up.Status.PrimarySupervisorActivationRequested || up.Status.ActivationStartTime == nil ||
+		strings.TrimSpace(up.Status.ValidatedVersion) == "" {
+		return r.holdLegacyTerminalQuarantine(ctx, up, now)
+	}
+	if up.Annotations[managedprotocol.AnnotationManaged] == "true" {
+		if up.Status.ManagerControl == nil ||
+			validateManagedClaimCoverage(up, up.Status.ManagerControl.Revision) != nil {
+			return r.holdLegacyTerminalQuarantine(ctx, up, now)
+		}
+	}
+	client, err := r.gnoiClient(ctx)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return reconcile.Result{RequeueAfter: awaitingReachabilityPoll}, nil
+	}
+	verify, err := verifyOS(ctx, client)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return reconcile.Result{RequeueAfter: awaitingReachabilityPoll}, nil
+	}
+	if strings.TrimSpace(verify.ActivationFailMessage) != "" || verify.IndividualSupervisorInstall ||
+		!versionMatches(verify.Version, up.Spec.TargetVersion) ||
+		!versionMatches(verify.Version, up.Status.ValidatedVersion) {
+		return reconcile.Result{RequeueAfter: awaitingReachabilityPoll}, nil
+	}
+	message := fmt.Sprintf("recovered lost NoReboot activation outcome: fresh OS.Verify reports exact target version %s; no activation was replayed", verify.Version)
+	return r.recoverTerminalActivationOutcome(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
+		cur.Status.RunningVersion = verify.Version
+		cur.Status.FailureReason = ""
+		cur.Status.Message = message
+		cur.Status.CompletionTime = &metav1.Time{Time: now}
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionTrue, "ActivationOutcomeRecovered", message, now)
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "DeviceReachable", message, now)
+		r.setCondition(cur, conditionTypeVerified, metav1.ConditionTrue, "Verified", message, now)
+		r.setReady(cur, metav1.ConditionTrue, "Succeeded", message, now)
+	}, reconcile.Result{})
+}
+
+// recoverTerminalActivationOutcome is deliberately narrower than updateStatus:
+// the ordinary compare-and-swap path rejects every write to a terminal record.
+// The only exception permitted here is correction of a retained
+// Failed/ActivationOutcomeUnknown record after observeTerminalActivationOutcome
+// has obtained definitive, read-only evidence that the exact target is running.
+func (r *Reconciler) recoverTerminalActivationOutcome(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	mutate func(*opsv1alpha1.IOSXESoftwareUpgrade),
+	result reconcile.Result,
+) (reconcile.Result, error) {
+	updated := false
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var cur opsv1alpha1.IOSXESoftwareUpgrade
+		reader := r.Reader
+		if reader == nil {
+			reader = r.Client
+		}
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(up), &cur); err != nil {
+			return err
+		}
+		if !upgradeStatusCASMatches(up, &cur) ||
+			cur.Status.Phase != opsv1alpha1.UpgradePhaseFailed ||
+			cur.Status.FailureReason != "ActivationOutcomeUnknown" ||
+			!retainMutationLeaseUntilExpiry(&cur) {
+			return nil
+		}
+		mutate(&cur)
+		cur.Status.ObservedGeneration = cur.Generation
+		if cur.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded ||
+			!apimeta.IsStatusConditionTrue(cur.Status.Conditions, conditionTypeVerified) {
+			return fmt.Errorf("activation outcome recovery did not produce a verified success")
+		}
+		r.setCondition(&cur, conditionTypeMutationSettled, metav1.ConditionTrue, "OutcomeVerified", cur.Status.Message, r.now())
+		if err := r.Client.Status().Update(ctx, &cur); err != nil {
+			return err
+		}
+		updated = true
+		return nil
+	})
+	if err != nil {
+		return result, fmt.Errorf("recover terminal activation outcome: %w", err)
+	}
+	if !updated {
+		return reconcile.Result{RequeueAfter: time.Second}, nil
+	}
+	setSoftwareUpgradeSpanOutcome(oteltrace.SpanFromContext(ctx), opsv1alpha1.UpgradePhaseSucceeded, "ActivationOutcomeRecovered", "")
+	recordPhaseTransition(r.DeviceName, up.Spec.TargetVersion, string(opsv1alpha1.UpgradePhaseFailed), string(opsv1alpha1.UpgradePhaseSucceeded), "ActivationOutcomeRecovered")
+	r.emitEvent(up, corev1.EventTypeNormal, "ActivationOutcomeRecovered",
+		fmt.Sprintf("fresh OS.Verify confirmed target version %s after a lost NoReboot activation response; no activation was replayed", up.Status.ValidatedVersion))
+	if err := r.releaseMutationLease(ctx, up); err != nil {
+		return result, err
+	}
+	return result, nil
 }
 
 func softwareUpgradeEntityID(up *opsv1alpha1.IOSXESoftwareUpgrade) string {

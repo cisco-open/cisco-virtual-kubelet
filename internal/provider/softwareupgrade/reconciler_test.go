@@ -39,6 +39,7 @@ import (
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -1241,6 +1242,110 @@ func TestNoRebootRecordedIntentFailsClosedAfterRPCGrace(t *testing.T) {
 	}
 	if rig.os.activateCalls != 0 {
 		t.Fatalf("Activate calls=%d, want no replay after grace expiry", rig.os.activateCalls)
+	}
+}
+
+func TestTerminalNoRebootOutcomeRecoversByExactReadOnlyVerifyWithoutReplay(t *testing.T) {
+	base := time.Unix(1_700_000_000, 0).UTC()
+	started := metav1.NewTime(base.Add(-5 * time.Minute))
+	rig := newRig(t)
+	up := newUpgrade("upgrade-noreboot-recovered", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
+		up.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+		up.Status.FailureReason = "ActivationOutcomeUnknown"
+		up.Status.ValidatedVersion = "17.15.01a"
+		up.Status.PrimarySupervisorInstallRequested = true
+		up.Status.PrimarySupervisorInstalled = true
+		up.Status.PrimarySupervisorActivationRequested = true
+		up.Status.ActivationStartTime = &started
+		up.Status.Conditions = []metav1.Condition{{
+			Type: conditionTypeMutationSettled, Status: metav1.ConditionFalse, Reason: "MutationRequested",
+		}}
+	})
+	r := newReconciler(t, rig, up)
+	r.Now = func() time.Time { return base }
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded || got.Status.FailureReason != "" ||
+		got.Status.RunningVersion != "17.15.01a" {
+		t.Fatalf("recovered status = %#v", got.Status)
+	}
+	if rig.os.verifyCalls != 1 || rig.os.activateCalls != 0 {
+		t.Fatalf("Verify calls=%d Activate calls=%d, want one read and no replay",
+			rig.os.verifyCalls, rig.os.activateCalls)
+	}
+	if !apimeta.IsStatusConditionTrue(got.Status.Conditions, conditionTypeMutationSettled) ||
+		!apimeta.IsStatusConditionTrue(got.Status.Conditions, conditionTypeVerified) {
+		t.Fatalf("recovered conditions = %#v", got.Status.Conditions)
+	}
+}
+
+func TestTerminalNoRebootOutcomeRetainsQuarantineOnOldVersion(t *testing.T) {
+	base := time.Unix(1_700_000_000, 0).UTC()
+	started := metav1.NewTime(base.Add(-5 * time.Minute))
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.14.01a"
+	up := newUpgrade("upgrade-noreboot-still-unknown", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
+		up.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+		up.Status.FailureReason = "ActivationOutcomeUnknown"
+		up.Status.ValidatedVersion = "17.15.01a"
+		up.Status.PreviousVersion = "17.14.01a"
+		up.Status.PrimarySupervisorInstallRequested = true
+		up.Status.PrimarySupervisorInstalled = true
+		up.Status.PrimarySupervisorActivationRequested = true
+		up.Status.ActivationStartTime = &started
+		up.Status.Conditions = []metav1.Condition{{
+			Type: conditionTypeMutationSettled, Status: metav1.ConditionFalse, Reason: "MutationRequested",
+		}}
+	})
+	r := newReconciler(t, rig, up)
+	r.Now = func() time.Time { return base }
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed ||
+		got.Status.FailureReason != "ActivationOutcomeUnknown" ||
+		apimeta.IsStatusConditionTrue(got.Status.Conditions, conditionTypeMutationSettled) {
+		t.Fatalf("quarantine was incorrectly settled: %#v", got.Status)
+	}
+	if rig.os.verifyCalls != 1 || rig.os.activateCalls != 0 {
+		t.Fatalf("Verify calls=%d Activate calls=%d, want one read and no replay",
+			rig.os.verifyCalls, rig.os.activateCalls)
+	}
+}
+
+func TestTerminalNoRebootOutcomeRetainsQuarantineOnValidatedVersionMismatch(t *testing.T) {
+	base := time.Unix(1_700_000_000, 0).UTC()
+	started := metav1.NewTime(base.Add(-5 * time.Minute))
+	rig := newRig(t)
+	up := newUpgrade("upgrade-noreboot-validated-mismatch", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
+		up.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+		up.Status.FailureReason = "ActivationOutcomeUnknown"
+		up.Status.ValidatedVersion = "17.15.01b"
+		up.Status.PrimarySupervisorInstallRequested = true
+		up.Status.PrimarySupervisorInstalled = true
+		up.Status.PrimarySupervisorActivationRequested = true
+		up.Status.ActivationStartTime = &started
+		up.Status.Conditions = []metav1.Condition{{
+			Type: conditionTypeMutationSettled, Status: metav1.ConditionFalse, Reason: "MutationRequested",
+		}}
+	})
+	r := newReconciler(t, rig, up)
+	r.Now = func() time.Time { return base }
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed ||
+		got.Status.FailureReason != "ActivationOutcomeUnknown" ||
+		apimeta.IsStatusConditionTrue(got.Status.Conditions, conditionTypeMutationSettled) {
+		t.Fatalf("validated-version mismatch was incorrectly settled: %#v", got.Status)
+	}
+	if rig.os.verifyCalls != 1 || rig.os.activateCalls != 0 {
+		t.Fatalf("Verify calls=%d Activate calls=%d, want one read and no replay",
+			rig.os.verifyCalls, rig.os.activateCalls)
 	}
 }
 

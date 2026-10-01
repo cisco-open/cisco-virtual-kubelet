@@ -218,6 +218,9 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		Scheme:          mgr.GetScheme(),
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodUID:    opts.WorkerPodUID,
 		Platform:        diagnostic.CommandPlatformNXOS,
 		TP:              r,
 	}

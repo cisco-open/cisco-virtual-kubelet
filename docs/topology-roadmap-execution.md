@@ -1,10 +1,10 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **reviewed for continued execution; roadmap not complete**, 1 October 2026.
-Read the [November handoff](topology-november-handoff.md) first for the saved
-evidence, ordered restart procedure, known defects and release boundaries.
-Reviewed source: `e7f3e8bf` on `pr/johalley/tas-extentions`, including
-`4711d3c7`, `f9b76322` and `c5a2deeb`. Historical physical evidence below is
+Status: **reviewed through `37db63c2`; roadmap not complete**, 1 October 2026.
+Start with the current checkpoint and C0–C9 execution queue below. The
+[November handoff](topology-november-handoff.md) preserves historical evidence
+and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
+Historical physical evidence below is
 from `665a7954` plus runtime changes through `0884666e`. The initial physical deployment
 used the rebuilt image `cvk-tas-extentions:665a7954-fix1` (full binary revision
 `665a7954a9def499cd3ee36e972e2b5fe15256f5`) on Ubuntu16. That binary embeds
@@ -23,7 +23,134 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
-### Current review and immediate execution queue (1 October 2026)
+### Current checkpoint (1 October 2026, lab read at 17:36 UTC)
+
+This checkpoint supersedes the historical N1–N5 queue below, not the detailed
+E00–E13 acceptance requirements. This review used source inspection, saved
+test output, read-only lab API queries and GitHub PR/run listings. It did not
+deploy code, execute a new upgrade or run a fresh full test suite.
+
+| Area | Verified progress | Still required |
+| --- | --- | --- |
+| Source / CI | Clean branch at `37db63c2`, matching local remote-tracking ref; GitHub branch PR and workflow-run queries both returned empty | Publish a reviewable candidate and obtain candidate-specific CI; a local remote-tracking ref is not a fresh remote-head attestation |
+| Observation/schema safety | `bc155820`: nonblank headroom interface scope; collection-start freshness and interval validation in publisher, consumer and admission. `c7023691`: runtime admission digest synchronized with rendered policy | Manager-owned acceptance, original contributing-source age, concurrency/lost-ack, cross-device and mixed-version qualification; do not reimplement the completed sequence/schema fixes |
+| Native authorization | Saved `/tmp/cvk-managed-shared-worker-kind.log` ends with a full integration pass on Kubernetes `v1.35.0`, including retained Lease, split-plane/stale-token, native Node guards and foreground deletion cases | Archive sanitized log and exact tested inputs; unbound peer-Pod denial is not proof of the complete distinct-device/namespace matrix. Retain two functional accounts, not per-node accounts |
+| Planning/admission | `11ae6704` fixes network-enabled plan freeze reading nil `status.effectivePolicy`; manager rechecks current network evidence at admission | The new test exercises only the freshness helper. Add an actual freeze/Reconcile regression with nil status; worker claim-time and recovery/soak network enforcement remain absent |
+| Current lab | Ubuntu16 server `v1.35.8+k3s1`; Helm revision 118 deployed; manager Deployment Ready `1/1`, image tag `cvk-tas-extentions:11ae6704`; all three C9K Nodes Ready and reporting `17.18.2` | Capture resolved manager/app/network image IDs, fresh CLI and secure Verify, paths/services and current ownership. Node status is not device inventory or service continuity |
+| `.103` safety state | Leaf `roadmap-noreboot-20261001-103-cat9k-lab-103-8a61c53c` remains `Failed/ActivationOutcomeUnknown`; maintenance `NoSchedule` taint and disruptive Lease remain held by that leaf UID | Read-only reconciliation and audited recovery before another mutation on `.103`; never delete the fence to resume testing |
+| Preparation boundary | Recorded `OS.Install` validated `17.18.03.0.5496.1776157760`; subsequent `Activate(NoReboot=true)` lost its response. Historical secure Verify returned running `17.18.02.0.4112.1766116039` | An install-only hold was **not tested**. This is neither a successful staged receipt nor proof that this C9K cohort cannot support one |
+
+The [OpenConfig OS contract](https://github.com/openconfig/gnoi/blob/master/os/os.proto)
+distinguishes Install from Activate: Activate changes the next-boot selection
+even when reboot is suppressed. Verify reports running state. Consequently,
+old-version Verify cannot settle a lost NoReboot response. Pin the actual gNOI
+dependency/proto revision in E04 evidence; the upstream contract is not proof
+of a particular IOS-XE implementation.
+
+The NoReboot narrative is [saved](evidence/topology-2026-10-01/11ae6704-noreboot-boundary.md),
+but its complete raw object/log/console bundle is not yet archived in the
+branch. The tested runtime remains `11ae6704`; `37db63c2` is a documentation
+checkpoint, not another deployed image. Historical six-rollout success must
+not be relabelled as acceptance of this candidate.
+
+### Concrete completion queue — C0–C9
+
+Each row is a separately reviewable delivery increment, not a claim of
+completion. Implement, test and archive its result before advancing through
+its dependency. E/F IDs retain the detailed gates later in this document.
+
+Preserve the architecture: native Kubernetes APIs/scheduler/admission/RBAC
+and CVK controllers/workers only; no third-party scheduling, workflow or
+policy component. Keep two functional worker ServiceAccounts per managed
+namespace (app-hosting and network-management) with RO/RW profiles, not
+per-device accounts. Human/planner/activation-approver permissions remain
+separately bound roles; they must not be granted implicitly to those workers.
+
+| Order / packages | Implementation or deployment deliverable | Verification and exit condition |
+| --- | --- | --- |
+| **C0 — preserve and recover** / E00, E04, E13 | Archive `.103` rollout/leaf/Lease, manifests, approval, current/previous logs and available device history before rotation. Add a read-only uncertainty diagnosis and an audited resolution path tied to the exact leaf/device/claim identities. Inspect installed/active/committed/next-boot state and in-progress sessions. Retain quarantine unless a qualified procedure proves settlement. | First run recovery unit/API tests for lost response, conflicting inventory, restart, stale actor and operation UID mismatch. On `.103`, correlate secure Verify with `show version`, `show boot`, `show install summary`, supported install detail/log commands and console history. Release fences only through the tested resolution path after conclusive settlement and health proof. If still unknown, leave `.103` blocked; no automatic replay, lease expiry takeover or forced cleanup. |
+| **C1 — stable base deployment** / E00, E01 | Fix new-leaf/DeviceOperation reconciliation ordering: absent manager binding waits boundedly without forbidden status writes or transport calls; wrong binding remains denied. Add a real freeze/Reconcile test for the `11ae6704` nil-status case. Validate generator, schema, Helm policy and embedded contract digest together. | Run E00-E–H with exact write/RPC spies, wrong/new/missing binding, API read error, retained uncertain predecessors and worker replacement. Fresh network-enabled plan reaches AwaitingApproval, emits no leaf before approval and blocks stale evidence after approval. Two generation passes produce no additional drift. Deploy a clean pinned image only after local/native admission gates; capture all worker identities and zero unexplained denial loops. |
+| **C2 — accepted measured evidence** / E01–E02 | Add manager-owned acceptance of worker samples, protected separately from worker publication, and make consumers use accepted evidence. Bind Pod/revision, sequence/hash and original sample age without moving device reads into the manager. Finish adjacency identity/migration and directional-rate qualification. | E01-A–E/E02-A–C: concurrent producers, stale reads, lost acknowledgements, same-Pod and manager restart, oldest-source expiry, wrong-device bound tokens, RO/RW, old/new schema/chart/binary and rollback. Compare all three devices' CLI to observations; measure idle/loaded ingress and egress against an independent source with tolerance declared before testing. Unsupported supervisor health stays Unknown. |
+| **C3 — execution-time network safety** / E03 | Add administrator-required checks/critical-service prohibitions, overlapping risk groups including non-target peers, byte pacing and evidence-bound expiring grants. Enforce at each new mutation claim and continuously during recovery/soak; retain reservations for work already accepted. | E03-A/B unit/race/native-API tests precede E03-C–F physical tests. Competing campaigns, stale/changed evidence, expired grant, tightened policy, API lag and worker rotation yield zero newly forbidden RPCs. Use measured redundant, single-path, critical-service and congested-path scenarios; reset soak on failed health. Labels alone do not qualify redundancy. |
+| **C4 — independent Install qualification** / E04 | Build a narrowly scoped, guarded qualification mode/harness that ends after successful Install/Validated and has **no reachable Activate or reboot call**. Keep mutation ownership while investigating. Do not use the existing `strategy: NoReboot` as prepare-only. Independently inspect installed identity and durability after observer/worker restart. | E04-A–D on an isolated, unquarantined target: record baseline/console/service probes, exact digest/version and inventory before/after, hold across restart, detect external removal/replacement and qualify both image directions. C0 settlement is required before using `.103`. Capability discovery/harness fixtures may precede C2/C3; any physical mutation still needs E00 safety, ownership and impact scope. Lack of durable identity is an explicit cohort blocker, not a fabricated pass. |
+| **C5 — durable prepare and separate activation** / E05–E06 | After C4 defines platform semantics, implement versioned prepare-only protocol, immutable staged receipt and retained staged ownership; then distinct append-only activation authorization, phase windows and atomic transfer/staged/disruption reservations. Bind receipt to device/Node/leaf identities, source digest/exact installed version, trust/policy and supervisor scope. | E05-A–C/E06-A–E: native admission rejects receipt/approval forgery and RO/app mutation; stage survives manager/worker restart and a closed activation window; changed image/trust/policy invalidates authority. Test cancellation, expiry, crash-before/after dispatch, lost response and restart without replay. Upgrade and downgrade both require the separate authorized activation and measured recovery before budget release. A running old version alone never creates a valid receipt. |
+| **C6 — workload continuity and eligibility** / E07, E08-A | Add raw group-field recognition/fail-closed guard before widening drain. Implement supported Deployment/ReplicaSet hard node affinity/selectors/topology spread without relaxing original constraints. Preserve PDB, device-clean acknowledgement and native replacement readiness before disruptive activation. | E07-A–D: capacity/placement failures and PDB 429 block; restart/cancel preserve exact ownership; no forced eviction. Run portable supported applications and continuous endpoint probes through both image directions. Unsigned apps without the required C9K SSD/USB storage are expected unsupported, not an upgrade failure. Full independent-activation integration follows C5. |
+| **C7 — graph and distribution** / E09–E10 | Wire bounded graph diagnostics to accepted evidence; prove three-way conflicts/duplicates/order invariance, freshness and declared-link drift before exposing results. Measure source→worker and worker→device traffic, then record the durable-cache decision. | E10-A–D with controlled physical link change/restore; diagnostics never independently grant disruption authority. E09-A measures bytes/time/concurrency/storage for both segments. If measurements justify persistent cache, implement E09-B–D with immutable digest/trust/Secret identity, PVC reservation/GC and disk-full/restart tests; otherwise record an evidence-backed deferral, not a cache implementation pass. |
+| **C8 — broader platform, ownership and TAS** / E08, E11–E12 | Implement/test sole-authority staged/uncertain ownership transfer, measure bounded scale, qualify a second lifecycle driver with real images, and then real CVK native TAS group lifecycle. Keep these as independent reviewable changes. | E12-B–D before physical group movement; prove no simultaneous owners and no reuse of uncertain claims. E12-A synthetic API load at 1/10/50/100 targets plus measured real-worker limits. E11-A–D requires a qualified second platform/image pair, not the existing virtual NX-OS Node alone. Before E08-B–D, verify available upstream Kubernetes binaries/APIs/feature gates; the current 1.35 lab and a filename mentioning 1.37 are not TAS qualification. |
+| **C9 — one-candidate acceptance** / E13 | Freeze a clean source/chart/CRD/admission/container digest set, publish PR/CI, deploy it with explicit migration order and run the complete applicable acceptance matrix. Update operator examples, supported capabilities and recovery instructions from actual evidence. | F01–F08/F13 core plus F09–F12 wider gates; all three physical targets upgrade and downgrade serially first, then only evidenced safe concurrency. Capture least-privilege approvals, both terminal views, service/path probes, recovery soak, final inventory and fence/budget settlement. Stop on unexplained discrepancy; fixes require a new candidate and affected reruns. Missing prerequisites remain open. |
+
+**Critical path:** C0/C1 → C2 → C3 → C5 → C6 → C9, with C4 gating
+C5 and C7/C8 required for the full wider roadmap. C4 read-only discovery,
+E09 measurements, graph unit work and platform/TAS inventory can advance
+without waiting for every preceding feature; they cannot bypass physical
+mutation safety or substitute for their integration gates.
+
+### Deployment and validation recipe for each increment
+
+1. Record clean commit, toolchain, test command/exit code and all image/chart
+   digests. Before schema changes, export affected objects and verify that
+   the previous reader can consume them; stored duplicate adjacency IDs may
+   make the old map schema unsafe to restore.
+2. Run focused tests first, then the existing branch gates below in a dedicated
+   local/disposable environment. Add the new cases from the C-row; today's
+   passing suites do not exercise APIs that have not been implemented.
+
+   ```sh
+   make test
+   make test-envtest
+   bash charts/cisco-virtual-kubelet/tests/topology-render-test.sh
+   bash charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh --cluster-name cvk-roadmap-acceptance
+   python3 -m unittest discover -s scripts/tests -p 'test_iosxe_gnoi_lab_cycle*.py'
+   git diff --check
+   ```
+
+   Also regenerate CRDs/DeepCopy/RBAC/chart copies using pinned tools twice,
+   compare their outputs, run Helm lint, and run the native topology scheduler
+   lane plus the optional TAS lane only on its verified API/version. Archive
+   server version and admission type-check/readiness results. Envtest does
+   not replace the Helm policy/bound-token lane.
+3. Establish migration order in the disposable cluster first. Pause new
+   admissions and settle or explicitly retain in-flight/staged ownership.
+   Use compatible schema/policy/manager/worker transitions with matching
+   contract digests; fail closed through mismatches. Do not blindly deploy a
+   stricter policy against old publishers. Test rollback compatibility before
+   relying on Helm rollback (which does not restore CRD storage semantics).
+4. On Ubuntu16, explicitly select `/etc/rancher/k3s/k3s.yaml` for Helm/kubectl;
+   never use the workstation's default context. Reconfirm ownership and CI
+   exclusions, target serial/UIDs, supported images and signing/storage,
+   secrets/trust metadata (not secret values), free capacity and probes.
+   Deploy clean immutable images, wait for policy/manager/worker readiness,
+   then run read-only CLI/Verify and observation checks before mutation.
+5. Canary on one qualified, unquarantined target; verify the new safety gate's
+   positive and negative paths, then expand to `.100`, `.101`, `.103` only
+   as their gates permit. Preserve uncertain operation/lease evidence; lack
+   of a usable canary is a stop condition for mutation, not permission to
+   take an unrelated CI node. Restore intended lab state after each test.
+6. Save artifacts as the run proceeds under a new run-ID directory in
+   `docs/evidence/`: pre-apply manifest, approval actor/hash, API/event timeline,
+   worker/manager identities and current/previous logs, device console/show
+   output, RPC claim correlation, traffic/service samples, final state,
+   exact commands/exit codes and checksums. Redact credentials/tokens/keys.
+   Missing console or probes is a missing gate, not implicit success.
+
+### Prerequisites to resolve before promising full completion
+
+| Input / responsible execution lane | Required resolution | If unavailable |
+| --- | --- | --- |
+| `.103` uncertain state / C0 lifecycle recovery | Conclusive installed/next-boot/session evidence and audited settlement | Keep this device fenced; other independently safe development can continue |
+| Real service paths and traffic / E00, C2–C3 | Record wiring, redundant vs singleton paths, load/probe endpoints, affected services and predeclared loss/rate tolerances | Accounting/fixture tests only; no forwarding or headroom qualification |
+| Portable applications / C6 | Supported signed image or qualifying SSD/USB storage, destination capacity, native owner and PDB, reachable probe | No cross-device app-continuity claim; do not relax signing policy |
+| Prepare capability / C4 | Install-only durable identity, trust/content verification and restart/removal behavior in both directions | E05/E06 physical acceptance blocked for that cohort; combined lifecycle remains distinct |
+| Redundant supervisor / E02, C4 | Actual supported redundant hardware if supervisor behavior is claimed | Keep that capability explicitly unqualified |
+| Second platform / C8 | Eligible device, credentials, lifecycle API and two compatible images | E11 stays blocked; NX-OS virtual Node readiness is not lifecycle evidence |
+| Native group scheduling / C8 | Available supported Kubernetes release, actual APIs/feature gates and matching CVK ownership lifecycle | E08 optional physical qualification remains pending; do not upgrade based on a planned version number |
+
+The next executable coding increment is **C1 binding-order + real freeze-path
+regressions**, alongside C0 read-only preservation/diagnosis. Resolve C0
+before reusing `.103`; do not start another blanket three-device cycle first.
+No E00–E13 package is closed by this review.
+
+### Historical N1–N5 queue (superseded by C0–C9)
 
 | Commit | Implemented | Qualification boundary |
 | --- | --- | --- |
@@ -79,11 +206,11 @@ deliverables.
 
 | Package | Roadmap | Work to execute | Prerequisites | Package status and remaining gate |
 | --- | --- | --- | --- | --- |
-| E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | In progress: a clean `9e578131` candidate, Helm revision 112, image digest, worker bindings, API conditions and network-worker log checks are saved in the evidence index; direct CLI/Verify, complete log-plane capture, capability matrix and service baseline remain. |
-| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: publisher binding/sequence guards, restart-safe persisted sequence allocation, bounded diagnostic reasons, separate write deadline and native Pod-UID expression landed; local and physical replacement-worker recovery is evidenced, while manager acceptance, full API enforcement, VRF context and physical CLI coverage remain (N1–N4). |
+| E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | In progress: clean candidates through `11ae6704` deployed; C0 must preserve/diagnose `.103` uncertainty; C1 must finish binding-order and freeze regressions. Complete source/image, CLI/Verify and service evidence still required. |
+| E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: restart-safe ordering, bounded publication, interval checks and native bound-token suite advanced through `11ae6704`; C2 still needs manager acceptance, complete identity/migration matrix, original-source age and physical CLI qualification. |
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
 | E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: campaign-local gate exists; administrator protection, overlapping memberships, transfer pacing and evidence-bound expiring grants require implementation. |
-| E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Not started for the independent boundary: combined upgrade/downgrade evidence exists, but E04-A–D remain unqualified. |
+| E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Investigated but unqualified: `11ae6704` Install succeeded, NoReboot activation timed out and `.103` is fenced. C4 must test a true Install-only hold, not infer incapability from the timeout; E04-A–D remain open. |
 | E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Not started: receipt/protocol/retained ownership absent; physical qualification depends on E04. |
 | E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Not started: independent authorization and phase accounting absent; physical qualification depends on E04–E05. |
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | In progress: fresh combined rollouts used `Drain`, with final Running workloads; per-target eviction/replacement/service timelines, hard placement and independent-activation integration remain. |
@@ -123,10 +250,9 @@ log does not establish healthy network-worker reconciliation.
 
 ### Review findings that change the next work
 
-This table reflects source through the current working branch after the N1/N3
-publisher and manager-admission hardening described above. Historical lab findings remain
-qualified by their recorded image. The N1–N5 queue above defines the immediate
-implementation/test sequence.
+This earlier findings table is retained for traceability; the C0–C9 queue
+and current checkpoint above supersede its status and ordering. Historical
+lab findings remain qualified by their recorded image.
 
 | Priority/package | Current code evidence | Required change and proof |
 | --- | --- | --- |
@@ -680,6 +806,14 @@ Label-only redundancy tests qualify accounting, not forwarding resilience.
 
 Code/evidence: `internal/softwarelifecycle`, IOS-XE lifecycle adapter,
 gNOI OS inventory readers, capability fixtures and physical qualification report.
+
+Current evidence: `11ae6704` proved Install/Validated followed by an uncertain
+NoReboot Activate, not an Install-only hold. C0 must reconcile `.103` before
+reuse. C4's qualification path must structurally prevent Activate/reboot after
+Install; stopping a process at a timing-sensitive point in the existing
+combined reconciler is not an acceptable boundary test. E04 defines device
+semantics before E05's durable receipt implementation; requiring E05 to pass
+before investigating E04 would create a circular dependency.
 
 ### Required execution
 

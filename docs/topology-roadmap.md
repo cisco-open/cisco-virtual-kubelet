@@ -1,6 +1,6 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete; reviewed through the restart-safe observation follow-up**, 1 October 2026.
+Status: **incomplete; reviewed through `37db63c2`**, 1 October 2026.
 Start with the [November handoff](topology-november-handoff.md) and
 [versioned evidence](evidence/topology-2026-10-01/README.md). The checkpoint
 preserves runtime/harness changes after `665a7954`; it is not a release candidate.
@@ -25,14 +25,23 @@ within an approved window while validating recovery. Broader workload
 relocation, cache optimization, and additional platforms follow their own
 qualification gates.
 
-Start with the execution plan's **N1–N5 queue**. The immediate repair is
-restart-safe observation ordering: `f9b76322` rejects a reset sequence in the
-same Pod until its process-local counter exceeds the persisted value.
-Publication can therefore stop for hours after a container restart. Native
-Pod-UID comparison landed in `c5a2deeb`, but API-enforced ordering/freshness,
-manager acceptance and actual bound-token tests are still required. The
-review tests explicitly distinguish reproducing this defect from proving
-recovery. Existing envtest CRD passes do not qualify the Helm admission rules.
+Start with the execution plan's [**C0–C9 queue**](topology-roadmap-execution.md#concrete-completion-queue-c0c9).
+Restart-safe sequence allocation, bounded diagnostics, collection-interval
+validation and a genuine bound-token admission suite have advanced. Do not
+reimplement those fixes. Manager-owned acceptance, complete cross-device and
+mixed-version qualification and execution-time network safety remain open.
+First preserve and reconcile `.103`'s uncertain NoReboot activation, fix new
+operation binding ordering and add full-path planning regressions. The
+existing nil-status test checks only a helper, not the failing freeze path.
+Envtest CRD passes remain distinct from Helm admission-policy tests.
+
+At the 1 October 17:36 UTC read-only lab check, the manager ran `11ae6704`,
+all three C9K Nodes were Ready and reported `17.18.2`, but `.103` still held
+its maintenance taint and mutation Lease after `ActivationOutcomeUnknown`.
+Do not use Node readiness to clear that fence. The successful Install followed
+by a timed-out Activate(NoReboot) did **not** test an independent Install-only
+hold and does not establish whether the cohort supports durable preparation.
+See C0/C4 for recovery and the correct qualification sequence.
 
 The original `/tmp/cvk-topology-awareness-options.md` was unavailable during
 this review. This plan reconstructs the remaining scope from the checked-in
@@ -64,22 +73,22 @@ evidence of forced device teardown. E07 service/traffic, hard-placement and
 restart/fault gates remain open. Transient new-object admission denials also
 require the binding-order regression already added to the next test gate.
 
-The physical image embeds `665a7954`, but was built with uncommitted changes;
+The historical six-campaign physical image embeds `665a7954`, but was built with uncommitted changes;
 the embedded base SHA does not identify all tested source. This checkpoint
 also contains later harness/documentation edits, not deployed runtime proof.
-The 30 September
-remote review found no branch PR/CI runs; this review does not establish a
-new remote status. Build a clean, reviewable candidate and verify its CI before
+The 1 October review again found no branch PR/CI runs. Clean runtime
+follow-ups through `11ae6704` exist, but have not passed full acceptance.
+Build a clean, reviewable final candidate and verify its CI before
 final acceptance. The [execution plan](topology-roadmap-execution.md) records
 the evidence corrections, immediate repairs and test-by-test exit gates and
 remains the completion ledger.
 
-| Slice | Reviewed status through `e7f3e8bf` (physical evidence retains its original revision) | Required execution |
+| Slice | Reviewed status through `37db63c2` (physical evidence retains its original revision) | Required execution |
 | --- | --- | --- |
 | T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired; clean `9e578131` candidate deployed to Ubuntu16 with all three physical target observations checked | E00: finish direct device CLI/secure OS.Verify, complete log-plane/service/path baselines and durable capability indexing. |
-| T1 | Publisher identity and sequence guards, restart-safe persisted sequence allocation, bounded diagnostics, independent write deadline and native Pod-UID admission expression are implemented; replacement-worker recovery is observed on `.103` | E01–E02/N1–N4: manager acceptance, API-enforced provenance, genuine worker-token tests, VRF/process context, rates, schema migration and physical CLI/secure Verify qualification. |
-| T2 | Network check at plan freeze, not yet claim-time/soak enforcement | E03: revalidate accepted network evidence at execution/recovery boundaries; implement administrator protection, overlapping groups, measured headroom and expiring grants; qualify service-path scenarios. |
-| T3 | Combined lifecycle exists; new preparation contract absent | E04–E05: qualify the device boundary, implement and test durable staged receipts and ownership. |
+| T1 | Restart-safe publisher, interval/schema safety, IOS-XE rate-presence fixtures and real bound-token admission suite advanced | C2 / E01–E02: manager acceptance, remaining concurrency/cross-device/mixed-version cases, source-age and physical rate/CLI qualification. |
+| T2 | Network check at plan freeze and manager admission; `11ae6704` fixes first-plan nil-status panic | C1/C3 / E03: full-path regression, worker claim-time/soak enforcement, administrator protection, overlapping groups, measured headroom and expiring grants; service-path tests. |
+| T3 | Combined lifecycle exists; `.103` NoReboot activation uncertain and fenced; independent prepare contract absent | C0/C4/C5 / E04–E05: audited recovery, true Install-only qualification, then durable receipts/ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
 | T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
 | T6 | Synthetic co-location/conflict evidence exists; full scheduler and physical group lifecycle absent | E08: raw group-field recognition before expanding drain, remaining scheduler scenarios, native controller recreation, physical service and group-aware drain tests. |
@@ -94,17 +103,15 @@ results remain useful evidence for the scenarios actually exercised; they do
 not establish the missing contracts or the full physical acceptance matrix.
 E13 supplies the final integrated acceptance gate after implementation.
 
-Before another disruptive qualification, complete E00-F/G/H: preserve the
-truthful direction-specific reports and exact target/source validation now
-implemented; repair the unsafe drain/provider path; retain both worker planes
-and manager evidence, service/guard/claim timelines, pinned tooling and
-new-object binding-order tests. Repair/test observation write ownership,
-freshness/replay (including same-Pod process restart), RO publication and
-retained old-worker leaves. The implemented 20-second collection and separate
-5-second write budgets need an end-to-end timeout/incomplete publication test. Then
-qualify the device's actual stage/activation boundary alongside E03 policy,
-and implement E05/E06. Each increment has its own code/API/physical gate;
-another successful combined reload alone cannot close those contracts.
+Before another disruptive qualification, follow C0/C1 and E00-F/G/H: retain
+the uncertain leaf/fences, truthful direction-specific reports, exact
+target/source identities, both worker planes and manager logs, service/claim
+timelines and reproducible tooling. Test binding ordering and the full
+network-enabled freeze path, then complete accepted-observation and
+claim-time enforcement. Qualify the actual Install-only boundary alongside
+E03 policy, then implement E05/E06. Broader drain testing still requires
+device-clean, replacement and service proof. Another successful combined
+reload alone cannot close these contracts.
 
 Full completion also requires lab inputs beyond three C9Ks: measured forwarding
 paths/load, portable supported applications and independent probes, capable

@@ -388,6 +388,96 @@ func managedTestMutationClaim(stage opsv1alpha1.UpgradeManagedMutationStage) ops
 	}
 }
 
+func TestManagedTerminalNoRebootOutcomeRecoveryRequiresExactClaimsAndBinding(t *testing.T) {
+	rig := newRig(t)
+	started := metav1.NewTime(managedTestTime.Add(-5 * time.Minute))
+	up := managedTestLeaf("terminal-activation-recovery")
+	up.Finalizers = []string{Finalizer}
+	up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
+	up.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+	up.Status.FailureReason = "ActivationOutcomeUnknown"
+	up.Status.ValidatedVersion = up.Spec.TargetVersion
+	up.Status.PrimarySupervisorInstallRequested = true
+	up.Status.PrimarySupervisorInstalled = true
+	up.Status.PrimarySupervisorActivationRequested = true
+	up.Status.ActivationStartTime = &started
+	up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+		managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryInstall),
+		managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryActivation),
+	}
+	up.Status.Conditions = []metav1.Condition{{
+		Type: conditionTypeMutationSettled, Status: metav1.ConditionFalse, Reason: "MutationRequested",
+	}}
+
+	r := newManagedTestReconciler(t, up, nil)
+	r.GNOI = &staticGNOI{c: rig.client}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}}
+	// The first pass durably acknowledges the current manager control revision;
+	// only the next pass may use the exact binding and claim proof.
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("acknowledge managed control: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("recover managed activation outcome: %v", err)
+	}
+
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), req.NamespacedName, &got); err != nil {
+		t.Fatalf("get recovered managed leaf: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded || got.Status.FailureReason != "" ||
+		got.Status.RunningVersion != up.Spec.TargetVersion {
+		t.Fatalf("managed recovered status = %#v", got.Status)
+	}
+	if rig.os.verifyCalls != 1 || rig.os.activateCalls != 0 {
+		t.Fatalf("Verify calls=%d Activate calls=%d, want one read and no replay",
+			rig.os.verifyCalls, rig.os.activateCalls)
+	}
+}
+
+func TestManagedTerminalNoRebootOutcomeRecoveryRejectsIncompleteClaims(t *testing.T) {
+	rig := newRig(t)
+	started := metav1.NewTime(managedTestTime.Add(-5 * time.Minute))
+	up := managedTestLeaf("terminal-activation-incomplete-claims")
+	up.Finalizers = []string{Finalizer}
+	up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
+	up.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+	up.Status.FailureReason = "ActivationOutcomeUnknown"
+	up.Status.ValidatedVersion = up.Spec.TargetVersion
+	up.Status.PrimarySupervisorInstallRequested = true
+	up.Status.PrimarySupervisorInstalled = true
+	up.Status.PrimarySupervisorActivationRequested = true
+	up.Status.ActivationStartTime = &started
+	// Deliberately omit the primary-activation claim even though its durable
+	// request marker is present.
+	up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+		managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryInstall),
+	}
+	up.Status.Conditions = []metav1.Condition{{
+		Type: conditionTypeMutationSettled, Status: metav1.ConditionFalse, Reason: "MutationRequested",
+	}}
+
+	r := newManagedTestReconciler(t, up, nil)
+	r.GNOI = &staticGNOI{c: rig.client}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}}
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("acknowledge managed control: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("hold incomplete managed proof: %v", err)
+	}
+
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), req.NamespacedName, &got); err != nil {
+		t.Fatalf("get retained managed leaf: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed ||
+		got.Status.FailureReason != "ActivationOutcomeUnknown" || rig.os.verifyCalls != 0 {
+		t.Fatalf("incomplete proof escaped quarantine: phase=%q reason=%q Verify calls=%d",
+			got.Status.Phase, got.Status.FailureReason, rig.os.verifyCalls)
+	}
+}
+
 func TestManagedLeafRejectsPredecessorPodUsingReplacementProof(t *testing.T) {
 	up := managedTestLeaf("predecessor-pod")
 	r := newManagedTestReconciler(t, up, nil)

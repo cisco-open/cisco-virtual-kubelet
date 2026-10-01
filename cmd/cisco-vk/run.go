@@ -790,6 +790,7 @@ func runNetworkManagementRuntime(
 		NodeName:                   identity.NodeName,
 		ManagedTopology:            identity.ManagedTopology,
 		WorkerRevision:             identity.WorkerRevision,
+		WorkerPodUID:               identity.WorkerPodUID,
 		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
 		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
 		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),

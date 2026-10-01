@@ -6,13 +6,17 @@ November release work, **not a merge recommendation or completed roadmap**.
 No E00–E13 package has all its exit gates closed. Do not promote this branch
 on the strength of the physical software-transition results alone.
 
-Review update: the execution plan's **N1–N5 queue** remains authoritative.
-Restart-safe persisted sequence allocation (N1 sequence portion) and bounded
-diagnostic normalization (N3 schema portion) are now implemented and locally
-tested. Manager-owned acceptance, native API enforcement, timeout/source
-regressions, and clean-candidate physical read-only acceptance remain before
-N4/N5. The earlier saved physical evidence continues to refer to its
-historical images.
+Review update through `37db63c2`: the execution plan's
+[**C0–C9 queue**](topology-roadmap-execution.md#concrete-completion-queue-c0c9)
+is authoritative and supersedes the older N1–N5 queue and historical inventory
+below. Restart-safe publication, interval/schema safety and a real native
+bound-token suite have advanced. The manager currently runs `11ae6704`;
+`.103` remains fenced after a lost NoReboot activation response, despite a
+Ready Node reporting 17.18.2. Start with C0 evidence/recovery and C1 binding
+ordering/full-path planning regressions, not another three-device cycle.
+Install-only preparation is still unqualified; the NoReboot timeout does not
+prove it unsupported. Manager acceptance, claim-time/soak network protection,
+durable staging and independent activation remain substantive implementation.
 
 ## Start here
 
@@ -40,7 +44,7 @@ git log -1 --format=fuller -- docs/topology-november-handoff.md
 | Latest `.101` downgrade | `665a7954-settled5`, 08:04–08:34 UTC, 1 October; `Succeeded`, gNOI `17.18.02.0.4112.1766116039`, settled drain/session, replacement Pods Ready on `.100` | Original collector **STOPPED** during app-log classification, before saving manager/network logs; no full end-to-end harness pass |
 | Drain callback repair | Exact released device-clean completion recognized after promotion to `SoftwareMutation`, settlement and Pod disappearance; regression tests retained | Released completion is acknowledgement-only, not authority for another device teardown. Broader lifecycle/fault/service qualification remains E07 |
 | Retained worker history | Wrong-bound worker skips forbidden leaf status updates | Missing/new binding, read failures, unresolved predecessors and real-API zero-dispatch tests still required |
-| Observation work | `4711d3c7`: separate write budget; `f9b76322`: publisher identity/order guards; current follow-up: persisted sequence allocation and bounded diagnostics; `c5a2deeb`: native token Pod-UID comparison | Client-side order checks are not API enforcement. Manager acceptance, genuine bound-token negatives, timeout/source regressions and physical qualification remain N1–N4. |
+| Observation work | Restart-safe allocation, bounded diagnostics and native Pod-UID checks, followed by `bc155820` interval/schema safety and a saved full native bound-token suite pass | Manager acceptance, remaining concurrency/cross-device/mixed-version cases and physical qualification remain C2. See current checkpoint for exact test limitations. |
 | Clean candidate qualification | `9e578131` image and Helm revision 112 deployed on Ubuntu16; all three physical targets reported Ready, complete UID-bound observations and healthy topology/gNOI conditions; `.103` replacement worker advanced from sequence one to three | Read-only evidence only. Direct CLI/secure OS.Verify, complete log planes, claim-time enforcement and E04 preparation/activation remain open. See [`9e578131-observation-validation.md`](evidence/topology-2026-10-01/9e578131-observation-validation.md). |
 | Graph helper | Structured hash/field bounds, remote-port reverse identity and two-input conflict correction (`4711d3c7`) | Three-way permutations and duplicate-device cases still need qualification; no production consumer or physical drift acceptance. |
 | Harness | Explicit source/target validation, direction-specific runs, binding observation, log-plane capture attempt, exact preceding cleanup-log correlation | Binding observation does not establish RPC order; offline marker correlation does not prove service health or complete drain safety |
@@ -52,10 +56,10 @@ original STOPPED report is preserved, not rewritten as a pass. Leaf timestamps
 independently record the manager's ordered eviction/device-clean decisions;
 these remain control-plane evidence, not an external forwarding probe.
 
-### Source and image provenance
+### Historical source and image provenance
 
 - Historical base SHA: `665a7954a9def499cd3ee36e972e2b5fe15256f5`.
-- Latest physical tag: `cvk-tas-extentions:665a7954-settled5`.
+- Historical settled-follow-up tag: `cvk-tas-extentions:665a7954-settled5`.
 - Reported OCI index digest:
   `sha256:3970030086b07fb6db2f582ec83358cae2548555ae39f25cca68f31eb2635efd`.
 - Archived `.101` app-container image ID:
@@ -77,7 +81,7 @@ envtest, admission and generation gates.
 | --- | --- | --- |
 | Lab control host | SSH alias `ubuntu16`, account `cisco`, address `192.0.2.43` | Reconfirm host ownership and CI exclusions; do not use Ubuntu17 or other CI nodes implicitly |
 | Cluster | On Ubuntu16: context `default`, k3s `v1.35.8+k3s1` | Verify server identity/version; never assume the workstation's `default` is this cluster |
-| CVK | Helm `cisco-vk` in `cisco-vk-system`; latest reported revision 107 | Capture current values with credentials redacted, chart/CRD/admission hashes and every manager/app/network image ID |
+| CVK | Helm `cisco-vk` in `cisco-vk-system`; historical revision 107, now revision 118 / manager `11ae6704` at this review | Capture current values with credentials redacted, chart/CRD/admission hashes and every manager/app/network image ID |
 | Device inventory | `cvk-live`: `cat9k-live` = `198.51.100.100`; `cat9k-lab-101` = `.101`; `cat9k-lab-103` = `.103` | Match physical serial, CR/Node UID, worker identities and sole owner before any mutation |
 | Workloads | `cvk-pr194-workloads`; two `cvk-topology-drain-{a,b}-0926` Deployments, PDB `cvk-topology-drain-0926` | Fresh baseline, portable package/signing/storage support, spare destination capacity and independent endpoint probes |
 | Source | SFTP `10.0.2.2`, `/home/cisco/cvk-gnoi-images/`, Secret reference `pr194-iosxe-image-source` | Check image bytes, reachability, trust and Secret metadata/ownership; never print or archive Secret data |
@@ -103,6 +107,11 @@ A subsequent read-only Node listing reported all three C9Ks Ready with
 choosing the next direction; a Node listing alone cannot resolve it.
 
 ## Exact next implementation increments
+
+The following ordering is retained as the historical work-package mapping.
+Use the current execution plan's C0–C9 deliverables, including the explicit
+uncertainty-recovery and Install-only gates, for new execution. Its latest
+checkpoint distinguishes completed subtests from remaining work.
 
 Each increment should be a reviewable commit on this branch with its tests,
 examples and evidence index updated. Do not wait until the end to test the

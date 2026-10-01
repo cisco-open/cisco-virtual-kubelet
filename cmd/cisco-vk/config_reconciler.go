@@ -555,6 +555,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		// uses it to refuse cross-namespace DeviceOperation requests.
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodUID:    opts.WorkerPodUID,
 		Platform:        diagnostic.CommandPlatformIOSXE,
 		TP:              r,
 		GNOI:            gnoiProv,

@@ -730,6 +730,70 @@ func attachReadyManagedWorkerProof(
 	return []client.Object{deployment, replicaSet, pod}
 }
 
+func attachReadyManagedNetworkWorkerProof(
+	t *testing.T,
+	device *ciskov1.CiscoDevice,
+	now time.Time,
+) []client.Object {
+	t.Helper()
+	labels := perDeviceNetworkDeploymentLabels(device.Name)
+	template := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Labels: labels},
+		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "cisco-vk", Image: "network-worker:test"}}},
+	}
+	revision, err := managedWorkerPodTemplateRevision(&template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template.Annotations = map[string]string{managedprotocol.AnnotationWorkerConfigRevision: revision}
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID)),
+			UID: "network-deployment-uid", Generation: 3,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: ciskov1.GroupVersion.String(), Kind: "CiscoDevice", Name: device.Name,
+				UID: device.UID, Controller: ptr.To(true),
+			}},
+		},
+		Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1), Template: template},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 3, Replicas: 1, UpdatedReplicas: 1, ReadyReplicas: 1, AvailableReplicas: 1,
+		},
+	}
+	replicaSet := &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "network-worker-rs", UID: "network-worker-rs-uid",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment", Name: deployment.Name,
+			UID: deployment.UID, Controller: ptr.To(true),
+		}},
+	}}
+	start := metav1.NewTime(now.Add(-time.Minute))
+	ready := metav1.NewTime(now.Add(-30 * time.Second))
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: device.Namespace, Name: "network-worker-pod", UID: "network-worker-pod-uid",
+			Labels: labels, Annotations: map[string]string{managedprotocol.AnnotationWorkerConfigRevision: revision},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "ReplicaSet", Name: replicaSet.Name,
+				UID: replicaSet.UID, Controller: ptr.To(true),
+			}},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning, StartTime: &start,
+			Conditions: []corev1.PodCondition{{
+				Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: ready,
+			}},
+		},
+	}
+	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+		DesiredRevision: revision, ObservedRevision: revision,
+		DeploymentUID: string(deployment.UID), DeploymentGeneration: deployment.Generation,
+		PodUID: string(pod.UID), PodStartTime: start.DeepCopy(), PodReadyTime: ready.DeepCopy(),
+		ObservedAt: metav1.NewTime(now),
+	}
+	return []client.Object{deployment, replicaSet, pod}
+}
+
 func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	const topologyKey = "topology.cisco.vk/site"
 	now := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
@@ -844,6 +908,36 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	}
 	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err != nil {
 		t.Fatalf("freezeTarget() after worker handoff error = %v", err)
+	}
+
+	// Reproduce the original planning path: network evidence is enabled before
+	// status.effectivePolicy exists. The parsed administrator policy must drive
+	// freshness, and a complete target must freeze without dereferencing rollout
+	// status that has not been published yet.
+	for _, object := range attachReadyManagedNetworkWorkerProof(t, device, now) {
+		if err := apiClient.Create(context.Background(), object); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rollout.Spec.Plan.Health.Network = &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+		Enabled: true, RequireCompleteEvidence: true,
+	}
+	device.Status.HealthObservation.Network = &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-2 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-2 * time.Second)),
+		SampleSequence:      1,
+		WorkerPodUID:        device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:    device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}
+	policy.Config.HealthFreshnessSeconds = 120
+	if rollout.Status.EffectivePolicy != nil {
+		t.Fatal("test requires an unpublished effective policy")
+	}
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err != nil {
+		t.Fatalf("freezeTarget() with network evidence before status publication error = %v", err)
 	}
 
 	// A bound worker may report live inventory, but it cannot choose rollout
