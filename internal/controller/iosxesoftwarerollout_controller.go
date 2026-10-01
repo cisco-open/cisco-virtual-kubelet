@@ -684,7 +684,8 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
-	if err := r.revalidateNetworkEvidence(ctx, rollout, device, physicalID, now); err != nil {
+	if err := r.revalidateNetworkEvidence(ctx, rollout, device, physicalID,
+		policy.Config.HealthFreshnessSeconds, now); err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
 	if device.Labels[managedprotocol.ImageFamilyLabel] != rollout.Spec.Plan.Image.ImageFamily {
@@ -786,6 +787,7 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateNetworkEvidence(
 	rollout *opsv1alpha1.IOSXESoftwareRollout,
 	device *ciskov1.CiscoDevice,
 	physicalIdentity string,
+	policyHealthFreshnessSeconds int,
 	now time.Time,
 ) error {
 	networkPolicy := rollout.Spec.Plan.Health.Network
@@ -799,16 +801,22 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateNetworkEvidence(
 	if device.Status.NetworkWorkerRevision == nil || strings.TrimSpace(device.Status.NetworkWorkerRevision.PodUID) == "" {
 		return fmt.Errorf("network health gate requires a current network worker Pod identity")
 	}
-	freshnessSeconds := minPositive(
-		int(rollout.Status.EffectivePolicy.Policy.HealthFreshnessSeconds),
-		int(defaultInt32(rollout.Spec.Plan.Health.MaxObservationAgeSeconds, 300)),
-	)
+	freshnessSeconds := networkEvidenceFreshnessSeconds(policyHealthFreshnessSeconds,
+		rollout.Spec.Plan.Health.MaxObservationAgeSeconds)
 	decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalIdentity, workerRevision,
 		device.Status.NetworkWorkerRevision.PodUID, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
 	if !decision.Allowed {
 		return fmt.Errorf("network health gate %s: %s", decision.Reason, decision.Message)
 	}
 	return nil
+}
+
+// networkEvidenceFreshnessSeconds is deliberately independent of rollout
+// status. Planning evaluates the administrator policy before it publishes the
+// frozen plan and therefore cannot depend on Status.EffectivePolicy, which is
+// created only after every target has passed its planning checks.
+func networkEvidenceFreshnessSeconds(policyHealthFreshnessSeconds int, requestedMaxAgeSeconds int32) int {
+	return minPositive(policyHealthFreshnessSeconds, int(defaultInt32(requestedMaxAgeSeconds, 300)))
 }
 
 func identityHashForPhysicalID(physicalIdentity string) string {

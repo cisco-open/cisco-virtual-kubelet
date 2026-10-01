@@ -102,6 +102,22 @@ func TestEvaluateNetworkHealthRequiresBoundWorkerIdentity(t *testing.T) {
 	}
 }
 
+func TestNetworkEvidenceFreshnessUsesPlanningPolicyBeforeStatusExists(t *testing.T) {
+	// The first target is evaluated before Status.EffectivePolicy exists. Its
+	// network freshness must use the parsed administrator policy, while later
+	// admission revalidation uses the current parsed policy through the same
+	// helper.
+	if got := networkEvidenceFreshnessSeconds(120, 300); got != 120 {
+		t.Fatalf("network evidence freshness = %d, want policy ceiling 120", got)
+	}
+	if got := networkEvidenceFreshnessSeconds(300, 90); got != 90 {
+		t.Fatalf("network evidence freshness = %d, want rollout ceiling 90", got)
+	}
+	if got := networkEvidenceFreshnessSeconds(0, 0); got != 300 {
+		t.Fatalf("network evidence freshness = %d, want default 300", got)
+	}
+}
+
 func TestExpectedLeafSpecIncludesAPIServerDefaults(t *testing.T) {
 	target := policyFenceTarget("edge-a", "device-uid", "campaign-edge-a")
 	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})

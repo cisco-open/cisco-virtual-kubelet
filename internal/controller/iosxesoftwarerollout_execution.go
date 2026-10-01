@@ -1512,7 +1512,8 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateFrozenTarget(
 	if _, err := r.currentReadyWorkerRevision(ctx, &device); err != nil {
 		return fmt.Errorf("frozen target managed worker revision is not ready: %w", err)
 	}
-	if err := r.revalidateNetworkEvidence(ctx, rollout, &device, declaredPhysicalIdentity, r.now()); err != nil {
+	if err := r.revalidateNetworkEvidence(ctx, rollout, &device, declaredPhysicalIdentity,
+		currentPolicy.Config.HealthFreshnessSeconds, r.now()); err != nil {
 		return err
 	}
 	return nil

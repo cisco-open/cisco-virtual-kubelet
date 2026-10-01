@@ -1149,6 +1149,20 @@ kubectl config --kubeconfig "$replacement_network_kubeconfig" \
 test "$(kubectl --kubeconfig "$replacement_network_kubeconfig" auth whoami \
   -o jsonpath='{.status.userInfo.username}')" = "$network_username"
 replacement_network_revision="sha256:$(printf 'd%.0s' {1..64})"
+
+# Both Pods use the same intentionally narrow network-management ServiceAccount.
+# Its namespace RBAC therefore cannot be the authorization boundary between
+# devices.  Before the replacement is bound to this CiscoDevice, prove that a
+# genuine token from the peer Pod cannot publish an otherwise well-formed
+# sample for it.  The policy must bind the authenticated Pod UID to the
+# manager-recorded device worker, rather than trusting the shared identity or
+# a caller-supplied observation UID.
+expect_denied "peer-device network worker cannot publish this device observation" \
+  "network observation status requires the authenticated bound network-worker Pod UID" \
+  patch_network_observation_from "$replacement_network_kubeconfig" \
+  "$replacement_network_pod_uid" "$network_observation_revision" 3 \
+  2026-10-01T00:00:06Z 2026-10-01T00:00:07Z
+
 kubectl --context "$context" --as="$manager_username" patch ciscodevice \
   "$network_device_name" --namespace "$worker_namespace" --subresource=status \
   --type=merge -p "{\"status\":{\"networkWorkerRevision\":{\"desiredRevision\":\"${replacement_network_revision}\",\"observedRevision\":\"${replacement_network_revision}\",\"podUID\":\"${replacement_network_pod_uid}\",\"podStartTime\":\"2026-10-01T00:00:06Z\",\"podReadyTime\":\"2026-10-01T00:00:07Z\",\"observedAt\":\"2026-10-01T00:00:07Z\"}}}" >/dev/null
