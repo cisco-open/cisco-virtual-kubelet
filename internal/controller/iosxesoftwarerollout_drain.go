@@ -590,9 +590,14 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileDrainGrant(
 				current.Status.ManagerAdmission.State != opsv1alpha1.UpgradeManagerAdmissionPending {
 				return fmt.Errorf("drain promotion status changed after ledger promotion")
 			}
+			evidence, err := r.currentNetworkGrantEvidence(ctx, rollout, currentPolicy, target)
+			if err != nil {
+				return err
+			}
 			revision := rollout.Spec.Control.Revision
 			current.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
 			current.Status.ManagerAdmission.ControlRevision = &revision
+			applyNetworkGrantEvidence(current.Status.ManagerAdmission, evidence)
 			current.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
 			current.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainPromoted
 			current.Status.ManagerDrain.UpdatedAt = metav1.NewTime(now)

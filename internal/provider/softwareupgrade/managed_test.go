@@ -37,6 +37,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 )
 
 const (
@@ -2040,6 +2041,112 @@ func TestManagedDurableClaimCASRecordsEveryMutationStage(t *testing.T) {
 				got.Status.WorkerControl.EffectiveState != opsv1alpha1.UpgradeWorkerControlClaimed ||
 				got.Status.WorkerControl.ObservedControlRevision != 7 {
 				t.Fatalf("claim acknowledgement = %#v", got.Status.WorkerControl)
+			}
+		})
+	}
+}
+
+func TestManagedNetworkGrantIsRevalidatedAtMutationClaim(t *testing.T) {
+	tests := []struct {
+		name       string
+		mutate     func(*opsv1alpha1.IOSXESoftwareUpgrade, *ciskov1.CiscoDevice)
+		wantClaim  bool
+		wantReason string
+	}{
+		{name: "exact evidence permits claim", wantClaim: true},
+		{name: "expired authority blocks claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *ciskov1.CiscoDevice) {
+			up.Status.ManagerAdmission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(managedTestTime))
+		}, wantReason: "NetworkEvidenceAuthorityInvalid"},
+		{name: "new accepted sample blocks old grant", mutate: func(_ *opsv1alpha1.IOSXESoftwareUpgrade, device *ciskov1.CiscoDevice) {
+			device.Status.HealthObservation.AcceptedNetwork.SampleSequence++
+		}, wantReason: "NetworkEvidenceAuthorityInvalid"},
+		{name: "worker rotation blocks grant", mutate: func(_ *opsv1alpha1.IOSXESoftwareUpgrade, device *ciskov1.CiscoDevice) {
+			device.Status.NetworkWorkerRevision.PodUID = "replacement-pod"
+		}, wantReason: "ManagedAdmissionDenied"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			up := managedTestLeaf("network-grant-" + strings.ReplaceAll(tt.name, " ", "-"))
+			up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+			node := managedTestNode()
+			node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] = managedTestWorkerUsername
+			sample := &ciskov1.DeviceNetworkObservationStatus{
+				WorkerPodUID:        managedTestWorkerPodUID,
+				CollectionStartedAt: metav1.NewTime(managedTestTime.Add(-time.Minute)),
+				CollectionEndedAt:   metav1.NewTime(managedTestTime.Add(-30 * time.Second)),
+				SampleSequence:      17,
+				ObservedAt:          metav1.NewTime(managedTestTime.Add(-30 * time.Second)),
+				Complete:            true,
+				ProducerRevision:    managedTestWorkerRevision,
+				DeviceIdentityHash:  "sha256:" + strings.Repeat("b", 64),
+			}
+			digest, err := topologyhealth.AcceptedNetworkDigest(sample)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sequence := sample.SampleSequence
+			up.Status.ManagerAdmission.NetworkEvidenceHash = digest
+			up.Status.ManagerAdmission.NetworkEvidenceProducerRevision = sample.ProducerRevision
+			up.Status.ManagerAdmission.NetworkEvidenceWorkerPodUID = sample.WorkerPodUID
+			up.Status.ManagerAdmission.NetworkEvidenceSampleSequence = &sequence
+			up.Status.ManagerAdmission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(managedTestTime.Add(time.Minute)))
+
+			device := managedTestDevice()
+			device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+				DesiredRevision:      managedTestWorkerRevision,
+				ObservedRevision:     managedTestWorkerRevision,
+				DeploymentUID:        "network-deployment-uid-1",
+				DeploymentGeneration: 1,
+				PodUID:               managedTestWorkerPodUID,
+				PodStartTime:         ptr.To(metav1.NewTime(managedTestTime.Add(-2 * time.Minute))),
+				PodReadyTime:         ptr.To(metav1.NewTime(managedTestTime.Add(-time.Minute))),
+				ObservedAt:           metav1.NewTime(managedTestTime),
+			}
+			device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{
+				ObservedAt:             metav1.NewTime(managedTestTime),
+				NodeReadyHeartbeatTime: metav1.NewTime(managedTestTime),
+				DeviceConditionsHash:   "sha256:" + strings.Repeat("c", 64),
+				AcceptedNetwork:        sample,
+			}
+			if tt.mutate != nil {
+				tt.mutate(up, device)
+			}
+			r := newManagedTestReconciler(t, up, node)
+			var stored ciskov1.CiscoDevice
+			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(device), &stored); err != nil {
+				t.Fatal(err)
+			}
+			stored.Status = *device.Status.DeepCopy()
+			if err := r.Client.Update(context.Background(), &stored); err != nil {
+				t.Fatal(err)
+			}
+			var snapshot opsv1alpha1.IOSXESoftwareUpgrade
+			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &snapshot); err != nil {
+				t.Fatal(err)
+			}
+			*up = *snapshot.DeepCopy()
+			claimed, _, err := r.claimActivation(
+				context.Background(), up, false, "ActivationRequested", "activate", managedTestTime,
+			)
+			if err != nil {
+				t.Fatalf("claimActivation() error = %v", err)
+			}
+			if claimed != tt.wantClaim {
+				t.Fatalf("claimed=%t, want %t", claimed, tt.wantClaim)
+			}
+			var got opsv1alpha1.IOSXESoftwareUpgrade
+			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &got); err != nil {
+				t.Fatal(err)
+			}
+			if tt.wantClaim {
+				if len(got.Status.ManagedMutationClaims) != 1 {
+					t.Fatalf("valid evidence did not produce one claim: %+v", got.Status)
+				}
+				return
+			}
+			if len(got.Status.ManagedMutationClaims) != 0 || got.Status.PrimarySupervisorActivationRequested ||
+				readyReason(got.Status.Conditions) != tt.wantReason {
+				t.Fatalf("invalid evidence claim status = %+v", got.Status)
 			}
 		})
 	}

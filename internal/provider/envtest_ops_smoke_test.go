@@ -49,6 +49,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
@@ -817,6 +818,97 @@ func TestEnvtest_IOSXESoftwareUpgradeSpecImmutable(t *testing.T) {
 	up.Labels = map[string]string{"operations.cisco.vk/audit": "retained"}
 	if err := c.Update(ctx, up); err != nil {
 		t.Fatalf("metadata-only update rejected: %v", err)
+	}
+}
+
+// TestEnvtest_IOSXESoftwareUpgradeNetworkGrantAuthority validates the native
+// API boundary that fake clients cannot exercise: evidence is all-or-nothing,
+// appears atomically with a grant, and cannot be replaced afterward.
+func TestEnvtest_IOSXESoftwareUpgradeNetworkGrantAuthority(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-upgrade-network-grant"
+	envtestNamespace(t, c, namespace)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	up := newUpgrade("network-grant", namespace, "26.01.01")
+	if err := c.Create(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		State: opsv1alpha1.UpgradeManagerAdmissionPending, PolicyEpoch: 1,
+		TopologyLockID: strings.Repeat("1", 32), DeviceGeneration: 1,
+		UpdatedAt: metav1.NewTime(time.Now().UTC()),
+	}
+	if err := c.Status().Update(ctx, up); err != nil {
+		t.Fatalf("persist pending admission: %v", err)
+	}
+
+	grant := func(current *opsv1alpha1.IOSXESoftwareUpgrade) {
+		controlRevision := int64(0)
+		admission := current.Status.ManagerAdmission
+		admission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
+		admission.ProtocolVersion = opsv1alpha1.ManagedUpgradeProtocolRolloutV1
+		admission.CampaignUID = "campaign-uid"
+		admission.PlanHash = "sha256:" + strings.Repeat("a", 64)
+		admission.PolicyUID = "policy-uid"
+		admission.PolicyResourceVersion = "1"
+		admission.LedgerUID = "ledger-uid"
+		admission.ReservationID = "reservation-1"
+		admission.LeafUID = string(current.UID)
+		admission.DeviceUID = "device-uid"
+		admission.PhysicalIdentity = "serial-a"
+		admission.NodeUID = "node-uid"
+		admission.ControlRevision = &controlRevision
+		admission.UpdatedAt = metav1.NewTime(time.Now().UTC())
+	}
+
+	var current opsv1alpha1.IOSXESoftwareUpgrade
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	grant(&current)
+	current.Status.ManagerAdmission.NetworkEvidenceHash = "sha256:" + strings.Repeat("b", 64)
+	if err := c.Status().Update(ctx, &current); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("partial network evidence update error = %v, want Invalid", err)
+	}
+
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	grant(&current)
+	sequence := uint64(7)
+	admission := current.Status.ManagerAdmission
+	admission.NetworkEvidenceHash = "sha256:" + strings.Repeat("b", 64)
+	admission.NetworkEvidenceProducerRevision = "sha256:worker"
+	admission.NetworkEvidenceWorkerPodUID = "worker-pod-uid"
+	admission.NetworkEvidenceSampleSequence = &sequence
+	admission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(time.Now().UTC().Add(time.Minute)))
+	if err := c.Status().Update(ctx, &current); err != nil {
+		t.Fatalf("complete atomic network grant rejected: %v", err)
+	}
+
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	admission = current.Status.ManagerAdmission
+	admission.NetworkEvidenceHash = "sha256:" + strings.Repeat("c", 64)
+	if err := c.Status().Update(ctx, &current); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("network grant replacement error = %v, want Invalid", err)
+	}
+
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	admission = current.Status.ManagerAdmission
+	renewedSequence := uint64(8)
+	admission.NetworkEvidenceHash = "sha256:" + strings.Repeat("c", 64)
+	admission.NetworkEvidenceSampleSequence = &renewedSequence
+	admission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(time.Now().UTC().Add(2 * time.Minute)))
+	admission.UpdatedAt = metav1.NewTime(time.Now().UTC())
+	if err := c.Status().Update(ctx, &current); err != nil {
+		t.Fatalf("monotonic complete network grant renewal rejected: %v", err)
 	}
 }
 

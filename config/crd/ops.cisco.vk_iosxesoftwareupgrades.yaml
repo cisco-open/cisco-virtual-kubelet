@@ -569,6 +569,33 @@ spec:
                     maxLength: 128
                     minLength: 1
                     type: string
+                  networkEvidenceHash:
+                    description: |-
+                      NetworkEvidenceHash binds a network-enabled grant to the exact
+                      manager-accepted observation. All networkEvidence fields are omitted for
+                      campaigns that did not opt into a network gate. The manager may atomically
+                      renew the complete authority to a newer accepted sample while Granted.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  networkEvidenceNotAfter:
+                    description: |-
+                      NetworkEvidenceNotAfter is an absolute, non-renewable claim deadline
+                      derived from the accepted sample's original collection start. Expiry
+                      blocks a new mutation claim but never abandons an existing claim.
+                    format: date-time
+                    type: string
+                  networkEvidenceProducerRevision:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  networkEvidenceSampleSequence:
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  networkEvidenceWorkerPodUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
                   nodeUID:
                     description: NodeUID is the planned identity-bound Node incarnation.
                     maxLength: 128
@@ -710,6 +737,26 @@ spec:
                 - message: admission controlRevision cannot decrease or be removed
                   rule: '!has(oldSelf.controlRevision) || (has(self.controlRevision)
                     && self.controlRevision >= oldSelf.controlRevision)'
+                - message: network evidence authority must be complete or omitted
+                  rule: has(self.networkEvidenceHash) == has(self.networkEvidenceProducerRevision)
+                    && has(self.networkEvidenceHash) == has(self.networkEvidenceWorkerPodUID)
+                    && has(self.networkEvidenceHash) == has(self.networkEvidenceSampleSequence)
+                    && has(self.networkEvidenceHash) == has(self.networkEvidenceNotAfter)
+                - message: pending admission cannot carry network evidence authority
+                  rule: self.state != 'Pending' || !has(self.networkEvidenceHash)
+                - message: network evidence authority may only renew monotonically
+                    while granted or clear during policy-epoch rearm
+                  rule: '!has(oldSelf.networkEvidenceHash) || (oldSelf.state == ''Revoked''
+                    && has(oldSelf.revocationReason) && oldSelf.revocationReason ==
+                    ''PolicyEpochTransition'' && self.state == ''Pending'' && !has(self.networkEvidenceHash))
+                    || (has(self.networkEvidenceHash) && ((self.networkEvidenceHash
+                    == oldSelf.networkEvidenceHash && self.networkEvidenceProducerRevision
+                    == oldSelf.networkEvidenceProducerRevision && self.networkEvidenceWorkerPodUID
+                    == oldSelf.networkEvidenceWorkerPodUID && self.networkEvidenceSampleSequence
+                    == oldSelf.networkEvidenceSampleSequence && self.networkEvidenceNotAfter
+                    == oldSelf.networkEvidenceNotAfter) || (oldSelf.state == ''Granted''
+                    && self.state == ''Granted'' && self.networkEvidenceNotAfter >
+                    oldSelf.networkEvidenceNotAfter)))'
                 - message: policy epoch cannot decrease
                   rule: self.policyEpoch >= oldSelf.policyEpoch
                 - message: manager admission state cannot regress except a newer policy

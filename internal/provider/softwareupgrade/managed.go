@@ -34,6 +34,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 )
 
 const managedAdmissionPoll = 15 * time.Second
@@ -604,6 +605,14 @@ func (r *Reconciler) prepareManagedMutationClaim(
 		return true, nil
 	}
 	if decision.allowClaim {
+		if err := r.validateManagedNetworkGrant(ctx, current.Status.ManagerAdmission, now); err != nil {
+			decision.allowClaim = false
+			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
+			decision.reason = "NetworkEvidenceAuthorityInvalid"
+			decision.message = boundedWorkerMessage(err.Error())
+		}
+	}
+	if decision.allowClaim {
 		devicePodLister, workloadGate, gateErr := r.managedClaimPodLister(current)
 		if gateErr != nil {
 			decision.allowClaim = false
@@ -667,6 +676,71 @@ func (r *Reconciler) prepareManagedMutationClaim(
 	decision.message = fmt.Sprintf("claimed %s at manager control revision %d", stage, decision.controlRevision)
 	applyWorkerControlDecision(current, decision, now)
 	return true, nil
+}
+
+// validateManagedNetworkGrant closes the manager-grant/worker-claim race for
+// an opted-in network gate. It uses an uncached read immediately before a new
+// durable mutation claim and requires the exact manager-accepted observation
+// bound into the grant to remain current and unexpired. An omitted authority
+// is the compatibility contract for campaigns without a network policy.
+func (r *Reconciler) validateManagedNetworkGrant(
+	ctx context.Context,
+	admission *opsv1alpha1.UpgradeManagerAdmissionStatus,
+	now time.Time,
+) error {
+	if admission == nil {
+		return fmt.Errorf("manager admission is absent")
+	}
+	present := []bool{
+		admission.NetworkEvidenceHash != "",
+		admission.NetworkEvidenceProducerRevision != "",
+		admission.NetworkEvidenceWorkerPodUID != "",
+		admission.NetworkEvidenceSampleSequence != nil,
+		admission.NetworkEvidenceNotAfter != nil,
+	}
+	for _, value := range present[1:] {
+		if value != present[0] {
+			return fmt.Errorf("manager network evidence authority is incomplete")
+		}
+	}
+	if !present[0] {
+		return nil
+	}
+	if *admission.NetworkEvidenceSampleSequence < 1 || admission.NetworkEvidenceNotAfter.IsZero() {
+		return fmt.Errorf("manager network evidence authority is invalid")
+	}
+	if !now.UTC().Before(admission.NetworkEvidenceNotAfter.Time.UTC()) {
+		return fmt.Errorf("manager network evidence authority expired at %s",
+			admission.NetworkEvidenceNotAfter.Time.UTC().Format(time.RFC3339Nano))
+	}
+	var device ciskov1.CiscoDevice
+	if err := r.apiReader().Get(ctx, client.ObjectKey{Namespace: r.DeviceNamespace, Name: r.DeviceName}, &device); err != nil {
+		return fmt.Errorf("read current network evidence: %w", err)
+	}
+	networkWorker := device.Status.NetworkWorkerRevision
+	if networkWorker == nil || networkWorker.DesiredRevision != admission.NetworkEvidenceProducerRevision ||
+		networkWorker.ObservedRevision != admission.NetworkEvidenceProducerRevision ||
+		networkWorker.PodUID != admission.NetworkEvidenceWorkerPodUID {
+		return fmt.Errorf("current network worker no longer matches the manager grant")
+	}
+	accepted := device.Status.HealthObservation
+	if accepted == nil || accepted.AcceptedNetwork == nil {
+		return fmt.Errorf("current manager-accepted network evidence is absent")
+	}
+	sample := accepted.AcceptedNetwork
+	if sample.ProducerRevision != admission.NetworkEvidenceProducerRevision ||
+		sample.WorkerPodUID != admission.NetworkEvidenceWorkerPodUID ||
+		sample.SampleSequence != *admission.NetworkEvidenceSampleSequence {
+		return fmt.Errorf("current manager-accepted network evidence identity changed")
+	}
+	digest, err := topologyhealth.AcceptedNetworkDigest(sample)
+	if err != nil {
+		return err
+	}
+	if digest != admission.NetworkEvidenceHash {
+		return fmt.Errorf("current manager-accepted network evidence digest changed")
+	}
+	return nil
 }
 
 // managedClaimPodLister selects the final device-side workload fence. The

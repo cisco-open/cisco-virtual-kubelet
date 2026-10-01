@@ -396,6 +396,9 @@ const (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.nodeUID) || self.nodeUID == oldSelf.nodeUID",message="nodeUID is immutable once set"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.protocolVersion) || self.protocolVersion == oldSelf.protocolVersion",message="protocolVersion is immutable once set"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.controlRevision) || (has(self.controlRevision) && self.controlRevision >= oldSelf.controlRevision)",message="admission controlRevision cannot decrease or be removed"
+// +kubebuilder:validation:XValidation:rule="has(self.networkEvidenceHash) == has(self.networkEvidenceProducerRevision) && has(self.networkEvidenceHash) == has(self.networkEvidenceWorkerPodUID) && has(self.networkEvidenceHash) == has(self.networkEvidenceSampleSequence) && has(self.networkEvidenceHash) == has(self.networkEvidenceNotAfter)",message="network evidence authority must be complete or omitted"
+// +kubebuilder:validation:XValidation:rule="self.state != 'Pending' || !has(self.networkEvidenceHash)",message="pending admission cannot carry network evidence authority"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.networkEvidenceHash) || (oldSelf.state == 'Revoked' && has(oldSelf.revocationReason) && oldSelf.revocationReason == 'PolicyEpochTransition' && self.state == 'Pending' && !has(self.networkEvidenceHash)) || (has(self.networkEvidenceHash) && ((self.networkEvidenceHash == oldSelf.networkEvidenceHash && self.networkEvidenceProducerRevision == oldSelf.networkEvidenceProducerRevision && self.networkEvidenceWorkerPodUID == oldSelf.networkEvidenceWorkerPodUID && self.networkEvidenceSampleSequence == oldSelf.networkEvidenceSampleSequence && self.networkEvidenceNotAfter == oldSelf.networkEvidenceNotAfter) || (oldSelf.state == 'Granted' && self.state == 'Granted' && self.networkEvidenceNotAfter > oldSelf.networkEvidenceNotAfter)))",message="network evidence authority may only renew monotonically while granted or clear during policy-epoch rearm"
 // +kubebuilder:validation:XValidation:rule="self.policyEpoch >= oldSelf.policyEpoch",message="policy epoch cannot decrease"
 // +kubebuilder:validation:XValidation:rule="oldSelf.state == 'Pending' ? self.state in ['Pending', 'Granted', 'Revoked'] : (oldSelf.state == 'Granted' ? self.state in ['Granted', 'Revoked', 'Settled'] : (oldSelf.state == 'Revoked' ? (self.state in ['Revoked', 'Settled'] || (self.state == 'Pending' && has(oldSelf.revocationReason) && oldSelf.revocationReason == 'PolicyEpochTransition' && self.policyEpoch > oldSelf.policyEpoch)) : self.state == 'Settled'))",message="manager admission state cannot regress except a newer policy epoch may rearm a policy-transition revocation"
 // +kubebuilder:validation:XValidation:rule="self.state == 'Revoked' ? has(self.revocationReason) : !has(self.revocationReason)",message="revoked admission requires a reason and non-revoked admission must not retain one"
@@ -508,6 +511,34 @@ type UpgradeManagerAdmissionStatus struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Minimum=0
 	ControlRevision *int64 `json:"controlRevision,omitempty"`
+
+	// NetworkEvidenceHash binds a network-enabled grant to the exact
+	// manager-accepted observation. All networkEvidence fields are omitted for
+	// campaigns that did not opt into a network gate. The manager may atomically
+	// renew the complete authority to a newer accepted sample while Granted.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	NetworkEvidenceHash string `json:"networkEvidenceHash,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	NetworkEvidenceProducerRevision string `json:"networkEvidenceProducerRevision,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	NetworkEvidenceWorkerPodUID string `json:"networkEvidenceWorkerPodUID,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	NetworkEvidenceSampleSequence *uint64 `json:"networkEvidenceSampleSequence,omitempty"`
+
+	// NetworkEvidenceNotAfter is an absolute, non-renewable claim deadline
+	// derived from the accepted sample's original collection start. Expiry
+	// blocks a new mutation claim but never abandons an existing claim.
+	// +kubebuilder:validation:Optional
+	NetworkEvidenceNotAfter *metav1.Time `json:"networkEvidenceNotAfter,omitempty"`
 
 	// UpdatedAt is the manager admission transition time.
 	// +kubebuilder:validation:Required

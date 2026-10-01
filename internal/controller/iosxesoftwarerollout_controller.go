@@ -780,6 +780,69 @@ func evaluateNetworkHealth(
 	})
 }
 
+type networkGrantEvidence struct {
+	hash             string
+	producerRevision string
+	workerPodUID     string
+	sampleSequence   uint64
+	notAfter         metav1.Time
+}
+
+// currentNetworkGrantEvidence performs an uncached final read and converts a
+// network-enabled rollout gate into immutable, expiring worker authority. The
+// deadline starts at collection start, never at manager acceptance or grant.
+func (r *IOSXESoftwareRolloutReconciler) currentNetworkGrantEvidence(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+) (*networkGrantEvidence, error) {
+	networkPolicy := rollout.Spec.Plan.Health.Network
+	if networkPolicy == nil || !networkPolicy.Enabled {
+		return nil, nil
+	}
+	var device ciskov1.CiscoDevice
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+		return nil, fmt.Errorf("read network evidence grant target: %w", err)
+	}
+	if string(device.UID) != target.DeviceUID || device.Generation != target.DeviceGeneration {
+		return nil, fmt.Errorf("network evidence grant target incarnation changed")
+	}
+	physicalIdentity, err := topology.CanonicalPhysicalIdentity(device.Spec.PhysicalIdentity)
+	if err != nil || physicalIdentity != target.PhysicalIdentity {
+		return nil, fmt.Errorf("network evidence grant physical identity changed")
+	}
+	producerRevision, err := r.currentReadyWorkerRevision(ctx, &device)
+	if err != nil {
+		return nil, fmt.Errorf("network evidence grant worker binding: %w", err)
+	}
+	if device.Status.NetworkWorkerRevision == nil || strings.TrimSpace(device.Status.NetworkWorkerRevision.PodUID) == "" {
+		return nil, fmt.Errorf("network evidence grant requires a current network worker Pod identity")
+	}
+	workerPodUID := device.Status.NetworkWorkerRevision.PodUID
+	freshnessSeconds := networkEvidenceFreshnessSeconds(currentPolicy.Config.HealthFreshnessSeconds,
+		rollout.Spec.Plan.Health.MaxObservationAgeSeconds)
+	decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalIdentity, producerRevision,
+		workerPodUID, r.now(), time.Duration(freshnessSeconds)*time.Second, networkPolicy)
+	if !decision.Allowed {
+		return nil, fmt.Errorf("network evidence grant %s: %s", decision.Reason, decision.Message)
+	}
+	accepted := device.Status.HealthObservation.AcceptedNetwork
+	digest, err := topologyhealth.AcceptedNetworkDigest(accepted)
+	if err != nil {
+		return nil, err
+	}
+	notAfter := accepted.CollectionStartedAt.Add(time.Duration(freshnessSeconds) * time.Second)
+	if !notAfter.After(r.now()) {
+		return nil, fmt.Errorf("network evidence grant expired before publication")
+	}
+	return &networkGrantEvidence{
+		hash: digest, producerRevision: accepted.ProducerRevision,
+		workerPodUID: accepted.WorkerPodUID, sampleSequence: accepted.SampleSequence,
+		notAfter: metav1.NewTime(notAfter),
+	}, nil
+}
+
 // revalidateNetworkEvidence uses a fresh API read path at planning and every
 // manager admission attempt. A previously healthy plan must not authorize a
 // later reservation after the worker identity or network evidence changed.
@@ -1178,6 +1241,25 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 					hasRunning = true
 				} else if grantErr == nil {
 					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetWaitingForAdmission, "WorkerProtocolPending", "waiting for worker protocol acknowledgement", now)
+				}
+			} else if leaf.Status.ManagerAdmission != nil &&
+				leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionGranted &&
+				rollout.Spec.Plan.Health.Network != nil && rollout.Spec.Plan.Health.Network.Enabled {
+				renewed, renewErr := r.refreshNetworkGrantEvidence(
+					ctx, rollout, currentPolicy, target, &leaf, now,
+				)
+				if renewErr != nil {
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+						"NetworkEvidenceAuthorityInvalid", renewErr.Error(), now)
+					progressionBlocked = true
+				} else if renewed {
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetRunning,
+						"NetworkEvidenceRenewed", "manager renewed claim authority from current accepted network evidence", now)
+					hasRunning = true
+				} else {
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetRunning,
+						string(leaf.Status.Phase), leaf.Status.Message, now)
+					hasRunning = true
 				}
 			} else {
 				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetRunning, string(leaf.Status.Phase), leaf.Status.Message, now)

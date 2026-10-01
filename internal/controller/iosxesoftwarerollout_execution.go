@@ -1018,6 +1018,7 @@ func (r *IOSXESoftwareRolloutReconciler) rearmPolicyEpochLeaf(
 		current.Status.ManagerAdmission.PolicyEpoch = effectivePolicy.Epoch
 		current.Status.ManagerAdmission.TopologyLockID = lockID
 		current.Status.ManagerAdmission.RevocationReason = ""
+		clearNetworkGrantEvidence(current.Status.ManagerAdmission)
 		current.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
 		return nil
 	}); err != nil {
@@ -1109,6 +1110,9 @@ func validateManagerAdmission(
 		(admission.State == opsv1alpha1.UpgradeManagerAdmissionRevoked) != (admission.RevocationReason != "") {
 		return fmt.Errorf("leaf %s/%s has an invalid policy-epoch revocation binding", leaf.Namespace, leaf.Name)
 	}
+	if !networkGrantEvidenceCompleteOrAbsent(admission) {
+		return fmt.Errorf("leaf %s/%s has an incomplete network evidence authority", leaf.Namespace, leaf.Name)
+	}
 	if admission.PolicyEpoch < policyEpoch && len(leaf.Status.ManagedMutationClaims) == 0 &&
 		(admission.State == opsv1alpha1.UpgradeManagerAdmissionPending || admission.State == opsv1alpha1.UpgradeManagerAdmissionGranted) {
 		return fmt.Errorf("leaf %s/%s retains unclaimed authority from stale policy epoch %d", leaf.Namespace, leaf.Name, admission.PolicyEpoch)
@@ -1119,6 +1123,111 @@ func validateManagerAdmission(
 		}
 	}
 	return nil
+}
+
+func networkGrantEvidenceCompleteOrAbsent(admission *opsv1alpha1.UpgradeManagerAdmissionStatus) bool {
+	if admission == nil {
+		return false
+	}
+	present := []bool{
+		admission.NetworkEvidenceHash != "",
+		admission.NetworkEvidenceProducerRevision != "",
+		admission.NetworkEvidenceWorkerPodUID != "",
+		admission.NetworkEvidenceSampleSequence != nil,
+		admission.NetworkEvidenceNotAfter != nil,
+	}
+	for _, value := range present[1:] {
+		if value != present[0] {
+			return false
+		}
+	}
+	return !present[0] || (*admission.NetworkEvidenceSampleSequence >= 1 &&
+		!admission.NetworkEvidenceNotAfter.IsZero())
+}
+
+func applyNetworkGrantEvidence(admission *opsv1alpha1.UpgradeManagerAdmissionStatus, evidence *networkGrantEvidence) {
+	clearNetworkGrantEvidence(admission)
+	if admission == nil || evidence == nil {
+		return
+	}
+	sequence := evidence.sampleSequence
+	notAfter := evidence.notAfter.DeepCopy()
+	admission.NetworkEvidenceHash = evidence.hash
+	admission.NetworkEvidenceProducerRevision = evidence.producerRevision
+	admission.NetworkEvidenceWorkerPodUID = evidence.workerPodUID
+	admission.NetworkEvidenceSampleSequence = &sequence
+	admission.NetworkEvidenceNotAfter = notAfter
+}
+
+func clearNetworkGrantEvidence(admission *opsv1alpha1.UpgradeManagerAdmissionStatus) {
+	if admission == nil {
+		return
+	}
+	admission.NetworkEvidenceHash = ""
+	admission.NetworkEvidenceProducerRevision = ""
+	admission.NetworkEvidenceWorkerPodUID = ""
+	admission.NetworkEvidenceSampleSequence = nil
+	admission.NetworkEvidenceNotAfter = nil
+}
+
+func networkGrantEvidenceMatches(
+	admission *opsv1alpha1.UpgradeManagerAdmissionStatus,
+	evidence *networkGrantEvidence,
+) bool {
+	return admission != nil && evidence != nil &&
+		admission.NetworkEvidenceSampleSequence != nil && admission.NetworkEvidenceNotAfter != nil &&
+		admission.NetworkEvidenceHash == evidence.hash &&
+		admission.NetworkEvidenceProducerRevision == evidence.producerRevision &&
+		admission.NetworkEvidenceWorkerPodUID == evidence.workerPodUID &&
+		*admission.NetworkEvidenceSampleSequence == evidence.sampleSequence &&
+		admission.NetworkEvidenceNotAfter.Equal(&evidence.notAfter)
+}
+
+// refreshNetworkGrantEvidence gives a long-running install a safe path to a
+// later activation claim. The complete authority advances atomically to a
+// newer manager-accepted sample and can never extend from the old sample or
+// move its absolute expiry backward. Workers still require an exact match at
+// every new mutation claim.
+func (r *IOSXESoftwareRolloutReconciler) refreshNetworkGrantEvidence(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+	now time.Time,
+) (bool, error) {
+	if rollout.Spec.Plan.Health.Network == nil || !rollout.Spec.Plan.Health.Network.Enabled {
+		return false, nil
+	}
+	changed := false
+	err := r.patchLeafManagerFields(ctx, client.ObjectKeyFromObject(leaf), func(current *opsv1alpha1.IOSXESoftwareUpgrade) error {
+		if current.UID != leaf.UID {
+			return fmt.Errorf("leaf incarnation changed before network evidence renewal")
+		}
+		if err := validateManagerAdmission(rollout, target, current); err != nil {
+			return err
+		}
+		admission := current.Status.ManagerAdmission
+		if admission.State != opsv1alpha1.UpgradeManagerAdmissionGranted {
+			return fmt.Errorf("network evidence renewal requires a granted admission")
+		}
+		evidence, err := r.currentNetworkGrantEvidence(ctx, rollout, currentPolicy, target)
+		if err != nil {
+			return err
+		}
+		if networkGrantEvidenceMatches(admission, evidence) {
+			return nil
+		}
+		if admission.NetworkEvidenceNotAfter == nil ||
+			!evidence.notAfter.After(admission.NetworkEvidenceNotAfter.Time) {
+			return fmt.Errorf("new network evidence does not advance the absolute grant expiry")
+		}
+		applyNetworkGrantEvidence(admission, evidence)
+		admission.UpdatedAt = metav1.NewTime(now)
+		changed = true
+		return nil
+	})
+	return changed, err
 }
 
 func rolloutEffectivePolicyBinding(rollout *opsv1alpha1.IOSXESoftwareRollout) (opsv1alpha1.IOSXESoftwareRolloutPolicySnapshot, int64, error) {
@@ -1294,6 +1403,10 @@ func (r *IOSXESoftwareRolloutReconciler) tryGrantLeaf(
 		if err := r.revalidateCampaignExecution(ctx, rollout); err != nil {
 			return err
 		}
+		evidence, err := r.currentNetworkGrantEvidence(ctx, rollout, currentPolicy, target)
+		if err != nil {
+			return err
+		}
 		if err := validateManagerAdmission(rollout, target, current); err != nil {
 			return err
 		}
@@ -1317,6 +1430,7 @@ func (r *IOSXESoftwareRolloutReconciler) tryGrantLeaf(
 		revision := rollout.Spec.Control.Revision
 		current.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
 		current.Status.ManagerAdmission.ControlRevision = &revision
+		applyNetworkGrantEvidence(current.Status.ManagerAdmission, evidence)
 		current.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
 		return nil
 	}); err != nil {

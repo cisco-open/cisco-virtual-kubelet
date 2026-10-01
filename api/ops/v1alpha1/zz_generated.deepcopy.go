@@ -1550,6 +1550,15 @@ func (in *UpgradeManagerAdmissionStatus) DeepCopyInto(out *UpgradeManagerAdmissi
 		*out = new(int64)
 		**out = **in
 	}
+	if in.NetworkEvidenceSampleSequence != nil {
+		in, out := &in.NetworkEvidenceSampleSequence, &out.NetworkEvidenceSampleSequence
+		*out = new(uint64)
+		**out = **in
+	}
+	if in.NetworkEvidenceNotAfter != nil {
+		in, out := &in.NetworkEvidenceNotAfter, &out.NetworkEvidenceNotAfter
+		*out = (*in).DeepCopy()
+	}
 	in.UpdatedAt.DeepCopyInto(&out.UpdatedAt)
 }
 

@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
 
@@ -115,6 +116,158 @@ func TestNetworkEvidenceFreshnessUsesPlanningPolicyBeforeStatusExists(t *testing
 	}
 	if got := networkEvidenceFreshnessSeconds(0, 0); got != 300 {
 		t.Fatalf("network evidence freshness = %d, want default 300", got)
+	}
+}
+
+func TestCurrentNetworkGrantEvidenceBindsExactAcceptedSampleAndOriginalExpiry(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "lab", Name: "device-a", UID: types.UID("device-uid"), Generation: 3,
+		},
+		Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, PhysicalIdentity: "SERIAL-A"},
+	}
+	workerObjects := attachReadyManagedNetworkWorkerProof(t, device, now)
+	accepted := &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-20 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-10 * time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-10 * time.Second)),
+		SampleSequence:      9,
+		WorkerPodUID:        device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:    device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}
+	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: accepted}
+	objects := append([]client.Object{device}, workerObjects...)
+	apiClient := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objects...).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	rollout := &opsv1alpha1.IOSXESoftwareRollout{
+		ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace},
+		Spec: opsv1alpha1.IOSXESoftwareRolloutSpec{Plan: opsv1alpha1.IOSXESoftwareRolloutPlan{
+			Health: opsv1alpha1.IOSXESoftwareRolloutHealthSpec{
+				MaxObservationAgeSeconds: 60,
+				Network: &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+					Enabled: true, RequireCompleteEvidence: true,
+				},
+			},
+		}},
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{HealthFreshnessSeconds: 120}}
+	target := opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+		DeviceName: device.Name, DeviceUID: string(device.UID), DeviceGeneration: device.Generation,
+		PhysicalIdentity: "serial-a",
+	}
+	evidence, err := reconciler.currentNetworkGrantEvidence(context.Background(), rollout, policy, target)
+	if err != nil {
+		t.Fatalf("currentNetworkGrantEvidence() error = %v", err)
+	}
+	wantHash, err := topologyhealth.AcceptedNetworkDigest(accepted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantExpiry := accepted.CollectionStartedAt.Add(time.Minute)
+	if evidence == nil || evidence.hash != wantHash || evidence.producerRevision != accepted.ProducerRevision ||
+		evidence.workerPodUID != accepted.WorkerPodUID || evidence.sampleSequence != accepted.SampleSequence ||
+		!evidence.notAfter.Time.Equal(wantExpiry) {
+		t.Fatalf("grant evidence = %#v, want hash %q and expiry %s", evidence, wantHash, wantExpiry)
+	}
+
+	reconciler.Now = func() time.Time { return wantExpiry }
+	if _, err := reconciler.currentNetworkGrantEvidence(context.Background(), rollout, policy, target); err == nil ||
+		!strings.Contains(err.Error(), "expired") {
+		t.Fatalf("expired currentNetworkGrantEvidence() error = %v", err)
+	}
+
+	rollout.Spec.Plan.Health.Network = nil
+	if evidence, err := reconciler.currentNetworkGrantEvidence(context.Background(), rollout, policy, target); err != nil || evidence != nil {
+		t.Fatalf("omitted network policy evidence = %#v, error = %v", evidence, err)
+	}
+}
+
+func TestRefreshNetworkGrantEvidenceAdvancesCompleteAuthorityAtomically(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	target := policyFenceTarget("device-a", "device-uid", "leaf-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Spec.Plan.Health.MaxObservationAgeSeconds = 60
+	rollout.Spec.Plan.Health.Network = &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+		Enabled: true, RequireCompleteEvidence: true,
+	}
+	leaf := policyFenceLeaf(rollout, target, "leaf-uid")
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: rollout.Namespace, Name: target.DeviceName, UID: types.UID(target.DeviceUID),
+			Generation: target.DeviceGeneration,
+		},
+		Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, PhysicalIdentity: target.PhysicalIdentity},
+	}
+	workerObjects := attachReadyManagedNetworkWorkerProof(t, device, now)
+	oldSample := &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-50 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-49 * time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-49 * time.Second)), SampleSequence: 4,
+		WorkerPodUID:       device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:   device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash: identityHashForPhysicalID(target.PhysicalIdentity), Complete: true,
+	}
+	oldHash, err := topologyhealth.AcceptedNetworkDigest(oldSample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldSequence := oldSample.SampleSequence
+	leaf.Status.ManagerAdmission.NetworkEvidenceHash = oldHash
+	leaf.Status.ManagerAdmission.NetworkEvidenceProducerRevision = oldSample.ProducerRevision
+	leaf.Status.ManagerAdmission.NetworkEvidenceWorkerPodUID = oldSample.WorkerPodUID
+	leaf.Status.ManagerAdmission.NetworkEvidenceSampleSequence = &oldSequence
+	leaf.Status.ManagerAdmission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(oldSample.CollectionStartedAt.Add(time.Minute)))
+
+	newSample := oldSample.DeepCopy()
+	newSample.CollectionStartedAt = metav1.NewTime(now.Add(-10 * time.Second))
+	newSample.CollectionEndedAt = metav1.NewTime(now.Add(-9 * time.Second))
+	newSample.ObservedAt = metav1.NewTime(now.Add(-9 * time.Second))
+	newSample.SampleSequence++
+	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: newSample}
+	objects := append([]client.Object{leaf, device}, workerObjects...)
+	scheme := newTestScheme(t)
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareUpgrade{}).
+		WithObjects(objects...).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{HealthFreshnessSeconds: 120}}
+	changed, err := reconciler.refreshNetworkGrantEvidence(
+		context.Background(), rollout, policy, target, leaf, now,
+	)
+	if err != nil || !changed {
+		t.Fatalf("refreshNetworkGrantEvidence() = changed %t, error %v", changed, err)
+	}
+	var current opsv1alpha1.IOSXESoftwareUpgrade
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(leaf), &current); err != nil {
+		t.Fatal(err)
+	}
+	wantHash, err := topologyhealth.AcceptedNetworkDigest(newSample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admission := current.Status.ManagerAdmission
+	if admission.NetworkEvidenceHash != wantHash || admission.NetworkEvidenceSampleSequence == nil ||
+		*admission.NetworkEvidenceSampleSequence != newSample.SampleSequence ||
+		admission.NetworkEvidenceNotAfter == nil ||
+		!admission.NetworkEvidenceNotAfter.Time.Equal(newSample.CollectionStartedAt.Add(time.Minute)) ||
+		!admission.UpdatedAt.Time.Equal(now) {
+		t.Fatalf("renewed manager authority = %#v", admission)
+	}
+	changed, err = reconciler.refreshNetworkGrantEvidence(
+		context.Background(), rollout, policy, target, &current, now.Add(time.Second),
+	)
+	if err != nil || changed {
+		t.Fatalf("idempotent refresh = changed %t, error %v", changed, err)
 	}
 }
 
