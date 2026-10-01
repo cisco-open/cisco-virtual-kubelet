@@ -20,6 +20,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	configtransport "github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	lifecycle "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
@@ -232,6 +233,72 @@ func TestInspectReportsAbsentAndMalformedInventory(t *testing.T) {
 			}
 			if test.sentinel != nil && !errors.Is(err, test.sentinel) {
 				t.Fatalf("Inspect error = %v, want %v", err, test.sentinel)
+			}
+		})
+	}
+}
+
+func TestObserveInterruptedInstallCorrelatesStrongNativeEvidence(t *testing.T) {
+	started := time.Date(2026, 10, 1, 22, 34, 53, 0, time.UTC)
+	raw := interruptedInstallResponse(
+		"install-no-activity",
+		"install-state-added",
+		"install-package-verify-ok",
+		"1247897709",
+		"install-op-succ",
+		"op-complete",
+		started.Add(-90*time.Second),
+	)
+	a, err := New(&fakeTransport{kind: configtransport.KindRESTCONF, responses: map[string][]byte{installOperDataPath: raw}})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	got, err := a.ObserveInterruptedInstall(context.Background(), lifecycle.InterruptedInstallRequest{
+		TargetVersion: "17.18.02",
+		SourceSize:    1247897709,
+		NotBefore:     started,
+		ObservedAt:    started.Add(10 * time.Minute),
+	})
+	if err != nil {
+		t.Fatalf("ObserveInterruptedInstall: %v", err)
+	}
+	if got.Image.Version != "17.18.02.0.4112.1766116039" || !got.Image.State.Activatable() || got.CompletedAt.IsZero() {
+		t.Fatalf("observation = %+v", got)
+	}
+}
+
+func TestObserveInterruptedInstallFailsClosedOnPartialEvidence(t *testing.T) {
+	started := time.Date(2026, 10, 1, 22, 34, 53, 0, time.UTC)
+	tests := []struct {
+		name      string
+		activity  string
+		pkgState  string
+		verify    string
+		size      string
+		opStatus  string
+		opDone    string
+		operation time.Time
+	}{
+		{name: "installer active", activity: "install-activity-install", pkgState: "install-state-added", verify: "install-package-verify-ok", size: "1247897709", opStatus: "install-op-succ", opDone: "op-complete", operation: started},
+		{name: "package incomplete", activity: "install-no-activity", pkgState: "install-state-adding", verify: "install-package-verify-ok", size: "1247897709", opStatus: "install-op-succ", opDone: "op-complete", operation: started},
+		{name: "source unverified", activity: "install-no-activity", pkgState: "install-state-added", verify: "install-package-verify-deferred", size: "1247897709", opStatus: "install-op-succ", opDone: "op-complete", operation: started},
+		{name: "source size mismatch", activity: "install-no-activity", pkgState: "install-state-added", verify: "install-package-verify-ok", size: "1247897708", opStatus: "install-op-succ", opDone: "op-complete", operation: started},
+		{name: "operation failed", activity: "install-no-activity", pkgState: "install-state-added", verify: "install-package-verify-ok", size: "1247897709", opStatus: "install-op-fail", opDone: "op-complete", operation: started},
+		{name: "operation too old", activity: "install-no-activity", pkgState: "install-state-added", verify: "install-package-verify-ok", size: "1247897709", opStatus: "install-op-succ", opDone: "op-complete", operation: started.Add(-6 * time.Minute)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			raw := interruptedInstallResponse(test.activity, test.pkgState, test.verify, test.size,
+				test.opStatus, test.opDone, test.operation)
+			a, err := New(&fakeTransport{kind: configtransport.KindRESTCONF, responses: map[string][]byte{installOperDataPath: raw}})
+			if err != nil {
+				t.Fatalf("New: %v", err)
+			}
+			if _, err := a.ObserveInterruptedInstall(context.Background(), lifecycle.InterruptedInstallRequest{
+				TargetVersion: "17.18.02", SourceSize: 1247897709, NotBefore: started,
+				ObservedAt: started.Add(10 * time.Minute),
+			}); err == nil {
+				t.Fatal("partial evidence was accepted")
 			}
 		})
 	}
@@ -470,6 +537,39 @@ func fullOperResponse(operation, inventory map[string]string) []byte {
 			"install-location-information": []any{
 				map[string]any{"install-version-info": versions},
 			},
+		},
+	})
+}
+
+func interruptedInstallResponse(activity, packageState, verify, size, opStatus, opDone string, operationTime time.Time) []byte {
+	const sourceName = "gNOI_iosxe_17.18.02.0.4112.1766116039.bin"
+	return mustJSON(map[string]any{
+		"Cisco-IOS-XE-install-oper:install-oper-data": map[string]any{
+			"install-oper": []any{},
+			"install-oper-hist": []any{map[string]any{
+				"op-uuid":    testOperationID,
+				"op-status":  opStatus,
+				"op-done":    opDone,
+				"start-time": operationTime.Format(time.RFC3339Nano),
+				"end-time":   operationTime.Add(2 * time.Minute).Format(time.RFC3339Nano),
+				"add-param":  map[string]any{"dest-filename": sourceName},
+			}},
+			"install-location-information": []any{map[string]any{
+				"oper-state": map[string]any{"sys-activity": activity},
+				"install-packages": []any{map[string]any{
+					"pkg-name": sourceName,
+					"pkg-data": map[string]any{"verify-status": verify, "pkg-size": size},
+				}},
+				"install-version-info": []any{map[string]any{
+					"version":           "17.18.02.0.4112",
+					"version-extension": "1766116039",
+					"current":           "install-version-state-in-progress",
+					"src-filename":      "/mnt/sd3/user/" + sourceName,
+					"install-package-state-info": []any{
+						map[string]any{"pkg-name": "cat9k-rpbase.17.18.02.SPA.pkg", "package-state": packageState},
+					},
+				}},
+			}},
 		},
 	})
 }

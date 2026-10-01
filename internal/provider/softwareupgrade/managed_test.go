@@ -53,6 +53,7 @@ const (
 	managedTestReservationID    = "reservation-1"
 	managedTestDeviceGeneration = int64(7)
 	managedTestWorkerRevision   = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	managedTestWorkerPodName    = "dev1-worker-abc123"
 	managedTestWorkerPodUID     = "pod-uid-1"
 	managedTestPhysicalIdentity = "serial-1"
 )
@@ -100,6 +101,7 @@ func managedTestNode() *corev1.Node {
 			managedprotocol.AnnotationDeviceUID:              managedTestDeviceUID,
 			managedprotocol.AnnotationNodeUID:                managedTestNodeUID,
 			managedprotocol.AnnotationWorkerUsername:         managedTestWorkerUsername,
+			managedprotocol.AnnotationNetworkWorkerUsername:  managedTestWorkerUsername,
 			managedprotocol.AnnotationWorkerProtocol:         managedprotocol.Version,
 			managedprotocol.AnnotationWorkerObservedRevision: managedTestWorkerRevision,
 		},
@@ -141,19 +143,23 @@ func managedTestLeaf(name string) *opsv1alpha1.IOSXESoftwareUpgrade {
 	up := newUpgrade(name, func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 		up.UID = types.UID(managedTestLeafUID + "-" + name)
 		up.Annotations = map[string]string{
-			managedprotocol.AnnotationManaged:          "true",
-			managedprotocol.AnnotationWorkerUsername:   managedTestWorkerUsername,
-			managedprotocol.AnnotationCampaignUID:      managedTestCampaignUID,
-			managedprotocol.AnnotationPlanHash:         "sha256:" + strings.Repeat("a", 64),
-			managedprotocol.AnnotationLedgerUID:        managedTestLedgerUID,
-			managedprotocol.AnnotationReservationID:    managedTestReservationID,
-			managedprotocol.AnnotationDeviceNamespace:  managedTestDeviceNamespace,
-			managedprotocol.AnnotationDeviceName:       managedTestDeviceName,
-			managedprotocol.AnnotationDeviceUID:        managedTestDeviceUID,
-			managedprotocol.AnnotationDeviceGeneration: strconv.FormatInt(managedTestDeviceGeneration, 10),
-			managedprotocol.AnnotationNodeName:         managedTestNodeName,
-			managedprotocol.AnnotationNodeUID:          managedTestNodeUID,
-			managedprotocol.AnnotationWorkerProtocol:   managedprotocol.Version,
+			managedprotocol.AnnotationManaged:              "true",
+			managedprotocol.AnnotationWorkerUsername:       managedTestWorkerUsername,
+			managedprotocol.AnnotationCampaignUID:          managedTestCampaignUID,
+			managedprotocol.AnnotationPlanHash:             "sha256:" + strings.Repeat("a", 64),
+			managedprotocol.AnnotationLedgerUID:            managedTestLedgerUID,
+			managedprotocol.AnnotationReservationID:        managedTestReservationID,
+			managedprotocol.AnnotationDeviceNamespace:      managedTestDeviceNamespace,
+			managedprotocol.AnnotationDeviceName:           managedTestDeviceName,
+			managedprotocol.AnnotationDeviceUID:            managedTestDeviceUID,
+			managedprotocol.AnnotationDeviceGeneration:     strconv.FormatInt(managedTestDeviceGeneration, 10),
+			managedprotocol.AnnotationNodeName:             managedTestNodeName,
+			managedprotocol.AnnotationNodeUID:              managedTestNodeUID,
+			managedprotocol.AnnotationWorkerProtocol:       managedprotocol.Version,
+			managedprotocol.AnnotationAppWorkerPodName:     managedTestWorkerPodName,
+			managedprotocol.AnnotationAppWorkerPodUID:      managedTestWorkerPodUID,
+			managedprotocol.AnnotationNetworkWorkerPodName: managedTestWorkerPodName,
+			managedprotocol.AnnotationNetworkWorkerPodUID:  managedTestWorkerPodUID,
 		}
 		up.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
 			ProtocolVersion:       opsv1alpha1.ManagedUpgradeProtocolVersion(managedprotocol.Version),
@@ -274,6 +280,7 @@ func newManagedTestReconciler(
 		NodeName:        managedTestNodeName,
 		ManagedTopology: true,
 		WorkerRevision:  managedTestWorkerRevision,
+		WorkerPodName:   managedTestWorkerPodName,
 		WorkerPodUID:    managedTestWorkerPodUID,
 		DevicePodLister: func(context.Context) ([]*corev1.Pod, error) { return nil, nil },
 		Now:             func() time.Time { return managedTestTime },
@@ -518,6 +525,44 @@ func TestManagedLeafGateAcknowledgesExactBinding(t *testing.T) {
 	}
 }
 
+func TestManagedLeafGateAcknowledgesExactNetworkWorkerPodBinding(t *testing.T) {
+	up := managedTestLeaf("network-gate-ready")
+	delete(up.Annotations, managedprotocol.AnnotationAppWorkerPodName)
+	delete(up.Annotations, managedprotocol.AnnotationAppWorkerPodUID)
+	up.Annotations[managedprotocol.AnnotationNetworkWorkerPodName] = managedTestWorkerPodName
+	up.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] = managedTestWorkerPodUID
+	r := newManagedTestReconciler(t, up, nil)
+
+	var device ciskov1.CiscoDevice
+	key := client.ObjectKey{Namespace: managedTestDeviceNamespace, Name: managedTestDeviceName}
+	if err := r.Client.Get(context.Background(), key, &device); err != nil {
+		t.Fatalf("get managed CiscoDevice: %v", err)
+	}
+	started := metav1.NewTime(managedTestTime.Add(-time.Minute))
+	ready := metav1.NewTime(managedTestTime)
+	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+		DesiredRevision:      managedTestWorkerRevision,
+		ObservedRevision:     managedTestWorkerRevision,
+		DeploymentUID:        "network-deployment-uid",
+		DeploymentGeneration: 1,
+		PodUID:               managedTestWorkerPodUID,
+		PodStartTime:         &started,
+		PodReadyTime:         &ready,
+		ObservedAt:           ready,
+	}
+	if err := r.Client.Update(context.Background(), &device); err != nil {
+		t.Fatalf("update managed CiscoDevice: %v", err)
+	}
+
+	decision, updated, err := r.syncManagedLeafGate(context.Background(), up, managedTestTime)
+	if err != nil {
+		t.Fatalf("syncManagedLeafGate() error = %v", err)
+	}
+	if !updated || !decision.allowProgress || !decision.allowClaim {
+		t.Fatalf("decision = %+v, updated=%t; want exact network worker acknowledgement", decision, updated)
+	}
+}
+
 func TestManagedLeafGateDoesNotWriteRetainedPredecessor(t *testing.T) {
 	up := managedTestLeaf("retained-predecessor")
 	r := newManagedTestReconciler(t, up, nil)
@@ -532,6 +577,23 @@ func TestManagedLeafGateDoesNotWriteRetainedPredecessor(t *testing.T) {
 	}
 	if up.Status.WorkerControl != nil {
 		t.Fatalf("retained predecessor received a worker-control write: %#v", up.Status.WorkerControl)
+	}
+}
+
+func TestManagedLeafGateWaitsForExactPodNameBinding(t *testing.T) {
+	up := managedTestLeaf("pod-name-not-converged")
+	up.Annotations[managedprotocol.AnnotationAppWorkerPodName] = "terminating-predecessor-pod"
+	r := newManagedTestReconciler(t, up, nil)
+
+	decision, updated, err := r.syncManagedLeafGate(context.Background(), up, managedTestTime)
+	if err != nil {
+		t.Fatalf("syncManagedLeafGate() error = %v", err)
+	}
+	if !decision.bindingDenied || updated {
+		t.Fatalf("decision=%+v updated=%t; want read-only wait for manager Pod binding", decision, updated)
+	}
+	if up.Status.WorkerControl != nil {
+		t.Fatalf("unbound worker received a worker-control write: %#v", up.Status.WorkerControl)
 	}
 }
 
@@ -550,6 +612,8 @@ func TestManagedLeafRequiresEveryManagedAnnotation(t *testing.T) {
 		managedprotocol.AnnotationNodeName,
 		managedprotocol.AnnotationNodeUID,
 		managedprotocol.AnnotationWorkerProtocol,
+		managedprotocol.AnnotationAppWorkerPodName,
+		managedprotocol.AnnotationAppWorkerPodUID,
 	}
 	for _, key := range keys {
 		t.Run(key, func(t *testing.T) {
@@ -578,6 +642,8 @@ func TestManagedLeafRejectsEveryManagedAnnotationMismatch(t *testing.T) {
 		managedprotocol.AnnotationNodeName,
 		managedprotocol.AnnotationNodeUID,
 		managedprotocol.AnnotationWorkerProtocol,
+		managedprotocol.AnnotationAppWorkerPodName,
+		managedprotocol.AnnotationAppWorkerPodUID,
 	}
 	for _, key := range keys {
 		t.Run(key, func(t *testing.T) {

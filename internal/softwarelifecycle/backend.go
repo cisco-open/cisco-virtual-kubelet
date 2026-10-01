@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ValidateTargetVersion enforces the shared version syntax accepted by the
@@ -142,6 +143,31 @@ type DeviceFileObservation struct {
 	OperationID string
 	State       OperationState
 	Image       *InventoryImage
+}
+
+// InterruptedInstallRequest identifies a gNOI byte-stream install whose
+// response was lost after this process observed transfer progress. Native
+// adapters may use stronger platform evidence to prove that exact attempt
+// completed without replaying it.
+type InterruptedInstallRequest struct {
+	TargetVersion string
+	SourceSize    int64
+	NotBefore     time.Time
+	ObservedAt    time.Time
+}
+
+// InterruptedInstallObservation is positive, platform-native proof that the
+// interrupted install produced one exact activatable image.
+type InterruptedInstallObservation struct {
+	Image       InventoryImage
+	CompletedAt time.Time
+}
+
+// InterruptedInstallObserver is an optional strengthening of Backend. A
+// provider must continue to fail closed when the selected backend does not
+// implement it or cannot correlate the interrupted attempt precisely.
+type InterruptedInstallObserver interface {
+	ObserveInterruptedInstall(context.Context, InterruptedInstallRequest) (InterruptedInstallObservation, error)
 }
 
 // Backend is an optional platform capability. Generic gNOI byte transfer and

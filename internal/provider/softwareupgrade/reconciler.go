@@ -106,6 +106,11 @@ type Reconciler struct {
 	// WorkerRevision is the manager-rendered PodTemplate content address loaded
 	// by this process. Managed admission and every new claim bind to it.
 	WorkerRevision string
+	// WorkerPodName is this process's downward-API Pod name. Managed admission
+	// binds every status mutation to this exact Pod incarnation, so the worker
+	// must verify that manager-owned leaf annotations have converged before it
+	// attempts a write.
+	WorkerPodName string
 	// WorkerPodUID is this process's downward-API Pod UID. Managed admission
 	// requires it to match the exact Pod authenticated in CiscoDevice status so
 	// an overlapping predecessor cannot reuse a replacement Pod's proof.
@@ -1435,6 +1440,21 @@ func (r *Reconciler) observeUncertainInstall(
 	if standby {
 		supervisor = "standby"
 	}
+	if !standby && interruptedInstallHasCurrentTransferProof(up) {
+		if observer, ok := r.Lifecycle.(softwarelifecycle.InterruptedInstallObserver); ok {
+			callCtx, cancel := context.WithTimeout(ctx, controlRPCTimeout)
+			observation, err := observer.ObserveInterruptedInstall(callCtx, softwarelifecycle.InterruptedInstallRequest{
+				TargetVersion: up.Spec.TargetVersion,
+				SourceSize:    up.Status.SourceSize,
+				NotBefore:     up.Status.InstallStartTime.Time,
+				ObservedAt:    now,
+			})
+			cancel()
+			if err == nil {
+				return r.acceptObservedInstall(ctx, up, observation, now)
+			}
+		}
+	}
 	reason := "InstallObservationPending"
 	message := fmt.Sprintf("the %s supervisor gNOI OS.Install outcome is unknown; observing without replay until the install deadline", supervisor)
 	inventoryState := up.Status.InventoryState
@@ -1465,6 +1485,55 @@ func (r *Reconciler) observeUncertainInstall(
 		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionFalse, reason, message, now)
 		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
 	}, reconcile.Result{RequeueAfter: installInventoryPoll})
+}
+
+func interruptedInstallHasCurrentTransferProof(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return up != nil && up.Status.InstallStartTime != nil && up.Status.SourceSize > 0 &&
+		up.Status.TransferProgress != nil && up.Status.TransferProgress.BytesTransferred > 0 &&
+		up.Status.TransferProgress.TotalBytes == up.Status.SourceSize &&
+		up.Status.TransferProgress.BytesTransferred <= up.Status.TransferProgress.TotalBytes
+}
+
+func (r *Reconciler) acceptObservedInstall(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	observation softwarelifecycle.InterruptedInstallObservation,
+	now time.Time,
+) (reconcile.Result, error) {
+	if !observation.Image.State.Activatable() ||
+		!versionMatches(observation.Image.Version, up.Spec.TargetVersion) || observation.CompletedAt.IsZero() {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "InvalidNativeInstallProof",
+			"native interrupted-install observer returned incomplete or mismatched completion evidence", now)
+	}
+	message := fmt.Sprintf("IOS XE native inventory and completed install-add operation prove %s was installed after the gNOI stream response was lost", observation.Image.Version)
+	if up.Status.IndividualSupervisorInstall {
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			cur.Status.PrimarySupervisorInstalled = true
+			cur.Status.ValidatedVersion = observation.Image.Version
+			cur.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
+			cur.Status.Message = message + "; installing standby supervisor"
+			cur.Status.FailureReason = ""
+			r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "NativeInstallCorroborated", cur.Status.Message, now)
+			r.setCondition(cur, conditionTypeValidated, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
+			r.setReady(cur, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
+		}, reconcile.Result{RequeueAfter: time.Second})
+	}
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		cur.Status.PrimarySupervisorInstalled = true
+		cur.Status.ValidatedVersion = observation.Image.Version
+		cur.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
+		cur.Status.Message = message + "; activating"
+		cur.Status.FailureReason = ""
+		markTransferComplete(cur)
+		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "NativeInstallCorroborated", message, now)
+		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "NativeInstallCorroborated",
+			"pinned bytes were transferred and IOS XE recorded a verified, quiescent, completed install-add operation", now)
+		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "NativeInstallCorroborated", message, now)
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationPending",
+			"waiting to submit gNOI OS.Activate", now)
+		r.setReady(cur, metav1.ConditionFalse, "NativeInstallCorroborated", cur.Status.Message, now)
+	}, reconcile.Result{RequeueAfter: time.Second})
 }
 
 func permanentGNOIError(err error) (string, bool) {

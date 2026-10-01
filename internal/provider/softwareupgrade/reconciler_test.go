@@ -379,6 +379,10 @@ type fakeLifecycle struct {
 	observeResult softwarelifecycle.DeviceFileObservation
 	observeErr    error
 	observeCalls  int
+
+	interruptedResult softwarelifecycle.InterruptedInstallObservation
+	interruptedErr    error
+	interruptedCalls  int
 }
 
 func (f *fakeLifecycle) Inspect(_ context.Context, target string) (softwarelifecycle.InventoryImage, error) {
@@ -399,6 +403,22 @@ func (f *fakeLifecycle) Inspect(_ context.Context, target string) (softwarelifec
 		image.State = softwarelifecycle.InventoryStateInstalled
 	}
 	return image, nil
+}
+
+func (f *fakeLifecycle) ObserveInterruptedInstall(
+	_ context.Context,
+	_ softwarelifecycle.InterruptedInstallRequest,
+) (softwarelifecycle.InterruptedInstallObservation, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.interruptedCalls++
+	if f.interruptedErr != nil {
+		return softwarelifecycle.InterruptedInstallObservation{}, f.interruptedErr
+	}
+	if f.interruptedResult.Image.Version == "" {
+		return softwarelifecycle.InterruptedInstallObservation{}, softwarelifecycle.ErrOperationNotFound
+	}
+	return f.interruptedResult, nil
 }
 
 func (f *fakeLifecycle) RegisterDeviceFile(ctx context.Context, req softwarelifecycle.DeviceFileRequest) (softwarelifecycle.DeviceFileRegistration, error) {
@@ -4009,6 +4029,70 @@ func TestInterruptedInstallWaitsWhenInventoryCannotProveOutcome(t *testing.T) {
 	}
 	if rig.os.installCalls != 1 {
 		t.Fatalf("Install calls=%d, want no replay while outcome is unknown", rig.os.installCalls)
+	}
+}
+
+func TestInterruptedInstallAdvancesOnlyWithCorrelatedNativeProof(t *testing.T) {
+	rig := newRig(t)
+	started := metav1.NewTime(time.Unix(1_700_000_000, 0).UTC())
+	up := newUpgrade("upgrade-native-install-proof", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseTransferInterrupted
+		up.Status.SourceDigest = "sha256:" + strings.Repeat("a", 64)
+		up.Status.SourceSize = 1_247_897_709
+		up.Status.InstallStartTime = &started
+		up.Status.PrimarySupervisorInstallRequested = true
+		up.Status.TransferProgress = &opsv1alpha1.UpgradeTransferProgress{
+			BytesTransferred: 1_247_805_440,
+			TotalBytes:       1_247_897_709,
+			Percent:          99,
+		}
+	})
+	lifecycle := &fakeLifecycle{interruptedResult: softwarelifecycle.InterruptedInstallObservation{
+		Image: softwarelifecycle.InventoryImage{
+			Version: "17.15.01a.123", State: softwarelifecycle.InventoryStateInstalled,
+			SourcePath: "/mnt/sd3/user/gNOI_iosxe_17.15.01a.123.bin",
+		},
+		CompletedAt: started.Add(3 * time.Minute),
+	}}
+	r := newReconciler(t, rig, up)
+	r.Lifecycle = lifecycle
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseActivating ||
+		!got.Status.PrimarySupervisorInstalled || got.Status.ValidatedVersion != "17.15.01a.123" {
+		t.Fatalf("status = %+v", got.Status)
+	}
+	if got.Status.InventoryState != opsv1alpha1.UpgradeInventoryStateInstalled ||
+		!strings.Contains(got.Status.Message, "native inventory") {
+		t.Fatalf("inventory=%q message=%q", got.Status.InventoryState, got.Status.Message)
+	}
+	if lifecycle.interruptedCalls != 1 || rig.os.installCalls != 0 {
+		t.Fatalf("native observations=%d Install calls=%d", lifecycle.interruptedCalls, rig.os.installCalls)
+	}
+}
+
+func TestInterruptedInstallDoesNotUseNativeProofWithoutCurrentTransferProgress(t *testing.T) {
+	rig := newRig(t)
+	started := metav1.NewTime(time.Unix(1_700_000_000, 0).UTC())
+	up := newUpgrade("upgrade-native-proof-no-progress", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Finalizers = []string{Finalizer}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseTransferInterrupted
+		up.Status.SourceDigest = "sha256:" + strings.Repeat("a", 64)
+		up.Status.SourceSize = 1_247_897_709
+		up.Status.InstallStartTime = &started
+		up.Status.PrimarySupervisorInstallRequested = true
+	})
+	lifecycle := &fakeLifecycle{interruptedResult: softwarelifecycle.InterruptedInstallObservation{
+		Image:       softwarelifecycle.InventoryImage{Version: "17.15.01a.123", State: softwarelifecycle.InventoryStateInstalled},
+		CompletedAt: started.Add(time.Minute),
+	}}
+	r := newReconciler(t, rig, up)
+	r.Lifecycle = lifecycle
+
+	got := runReconcile(t, r, up, 1)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseTransferInterrupted || lifecycle.interruptedCalls != 0 {
+		t.Fatalf("phase=%q native observations=%d", got.Status.Phase, lifecycle.interruptedCalls)
 	}
 }
 

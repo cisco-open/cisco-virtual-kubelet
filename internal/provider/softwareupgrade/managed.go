@@ -290,6 +290,7 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 		{name: "runtime device UID", value: r.DeviceUID},
 		{name: "runtime Node name", value: r.NodeName},
 		{name: "runtime worker configuration revision", value: r.WorkerRevision},
+		{name: "runtime worker Pod name", value: r.WorkerPodName},
 		{name: "runtime worker Pod UID", value: r.WorkerPodUID},
 	} {
 		if strings.TrimSpace(field.value) == "" {
@@ -316,6 +317,18 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 	}
 	if !managedUpgradeWorkerReady(&device, r.WorkerRevision, r.WorkerPodUID) {
 		return fmt.Errorf("live CiscoDevice has no ready worker proof for runtime revision %q", r.WorkerRevision)
+	}
+	podNameAnnotation := managedprotocol.AnnotationAppWorkerPodName
+	podUIDAnnotation := managedprotocol.AnnotationAppWorkerPodUID
+	if device.Status.NetworkWorkerRevision != nil {
+		podNameAnnotation = managedprotocol.AnnotationNetworkWorkerPodName
+		podUIDAnnotation = managedprotocol.AnnotationNetworkWorkerPodUID
+	}
+	if err := requireAnnotation(up.Annotations, podNameAnnotation, r.WorkerPodName); err != nil {
+		return fmt.Errorf("runtime worker Pod binding: %w", err)
+	}
+	if err := requireAnnotation(up.Annotations, podUIDAnnotation, r.WorkerPodUID); err != nil {
+		return fmt.Errorf("runtime worker Pod binding: %w", err)
 	}
 	if err := r.validateManagedRuntimeSecretRevisions(ctx, &device); err != nil {
 		return err

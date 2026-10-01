@@ -94,6 +94,7 @@ type configReconcilerOptions struct {
 	NodeName                 string
 	ManagedTopology          bool
 	WorkerRevision           string
+	WorkerPodName            string
 	WorkerPodUID             string
 	CredentialSecretRevision string
 	GNOITLSSecretRevision    string
@@ -591,6 +592,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			NodeName:                 opts.NodeName,
 			ManagedTopology:          opts.ManagedTopology,
 			WorkerRevision:           opts.WorkerRevision,
+			WorkerPodName:            opts.WorkerPodName,
 			WorkerPodUID:             runtimeID,
 			CredentialSecretRevision: opts.CredentialSecretRevision,
 			GNOITLSSecretRevision:    opts.GNOITLSSecretRevision,
