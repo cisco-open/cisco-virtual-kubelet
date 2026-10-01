@@ -139,4 +139,26 @@ succeeded. See the
 
 No live protection rule or device mutation was used. Physical redundant,
 singleton, critical-service and congested-path cases, overlapping groups,
-transfer pacing and continuous recovery/soak enforcement remain open.
+transfer pacing and, at this candidate, continuous recovery/soak enforcement
+remain open. The following candidate closes the code/API recovery/soak item.
+
+## C3 continuous network recovery/soak follow-up — `ae4f3a7b`
+
+The full race suite, pinned Kubernetes 1.35 envtest suite, topology render
+contract and strict MkDocs build passed. Tests prove that a network-enabled
+rollout cannot settle from a still-fresh pre-operation sample, accepts a
+complete post-operation sample, and fails/reset its continuous soak when a
+later accepted sample becomes incomplete. The same gate covers drained and
+non-drained leaves; disabled network policy retains legacy behavior.
+
+Helm revision 125 converged the manager and all six physical C9K workers to
+the exact clean candidate. Manager-accepted observations matched each current
+network-worker Pod UID; all three Nodes were Ready, schedulable and untainted;
+and three secure read-only gNOI Verify operations succeeded. Expected
+fail-closed handoff/Lease conflicts appeared during worker replacement, while
+the explicit settled 21:18 UTC log window was clean. See the
+[continuous recovery/soak record](c3-continuous-network-recovery-soak.md).
+
+No software mutation or controlled path failure was performed. E03 still
+requires an isolated redundant/singleton/critical/congested path fixture,
+overlapping group accounting and byte-based transfer pacing.

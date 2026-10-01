@@ -1,6 +1,6 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete; implemented and reviewed through `617b1cfc`**, 1 October 2026.
+Status: **incomplete; implemented and reviewed through `ae4f3a7b`**, 1 October 2026.
 Start with the [November handoff](topology-november-handoff.md) and
 [versioned evidence](evidence/topology-2026-10-01/README.md). The checkpoint
 preserves runtime/harness changes after `665a7954`; it is not a release candidate.
@@ -17,10 +17,10 @@ physical prerequisites, evidence and completion gates for every outstanding
 area. Its work-package IDs must be used when reporting progress. Updating a
 status description does not implement or qualify the corresponding feature.
 
-The trustworthy-network-evidence, claim-time-authority and administrator
-disruption-protection increments are now implemented. The next policy
-checkpoint is overlapping risk groups, transfer pacing and recovery/soak
-enforcement, while independently
+The trustworthy-network-evidence, claim-time-authority, administrator
+disruption-protection and continuous recovery/soak increments are now
+implemented. The next policy checkpoint is overlapping risk groups and
+transfer pacing, while independently
 qualifying preparation before a separately approved activation step on a
 capable platform. Operators should be able to prepare
 an image in advance, understand which devices are safe to interrupt, and activate only
@@ -33,8 +33,9 @@ Restart-safe sequence allocation, bounded diagnostics, collection-interval
 validation, manager-owned acceptance, rate provenance and a genuine
 bound-token admission suite have advanced. Do not reimplement those fixes.
 Controlled loaded-path and reverse mixed-version qualification remain open.
-The evidence-bound worker claim check is complete; broader execution-time
-policy, recovery/soak and service-path acceptance remain open.
+The evidence-bound worker claim and continuous recovery/soak checks are
+complete; broader execution-time policy and physical service-path acceptance
+remain open.
 First preserve and reconcile `.103`'s uncertain NoReboot activation, fix new
 operation binding ordering and add full-path planning regressions. The
 existing nil-status test checks only a helper, not the failing freeze path.
@@ -72,7 +73,10 @@ Candidate `617b1cfc` adds bounded administrator-owned critical-service and
 singleton-path prohibitions at planning and pre-execution revalidation. Its
 [qualification record](evidence/topology-2026-10-01/c3-administrator-disruption-protections.md)
 also records the retained-value Helm compatibility defect found and repaired
-before physical convergence.
+before physical convergence. Candidate `ae4f3a7b` extends the opted-in network
+gate through post-operation recovery and every continuous-soak pass, requiring
+a manager-accepted sample collected after the device operation; see the
+[recovery/soak qualification](evidence/topology-2026-10-01/c3-continuous-network-recovery-soak.md).
 
 The original `/tmp/cvk-topology-awareness-options.md` was unavailable during
 this review. This plan reconstructs the remaining scope from the checked-in
@@ -114,11 +118,11 @@ final acceptance. The [execution plan](topology-roadmap-execution.md) records
 the evidence corrections, immediate repairs and test-by-test exit gates and
 remains the completion ledger.
 
-| Slice | Reviewed status through `617b1cfc` (physical evidence retains its original revision) | Required execution |
+| Slice | Reviewed status through `ae4f3a7b` (physical evidence retains its original revision) | Required execution |
 | --- | --- | --- |
 | T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired; clean `9e578131` candidate deployed to Ubuntu16 with all three physical target observations checked | E00: finish direct device CLI/secure OS.Verify, complete log-plane/service/path baselines and durable capability indexing. |
 | T1 | Manager-accepted Pod-bound evidence, restart-safe publisher, interval/schema safety, directional-rate provenance/recomputation, concurrency/lost-response tests and real bound-token admission suite passed; physical k3s schema compatibility corrected | C2 / E01–E02: controlled loaded-path accuracy with an independent source, redundant-hardware capability, reverse mixed-version/rollback and candidate CI. |
-| T2 | Network checks at plan freeze and manager admission; evidence-bound expiring grant and monotonic renewal; uncached exact-sample worker recheck before each new mutation claim; bounded administrator critical-service/singleton-path prohibitions; real-API negative coverage and physical exact-candidate/secure-gNOI validation | C3 / E03: overlapping risk groups, byte pacing, recovery/soak enforcement, controlled measured headroom and physical redundant/singleton/critical/congested service-path tests. |
+| T2 | Network checks at plan freeze and manager admission; evidence-bound expiring grant and monotonic renewal; uncached exact-sample worker recheck before each new mutation claim; bounded administrator critical-service/singleton-path prohibitions; post-operation accepted-evidence recovery and continuous-soak enforcement; real-API negative coverage and physical exact-candidate/secure-gNOI validation | C3 / E03: overlapping risk groups, byte pacing, controlled measured headroom and physical redundant/singleton/critical/congested service-path tests. |
 | T3 | Combined lifecycle exists; `3212f777` reconciled `.103`'s lost NoReboot outcome without replay; independent prepare contract absent | C4/C5 / E04–E05: true Install-only qualification, then durable receipts/ownership. |
 | T4 | Separate activation authorization/reservations absent | E06: implement append-only activation approval, phase windows, atomic budget transitions and recovery. |
 | T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
@@ -140,7 +144,8 @@ target/source identities, both worker planes and manager logs, service/claim
 timelines and reproducible tooling. Test binding ordering and the full
 network-enabled freeze path, then complete accepted-observation and
 claim-time enforcement. These trust-boundary increments are now complete;
-continue with the remaining E03 group/pacing/recovery policy. Qualify
+continue with the remaining E03 group/pacing policy and physical failed-path
+recovery scenarios. Qualify
 the actual Install-only boundary alongside E03 policy, then implement E05/E06. Broader drain testing still requires
 device-clean, replacement and service proof. Another successful combined
 reload alone cannot close these contracts.
