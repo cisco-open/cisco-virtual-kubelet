@@ -619,6 +619,15 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if device.Spec.Driver != ciskov1.DeviceDriverXE {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("driver %s is unsupported by IOSXESoftwareRollout", device.Spec.Driver)
 	}
+	protection, err := policy.DisruptionProtection(device.Labels)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("evaluate administrator disruption protection: %w", err)
+	}
+	if protection != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf(
+			"%sProtected: administrator rule %q prohibits the current disruptive lifecycle",
+			protection.Reason, protection.Name)
+	}
 	if device.UID == "" || device.Status.NodeIdentity == nil || device.Status.TopologyProjection == nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("managed Node identity and topology projection are not ready")
 	}

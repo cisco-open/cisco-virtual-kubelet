@@ -13,6 +13,7 @@ managed_render="$scratch_dir/managed.yaml"
 managed_short_account_render="$scratch_dir/managed-short-accounts.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
 managed_drain_render="$scratch_dir/managed-drain.yaml"
+managed_protection_render="$scratch_dir/managed-protection.yaml"
 managed_lease_namespace_render="$scratch_dir/managed-lease-namespace.yaml"
 strict_render_bundle="$scratch_dir/managed-and-examples.yaml"
 error_output="$scratch_dir/error.txt"
@@ -141,6 +142,14 @@ helm template cvk "$chart_dir" \
   --set topology.policy.workloadDrain.maxTimeoutSeconds=900 \
   --set topology.policy.workloadDrain.maxPods=8 \
   --set topology.policy.workloadDrain.maxTerminationGraceSeconds=180 >"$managed_drain_render"
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set-json 'topology.policy.requiredTopologyKeys=["topology.kubernetes.io/region","topology.kubernetes.io/zone","operations.cisco.vk/service-tier"]' \
+  --set-json 'topology.policy.disruptionProtections=[{"name":"critical-services","reason":"CriticalService","selector":{"matchLabels":{"operations.cisco.vk/service-tier":"critical"},"matchExpressions":[]}}]' >"$managed_protection_render"
 helm template cvk "$chart_dir" --namespace cisco-vk-system --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
   --set config.leaseNamespace=cvk-leases >"$managed_lease_namespace_render"
 
@@ -258,6 +267,11 @@ if grep -Fq '"workloadDrain"' "$managed_render"; then
   echo "disabled workload drain changed the v1 administrator policy" >&2
   exit 1
 fi
+if grep -Fq '"disruptionProtections"' "$managed_render"; then
+  echo "empty disruption protection changed the v1 administrator policy" >&2
+  exit 1
+fi
+grep -Fq '"disruptionProtections":[{"name":"critical-services","reason":"CriticalService","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-tier":"critical"}}}]' "$managed_protection_render"
 grep -Fq '"workloadDrain":{' "$managed_drain_render"
 grep -Fq '"allowedNamespaces":["apps","edge-services"]' "$managed_drain_render"
 grep -Fq '"enabled":true' "$managed_drain_render"
@@ -1117,6 +1131,25 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   exit 1
 fi
 grep -Fq 'globalMaxUnavailable' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set-json 'topology.policy.disruptionProtections=[{"name":"critical","reason":"Advisory","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-a"},"matchExpressions":[]}}]' >"$error_output" 2>&1; then
+  echo "unknown disruption-protection reason passed values schema" >&2
+  exit 1
+fi
+grep -Fq '/topology/policy/disruptionProtections/0/reason' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.disruptionProtections=[{"name":"critical","reason":"CriticalService","selector":{"matchLabels":{"operations.cisco.vk/service-tier":"critical"},"matchExpressions":[]}}]' >"$error_output" 2>&1; then
+  echo "disruption-protection selector outside required keys rendered" >&2
+  exit 1
+fi
+grep -Fq 'is not in requiredTopologyKeys' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \

@@ -121,6 +121,34 @@ func TestAdminPolicyHashesSeparateSemanticAndStructuralChanges(t *testing.T) {
 	if structuralLeaseChanged == structural {
 		t.Fatal("config Lease namespace change did not change the structural hash")
 	}
+	protectedA := base
+	protectedA.DisruptionProtections = []AdminDisruptionProtection{
+		{Name: "singleton-path", Reason: "SingletonPath", Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}}},
+		{Name: "critical-service", Reason: "CriticalService", Selector: metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key: "topology.cisco.vk/redundancy-group", Operator: metav1.LabelSelectorOpIn, Values: []string{"b", "a"},
+		}}}},
+	}
+	protectedB := base
+	protectedB.DisruptionProtections = []AdminDisruptionProtection{
+		{Name: "critical-service", Reason: "CriticalService", Selector: metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key: "topology.cisco.vk/redundancy-group", Operator: metav1.LabelSelectorOpIn, Values: []string{"a", "b"},
+		}}}},
+		{Name: "singleton-path", Reason: "SingletonPath", Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}}},
+	}
+	semanticProtectedA, structuralProtectedA, err := AdminPolicyHashes(protectedA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	semanticProtectedB, structuralProtectedB, err := AdminPolicyHashes(protectedB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if semanticProtectedA != semanticProtectedB || structuralProtectedA != structuralProtectedB {
+		t.Fatal("order-only disruption-protection rewrite changed canonical policy hashes")
+	}
+	if semanticProtectedA == semantic || structuralProtectedA == structural {
+		t.Fatal("disruption protection did not change both semantic and structural policy hashes")
+	}
 }
 
 func TestAdminPolicyValidationFailsClosed(t *testing.T) {
@@ -198,6 +226,28 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 			cfg.WorkloadDrain.MaxTimeoutSeconds = minDrainTimeoutSeconds
 			cfg.WorkloadDrain.MaxTerminationGraceSeconds = minDrainTimeoutSeconds - drainCompletionBuffer + 1
 		},
+		"empty disruption selector": func(cfg *AdminPolicyConfig) {
+			cfg.DisruptionProtections = []AdminDisruptionProtection{{Name: "critical", Reason: "CriticalService"}}
+		},
+		"unknown disruption reason": func(cfg *AdminPolicyConfig) {
+			cfg.DisruptionProtections = []AdminDisruptionProtection{{
+				Name: "critical", Reason: "Advisory",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}},
+			}}
+		},
+		"unfrozen disruption selector key": func(cfg *AdminPolicyConfig) {
+			cfg.DisruptionProtections = []AdminDisruptionProtection{{
+				Name: "critical", Reason: "CriticalService",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"operations.cisco.vk/service-tier": "critical"}},
+			}}
+		},
+		"duplicate disruption names": func(cfg *AdminPolicyConfig) {
+			rule := AdminDisruptionProtection{
+				Name: "critical", Reason: "CriticalService",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}},
+			}
+			cfg.DisruptionProtections = []AdminDisruptionProtection{rule, rule}
+		},
 	}
 	for name, mutate := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -207,6 +257,32 @@ func TestAdminPolicyValidationFailsClosed(t *testing.T) {
 				t.Fatal("CanonicalPolicyJSON() accepted invalid policy")
 			}
 		})
+	}
+}
+
+func TestAdminPolicyDisruptionProtectionMatchesDeterministically(t *testing.T) {
+	cfg := validAdminPolicyConfig()
+	cfg.DisruptionProtections = []AdminDisruptionProtection{
+		{Name: "z-singleton", Reason: "SingletonPath", Selector: metav1.LabelSelector{MatchLabels: map[string]string{"topology.cisco.vk/site": "site-a"}}},
+		{Name: "a-critical", Reason: "CriticalService", Selector: metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{
+			Key: "topology.cisco.vk/redundancy-group", Operator: metav1.LabelSelectorOpIn, Values: []string{"pair-a"},
+		}}}},
+	}
+	policy := &ParsedAdminPolicy{Config: cfg}
+	match, err := policy.DisruptionProtection(map[string]string{
+		"topology.cisco.vk/site": "site-a", "topology.cisco.vk/redundancy-group": "pair-a",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if match == nil || match.Name != "a-critical" || match.Reason != "CriticalService" {
+		t.Fatalf("DisruptionProtection() = %+v, want deterministic a-critical match", match)
+	}
+	match, err = policy.DisruptionProtection(map[string]string{
+		"topology.cisco.vk/site": "site-b", "topology.cisco.vk/redundancy-group": "pair-b",
+	})
+	if err != nil || match != nil {
+		t.Fatalf("DisruptionProtection() non-match = %+v, %v", match, err)
 	}
 }
 

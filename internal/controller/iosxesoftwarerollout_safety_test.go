@@ -1062,6 +1062,15 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err != nil {
 		t.Fatalf("freezeTarget() after worker handoff error = %v", err)
 	}
+	policy.Config.DisruptionProtections = []topologyrollout.AdminDisruptionProtection{{
+		Name: "critical-service", Reason: "CriticalService",
+		Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+	}}
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
+		!strings.Contains(err.Error(), "CriticalServiceProtected") {
+		t.Fatalf("freezeTarget() disruption protection error = %v", err)
+	}
+	policy.Config.DisruptionProtections = nil
 
 	// Reproduce the original planning path: network evidence is enabled before
 	// status.effectivePolicy exists. The parsed administrator policy must drive
@@ -1229,8 +1238,9 @@ func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 	policy := &topologyrollout.ParsedAdminPolicy{Selector: labels.Everything()}
 
 	for _, tt := range []struct {
-		name   string
-		mutate func(*ciskov1.CiscoDevice)
+		name         string
+		mutate       func(*ciskov1.CiscoDevice)
+		mutatePolicy func(*topologyrollout.ParsedAdminPolicy)
 	}{
 		{name: "unchanged", mutate: func(*ciskov1.CiscoDevice) {}},
 		{name: "address generation", mutate: func(device *ciskov1.CiscoDevice) {
@@ -1243,6 +1253,13 @@ func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 		{name: "qualification cohort", mutate: func(device *ciskov1.CiscoDevice) {
 			device.Labels[managedprotocol.QualificationCohortLabel] = "c9400"
 		}},
+		{name: "administrator disruption protection", mutate: func(*ciskov1.CiscoDevice) {}, mutatePolicy: func(policy *topologyrollout.ParsedAdminPolicy) {
+			policy.Config.RequiredTopologyKeys = []string{topologyKey}
+			policy.Config.DisruptionProtections = []topologyrollout.AdminDisruptionProtection{{
+				Name: "singleton-path", Reason: "SingletonPath",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+			}}
+		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			device := baseDevice.DeepCopy()
@@ -1254,7 +1271,11 @@ func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 			objects := append([]client.Object{device, node}, workerObjects...)
 			apiClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 			reconciler := &IOSXESoftwareRolloutReconciler{Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now }}
-			err := reconciler.revalidateFrozenTarget(context.Background(), rollout, policy, target)
+			testPolicy := *policy
+			if tt.mutatePolicy != nil {
+				tt.mutatePolicy(&testPolicy)
+			}
+			err := reconciler.revalidateFrozenTarget(context.Background(), rollout, &testPolicy, target)
 			if tt.name == "unchanged" {
 				if err != nil {
 					t.Fatalf("unchanged target rejected: %v", err)

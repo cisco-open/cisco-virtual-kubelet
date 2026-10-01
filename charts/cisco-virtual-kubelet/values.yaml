@@ -157,6 +157,21 @@ topology:
     domainMaxUnavailable:
       topology.kubernetes.io/zone: 1
 
+    # Optional fail-closed administrator rules for devices whose current
+    # combined software lifecycle must not be disrupted. Selector keys must be
+    # present in requiredTopologyKeys. The manager re-evaluates these rules at
+    # planning and immediately before admission. Empty preserves existing
+    # behavior. A future independently qualified prepare-only phase will have
+    # its own authorization contract; these rules currently block the whole
+    # combined lifecycle.
+    disruptionProtections: []
+    #  - name: critical-services
+    #    reason: CriticalService
+    #    selector:
+    #      matchLabels:
+    #        operations.cisco.vk/service-tier: critical
+    #      matchExpressions: []
+
     healthFreshnessSeconds: 300
     maxCampaignTargets: 100
     maxActiveReservations: 256

@@ -543,6 +543,23 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- fail (printf "topology.policy.projectedTopologyKeys contains %q, which is not in requiredTopologyKeys" $key) -}}
 {{- end -}}
 {{- end -}}
+{{- $protectionNames := dict -}}
+{{- range $protection := .Values.topology.policy.disruptionProtections -}}
+{{- if hasKey $protectionNames $protection.name -}}
+{{- fail (printf "topology.policy.disruptionProtections contains duplicate name %q" $protection.name) -}}
+{{- end -}}
+{{- $_ := set $protectionNames $protection.name true -}}
+{{- range $key, $_ := $protection.selector.matchLabels -}}
+{{- if not (hasKey $required $key) -}}
+{{- fail (printf "topology.policy.disruptionProtections rule %q selector key %q is not in requiredTopologyKeys" $protection.name $key) -}}
+{{- end -}}
+{{- end -}}
+{{- range $expression := $protection.selector.matchExpressions -}}
+{{- if not (hasKey $required $expression.key) -}}
+{{- fail (printf "topology.policy.disruptionProtections rule %q selector key %q is not in requiredTopologyKeys" $protection.name $expression.key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- $domainKeys := dict -}}
 {{- range $key, $_ := .Values.topology.policy.domainMaxConcurrentTransfers -}}
 {{- if not (hasKey $required $key) -}}

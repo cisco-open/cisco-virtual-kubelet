@@ -1172,6 +1172,19 @@ Already-claimed work keeps its reservation and is observed to a conclusive
 outcome; policy or target drift never silently expands or abandons existing
 mutation authority.
 
+Administrator policy may also define up to 16 `disruptionProtections`. Each
+rule has a DNS-label name, a reason (`CriticalService` or `SingletonPath`) and
+a non-empty Kubernetes label selector whose keys are included in
+`requiredTopologyKeys`. These rules are prohibitions, not hints: a matching
+CiscoDevice cannot enter the current combined software lifecycle. The manager
+checks them while freezing the plan and again from current protected labels
+before admission. Adding or changing a rule changes both policy hashes and
+requires re-planning; already-claimed physical work remains under observation
+instead of being abandoned. Because the current lifecycle is not independently
+staged, the rule also blocks image preparation. Never infer redundancy merely
+from a label—use qualified path and service evidence before removing a
+singleton or critical-service protection.
+
 ### Admission and execution behavior
 
 For each target, the manager checks:
@@ -1181,6 +1194,8 @@ For each target, the manager checks:
   Node UID, projection hash, and worker protocol;
 - deterministic source selection still resolves to the exact frozen endpoint
   and Secret incarnation;
+- no administrator `CriticalService` or `SingletonPath` disruption protection
+  matches the current protected device labels;
 - fresh device and Node health, including current producer observations for
   `NodeIdentityReady`, `TopologyReady`, and `GNOIConfigurationReady`;
 - the selected workload policy: `BlockIfRunning` requires no live Kubernetes

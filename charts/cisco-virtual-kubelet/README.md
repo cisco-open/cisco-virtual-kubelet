@@ -102,6 +102,13 @@ topology:
       topology.kubernetes.io/region: 1
     domainMaxUnavailable:
       topology.kubernetes.io/zone: 1
+    disruptionProtections: []
+    # - name: critical-services
+    #   reason: CriticalService # or SingletonPath
+    #   selector:
+    #     matchLabels:
+    #       operations.cisco.vk/service-tier: critical
+    #     matchExpressions: []
     healthFreshnessSeconds: 300
     maxCampaignTargets: 100
     maxActiveReservations: 256
@@ -163,6 +170,18 @@ Campaign limits may tighten the administrator ceilings above; they cannot
 loosen them. The policy selector must be non-empty and every selector key must
 live under `topology.cisco.vk/*`; those are the enrollment labels protected by
 native admission from ordinary CiscoDevice editors.
+
+`disruptionProtections` is an administrator-owned, fail-closed selector list
+for critical-service and singleton-path devices. Every selector key must be in
+`requiredTopologyKeys`, which keeps the decision inside the protected,
+plan-frozen device inventory. A matching rule stops plan creation with
+`CriticalServiceProtected` or `SingletonPathProtected`; the manager evaluates it again before granting
+execution, so a newly tightened policy cannot leave an old disruptive target
+usable. The current IOS-XE workflow combines preparation and activation, so a
+match blocks the entire software lifecycle. Do not use labels alone to claim a
+path is redundant. A future prepare-only phase may bypass disruption
+protection only after it has a separate API, authorization, and physical
+non-disruption qualification.
 
 Every software-rollout target must also carry the protected,
 low-cardinality `operations.cisco.vk/qualification-cohort` label describing

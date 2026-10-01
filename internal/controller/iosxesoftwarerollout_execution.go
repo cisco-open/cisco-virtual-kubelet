@@ -1577,6 +1577,14 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateFrozenTarget(
 		!currentPolicy.Selector.Matches(labels.Set(device.Labels)) {
 		return fmt.Errorf("frozen target device incarnation or fleet membership changed")
 	}
+	protection, err := currentPolicy.DisruptionProtection(device.Labels)
+	if err != nil {
+		return fmt.Errorf("evaluate administrator disruption protection: %w", err)
+	}
+	if protection != nil {
+		return fmt.Errorf("%sProtected: administrator rule %q prohibits the current disruptive lifecycle",
+			protection.Reason, protection.Name)
+	}
 	if device.Status.NodeIdentity == nil || device.Status.TopologyProjection == nil ||
 		device.Status.NodeIdentity.NodeName != target.NodeName || device.Status.NodeIdentity.NodeUID != target.NodeUID ||
 		device.Status.NodeIdentity.DeviceUID != target.DeviceUID {
