@@ -39,12 +39,13 @@ type GraphObservation struct {
 }
 
 type GraphNeighbor struct {
-	Identity      string
-	PeerID        string
-	Source        string
-	Interface     string
-	RoutingDomain string
-	State         string
+	Identity        string
+	PeerID          string
+	Source          string
+	Interface       string
+	RemoteInterface string
+	RoutingDomain   string
+	State           string
 }
 
 type GraphPolicy struct {
@@ -59,11 +60,12 @@ type GraphPolicy struct {
 }
 
 type DeclaredLink struct {
-	Local         string
-	Peer          string
-	Source        string
-	Interface     string
-	RoutingDomain string
+	Local           string
+	Peer            string
+	Source          string
+	Interface       string
+	RemoteInterface string
+	RoutingDomain   string
 }
 
 type Graph struct {
@@ -75,13 +77,14 @@ type Graph struct {
 }
 
 type GraphEdge struct {
-	Local         string
-	Peer          string
-	Identity      string
-	Source        string
-	Interface     string
-	RoutingDomain string
-	State         string
+	Local           string
+	Peer            string
+	Identity        string
+	Source          string
+	Interface       string
+	RemoteInterface string
+	RoutingDomain   string
+	State           string
 }
 
 type GraphDiagnostic struct {
@@ -175,31 +178,33 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 				return Graph{}, fmt.Errorf("topology graph input has more than %d neighbors", maxInputNeighbors)
 			}
 			peer := strings.TrimSpace(neighbor.PeerID)
-			if len(peer) > MaxGraphFieldLength || len(neighbor.Interface) > MaxGraphFieldLength || len(neighbor.RoutingDomain) > MaxGraphFieldLength || len(neighbor.Source) > MaxGraphFieldLength || len(neighbor.Identity) > MaxGraphFieldLength || len(neighbor.State) > MaxGraphFieldLength {
+			if len(peer) > MaxGraphFieldLength || len(neighbor.Interface) > MaxGraphFieldLength || len(neighbor.RemoteInterface) > MaxGraphFieldLength || len(neighbor.RoutingDomain) > MaxGraphFieldLength || len(neighbor.Source) > MaxGraphFieldLength || len(neighbor.Identity) > MaxGraphFieldLength || len(neighbor.State) > MaxGraphFieldLength {
 				return Graph{}, fmt.Errorf("topology adjacency field exceeds %d bytes", MaxGraphFieldLength)
 			}
 			identity := strings.TrimSpace(neighbor.Identity)
 			source := strings.TrimSpace(neighbor.Source)
 			if identity == "" {
-				identity = graphEdgeIdentity(local, peer, source, neighbor.Interface, neighbor.RoutingDomain)
+				identity = graphEdgeIdentity(local, peer, source, neighbor.Interface, neighbor.RemoteInterface, neighbor.RoutingDomain)
 			}
 			key := canonicalKey(local, identity)
 			edge := GraphEdge{
 				Local: local, Peer: peer, Identity: identity, Source: source,
-				Interface: strings.TrimSpace(neighbor.Interface), RoutingDomain: strings.TrimSpace(neighbor.RoutingDomain),
+				Interface: strings.TrimSpace(neighbor.Interface), RemoteInterface: strings.TrimSpace(neighbor.RemoteInterface), RoutingDomain: strings.TrimSpace(neighbor.RoutingDomain),
 				State: strings.TrimSpace(neighbor.State),
 			}
 			if previous, duplicate := seen[key]; duplicate {
 				graph.Complete = false
 				message := "the same source-qualified adjacency was observed more than once"
+				diagnosticPeer := previous.Peer
 				if canonicalJSON(edge) != canonicalJSON(previous) {
 					message = "the same source-qualified adjacency was observed with conflicting fields"
 					if canonicalJSON(edge) < canonicalJSON(previous) {
 						seen[key] = edge
+						diagnosticPeer = edge.Peer
 					}
 				}
 				graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
-					Code: "DuplicateAdjacency", Severity: "Error", Local: local, Peer: peer, Message: message,
+					Code: "DuplicateAdjacency", Severity: "Error", Local: local, Peer: diagnosticPeer, Message: message,
 				})
 				continue
 			}
@@ -254,14 +259,21 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 func asymmetricDiagnostics(edges []GraphEdge, nodes map[string]struct{}) []GraphDiagnostic {
 	seen := make(map[string]struct{}, len(edges))
 	for _, edge := range edges {
-		seen[canonicalKey(edge.Local, edge.Peer, edge.Source, edge.RoutingDomain, edge.Interface)] = struct{}{}
+		seen[adjacencyKey(edge.Local, edge.Peer, edge.Source, edge.RoutingDomain, edge.Interface, edge.RemoteInterface)] = struct{}{}
 	}
 	var diagnostics []GraphDiagnostic
 	for _, edge := range edges {
 		if _, known := nodes[edge.Peer]; !known {
 			continue
 		}
-		if _, reverse := seen[canonicalKey(edge.Peer, edge.Local, edge.Source, edge.RoutingDomain, edge.Interface)]; reverse {
+		if edge.RemoteInterface == "" {
+			diagnostics = append(diagnostics, GraphDiagnostic{
+				Code: "ReverseIdentityInsufficient", Severity: "Warning", Local: edge.Local, Peer: edge.Peer,
+				Message: "remote interface identity is absent; reverse adjacency cannot be proven",
+			})
+			continue
+		}
+		if _, reverse := seen[adjacencyKey(edge.Peer, edge.Local, edge.Source, edge.RoutingDomain, edge.RemoteInterface, edge.Interface)]; reverse {
 			continue
 		}
 		diagnostics = append(diagnostics, GraphDiagnostic{
@@ -276,22 +288,22 @@ func declaredDrift(edges []GraphEdge, declared []DeclaredLink) []GraphDiagnostic
 	observed := make(map[string]struct{}, len(edges))
 	observedWithoutSource := make(map[string]struct{}, len(edges))
 	for _, edge := range edges {
-		observed[linkKey(edge.Local, edge.Peer, edge.Source, edge.Interface, edge.RoutingDomain)] = struct{}{}
-		observedWithoutSource[linkKey(edge.Local, edge.Peer, "", edge.Interface, edge.RoutingDomain)] = struct{}{}
+		observed[linkKey(edge.Local, edge.Peer, edge.Source, edge.Interface, edge.RemoteInterface, edge.RoutingDomain)] = struct{}{}
+		observedWithoutSource[linkKey(edge.Local, edge.Peer, "", edge.Interface, edge.RemoteInterface, edge.RoutingDomain)] = struct{}{}
 	}
 	declaredSet := make(map[string]struct{}, len(declared))
 	declaredSetWithoutSource := make(map[string]struct{}, len(declared))
 	var diagnostics []GraphDiagnostic
 	for _, link := range declared {
-		key := linkKey(link.Local, link.Peer, link.Source, link.Interface, link.RoutingDomain)
+		key := linkKey(link.Local, link.Peer, link.Source, link.Interface, link.RemoteInterface, link.RoutingDomain)
 		if link.Source == "" {
-			declaredSetWithoutSource[linkKey(link.Local, link.Peer, "", link.Interface, link.RoutingDomain)] = struct{}{}
+			declaredSetWithoutSource[linkKey(link.Local, link.Peer, "", link.Interface, link.RemoteInterface, link.RoutingDomain)] = struct{}{}
 		} else {
 			declaredSet[key] = struct{}{}
 		}
 		_, ok := observed[key]
 		if link.Source == "" {
-			_, ok = observedWithoutSource[linkKey(link.Local, link.Peer, "", link.Interface, link.RoutingDomain)]
+			_, ok = observedWithoutSource[linkKey(link.Local, link.Peer, "", link.Interface, link.RemoteInterface, link.RoutingDomain)]
 		}
 		if !ok {
 			diagnostics = append(diagnostics, GraphDiagnostic{Code: "DeclaredLinkMissing", Severity: "Error", Local: link.Local, Peer: link.Peer, Message: "declared link is not present in observed topology"})
@@ -301,9 +313,9 @@ func declaredDrift(edges []GraphEdge, declared []DeclaredLink) []GraphDiagnostic
 		if len(declared) == 0 {
 			break
 		}
-		_, ok := declaredSet[linkKey(edge.Local, edge.Peer, edge.Source, edge.Interface, edge.RoutingDomain)]
+		_, ok := declaredSet[linkKey(edge.Local, edge.Peer, edge.Source, edge.Interface, edge.RemoteInterface, edge.RoutingDomain)]
 		if !ok {
-			_, ok = declaredSetWithoutSource[linkKey(edge.Local, edge.Peer, "", edge.Interface, edge.RoutingDomain)]
+			_, ok = declaredSetWithoutSource[linkKey(edge.Local, edge.Peer, "", edge.Interface, edge.RemoteInterface, edge.RoutingDomain)]
 		}
 		if !ok {
 			diagnostics = append(diagnostics, GraphDiagnostic{Code: "UnexpectedObservedLink", Severity: "Warning", Local: edge.Local, Peer: edge.Peer, Message: "observed link is outside the declared topology"})
@@ -312,17 +324,21 @@ func declaredDrift(edges []GraphEdge, declared []DeclaredLink) []GraphDiagnostic
 	return diagnostics
 }
 
-func linkKey(local, peer, source, iface, domain string) string {
-	return canonicalKey(strings.TrimSpace(local), strings.TrimSpace(peer), strings.TrimSpace(source), strings.TrimSpace(iface), strings.TrimSpace(domain))
+func linkKey(local, peer, source, iface, remoteIface, domain string) string {
+	return canonicalKey(strings.TrimSpace(local), strings.TrimSpace(peer), strings.TrimSpace(source), strings.TrimSpace(iface), strings.TrimSpace(remoteIface), strings.TrimSpace(domain))
 }
 
-func graphEdgeIdentity(local, peer, source, iface, domain string) string {
-	raw := canonicalKey(local, peer, source, iface, domain)
+func graphEdgeIdentity(local, peer, source, iface, remoteIface, domain string) string {
+	raw := adjacencyKey(local, peer, source, domain, iface, remoteIface)
 	if len(raw) <= 128 {
 		return raw
 	}
 	digest := sha256.Sum256([]byte(raw))
 	return "sha256:" + hex.EncodeToString(digest[:])
+}
+
+func adjacencyKey(local, peer, source, domain, iface, remoteIface string) string {
+	return canonicalKey(strings.TrimSpace(local), strings.TrimSpace(peer), strings.TrimSpace(source), strings.TrimSpace(domain), strings.TrimSpace(iface), strings.TrimSpace(remoteIface))
 }
 
 func canonicalKey(values ...string) string {

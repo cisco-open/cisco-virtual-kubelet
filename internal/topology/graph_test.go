@@ -123,7 +123,7 @@ func TestBuildGraphReportsKnownPeerAsymmetryAndInputLimits(t *testing.T) {
 	}
 	found := false
 	for _, diagnostic := range graph.Diagnostics {
-		if diagnostic.Code == "AsymmetricLink" {
+		if diagnostic.Code == "AsymmetricLink" || diagnostic.Code == "ReverseIdentityInsufficient" {
 			found = true
 		}
 	}
@@ -152,6 +152,37 @@ func TestBuildGraphHashSeparatesDelimiterBearingFields(t *testing.T) {
 	}
 	if left.EvidenceHash == right.EvidenceHash {
 		t.Fatalf("delimiter-bearing fields collided: %s", left.EvidenceHash)
+	}
+}
+
+func TestBuildGraphUsesRemoteInterfaceForReverseIdentity(t *testing.T) {
+	graph, err := BuildGraph([]GraphObservation{
+		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{PeerID: "leaf-b", Source: "cdp", Interface: "Gi1", RemoteInterface: "Gi2"}}},
+		{PhysicalID: "leaf-b", Complete: true, Neighbors: []GraphNeighbor{{PeerID: "leaf-a", Source: "cdp", Interface: "Gi2", RemoteInterface: "Gi1"}}},
+	}, GraphPolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Code == "AsymmetricLink" || diagnostic.Code == "ReverseIdentityInsufficient" {
+			t.Fatalf("valid port-reversed adjacency was not recognized: %#v", graph.Diagnostics)
+		}
+	}
+}
+
+func TestBuildGraphConflictDiagnosticIsInputOrderIndependent(t *testing.T) {
+	first := GraphObservation{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{Identity: "stable", PeerID: "peer-z", Source: "cdp", Interface: "Gi1"}}}
+	second := GraphObservation{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{Identity: "stable", PeerID: "peer-a", Source: "cdp", Interface: "Gi1"}}}
+	left, err := BuildGraph([]GraphObservation{first, second}, GraphPolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	right, err := BuildGraph([]GraphObservation{second, first}, GraphPolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if left.EvidenceHash != right.EvidenceHash || canonicalJSON(left.Diagnostics) != canonicalJSON(right.Diagnostics) {
+		t.Fatalf("conflict diagnostics depend on input order: left=%#v right=%#v", left, right)
 	}
 }
 
