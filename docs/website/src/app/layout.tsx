@@ -27,9 +27,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cisco Virtual Kubelet — Deploy Containers to Cisco Network Devices",
+  title: "Cisco Virtual Kubelet — Network Workloads and Topology-Aware Upgrades",
   description:
-    "A Virtual Kubelet provider that enables Kubernetes to schedule container workloads on Cisco Catalyst series switches and IOS-XE devices, with Beta support for Cisco Nexus (NX-OS) switches, that offer App-Hosting capabilities.",
+    "Native Kubernetes app hosting and configuration on Cisco devices, with opt-in topology-aware IOS-XE rollouts, secure gNOI and topology-scoped image selection. NX-OS app hosting and configuration remain Beta.",
   keywords: [
     "Cisco",
     "Virtual Kubelet",
@@ -42,11 +42,13 @@ export const metadata: Metadata = {
     "RESTCONF",
     "NX-API",
     "Containers",
+    "gNOI",
+    "Topology-Aware Upgrades",
   ],
   openGraph: {
     title: "Cisco Virtual Kubelet",
     description:
-      "Deploy containers to Cisco network devices using standard Kubernetes workflows.",
+      "Place app-hosted workloads and coordinate opt-in topology-aware IOS-XE software upgrades using native Kubernetes workflows and secure gNOI.",
     type: "website",
   },
 };

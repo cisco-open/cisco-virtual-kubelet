@@ -17,8 +17,8 @@ runtime subcommands:
 - **`cisco-vk run`** — the Virtual Kubelet provider. One process per device. Reads its config, registers a virtual node in the cluster, and drives the device via RESTCONF when pods come and go.
 - **`cisco-vk controller-worker`** — the network-controller runtime. One
   process per `NetworkController` whose type has a registered adapter; it
-  starts that adapter and watches only its Kubernetes namespace. The September
-  image registers zero product adapters, so this Alpha path remains inactive.
+  starts that adapter and watches only its Kubernetes namespace. The current
+  scaffold registers zero product adapters, so this Alpha path remains inactive.
 
 This split keeps device/controller API calls and device-side signing workflows
 inside their workers. The manager writes credential Secret references and
@@ -40,10 +40,36 @@ API. Endpoint processes, credentials, failure domains, and rate limits are
 separate, but the namespace remains the API trust/RBAC/cache boundary. Use a
 dedicated namespace when endpoints or config authors are not mutually trusted.
 Duplicate fencing compares the exact stored endpoint string within that
-namespace only. The September scaffold is report-only and has no apply, prune,
+namespace only. The current scaffold is report-only and has no apply, prune,
 remote-delete, or mutation-RBAC implementation.
 See the [Network Controller Extension Guide](controller-extension-guide.md) for
 the registry, worker, model, ownership, and security contracts.
+
+### Opt-in managed topology: placement and software campaigns
+
+October adds a separate managed ownership/rollout path, not a replacement
+Kubernetes scheduler. The manager projects protected declared topology and
+owns Node identity; the app-hosting worker reports its permitted status and
+handles eligible Pods. The network-management worker handles configuration,
+diagnostics and explicitly enabled software operations. Two shared functional
+ServiceAccounts have RO/RW role options; exact worker binding and native
+admission remain essential because RBAC alone is not per-device authority.
+
+| Decision | Responsible component | Input / result |
+| --- | --- | --- |
+| Where a Pod runs | Native Kubernetes scheduler | Affinity/spread over projected Node labels; app worker reconciles the assigned Pod |
+| Which devices may enter a campaign | CVK rollout manager | Immutable approved `IOSXESoftwareRollout` plan, canaries and declared domain budgets |
+| Which source supplies each device | CVK source selection | Topology-scoped endpoint with frozen URL, digest and Secret identity |
+| How software is changed | Network worker / IOS-XE lifecycle driver | Gated secure gNOI install/activate/verify and recovery; no independent durable staging contract |
+| Whether an eligible Pod can be drained | Preview manager/worker drain protocol | Native Eviction/PDB plus exact Pod/device-clean and recovery evidence |
+
+The existing app-hosting diagram below remains the simple path; managed
+software changes are CRD operations, not Pods scheduled onto a device.
+Topology labels do not establish live forwarding health, link headroom or
+critical-service availability. Native 1.37 TAS is a separate experimental
+scheduler lane and is not required for the Kubernetes 1.35+ managed baseline.
+See [Managed Topology and Rollouts](topology-awareness.md) for opt-in gates,
+ownership migration, workload eligibility and remaining qualification limits.
 
 ## Component architecture
 

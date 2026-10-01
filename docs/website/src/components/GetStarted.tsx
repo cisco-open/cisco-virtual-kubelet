@@ -51,9 +51,10 @@ const tabs = [
 const codeBlocks: Record<string, { language: string; code: string }> = {
   install: {
     language: "bash",
-    code: `# Install the published Helm chart and signed image from GHCR.
+    code: `# After v2026.10.0 is published on GitHub Releases (use 2026.9.2 until then).
+# Install the Helm chart and signed image from GHCR.
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \\
-  --version 2026.9.2 \\
+  --version 2026.10.0 \\
   --namespace cvk-system --create-namespace
 
 # Verify the CRD and controller are up
@@ -177,7 +178,7 @@ export default function GetStarted() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: "Kubernetes 1.28+", desc: "Any distribution" },
+              { label: "Kubernetes 1.28+", desc: "Standalone; managed topology requires 1.35+" },
               { label: "Helm 3.21+ or 4.2+", desc: "Installs the published OCI chart" },
               { label: "kubectl", desc: "Configured for your cluster" },
               { label: "Cisco Device", desc: "IOS-XE (Cat 8000V/9000) or Nexus NX-OS (Beta)" },
