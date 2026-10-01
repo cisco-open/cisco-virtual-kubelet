@@ -1146,7 +1146,7 @@ ConfigMap `resourceVersion` as executable drift:
   previously effective, and current values, so an existing rollout can never
   be loosened by a policy edit; and
 - changing policy/ledger identity, policy version, selector, required or
-  projected topology-key sets, domain-key or optional-budget shape, or setting
+  projected topology-key sets, domain-key, risk-group or optional-budget shape, or setting
   `maxCampaignTargets` below the frozen target count sets
   `PolicyChanged=True` with `Reason=ReplanRequired` and requires a new rollout.
 
@@ -1185,6 +1185,19 @@ staged, the rule also blocks image preparation. Never infer redundancy merely
 from a label—use qualified path and service evidence before removing a
 singleton or critical-service protection.
 
+Administrator policy may additionally define up to 16 `riskGroups`. Each
+group has a DNS-label name, a non-empty Kubernetes selector restricted to
+`requiredTopologyKeys`, `maxConcurrentTransfers`, and `maxUnavailable`. A
+device may match multiple groups. The frozen plan records each target's sorted
+groups and a SHA-256 digest of the complete relevant physical membership.
+Before admission, the manager recomputes that membership and requires an exact
+match. In the same ledger compare-and-swap used for global/domain budgets, it
+counts unhealthy non-target members and reservations from every campaign
+against every applicable group. All groups must pass. Changing a selector,
+budget, or membership requires a new plan and approval. Risk groups are
+explicit operator constraints; they do not prove that a forwarding path is
+redundant or healthy.
+
 ### Admission and execution behavior
 
 For each target, the manager checks:
@@ -1202,6 +1215,8 @@ For each target, the manager checks:
   or device workload, while `Drain` requires the exact bounded eligibility,
   PDB, session, teardown, replacement-readiness, and inventory proofs above;
 - global and every independent domain transfer/unavailability ceiling;
+- every matching administrator risk-group transfer/unavailability ceiling,
+  including non-target health and reservations from other campaigns;
 - existing unhealthy or maintained fleet members, including non-targets; and
 - no conflicting device mutation.
 
