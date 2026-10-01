@@ -103,3 +103,20 @@ read-only interface operations succeeded and the manager-only restart kept
 the workers stable while accepted sequences advanced. See the
 [rate-provenance record](c2-rate-provenance-followup.md) for exact hashes,
 operation UIDs and remaining limitations.
+
+## C3 claim-time network-authority follow-up — `9c48a98c`
+
+The full race suite and pinned Kubernetes 1.35 envtest suite passed after the
+manager grant, monotonic renewal and worker claim-time implementation. Native
+API tests reject partial tuples and non-increasing renewals. Provider tests
+prove that expired or replaced evidence creates no durable mutation claim or
+activation marker, while work already accepted remains observable instead of
+being replayed.
+
+Helm revision 123 converged the manager and all six physical C9K workers to the
+exact candidate. Fresh accepted samples matched the replacement network-worker
+Pod UIDs; three secure gNOI `OS.Verify` operations succeeded; all three Nodes
+were Ready, schedulable and untainted. The settled three-minute manager/worker
+log window contained no errors. See the
+[C3 evidence record](c3-claim-time-network-authority.md) for exact artifact
+hashes, operation UIDs and the remaining E03 limitations.
