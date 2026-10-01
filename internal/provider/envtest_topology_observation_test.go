@@ -79,7 +79,7 @@ func TestEnvtest_NetworkObservationStatusRoundTrip(t *testing.T) {
 	oversized, err := BuildNetworkObservation(ctx, observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: name}, {Name: name}},
 		cdp:        []common.CDPNeighbor{{DeviceID: name}, {DeviceID: name}},
-	}, "serial-01", sample.ProducerRevision, time.Now(), sample.WorkerPodUID)
+	}, "serial-01", sample.ProducerRevision, sample.WorkerPodUID, time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}

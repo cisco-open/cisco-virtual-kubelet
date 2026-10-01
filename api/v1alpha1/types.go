@@ -710,6 +710,28 @@ type DeviceNetworkInterfaceObservation struct {
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=100
 	HeadroomPercent *int32 `json:"headroomPercent,omitempty"`
+
+	// CapacityBitsPerSecond and directional rates retain the bounded inputs
+	// from which HeadroomPercent was derived. Their absence is Unknown, while a
+	// present zero directional rate is a measured zero.
+	// +kubebuilder:validation:Optional
+	// The ceiling is the largest exactly representable JSON integer. Keeping
+	// the CRD boundary below int64's maximum avoids rounding that older API
+	// servers can reinterpret as a negative validation bound.
+	// +kubebuilder:validation:Maximum=9007199254740991
+	CapacityBitsPerSecond *uint64 `json:"capacityBitsPerSecond,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Maximum=9007199254740991
+	IngressBitsPerSecond *uint64 `json:"ingressBitsPerSecond,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Maximum=9007199254740991
+	EgressBitsPerSecond *uint64 `json:"egressBitsPerSecond,omitempty"`
+
+	// RateSource identifies the device data model used for the directional
+	// rates. It documents provenance, not an independent health grant.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	RateSource string `json:"rateSource,omitempty"`
 }
 
 type DeviceNetworkNeighborObservation struct {

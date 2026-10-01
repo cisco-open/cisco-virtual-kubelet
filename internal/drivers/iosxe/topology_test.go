@@ -63,7 +63,8 @@ func TestGetInterfaceStatsPreservesRatePresenceAndValidity(t *testing.T) {
 	measured := stats[measuredIndex]
 	if !measured.InRatePresent || !measured.OutRatePresent ||
 		!measured.InRateValid || !measured.OutRateValid ||
-		measured.InBitsPerSec != 0 || measured.OutBitsPerSec != 123_000 {
+		measured.InBitsPerSec != 0 || measured.OutBitsPerSec != 123_000 ||
+		measured.RateSource != "cisco-ios-xe-interfaces-oper:statistics-kbps" {
 		t.Fatalf("measured rate = %#v, want valid measured zero and 123 Kbps", measured)
 	}
 

@@ -215,6 +215,20 @@ func TestAcceptManagedNetworkObservationRequiresExactCurrentBinding(t *testing.T
 		{"duplicate interface", func(_ *ciskov1.CiscoDevice, s *ciskov1.DeviceNetworkObservationStatus) {
 			s.Interfaces = append(s.Interfaces, s.Interfaces[0])
 		}},
+		{"unproven headroom", func(_ *ciskov1.CiscoDevice, s *ciskov1.DeviceNetworkObservationStatus) {
+			s.Interfaces[0].HeadroomPercent = ptr.To(int32(50))
+			s.Interfaces[0].CapacityBitsPerSecond = nil
+			s.Interfaces[0].IngressBitsPerSecond = nil
+			s.Interfaces[0].EgressBitsPerSecond = nil
+			s.Interfaces[0].RateSource = ""
+		}},
+		{"mismatched headroom", func(_ *ciskov1.CiscoDevice, s *ciskov1.DeviceNetworkObservationStatus) {
+			s.Interfaces[0].HeadroomPercent = ptr.To(int32(50))
+			s.Interfaces[0].CapacityBitsPerSecond = ptr.To(uint64(1000))
+			s.Interfaces[0].IngressBitsPerSecond = ptr.To(uint64(100))
+			s.Interfaces[0].EgressBitsPerSecond = ptr.To(uint64(100))
+			s.Interfaces[0].RateSource = "fixture"
+		}},
 		{"missing neighbor identity", func(_ *ciskov1.CiscoDevice, s *ciskov1.DeviceNetworkObservationStatus) { s.Neighbors[0].Identity = "" }},
 	}
 	for _, test := range tests {
@@ -234,6 +248,54 @@ func TestAcceptManagedNetworkObservationRequiresExactCurrentBinding(t *testing.T
 	}
 }
 
+func TestAcceptManagedNetworkObservationRequiresMonotonicProducerEpoch(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		mutate func(*ciskov1.CiscoDevice, *ciskov1.DeviceNetworkObservationStatus)
+		want   bool
+	}{
+		{name: "identical reconcile", want: true},
+		{name: "sequence replay", mutate: func(_ *ciskov1.CiscoDevice, raw *ciskov1.DeviceNetworkObservationStatus) {
+			raw.SampleSequence--
+		}},
+		{name: "same sequence changed content", mutate: func(_ *ciskov1.CiscoDevice, raw *ciskov1.DeviceNetworkObservationStatus) {
+			raw.Complete = false
+			raw.UnknownReason = "changed"
+		}},
+		{name: "new sequence older collection", mutate: func(_ *ciskov1.CiscoDevice, raw *ciskov1.DeviceNetworkObservationStatus) {
+			raw.SampleSequence++
+			raw.CollectionStartedAt = metav1.NewTime(raw.CollectionStartedAt.Add(-time.Minute))
+			raw.CollectionEndedAt = metav1.NewTime(raw.CollectionEndedAt.Add(-time.Minute))
+			raw.ObservedAt = raw.CollectionStartedAt
+		}},
+		{name: "new sequence and collection", mutate: func(_ *ciskov1.CiscoDevice, raw *ciskov1.DeviceNetworkObservationStatus) {
+			raw.SampleSequence++
+			raw.CollectionStartedAt = metav1.NewTime(raw.CollectionStartedAt.Add(time.Second))
+			raw.CollectionEndedAt = metav1.NewTime(raw.CollectionEndedAt.Add(time.Second))
+			raw.ObservedAt = raw.CollectionStartedAt
+		}, want: true},
+		{name: "replacement Pod starts new epoch", mutate: func(device *ciskov1.CiscoDevice, raw *ciskov1.DeviceNetworkObservationStatus) {
+			device.Status.NetworkWorkerRevision.PodUID = "replacement-pod"
+			device.Status.NetworkWorkerRevision.PodStartTime = ptr.To(metav1.NewTime(raw.CollectionStartedAt.Add(-time.Second)))
+			device.Status.NetworkWorkerRevision.PodReadyTime = ptr.To(metav1.NewTime(raw.CollectionStartedAt.Add(-time.Second)))
+			raw.WorkerPodUID = "replacement-pod"
+			raw.SampleSequence = 1
+		}, want: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			device, raw := acceptedNetworkObservationFixture()
+			device.Status.HealthObservation.AcceptedNetwork = raw.DeepCopy()
+			if test.mutate != nil {
+				test.mutate(device, raw)
+			}
+			acceptManagedNetworkObservation(device)
+			if got := device.Status.HealthObservation.AcceptedNetwork != nil; got != test.want {
+				t.Fatalf("accepted=%t, want %t", got, test.want)
+			}
+		})
+	}
+}
+
 func acceptedNetworkObservationFixture() (*ciskov1.CiscoDevice, *ciskov1.DeviceNetworkObservationStatus) {
 	started := time.Date(2026, 10, 1, 18, 0, 0, 0, time.UTC)
 	podStarted := metav1.NewTime(started.Add(-time.Minute))
@@ -244,8 +306,12 @@ func acceptedNetworkObservationFixture() (*ciskov1.CiscoDevice, *ciskov1.DeviceN
 		CollectionEndedAt: ended, SampleSequence: 42, ObservedAt: ended,
 		Complete: true, ProducerRevision: "sha256:current",
 		DeviceIdentityHash: identityHashForPhysicalID("foc123"),
-		Interfaces:         []ciskov1.DeviceNetworkInterfaceObservation{{Name: "TenGigabitEthernet1/0/1", OperUp: true}},
-		Neighbors:          []ciskov1.DeviceNetworkNeighborObservation{{Identity: "cdp:default:peer:Te1/0/1", ID: "peer", State: "up"}},
+		Interfaces: []ciskov1.DeviceNetworkInterfaceObservation{{
+			Name: "TenGigabitEthernet1/0/1", OperUp: true, HeadroomPercent: ptr.To(int32(90)),
+			CapacityBitsPerSecond: ptr.To(uint64(1000)), IngressBitsPerSecond: ptr.To(uint64(100)),
+			EgressBitsPerSecond: ptr.To(uint64(50)), RateSource: "fixture",
+		}},
+		Neighbors: []ciskov1.DeviceNetworkNeighborObservation{{Identity: "cdp:default:peer:Te1/0/1", ID: "peer", State: "up"}},
 	}
 	device := &ciskov1.CiscoDevice{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "edge", Name: "switch", UID: "device-uid"},

@@ -414,17 +414,38 @@ func acceptManagedNetworkObservation(device *ciskov1.CiscoDevice) {
 	}
 	physicalIdentity, err := topology.CanonicalPhysicalIdentity(identity.PhysicalIdentity)
 	if err != nil || sample.DeviceIdentityHash != identityHashForPhysicalID(physicalIdentity) ||
-		!validAcceptedNetworkIdentities(sample) {
+		!validAcceptedNetworkIdentities(sample) ||
+		!validAcceptedNetworkProgression(sample, health.AcceptedNetwork) {
 		health.AcceptedNetwork = nil
 		return
 	}
 	health.AcceptedNetwork = sample.DeepCopy()
 }
 
+// validAcceptedNetworkProgression prevents a stale or conflicting raw sample
+// from moving the manager-owned high-water mark backwards. A replacement Pod
+// is a new producer epoch and may restart at sequence one; within one exact
+// Pod/revision epoch, sequence and collection-end time must both advance. An
+// identical already-accepted sample is idempotent across manager reconciles.
+func validAcceptedNetworkProgression(sample, accepted *ciskov1.DeviceNetworkObservationStatus) bool {
+	if sample == nil || accepted == nil {
+		return sample != nil
+	}
+	if sample.WorkerPodUID != accepted.WorkerPodUID || sample.ProducerRevision != accepted.ProducerRevision {
+		return true
+	}
+	if sample.SampleSequence == accepted.SampleSequence {
+		return reflect.DeepEqual(sample, accepted)
+	}
+	return sample.SampleSequence > accepted.SampleSequence &&
+		sample.CollectionEndedAt.After(accepted.CollectionEndedAt.Time)
+}
+
 func validAcceptedNetworkIdentities(sample *ciskov1.DeviceNetworkObservationStatus) bool {
 	interfaces := make(map[string]struct{}, len(sample.Interfaces))
 	for i := range sample.Interfaces {
-		name := strings.TrimSpace(sample.Interfaces[i].Name)
+		item := sample.Interfaces[i]
+		name := strings.TrimSpace(item.Name)
 		if name == "" {
 			return false
 		}
@@ -432,6 +453,9 @@ func validAcceptedNetworkIdentities(sample *ciskov1.DeviceNetworkObservationStat
 			return false
 		}
 		interfaces[name] = struct{}{}
+		if !validAcceptedInterfaceRateEvidence(item) {
+			return false
+		}
 	}
 	neighbors := make(map[string]struct{}, len(sample.Neighbors))
 	for i := range sample.Neighbors {
@@ -445,6 +469,29 @@ func validAcceptedNetworkIdentities(sample *ciskov1.DeviceNetworkObservationStat
 		neighbors[identity] = struct{}{}
 	}
 	return true
+}
+
+func validAcceptedInterfaceRateEvidence(item ciskov1.DeviceNetworkInterfaceObservation) bool {
+	if item.HeadroomPercent == nil {
+		return true
+	}
+	if item.CapacityBitsPerSecond == nil || *item.CapacityBitsPerSecond == 0 ||
+		item.IngressBitsPerSecond == nil || item.EgressBitsPerSecond == nil ||
+		strings.TrimSpace(item.RateSource) == "" {
+		return false
+	}
+	utilization := *item.IngressBitsPerSecond
+	if *item.EgressBitsPerSecond > utilization {
+		utilization = *item.EgressBitsPerSecond
+	}
+	want := int32(0)
+	if utilization < *item.CapacityBitsPerSecond {
+		want = int32(float64(*item.CapacityBitsPerSecond-utilization) * 100 / float64(*item.CapacityBitsPerSecond))
+		if want > 100 {
+			want = 100
+		}
+	}
+	return *item.HeadroomPercent == want
 }
 
 // updateManagedDeviceStatusWithRetry serializes controller-owned status changes

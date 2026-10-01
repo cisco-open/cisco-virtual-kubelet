@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -13,9 +15,11 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -25,6 +29,66 @@ type observationTopologyProvider struct {
 	cdp        []common.CDPNeighbor
 	ospf       []common.OSPFNeighbor
 	err        error
+}
+
+type observationStatusClient struct {
+	client.Client
+	writer client.StatusWriter
+}
+
+func (c *observationStatusClient) Status() client.StatusWriter { return c.writer }
+
+type barrierObservationStatusWriter struct {
+	delegate client.StatusWriter
+	arrived  chan struct{}
+	release  <-chan struct{}
+}
+
+func (w *barrierObservationStatusWriter) Create(ctx context.Context, obj client.Object, subResource client.Object, opts ...client.SubResourceCreateOption) error {
+	return w.delegate.Create(ctx, obj, subResource, opts...)
+}
+
+func (w *barrierObservationStatusWriter) Update(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+	return w.delegate.Update(ctx, obj, opts...)
+}
+
+func (w *barrierObservationStatusWriter) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+	w.arrived <- struct{}{}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-w.release:
+		return w.delegate.Patch(ctx, obj, patch, opts...)
+	}
+}
+
+func (w *barrierObservationStatusWriter) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...client.SubResourceApplyOption) error {
+	return w.delegate.Apply(ctx, obj, opts...)
+}
+
+type lostResponseObservationStatusWriter struct {
+	delegate client.StatusWriter
+	lost     atomic.Bool
+}
+
+func (w *lostResponseObservationStatusWriter) Create(ctx context.Context, obj client.Object, subResource client.Object, opts ...client.SubResourceCreateOption) error {
+	return w.delegate.Create(ctx, obj, subResource, opts...)
+}
+
+func (w *lostResponseObservationStatusWriter) Update(ctx context.Context, obj client.Object, opts ...client.SubResourceUpdateOption) error {
+	return w.delegate.Update(ctx, obj, opts...)
+}
+
+func (w *lostResponseObservationStatusWriter) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+	err := w.delegate.Patch(ctx, obj, patch, opts...)
+	if err == nil && w.lost.CompareAndSwap(false, true) {
+		return errors.New("simulated lost status response")
+	}
+	return err
+}
+
+func (w *lostResponseObservationStatusWriter) Apply(ctx context.Context, obj runtime.ApplyConfiguration, opts ...client.SubResourceApplyOption) error {
+	return w.delegate.Apply(ctx, obj, opts...)
 }
 
 type blockingObservationTopologyProvider struct {
@@ -75,7 +139,7 @@ func TestBuildNetworkObservationIsBoundedAndDeterministic(t *testing.T) {
 		interfaces: []common.InterfaceStats{{Name: "Gi2", OperStatus: "down"}, {Name: "Gi1", OperStatus: "up"}},
 		cdp:        []common.CDPNeighbor{{DeviceID: "peer-a"}},
 		ospf:       []common.OSPFNeighbor{{NeighborID: "peer-a", State: "FULL"}, {NeighborID: "peer-b", State: "2way"}},
-	}, "SERIAL-01", "sha256:worker", now, "pod-uid")
+	}, "SERIAL-01", "sha256:worker", "pod-uid", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,12 +164,21 @@ func TestBuildNetworkObservationIsBoundedAndDeterministic(t *testing.T) {
 }
 
 func TestBuildNetworkObservationFailsClosedOnPartialSource(t *testing.T) {
-	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{err: errors.New("unsupported")}, "SERIAL-01", "worker", time.Now())
+	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{err: errors.New("unsupported")}, "SERIAL-01", "worker", "pod-a", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
 	if observation.Complete || observation.UnknownReason == "" {
 		t.Fatalf("partial observation=%#v", observation)
+	}
+}
+
+func TestBuildNetworkObservationRequiresProducerPodIdentity(t *testing.T) {
+	if _, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{}, "SERIAL-01", "worker", "", time.Now()); err == nil || !strings.Contains(err.Error(), "worker Pod UID is empty") {
+		t.Fatalf("missing worker Pod UID error = %v", err)
+	}
+	if _, err := incompleteNetworkObservation("SERIAL-01", "worker", "", time.Now(), time.Now(), "incomplete"); err == nil || !strings.Contains(err.Error(), "worker Pod UID is empty") {
+		t.Fatalf("missing incomplete-sample worker Pod UID error = %v", err)
 	}
 }
 
@@ -115,7 +188,7 @@ func TestNetworkObservationCollectorBoundsHungProvider(t *testing.T) {
 	collector := &networkObservationCollector{}
 	timedOut, cancel := context.WithCancel(context.Background())
 	cancel()
-	observation, err := collector.collect(timedOut, provider, "serial-01", "sha256:worker", now, "pod-a")
+	observation, err := collector.collect(timedOut, provider, "serial-01", "sha256:worker", "pod-a", now)
 	if err != nil || observation.Complete || observation.UnknownReason != "collection deadline exceeded" {
 		t.Fatalf("timed-out collection = %#v, %v", observation, err)
 	}
@@ -124,7 +197,7 @@ func TestNetworkObservationCollectorBoundsHungProvider(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("hung provider did not start")
 	}
-	observation, err = collector.collect(timedOut, provider, "serial-01", "sha256:worker", now.Add(time.Minute), "pod-a")
+	observation, err = collector.collect(timedOut, provider, "serial-01", "sha256:worker", "pod-a", now.Add(time.Minute))
 	if err != nil || observation.Complete || observation.UnknownReason != "collection remains in flight after deadline" {
 		t.Fatalf("in-flight collection = %#v, %v", observation, err)
 	}
@@ -137,7 +210,7 @@ func TestNetworkObservationCollectorBoundsHungProvider(t *testing.T) {
 	close(provider.release)
 	deadline := time.Now().Add(time.Second)
 	for {
-		observation, err = collector.collect(context.Background(), provider, "serial-01", "sha256:worker", time.Now(), "pod-a")
+		observation, err = collector.collect(context.Background(), provider, "serial-01", "sha256:worker", "pod-a", time.Now())
 		if err == nil && observation.Complete {
 			break
 		}
@@ -159,7 +232,7 @@ func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
 	}
 	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		interfaces: interfaces,
-	}, "SERIAL-01", "worker", now)
+	}, "SERIAL-01", "worker", "pod-a", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +245,7 @@ func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
 	}
 	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		cdp: neighbors,
-	}, "SERIAL-01", "worker", now)
+	}, "SERIAL-01", "worker", "pod-a", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,7 +255,7 @@ func TestBuildNetworkObservationRejectsTruncationAndDuplicates(t *testing.T) {
 
 	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: "Gi1"}, {Name: "Gi1"}},
-	}, "SERIAL-01", "worker", now)
+	}, "SERIAL-01", "worker", "pod-a", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,17 +268,24 @@ func TestBuildNetworkObservationPublishesConservativeHeadroom(t *testing.T) {
 	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
 	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 250, OutBitsPerSec: 100,
-			InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true}},
-	}, "SERIAL-01", "worker", now)
+			InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true, RateSource: "fixture"}},
+	}, "SERIAL-01", "worker", "pod-a", now)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if observation.Interfaces[0].HeadroomPercent == nil || *observation.Interfaces[0].HeadroomPercent != 75 {
 		t.Fatalf("headroom=%v, want 75%%", observation.Interfaces[0].HeadroomPercent)
 	}
+	item := observation.Interfaces[0]
+	if item.CapacityBitsPerSecond == nil || *item.CapacityBitsPerSecond != 1000 ||
+		item.IngressBitsPerSecond == nil || *item.IngressBitsPerSecond != 250 ||
+		item.EgressBitsPerSecond == nil || *item.EgressBitsPerSecond != 100 ||
+		item.RateSource != "fixture" {
+		t.Fatalf("directional rate evidence = %#v", item)
+	}
 	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: "Gi1", InBitsPerSec: 1}},
-	}, "SERIAL-01", "worker", now)
+	}, "SERIAL-01", "worker", "pod-a", now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,17 +294,39 @@ func TestBuildNetworkObservationPublishesConservativeHeadroom(t *testing.T) {
 	}
 	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 0, OutBitsPerSec: 0,
-			InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true}},
-	}, "SERIAL-01", "worker", now)
+			InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true, RateSource: "fixture"}},
+	}, "SERIAL-01", "worker", "pod-a", now)
 	if err != nil || observation.Interfaces[0].HeadroomPercent == nil || *observation.Interfaces[0].HeadroomPercent != 100 {
 		t.Fatalf("measured zero rates must produce 100%% headroom, got %#v err=%v", observation.Interfaces[0].HeadroomPercent, err)
 	}
 	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: "Gi1", Speed: 1000, InBitsPerSec: 250,
-			InRatePresent: true, InRateValid: true}},
-	}, "SERIAL-01", "worker", now)
+			InRatePresent: true, InRateValid: true, RateSource: "fixture"}},
+	}, "SERIAL-01", "worker", "pod-a", now)
 	if err != nil || observation.Interfaces[0].HeadroomPercent != nil {
 		t.Fatalf("one missing direction must remain unknown, got %#v err=%v", observation.Interfaces[0].HeadroomPercent, err)
+	}
+}
+
+func TestInterfaceRateEvidenceFailsClosedOnUnqualifiedInputs(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		stats common.InterfaceStats
+		want  *int32
+	}{
+		{name: "empty source", stats: common.InterfaceStats{Speed: 1000, InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true}},
+		{name: "capacity overflow", stats: common.InterfaceStats{Speed: math.MaxUint64, InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true, RateSource: "fixture"}},
+		{name: "rate overflow", stats: common.InterfaceStats{Speed: maxNetworkObservationRate, InBitsPerSec: math.MaxUint64, InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true, RateSource: "fixture"}},
+		{name: "json safe integer overflow", stats: common.InterfaceStats{Speed: maxNetworkObservationRate + 1, InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true, RateSource: "fixture"}},
+		{name: "at capacity", stats: common.InterfaceStats{Speed: 1000, InBitsPerSec: 1000, InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true, RateSource: "fixture"}, want: ptr.To(int32(0))},
+		{name: "over capacity", stats: common.InterfaceStats{Speed: 1000, OutBitsPerSec: 1001, InRatePresent: true, OutRatePresent: true, InRateValid: true, OutRateValid: true, RateSource: "fixture"}, want: ptr.To(int32(0))},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			got := interfaceHeadroom(test.stats)
+			if !reflect.DeepEqual(got, test.want) {
+				t.Fatalf("headroom=%v, want %v", got, test.want)
+			}
+		})
 	}
 }
 
@@ -262,7 +364,7 @@ func TestNormalizeNeighborsKeepsDelimiterBearingAdjacenciesDistinct(t *testing.T
 func TestBuildNetworkObservationFailsClosedOnOversizedStatusFields(t *testing.T) {
 	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		ospf: []common.OSPFNeighbor{{NeighborID: strings.Repeat("n", 129), State: "full"}},
-	}, "serial-01", "sha256:worker", time.Now(), "pod-a")
+	}, "serial-01", "sha256:worker", "pod-a", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,7 +373,7 @@ func TestBuildNetworkObservationFailsClosedOnOversizedStatusFields(t *testing.T)
 	}
 	observation, err = BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		interfaces: []common.InterfaceStats{{Name: strings.Repeat("i", 129)}},
-	}, "serial-01", "sha256:worker", time.Now(), "pod-a")
+	}, "serial-01", "sha256:worker", "pod-a", time.Now())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -442,6 +544,107 @@ func TestPublishNetworkObservationRejectsOlderCollection(t *testing.T) {
 	}
 }
 
+func TestPublishNetworkObservationConcurrentWritersPreserveOneHighWaterMark(t *testing.T) {
+	d, first := topologyObservationFixture()
+	base := newTopologyObservationClient(t, d)
+	arrived := make(chan struct{}, 2)
+	release := make(chan struct{})
+	c := &observationStatusClient{Client: base, writer: &barrierObservationStatusWriter{
+		delegate: base.Status(), arrived: arrived, release: release,
+	}}
+	second := first.DeepCopy()
+	second.CollectionStartedAt = metav1.NewTime(second.CollectionStartedAt.Add(time.Second))
+	second.CollectionEndedAt = metav1.NewTime(second.CollectionEndedAt.Add(time.Second))
+	second.ObservedAt = metav1.NewTime(second.ObservedAt.Add(time.Second))
+
+	results := make(chan error, 2)
+	for _, sample := range []*ciskov1.DeviceNetworkObservationStatus{first, second} {
+		go func(sample *ciskov1.DeviceNetworkObservationStatus) {
+			results <- PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, sample)
+		}(sample)
+	}
+	for range 2 {
+		select {
+		case <-arrived:
+		case <-time.After(time.Second):
+			t.Fatal("concurrent publishers did not reach the status boundary")
+		}
+	}
+	close(release)
+	successes, conflicts := 0, 0
+	for range 2 {
+		err := <-results
+		switch {
+		case err == nil:
+			successes++
+		case apierrors.IsConflict(err):
+			conflicts++
+		default:
+			t.Fatalf("concurrent publication error = %v", err)
+		}
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatalf("concurrent results successes=%d conflicts=%d", successes, conflicts)
+	}
+	var persisted ciskov1.CiscoDevice
+	if err := base.Get(context.Background(), client.ObjectKeyFromObject(d), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if persisted.Status.HealthObservation == nil || persisted.Status.HealthObservation.Network == nil ||
+		persisted.Status.HealthObservation.Network.SampleSequence != 1 {
+		t.Fatalf("persisted high-water mark = %#v", persisted.Status.HealthObservation)
+	}
+	third := first.DeepCopy()
+	third.SampleSequence = 0
+	third.CollectionStartedAt = metav1.NewTime(second.CollectionStartedAt.Add(time.Second))
+	third.CollectionEndedAt = metav1.NewTime(second.CollectionEndedAt.Add(time.Second))
+	third.ObservedAt = metav1.NewTime(second.ObservedAt.Add(time.Second))
+	if err := PublishNetworkObservation(context.Background(), base, client.ObjectKeyFromObject(d), d.UID, third); err != nil {
+		t.Fatalf("fresh sample after conflict rejected: %v", err)
+	}
+	if err := base.Get(context.Background(), client.ObjectKeyFromObject(d), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if got := persisted.Status.HealthObservation.Network.SampleSequence; got != 2 {
+		t.Fatalf("post-conflict sequence=%d, want 2", got)
+	}
+}
+
+func TestPublishNetworkObservationLostResponseDoesNotReplay(t *testing.T) {
+	d, sample := topologyObservationFixture()
+	base := newTopologyObservationClient(t, d)
+	writer := &lostResponseObservationStatusWriter{delegate: base.Status()}
+	c := &observationStatusClient{Client: base, writer: writer}
+	err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, sample)
+	if err == nil || !strings.Contains(err.Error(), "simulated lost status response") {
+		t.Fatalf("lost response error = %v", err)
+	}
+	var persisted ciskov1.CiscoDevice
+	if err := base.Get(context.Background(), client.ObjectKeyFromObject(d), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if got := persisted.Status.HealthObservation.Network.SampleSequence; got != 1 {
+		t.Fatalf("persisted lost-response sequence=%d, want 1", got)
+	}
+	if err := PublishNetworkObservation(context.Background(), base, client.ObjectKeyFromObject(d), d.UID, sample); err == nil || !strings.Contains(err.Error(), "not newer") {
+		t.Fatalf("replayed lost-response sample error = %v", err)
+	}
+	newer := sample.DeepCopy()
+	newer.SampleSequence = 0
+	newer.CollectionStartedAt = metav1.NewTime(newer.CollectionStartedAt.Add(time.Second))
+	newer.CollectionEndedAt = metav1.NewTime(newer.CollectionEndedAt.Add(time.Second))
+	newer.ObservedAt = metav1.NewTime(newer.ObservedAt.Add(time.Second))
+	if err := PublishNetworkObservation(context.Background(), base, client.ObjectKeyFromObject(d), d.UID, newer); err != nil {
+		t.Fatalf("fresh sample after lost response rejected: %v", err)
+	}
+	if err := base.Get(context.Background(), client.ObjectKeyFromObject(d), &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if got := persisted.Status.HealthObservation.Network.SampleSequence; got != 2 {
+		t.Fatalf("post-loss sequence=%d, want 2", got)
+	}
+}
+
 func topologyObservationFixture() (*ciskov1.CiscoDevice, *ciskov1.DeviceNetworkObservationStatus) {
 	const revision = "sha256:" + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	now := metav1.NewTime(time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC))
@@ -462,6 +665,11 @@ func topologyObservationFixture() (*ciskov1.CiscoDevice, *ciskov1.DeviceNetworkO
 		WorkerPodUID: "network-pod-uid", CollectionStartedAt: metav1.NewTime(now.Add(-time.Second)),
 		CollectionEndedAt: now, SampleSequence: 1, ObservedAt: now, Complete: true,
 		ProducerRevision: revision, DeviceIdentityHash: identityHash("serial-01"),
+		Interfaces: []ciskov1.DeviceNetworkInterfaceObservation{{
+			Name: "Gi1", OperUp: true, HeadroomPercent: ptr.To(int32(90)),
+			CapacityBitsPerSecond: ptr.To(uint64(1000)), IngressBitsPerSecond: ptr.To(uint64(100)),
+			EgressBitsPerSecond: ptr.To(uint64(50)), RateSource: "fixture",
+		}},
 	}
 	device.Spec = ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, Address: "192.0.2.10", Username: "admin", PhysicalIdentity: "serial-01"}
 	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{

@@ -133,8 +133,11 @@ type InterfaceStats struct {
 	OutRatePresent bool
 	InRateValid    bool
 	OutRateValid   bool
-	Speed          uint64
-	IPv4Address    string
+	// RateSource identifies the device model/leaves that supplied the rates.
+	// Consumers must not infer sampling semantics from the numeric values alone.
+	RateSource  string
+	Speed       uint64
+	IPv4Address string
 }
 
 // InterfaceIP represents an interface with its IPv4 address and operational status

@@ -27,6 +27,7 @@ import (
 	"github.com/virtual-kubelet/virtual-kubelet/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -34,9 +35,13 @@ const (
 	maxNetworkObservationInterfaces    = 64
 	maxNetworkObservationNeighbors     = 64
 	maxNetworkObservationUnknownReason = 256
-	networkObservationInterval         = 30 * time.Second
-	networkObservationTimeout          = 20 * time.Second
-	networkObservationPublishTimeout   = 5 * time.Second
+	// JSON numbers are interoperable across Kubernetes/OpenAPI implementations
+	// only through 2^53-1. This is still more than 9 Pbit/s and therefore does
+	// not constrain any supported physical interface.
+	maxNetworkObservationRate        = uint64(1<<53 - 1)
+	networkObservationInterval       = 30 * time.Second
+	networkObservationTimeout        = 20 * time.Second
+	networkObservationPublishTimeout = 5 * time.Second
 )
 
 type networkObservationCollectionResult struct {
@@ -56,8 +61,9 @@ type networkObservationCollector struct {
 	expired bool
 }
 
-// RunNetworkObservationPublisher keeps the manager-owned summary fresh from
-// the network worker. Failed samples are published as incomplete evidence by
+// RunNetworkObservationPublisher keeps the worker-owned raw sample fresh.
+// The manager separately validates and promotes accepted evidence. Failed
+// samples are published as incomplete evidence by
 // the next successful collection; a failed write is logged and retried at the
 // next interval without widening any device authority.
 func RunNetworkObservationPublisher(
@@ -68,12 +74,12 @@ func RunNetworkObservationPublisher(
 	physicalIdentity string,
 	producerRevision string,
 	provider drivers.TopologyProvider,
-	workerPodUID ...string,
+	workerPodUID string,
 ) {
 	collector := &networkObservationCollector{}
 	publish := func() {
 		collectionCtx, collectionCancel := context.WithTimeout(ctx, networkObservationTimeout)
-		observation, err := collector.collect(collectionCtx, provider, physicalIdentity, producerRevision, time.Now(), workerPodUID...)
+		observation, err := collector.collect(collectionCtx, provider, physicalIdentity, producerRevision, workerPodUID, time.Now())
 		collectionCancel()
 		if ctx.Err() != nil {
 			return
@@ -107,8 +113,8 @@ func (c *networkObservationCollector) collect(
 	provider drivers.TopologyProvider,
 	physicalIdentity string,
 	producerRevision string,
+	workerPodUID string,
 	now time.Time,
-	workerPodUID ...string,
 ) (*ciskov1.DeviceNetworkObservationStatus, error) {
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -127,15 +133,15 @@ func (c *networkObservationCollector) collect(
 			// Keep the original collection timestamp while it remains stuck. A
 			// periodic incomplete status must not look like newly collected,
 			// fresh evidence merely because the publisher ticked again.
-			return incompleteNetworkObservation(physicalIdentity, producerRevision, c.started, c.started,
-				"collection remains in flight after deadline", workerPodUID...)
+			return incompleteNetworkObservation(physicalIdentity, producerRevision, workerPodUID, c.started, c.started,
+				"collection remains in flight after deadline")
 		}
 	}
 	result := make(chan networkObservationCollectionResult, 1)
 	c.result = result
 	c.started = now.UTC()
 	go func() {
-		observation, err := BuildNetworkObservation(ctx, provider, physicalIdentity, producerRevision, now, workerPodUID...)
+		observation, err := BuildNetworkObservation(ctx, provider, physicalIdentity, producerRevision, workerPodUID, now)
 		result <- networkObservationCollectionResult{observation: observation, err: err}
 	}()
 	select {
@@ -144,17 +150,17 @@ func (c *networkObservationCollector) collect(
 		return result.observation, result.err
 	case <-ctx.Done():
 		c.expired = true
-		return incompleteNetworkObservation(physicalIdentity, producerRevision, c.started, now,
-			"collection deadline exceeded", workerPodUID...)
+		return incompleteNetworkObservation(physicalIdentity, producerRevision, workerPodUID, c.started, now,
+			"collection deadline exceeded")
 	}
 }
 
 func incompleteNetworkObservation(
 	physicalIdentity string,
 	producerRevision string,
+	workerPodUID string,
 	started, now time.Time,
 	reason string,
-	workerPodUID ...string,
 ) (*ciskov1.DeviceNetworkObservationStatus, error) {
 	identity, err := topology.CanonicalPhysicalIdentity(physicalIdentity)
 	if err != nil {
@@ -162,6 +168,13 @@ func incompleteNetworkObservation(
 	}
 	if strings.TrimSpace(producerRevision) == "" {
 		return nil, fmt.Errorf("producer revision is empty")
+	}
+	workerPodUID = strings.TrimSpace(workerPodUID)
+	if workerPodUID == "" {
+		return nil, fmt.Errorf("worker Pod UID is empty")
+	}
+	if len(workerPodUID) > 128 {
+		return nil, fmt.Errorf("worker Pod UID exceeds 128 characters")
 	}
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -173,13 +186,7 @@ func incompleteNetworkObservation(
 		CollectionStartedAt: metav1.NewTime(started.UTC()), CollectionEndedAt: metav1.NewTime(now.UTC()),
 		ObservedAt: metav1.NewTime(now.UTC()), Complete: false,
 		UnknownReason: truncateNetworkObservationReason(reason), ProducerRevision: producerRevision,
-		DeviceIdentityHash: identityHash(identity),
-	}
-	if len(workerPodUID) > 0 {
-		status.WorkerPodUID = strings.TrimSpace(workerPodUID[0])
-		if len(status.WorkerPodUID) > 128 {
-			return nil, fmt.Errorf("worker Pod UID exceeds 128 characters")
-		}
+		DeviceIdentityHash: identityHash(identity), WorkerPodUID: workerPodUID,
 	}
 	return status, nil
 }
@@ -207,8 +214,8 @@ func BuildNetworkObservation(
 	provider drivers.TopologyProvider,
 	physicalIdentity string,
 	producerRevision string,
+	workerPodUID string,
 	now time.Time,
-	workerPodUID ...string,
 ) (*ciskov1.DeviceNetworkObservationStatus, error) {
 	if provider == nil {
 		return nil, fmt.Errorf("topology provider is nil")
@@ -219,6 +226,13 @@ func BuildNetworkObservation(
 	}
 	if strings.TrimSpace(producerRevision) == "" {
 		return nil, fmt.Errorf("producer revision is empty")
+	}
+	workerPodUID = strings.TrimSpace(workerPodUID)
+	if workerPodUID == "" {
+		return nil, fmt.Errorf("worker Pod UID is empty")
+	}
+	if len(workerPodUID) > 128 {
+		return nil, fmt.Errorf("worker Pod UID exceeds 128 characters")
 	}
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -238,12 +252,7 @@ func BuildNetworkObservation(
 		Complete:            interfaceErr == nil && cdpErr == nil && ospfErr == nil,
 		ProducerRevision:    producerRevision,
 		DeviceIdentityHash:  identityHash(identity),
-	}
-	if len(workerPodUID) > 0 {
-		status.WorkerPodUID = strings.TrimSpace(workerPodUID[0])
-		if len(status.WorkerPodUID) > 128 {
-			return nil, fmt.Errorf("worker Pod UID exceeds 128 characters")
-		}
+		WorkerPodUID:        workerPodUID,
 	}
 	var failures []string
 	if interfaceErr != nil {
@@ -440,8 +449,11 @@ func normalizeInterfaces(values []common.InterfaceStats) ([]ciskov1.DeviceNetwor
 			return nil, fmt.Errorf("source returned duplicate interface %q", name)
 		}
 		headroom := interfaceHeadroom(value)
+		capacity, ingress, egress, rateSource := interfaceRateEvidence(value)
 		byName[name] = ciskov1.DeviceNetworkInterfaceObservation{
 			Name: name, OperUp: strings.EqualFold(strings.TrimSpace(value.OperStatus), "up"), HeadroomPercent: headroom,
+			CapacityBitsPerSecond: capacity, IngressBitsPerSecond: ingress,
+			EgressBitsPerSecond: egress, RateSource: rateSource,
 		}
 	}
 	out := make([]ciskov1.DeviceNetworkInterfaceObservation, 0, len(byName))
@@ -572,8 +584,12 @@ func neighborIdentity(source, id, localInterface, routingDomain string) string {
 // the common driver contract. Missing/zero capacity or counters outside the
 // representable range remain Unknown (nil), never zero-headroom.
 func interfaceHeadroom(value common.InterfaceStats) *int32 {
-	if value.Speed == 0 || !value.InRatePresent || !value.OutRatePresent ||
+	if value.Speed == 0 || value.Speed > maxNetworkObservationRate || !value.InRatePresent || !value.OutRatePresent ||
 		!value.InRateValid || !value.OutRateValid {
+		return nil
+	}
+	if value.InBitsPerSec > maxNetworkObservationRate || value.OutBitsPerSec > maxNetworkObservationRate ||
+		strings.TrimSpace(value.RateSource) == "" {
 		return nil
 	}
 	utilization := value.InBitsPerSec
@@ -592,4 +608,23 @@ func interfaceHeadroom(value common.InterfaceStats) *int32 {
 		headroom = 100
 	}
 	return &headroom
+}
+
+func interfaceRateEvidence(value common.InterfaceStats) (capacity, ingress, egress *uint64, source string) {
+	if value.Speed > 0 && value.Speed <= maxNetworkObservationRate {
+		capacity = ptr.To(value.Speed)
+	}
+	if value.InRatePresent && value.InRateValid && value.InBitsPerSec <= maxNetworkObservationRate {
+		ingress = ptr.To(value.InBitsPerSec)
+	}
+	if value.OutRatePresent && value.OutRateValid && value.OutBitsPerSec <= maxNetworkObservationRate {
+		egress = ptr.To(value.OutBitsPerSec)
+	}
+	if capacity != nil && ingress != nil && egress != nil {
+		source = strings.TrimSpace(value.RateSource)
+		if len(source) > 128 {
+			source = ""
+		}
+	}
+	return capacity, ingress, egress, source
 }

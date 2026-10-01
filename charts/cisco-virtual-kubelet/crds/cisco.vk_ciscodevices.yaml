@@ -839,6 +839,21 @@ spec:
                           manager validates ownership and duplicate identities before persistence.
                         items:
                           properties:
+                            capacityBitsPerSecond:
+                              description: |-
+                                CapacityBitsPerSecond and directional rates retain the bounded inputs
+                                from which HeadroomPercent was derived. Their absence is Unknown, while a
+                                present zero directional rate is a measured zero.
+                                The ceiling is the largest exactly representable JSON integer. Keeping
+                                the CRD boundary below int64's maximum avoids rounding that older API
+                                servers can reinterpret as a negative validation bound.
+                              format: int64
+                              maximum: 9007199254740991
+                              type: integer
+                            egressBitsPerSecond:
+                              format: int64
+                              maximum: 9007199254740991
+                              type: integer
                             headroomPercent:
                               description: |-
                                 HeadroomPercent is omitted when the driver cannot provide a trustworthy
@@ -847,11 +862,21 @@ spec:
                               maximum: 100
                               minimum: 0
                               type: integer
+                            ingressBitsPerSecond:
+                              format: int64
+                              maximum: 9007199254740991
+                              type: integer
                             name:
                               maxLength: 128
                               type: string
                             operUp:
                               type: boolean
+                            rateSource:
+                              description: |-
+                                RateSource identifies the device data model used for the directional
+                                rates. It documents provenance, not an independent health grant.
+                              maxLength: 128
+                              type: string
                           required:
                           - name
                           - operUp
@@ -1021,6 +1046,21 @@ spec:
                           manager validates ownership and duplicate identities before persistence.
                         items:
                           properties:
+                            capacityBitsPerSecond:
+                              description: |-
+                                CapacityBitsPerSecond and directional rates retain the bounded inputs
+                                from which HeadroomPercent was derived. Their absence is Unknown, while a
+                                present zero directional rate is a measured zero.
+                                The ceiling is the largest exactly representable JSON integer. Keeping
+                                the CRD boundary below int64's maximum avoids rounding that older API
+                                servers can reinterpret as a negative validation bound.
+                              format: int64
+                              maximum: 9007199254740991
+                              type: integer
+                            egressBitsPerSecond:
+                              format: int64
+                              maximum: 9007199254740991
+                              type: integer
                             headroomPercent:
                               description: |-
                                 HeadroomPercent is omitted when the driver cannot provide a trustworthy
@@ -1029,11 +1069,21 @@ spec:
                               maximum: 100
                               minimum: 0
                               type: integer
+                            ingressBitsPerSecond:
+                              format: int64
+                              maximum: 9007199254740991
+                              type: integer
                             name:
                               maxLength: 128
                               type: string
                             operUp:
                               type: boolean
+                            rateSource:
+                              description: |-
+                                RateSource identifies the device data model used for the directional
+                                rates. It documents provenance, not an independent health grant.
+                              maxLength: 128
+                              type: string
                           required:
                           - name
                           - operUp

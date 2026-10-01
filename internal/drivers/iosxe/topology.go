@@ -220,6 +220,7 @@ func (d *XEDriver) GetInterfaceStats(ctx context.Context) ([]common.InterfaceSta
 		}
 
 		if intf.Statistics != nil {
+			s.RateSource = "cisco-ios-xe-interfaces-oper:statistics-kbps"
 			if intf.Statistics.InOctets != nil {
 				s.InOctets = *intf.Statistics.InOctets
 			}
