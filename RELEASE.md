@@ -1,8 +1,8 @@
 # Release runbook
 
 This is the maintainer checklist for a Cisco Virtual Kubelet release. The next
-planned release is `v2026.9.2` on 2026-09-01; its Helm chart version is
-`2026.9.2`. Tags use strict SemVer-compatible CalVer:
+planned release is `v2026.10.0` on 2026-10-01; its Helm chart version is
+`2026.10.0`. Tags use strict SemVer-compatible CalVer:
 `vYYYY.M.PATCH` (no leading zero in the month).
 
 The release workflow deliberately cannot create or publish a GitHub Release.
@@ -17,8 +17,9 @@ signed image and chart tags, but its release-image scan found fixed
 HIGH/CRITICAL dependency findings, so maintainers made a pre-publication no-go
 decision. Never move or delete either tag and never publish either draft.
 Neither candidate triggered documentation deployment or a Krew update.
-`v2026.9.2` carries the dependency remediation and is the publishable September
-candidate.
+`v2026.9.2` was published on 1 September and is the October comparison baseline.
+The October candidate is still unpublished; follow the
+[October readiness ledger](docs/releases/v2026.10.0-readiness.md) before tagging.
 
 Do not rerun the `v2026.9.0` or `v2026.9.1` tag workflows. In particular, the
 older `v2026.9.1` workflow emitted mutable image aliases before its advisory
@@ -29,11 +30,11 @@ scan; a rerun could move those aliases outside the corrected gates below.
 - [ ] Open a pull request to `main`; do not release directly from a topic
   branch.
 - [ ] Review the complete change set from the previous release:
-  `git log --oneline v2026.8.1..HEAD` and
-  `git diff --stat v2026.8.1..HEAD`.
+  `git log --oneline v2026.9.2..HEAD` and
+  `git diff --stat v2026.9.2..HEAD`.
 - [ ] Confirm the release-facing version and source chart `appVersion` are
-  `v2026.9.2`. The release workflow must stamp the packaged chart version as
-  `2026.9.2`; source `Chart.yaml` intentionally retains its local-development
+  `v2026.10.0`. The release workflow must stamp the packaged chart version as
+  `2026.10.0`; source `Chart.yaml` intentionally retains its local-development
   chart version. Historical examples must retain their original version.
 - [ ] Regenerate committed material and require a clean diff:
 
@@ -153,15 +154,16 @@ scan; a rerun could move those aliases outside the corrected gates below.
 ## 2. Prepare curated notes
 
 - [ ] Review and update the committed
-  `docs/releases/v2026.9.2.md` notes from the final comparison
-  `v2026.8.1...<release_commit>`. Include user-visible features, compatibility
+  `docs/releases/v2026.10.0.md` notes from the final comparison
+  `v2026.9.2...<release_commit>`. Include user-visible features, compatibility
   and security changes, known limitations, upgrade steps, and links to the
   documentation. Use that committed file as the canonical source. Render its
   site-relative links as tag-pinned GitHub links with the checked-in renderer
   before creating the curated GitHub draft; never edit the canonical MkDocs
   source just for GitHub.
-- [ ] Call out the new `NetworkController` and `NetworkControllerConfig` CRDs
-  and the Helm upgrade procedure below.
+- [ ] Call out the new `IOSXESoftwareRollout` CRD and the changed
+  `CiscoDevice`, `IOSXESoftwareUpgrade` and `IOSXEOperationalAction` schemas;
+  use the complete chart CRD upgrade procedure below.
 - [ ] Do not claim the release is available until the draft has been published.
 
 ## 3. Create the draft before the tag
@@ -169,11 +171,11 @@ scan; a rerun could move those aliases outside the corrected gates below.
 Set these in a clean maintainer shell:
 
 ```sh
-release_version=v2026.9.2
+release_version=v2026.10.0
 release_name="Cisco Virtual Kubelet ${release_version}"
 repo=cisco-open/cisco-virtual-kubelet
 repo_root="$(git rev-parse --show-toplevel)"
-release_notes_source="${repo_root}/docs/releases/v2026.9.2.md"
+release_notes_source="${repo_root}/docs/releases/v2026.10.0.md"
 release_notes="$(mktemp)"
 test -s "$release_notes_source"
 python3 "${repo_root}/.github/scripts/render_github_release_notes.py" \
@@ -227,17 +229,17 @@ test -z "$(git status --porcelain=v1 --untracked-files=all)"
 
 - [ ] Have a second repository maintainer who is not the release operator
   review the rendered draft, exact target commit, version, recovery/security
-  delta, zero-adapter limitation, and CRD upgrade warning. Record the approval
+  delta, preview rollout/drain limitations, and CRD upgrade warning. Record the approval
   as a comment on the release PR; a review approval by itself is not the
   release authorization. The approver must replace both angle-bracket values
   and post this exact text:
 
   ```text
-  I am a Cisco Virtual Kubelet repository maintainer other than the release operator. I approve Cisco Virtual Kubelet v2026.9.2 for release from commit <full 40-character release commit> using draft release ID <draft release ID>.
+  I am a Cisco Virtual Kubelet repository maintainer other than the release operator. I approve Cisco Virtual Kubelet v2026.10.0 for release from commit <full 40-character release commit> using draft release ID <draft release ID>.
 
-  I verified that the draft is a non-prerelease draft targeting that exact commit, has zero assets before the tag is pushed, and renders the tag-pinned release-note links correctly. I reviewed the complete delta from v2026.8.1, including the v2026.9.2 remediation of the dependency findings discovered in v2026.9.1 and the hard Linux AMD64/ARM64 HIGH/CRITICAL image gates. I understand that this release adds two Alpha CRD contracts and scaffolding but no working external-controller adapter, adds no new IOS-XE or NX-OS behavior, keeps kubectl plugin commands unchanged, and requires existing Helm installations to apply both new CRDs before upgrading.
+  I verified that the draft is a non-prerelease draft targeting that exact commit, has zero assets before the tag is pushed, and renders the tag-pinned release-note links correctly. I reviewed the complete delta from v2026.9.2, including secure IOS-XE gNOI authentication/provisioning, native topology projection, topology-aware image selection and combined rollouts, opt-in preview PDB drain, dependency updates, and the hard Linux AMD64/ARM64 HIGH/CRITICAL image gates. I verified the October readiness ledger and exact-candidate lab results. I understand that native TAS is an optional experimental lane, independent staging/activation and the November roadmap are excluded, no zero-downtime guarantee is made, and existing Helm installations must apply all reviewed October CRDs before upgrading.
 
-  I authorize the release operator to create and push the immutable signed v2026.9.2 tag with the approved release-signing identity. I do not authorize publishing v2026.9.0 or v2026.9.1, moving or deleting any existing release tag, rerunning either old tag workflow, or publishing v2026.9.2 until all required checks pass, the draft contains exactly 16 verified assets, both mutable image aliases resolve to the signed v2026.9.2 digest, and the final post-stage verification is complete.
+  I authorize the release operator to create and push the immutable signed v2026.10.0 tag with the approved release-signing identity. I do not authorize publishing v2026.9.0 or v2026.9.1, moving or deleting any existing release tag, rerunning either old tag workflow, or publishing v2026.10.0 until all required checks pass, the draft contains exactly 16 verified assets, both mutable image aliases resolve to the signed v2026.10.0 digest, and the final post-stage verification is complete.
   ```
 
 ## 4. Push the tag and let automation stage the draft
@@ -273,14 +275,14 @@ git push origin "refs/tags/${release_version}"
   subject. Pin the expected GitHub Actions OIDC issuer and this repository's
   release-workflow certificate identity; do not use unconstrained keyless
   verification.
-- [ ] Pull Helm OCI chart `2026.9.2` by digest, verify its cosign signature,
+- [ ] Pull Helm OCI chart `2026.10.0` by digest, verify its cosign signature,
   inspect `Chart.yaml`, and confirm its package contains `LICENSE` identical to
   the repository root.
 - [ ] Require both the pre-merge and exact tagged-image Trivy scans to report
   zero fixed HIGH/CRITICAL findings. The tagged-image scan is a hard gate even
   though the image has already been pushed and signed. The root and Terraform
   `govulncheck` gates must also be green.
-- [ ] Confirm the mutable `2026.9` and `latest` image aliases were promoted
+- [ ] Confirm the mutable `2026.10` and `latest` image aliases were promoted
   only after both tagged-image platform scans passed and all chart, plugin, and
   16-asset draft staging completed. Both aliases must resolve to the exact
   signed image digest. During recovery, treat aliases that still resolve to an
@@ -290,45 +292,48 @@ git push origin "refs/tags/${release_version}"
 Do not publish a partial draft. If any job or verification fails, follow the
 abort rules below.
 
-## 5. Helm upgrade: apply the new CRDs first
+## 5. Helm upgrade: apply all reviewed October CRDs first
 
-Helm installs files under `crds/` on a fresh installation but intentionally
-does not apply them during `helm upgrade`. Existing installations upgrading to
-`v2026.9.2` must apply both new CRDs to enable the new controller scaffold.
-Without them, the manager continues running its existing reconcilers but
-reports the optional scaffold as disabled.
+Helm installs files under `crds/` on a fresh installation but does not
+update them during `helm upgrade`. The September-to-October delta adds
+`IOSXESoftwareRollout` and changes `CiscoDevice`, `IOSXESoftwareUpgrade`
+and `IOSXEOperationalAction`. Applying only September's two controller CRDs
+is insufficient. Back up custom resources as well as schemas.
+The full directory also retains September's `networkcontrollers.cisco.vk`
+and `networkcontrollerconfigs.config.cisco.vk` for upgrades from older releases.
+
+After publication, use the complete pinned chart CRD directory:
 
 ```sh
-kubectl apply --server-side -f \
-  https://raw.githubusercontent.com/cisco-open/cisco-virtual-kubelet/v2026.9.2/config/crd/cisco.vk_networkcontrollers.yaml
-kubectl apply --server-side -f \
-  https://raw.githubusercontent.com/cisco-open/cisco-virtual-kubelet/v2026.9.2/config/crd/config.cisco.vk_networkcontrollerconfigs.yaml
-
-kubectl get crd \
-  networkcontrollers.cisco.vk \
-  networkcontrollerconfigs.config.cisco.vk
+helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
+  --version 2026.10.0 --untar
+kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
+  > cvk-crds-before-upgrade.yaml
+# Diff exit 1 means differences; review before explicit field ownership transfer.
+kubectl diff --server-side --force-conflicts --field-manager=cvk-crd-upgrade \
+  -f cisco-virtual-kubelet/crds/
+kubectl apply --server-side --force-conflicts --field-manager=cvk-crd-upgrade \
+  -f cisco-virtual-kubelet/crds/
+kubectl wait --for=condition=Established --timeout=60s \
+  crd/ciscodevices.cisco.vk \
+  crd/iosxesoftwareupgrades.ops.cisco.vk \
+  crd/iosxeoperationalactions.ops.cisco.vk \
+  crd/iosxesoftwarerollouts.ops.cisco.vk
 
 helm upgrade <release> \
   oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 \
-  --namespace <namespace> \
-  --reuse-values \
-  --wait --timeout 5m
-
-controller_deployment="$(kubectl get deployment -n <namespace> \
-  -l 'app.kubernetes.io/instance=<release>,app.kubernetes.io/name=cisco-virtual-kubelet,app.kubernetes.io/component=controller' \
-  -o jsonpath='{.items[0].metadata.name}')"
-test -n "$controller_deployment"
-kubectl rollout restart "deployment/${controller_deployment}" -n <namespace>
-kubectl rollout status "deployment/${controller_deployment}" \
+  --version 2026.10.0 --namespace <namespace> \
+  -f <reviewed-values-file> --wait --timeout 5m
+kubectl rollout status deployment/<controller-deployment> \
   -n <namespace> --timeout=5m
-kubectl get crd \
-  networkcontrollers.cisco.vk \
-  networkcontrollerconfigs.config.cisco.vk
 ```
 
-Replace the angle-bracket placeholders before running the commands. A fresh
-`helm install` installs these CRDs automatically.
+Replace placeholders; use a clean extraction directory and verify the chart
+signature. `--force-conflicts` must target only reviewed CVK CRDs. Keep
+topology, software mutation and drain gates at their previous settings until
+the migration/admission tests pass; do not blindly reuse unqualified flags.
+The [operations runbook](docs/operations.md#upgrading-crds) covers schema and
+data rollback risks. Never delete CRDs or active operation records as rollback.
 
 ## 6. Publish and verify distribution
 
@@ -342,7 +347,7 @@ Replace the angle-bracket placeholders before running the commands. A fresh
   checksums from an unauthenticated session.
 - [ ] The public Krew index already contains `cisco-vk`; do not open an initial
   submission. The `krew-index` workflow should open the normal update-bot pull
-  request for `v2026.9.2`. Wait for it to merge, verify the official index has
+  request for `v2026.10.0`. Wait for it to merge, verify the official index has
   the four expected URLs and SHA-256 values, then run `kubectl krew update`,
   install/update `cisco-vk`, and execute `kubectl cisco-vk version`.
 - [ ] Exercise a fresh Helm install and the upgrade procedure above in a clean
@@ -356,11 +361,11 @@ Replace the angle-bracket placeholders before running the commands. A fresh
   has no assets and is still a draft. Then restart at section 1.
 - **After the tag is pushed:** do not delete, force-push, or move the tag. Image
   and chart tags may already be public and signed. Leave the draft unpublished,
-  diagnose the failed workflow, and use a new patch version (`v2026.9.3`) for
+  diagnose the failed workflow, and use a new patch version (`v2026.10.1`) for
   any source or artifact change.
 - **After publication:** the release and its assets are immutable. Never replace
   an asset or retag a commit; publish corrective notes if documentation alone
-  is wrong, or cut `v2026.9.3` for code/artifact changes.
+  is wrong, or cut `v2026.10.1` for code/artifact changes.
 - **Krew update failure:** an infrastructure-only failure may be rerun. A wrong
   URL, digest, platform, archive layout, or binary requires a new patch release.
 - **Helm rollback:** rolling the Deployment/chart back does not remove CRDs or

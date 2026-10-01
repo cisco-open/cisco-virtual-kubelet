@@ -66,7 +66,7 @@ const features = [
     icon: Network,
     title: "Controller Extension API",
     description:
-      "Alpha, report-only contracts for future controller adapters. The September image ships with zero product adapters and cannot apply, prune, or remotely delete controller state.",
+      "Alpha, report-only contracts for future controller adapters. The current scaffold ships with zero product adapters and cannot apply, prune, or remotely delete controller state.",
     color: "from-primary to-accent",
     glowColor: "primary",
     beta: true,
@@ -76,10 +76,49 @@ const features = [
     icon: ArrowUpCircle,
     title: "Software Lifecycle",
     description:
-      "Drive IOS-XE software upgrades from Kubernetes via the IOSXESoftwareUpgrade CRD, using gNOI OS install, activate, and verify.",
+      "Upgrade or downgrade IOS-XE through IOSXESoftwareUpgrade: transfer a verified image, activate it, and verify recovery. Software mutation is explicitly gated and disabled by default.",
     color: "from-accent to-accent-light",
     glowColor: "accent",
     beta: true,
+  },
+  {
+    icon: Network,
+    title: "Native Topology Placement",
+    description:
+      "Project protected site and failure-domain labels onto Nodes for native Kubernetes affinity and topology spread. Managed mode requires Kubernetes 1.35+; no third-party scheduler is needed.",
+    color: "from-primary to-accent",
+    glowColor: "primary",
+    beta: true,
+    maturity: "Opt-in",
+  },
+  {
+    icon: ArrowUpCircle,
+    title: "Topology-Aware Rollouts",
+    description:
+      "Approve immutable IOSXESoftwareRollout plans with canaries and domain budgets. Freeze each target's topology-selected image URL, digest and Secret identity, then track combined activation and recovery.",
+    color: "from-accent to-accent-light",
+    glowColor: "accent",
+    beta: true,
+    maturity: "Alpha",
+  },
+  {
+    icon: Shield,
+    title: "Secure IOS-XE gNOI",
+    description:
+      "Use verified TLS, secure-password metadata and opt-in CSR-based OS-service certificate provisioning. Trust is isolated to gNOI; read-only OS.Verify never installs certificates.",
+    color: "from-success to-teal-400",
+    glowColor: "success",
+    beta: true,
+  },
+  {
+    icon: Layers,
+    title: "PDB-Aware Drain",
+    description:
+      "Opt into Kubernetes Eviction for the documented eligible workloads before reload, with device-clean and recovery checks. Disabled by default; not general evacuation or a zero-downtime guarantee.",
+    color: "from-primary to-accent",
+    glowColor: "primary",
+    beta: true,
+    maturity: "Preview",
   },
   {
     icon: Terminal,
@@ -102,7 +141,7 @@ const features = [
     icon: Shield,
     title: "Secure by Design",
     description:
-      "Device credentials are referenced through Kubernetes Secrets and kept out of generated ConfigMaps. Production clusters should enable Secret encryption at rest and least-privilege RBAC.",
+      "Keep credentials in Secrets. Managed mode separates shared app-hosting and network-management ServiceAccounts with RO/RW role options, native admission and exact worker binding. RBAC alone is not per-device authorization.",
     color: "from-success to-teal-400",
     glowColor: "success",
   },
@@ -152,14 +191,23 @@ export default function Features() {
           className="text-center mb-16"
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-            Make{" "}
-            <span className="gradient-text">Edge Computing</span>
+            Bring{" "}
+            <span className="gradient-text">Kubernetes to the Network</span>
             <br />
-            Simple and Powerful
+            Apps, Configuration and Upgrades
           </h2>
           <p className="text-lg text-text-muted max-w-2xl mx-auto">
             Built on the Virtual Kubelet framework, Cisco Virtual Kubelet brings
-            cloud-native container orchestration to your network infrastructure.
+            cloud-native workload placement, configuration and opt-in IOS-XE
+            software campaigns to your network infrastructure.
+          </p>
+          <p className="text-sm text-text-muted max-w-3xl mx-auto mt-5 leading-relaxed">
+            October adds topology-aware campaigns and secure gNOI provisioning.
+            Declared domains do not prove healthy redundant paths, link headroom
+            or critical-service availability. Independent staging, persistent
+            image caching and automatic network-path health gates remain roadmap work.
+            Optional Kubernetes 1.37 TAS is an experimental scheduler lane.
+            {" "}<a className="text-primary underline" href="/cisco-virtual-kubelet/docs/releases/v2026.10.0/">October scope and limitations</a>
           </p>
         </motion.div>
 
@@ -185,7 +233,7 @@ export default function Features() {
               </div>
 
               {/* Content */}
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
                 <h3 className="text-xl font-semibold text-foreground">
                   {feature.title}
                 </h3>

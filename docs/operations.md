@@ -6,10 +6,16 @@ Cisco Virtual Kubelet ships CRD manifests alongside the Helm chart. When
 upgrading to a new CVK version, apply the updated CRDs before upgrading the
 chart — Helm does not manage CRD updates automatically.
 
+These examples target `v2026.10.0` after publication; until then use the
+published September release. October adds `IOSXESoftwareRollout` and changes
+`CiscoDevice`, `IOSXESoftwareUpgrade` and `IOSXEOperationalAction`; applying
+only September's controller-extension CRDs is insufficient. Back up the
+corresponding custom resources as well as their schemas before migration.
+
 ```bash
-# 1. Pull the exact release chart. For the September release:
+# 1. Pull the exact release chart, after October publication:
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 --untar
+  --version 2026.10.0 --untar
 
 # 2. Back up the live definitions, then review the exact server-side result.
 # kubectl diff exits 1 when it finds expected differences.
@@ -26,25 +32,28 @@ kubectl apply --server-side --force-conflicts \
   --field-manager=cvk-crd-upgrade \
   -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
-  crd/networkcontrollers.cisco.vk \
-  crd/networkcontrollerconfigs.config.cisco.vk
+  crd/ciscodevices.cisco.vk \
+  crd/iosxesoftwareupgrades.ops.cisco.vk \
+  crd/iosxeoperationalactions.ops.cisco.vk \
+  crd/iosxesoftwarerollouts.ops.cisco.vk
 
 # 4. Verify all CRDs registered at the new schema version:
 kubectl get crds | grep cisco
 
-# Example output (abbreviated; the chart currently ships 17 CRDs):
+# Example output (abbreviated; the chart currently ships 18 CRDs):
 NAME                                    CREATED AT
 ciscodevices.cisco.vk                   2026-01-10T09:00:00Z
 deviceoperations.ops.cisco.vk           2026-01-10T09:00:00Z
 iosxeconfigs.config.cisco.vk            2026-01-10T09:00:00Z
 iosxesoftwareupgrades.ops.cisco.vk      2026-01-10T09:00:00Z
+iosxesoftwarerollouts.ops.cisco.vk      2026-10-01T09:00:00Z
 iosxeoperationalactions.ops.cisco.vk    2026-01-10T09:00:00Z
 networkcontrollers.cisco.vk             2026-08-07T09:00:00Z
 networkcontrollerconfigs.config.cisco.vk 2026-08-07T09:00:00Z
 
 # 5. Upgrade the Helm release from the same immutable chart version:
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 \
+  --version 2026.10.0 \
   --namespace cvk-system
 
 # 6. Confirm manager pod is running the new image:
