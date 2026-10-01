@@ -1,0 +1,58 @@
+time="2026-10-01T23:14:31Z" level=info msg="Device info: Serial=FOC2416U0MV, Version=17.18.3, Product=C9300-24P" file="device.go:75"
+time="2026-10-01T23:14:31Z" level=info msg="Connected to IOSXE device" file="driver.go:144" platform=IOS-XE url="https://198.51.100.103:443"
+time="2026-10-01T23:14:32Z" level=warning msg="YANG release is marked experimental; integration coverage may be incomplete" file="builder.go:161" component=iosxe-configdriver release=1715 status=experimental
+time="2026-10-01T23:14:32Z" level=warning msg="YANG release is marked experimental; integration coverage may be incomplete" file="builder.go:161" component=iosxe-configdriver release=1716 status=experimental
+time="2026-10-01T23:14:32Z" level=warning msg="YANG release is marked experimental; integration coverage may be incomplete" file="builder.go:161" component=iosxe-configdriver release=2601 status=experimental
+time="2026-10-01T23:14:32Z" level=info msg="config driver: fetched device version" file="register.go:141" version=17.18
+time="2026-10-01T23:14:32Z" level=info msg="device version set for writers" file="config_reconciler.go:384" version=17.18
+time="2026-10-01T23:14:32Z" level=info msg="gNOI: pillar enabled (198.51.100.103:9339, tls=true, trust_source=xe-provisioning, auth_mode=iosxe-password-metadata, lazy_bulk=true)" file="gnoi_wiring.go:132"
+time="2026-10-01T23:14:32Z" level=info msg="IOSXEOperationalAction reconciler not registered; enable with --enable-write-class-gnoi or CISCO_VK_ENABLE_WRITE_CLASS_GNOI=true" file="config_reconciler.go:651"
+time="2026-10-01T23:14:32Z" level=info msg="network-management runtime started without Virtual Kubelet Node or Pod controllers" file="run.go:842" workerAccess=readWrite workerMode=network-management
+2026-10-01T23:14:32Z	INFO	controller-runtime.metrics	Starting metrics server
+2026-10-01T23:14:32Z	INFO	starting server	{"name": "health probe", "addr": "[::]:8081"}
+2026-10-01T23:14:32Z	INFO	controller-runtime.metrics	Serving metrics server	{"bindAddress": ":8080", "secure": false}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "deviceoperation", "controllerGroup": "ops.cisco.vk", "controllerKind": "DeviceOperation", "source": "kind source: *v1alpha1.DeviceOperation"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "source": "kind source: *v1alpha1.IOSXEConfig"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxediagnostic", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEDiagnostic", "source": "kind source: *v1alpha1.IOSXEDiagnostic"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxetelemetry-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXETelemetry", "source": "channel source: 0x25eb1a8be5b0"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "source": "kind source: *v1alpha1.IOSXEConfigDefaults"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "source": "kind source: *v1alpha1.IOSXEDeviceGroupConfig"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "source": "kind source: *v1alpha1.IOSXEInterfaceGroupConfig"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "source": "kind source: *v1alpha1.IOSXETemplate"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "source": "kind source: *v1.ConfigMap"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "source": "kind source: *v1.Secret"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxetelemetry-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXETelemetry", "source": "kind source: *v1alpha1.IOSXETelemetry"}
+2026-10-01T23:14:32Z	INFO	Starting EventSource	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "source": "kind source: *v1alpha1.IOSXESoftwareUpgrade"}
+2026-10-01T23:14:32Z	INFO	Starting Controller	{"controller": "iosxediagnostic", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEDiagnostic"}
+2026-10-01T23:14:32Z	INFO	Starting workers	{"controller": "iosxediagnostic", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEDiagnostic", "worker count": 1}
+2026-10-01T23:14:32Z	INFO	Starting Controller	{"controller": "iosxetelemetry-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXETelemetry"}
+2026-10-01T23:14:32Z	INFO	Starting workers	{"controller": "iosxetelemetry-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXETelemetry", "worker count": 1}
+2026-10-01T23:14:32Z	INFO	Starting Controller	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade"}
+2026-10-01T23:14:32Z	INFO	Starting workers	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "worker count": 1}
+2026-10-01T23:14:32Z	INFO	Starting Controller	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig"}
+2026-10-01T23:14:32Z	INFO	Starting workers	{"controller": "iosxeconfig-cat9k-lab-103", "controllerGroup": "config.cisco.vk", "controllerKind": "IOSXEConfig", "worker count": 1}
+2026-10-01T23:14:32Z	INFO	Starting Controller	{"controller": "deviceoperation", "controllerGroup": "ops.cisco.vk", "controllerKind": "DeviceOperation"}
+2026-10-01T23:14:32Z	INFO	Starting workers	{"controller": "deviceoperation", "controllerGroup": "ops.cisco.vk", "controllerKind": "DeviceOperation", "worker count": 1}
+time="2026-10-01T23:14:33Z" level=warning msg="network topology observation status update failed" file="topology_observation.go:95" error="network worker binding is not at the desired revision"
+time="2026-10-01T23:15:05Z" level=warning msg="network topology observation status update failed" file="topology_observation.go:95" error="network worker binding is not at the desired revision"
+time="2026-10-01T23:15:31Z" level=info msg="IOSXESoftwareUpgrade phase advanced" file="reconciler.go:3738" from=Transferring reason=NativeInstallCorroborated softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 to=Activating
+time="2026-10-01T23:15:58Z" level=info msg="ListPods: discovering pods from device" file="pod_lifecycle.go:653"
+time="2026-10-01T23:15:58Z" level=warning msg="dispatching gNOI OS.Activate" file="reconciler.go:2453" noReboot=false softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 standbySupervisor=false version=17.18.02.0.4112.1766116039
+time="2026-10-01T23:17:28Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+time="2026-10-01T23:17:34Z" level=info msg="IOSXESoftwareUpgrade phase advanced" file="reconciler.go:3738" from=Activating reason=Rebooting softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 to=AwaitingReachability
+W1001 23:19:21.712222       1 logging.go:55] [core] [Channel #4 SubChannel #5] grpc: addrConn.createTransport failed to connect to {Addr: "198.51.100.103:9339", ServerName: "198.51.100.103", }. Err: connection error: desc = "transport: Error while dialing: dial tcp 198.51.100.103:9339: connect: connection refused"
+time="2026-10-01T23:19:21Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+W1001 23:19:22.722558       1 logging.go:55] [core] [Channel #7 SubChannel #8] grpc: addrConn.createTransport failed to connect to {Addr: "198.51.100.103:9339", ServerName: "198.51.100.103", }. Err: connection error: desc = "transport: Error while dialing: dial tcp 198.51.100.103:9339: connect: connection refused"
+time="2026-10-01T23:19:22Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+W1001 23:19:23.702941       1 logging.go:55] [core] [Channel #9 SubChannel #10] grpc: addrConn.createTransport failed to connect to {Addr: "198.51.100.103:9339", ServerName: "198.51.100.103", }. Err: connection error: desc = "transport: Error while dialing: dial tcp 198.51.100.103:9339: connect: connection refused"
+time="2026-10-01T23:19:23Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+W1001 23:20:14.701483       1 logging.go:55] [core] [Channel #11 SubChannel #12] grpc: addrConn.createTransport failed to connect to {Addr: "198.51.100.103:9339", ServerName: "198.51.100.103", }. Err: connection error: desc = "transport: Error while dialing: dial tcp 198.51.100.103:9339: i/o timeout"
+time="2026-10-01T23:20:14Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+W1001 23:20:35.746784       1 logging.go:55] [core] [Channel #13 SubChannel #14] grpc: addrConn.createTransport failed to connect to {Addr: "198.51.100.103:9339", ServerName: "198.51.100.103", }. Err: connection error: desc = "transport: Error while dialing: dial tcp 198.51.100.103:9339: i/o timeout"
+time="2026-10-01T23:20:35Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+W1001 23:21:27.209041       1 logging.go:55] [core] [Channel #15 SubChannel #16] grpc: addrConn.createTransport failed to connect to {Addr: "198.51.100.103:9339", ServerName: "198.51.100.103", }. Err: connection error: desc = "transport: Error while dialing: dial tcp 198.51.100.103:9339: i/o timeout"
+time="2026-10-01T23:21:27Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+W1001 23:22:17.760394       1 logging.go:55] [core] [Channel #17 SubChannel #18] grpc: addrConn.createTransport failed to connect to {Addr: "198.51.100.103:9339", ServerName: "198.51.100.103", }. Err: connection error: desc = "transport: Error while dialing: dial tcp 198.51.100.103:9339: i/o timeout"
+time="2026-10-01T23:22:17Z" level=info msg="gNOI: reset client leases for 198.51.100.103:9339" file="provider.go:132"
+time="2026-10-01T23:23:19Z" level=info msg="IOSXESoftwareUpgrade phase advanced" file="reconciler.go:3738" from=AwaitingReachability reason=DeviceReachable softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 to=Verifying
+time="2026-10-01T23:23:19Z" level=info msg="IOSXESoftwareUpgrade phase advanced" file="reconciler.go:3738" from=Verifying reason=Succeeded softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 to=Succeeded

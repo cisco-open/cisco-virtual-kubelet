@@ -1,0 +1,174 @@
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareUpgrade
+metadata:
+  annotations:
+    topology.cisco.vk/app-worker-config-revision: sha256:dd4d20a19a93d00885123bf83db581af553323e218467a4c33d60db77efba0e5
+    topology.cisco.vk/app-worker-pod-name: cat9k-lab-103-vk-5b98c5c898-kn864
+    topology.cisco.vk/app-worker-pod-uid: a2cdaeb1-ff39-4ca4-8a41-c40fbc61e692
+    topology.cisco.vk/app-worker-username: system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting
+    topology.cisco.vk/campaign-name: roadmap-pacing-downgrade-20261002-103
+    topology.cisco.vk/campaign-namespace: cvk-live
+    topology.cisco.vk/campaign-uid: b57d4bf9-3c3c-4998-8a79-954cfd2ff51e
+    topology.cisco.vk/device-generation: "7"
+    topology.cisco.vk/device-name: cat9k-lab-103
+    topology.cisco.vk/device-namespace: cvk-live
+    topology.cisco.vk/device-uid: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+    topology.cisco.vk/ledger-uid: 8587a09e-451e-43a1-b638-0b2c11af78b6
+    topology.cisco.vk/managed: "true"
+    topology.cisco.vk/network-worker-pod-name: u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f
+    topology.cisco.vk/network-worker-pod-uid: 0c37b01d-d645-43f0-8d13-a033eceb0a1e
+    topology.cisco.vk/network-worker-username: system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management
+    topology.cisco.vk/node-name: cat9k-lab-103
+    topology.cisco.vk/node-uid: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+    topology.cisco.vk/plan-hash: sha256:69887ad50f58fbe51a014b53559be34869331be35cbd384ced02a31771fced53
+    topology.cisco.vk/reservation-id: 0f3c4e98245e52b85475fcbf06f74383
+    topology.cisco.vk/source-secret-uid: 05d5617d-d807-4388-902f-9148c667fcc3
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-username: system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management
+  creationTimestamp: "2026-10-01T22:33:21Z"
+  finalizers:
+  - ops.cisco.vk/iosxesoftwareupgrade-cleanup
+  generation: 1
+  labels:
+    topology.cisco.vk/campaign-uid: b57d4bf9-3c3c-4998-8a79-954cfd2ff51e
+  name: roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98
+  namespace: cvk-live
+  resourceVersion: "9710301"
+  uid: 6419e3de-94b3-4a19-9f6e-4974f2ef2cad
+spec:
+  deviceRef:
+    name: cat9k-lab-103
+  imageSource:
+    sha256: c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+    url: sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.02.SPA.bin
+    urlSecretRef:
+      name: pr194-iosxe-image-source
+  installTimeoutSeconds: 7200
+  maxRetries: 3
+  maxTransferBytesPerSecond: 25000000
+  rebootTimeoutSeconds: 3600
+  resumePolicy: Retry
+  rollbackOnFailure: true
+  strategy: Reload
+  targetVersion: 17.18.02
+status:
+  activationStartTime: "2026-10-01T23:15:58Z"
+  completionTime: "2026-10-01T23:23:19Z"
+  conditions:
+  - lastTransitionTime: "2026-10-01T23:23:19Z"
+    message: upgrade complete
+    observedGeneration: 1
+    reason: Succeeded
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2026-10-01T23:15:30Z"
+    message: pinned bytes were transferred and IOS XE recorded a verified, quiescent,
+      completed install-add operation
+    observedGeneration: 1
+    reason: NativeInstallCorroborated
+    status: "True"
+    type: Transferred
+  - lastTransitionTime: "2026-10-01T22:34:53Z"
+    message: resolved and pinned sha256:c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+      (1247897709 bytes); ready for gNOI OS.Install
+    observedGeneration: 1
+    reason: ImagePinned
+    status: "True"
+    type: ImageResolved
+  - lastTransitionTime: "2026-10-01T23:23:19Z"
+    message: upgrade complete
+    observedGeneration: 1
+    reason: OutcomeVerified
+    status: "True"
+    type: DeviceMutationSettled
+  - lastTransitionTime: "2026-10-01T23:15:30Z"
+    message: IOS XE native inventory and completed install-add operation prove 17.18.02.0.4112.1766116039
+      was installed after the gNOI stream response was lost
+    observedGeneration: 1
+    reason: NativeInstallCorroborated
+    status: "True"
+    type: Validated
+  - lastTransitionTime: "2026-10-01T23:17:34Z"
+    message: recovering a recorded activation request without replaying it; waiting
+      up to 3600s for the device to report the target version
+    observedGeneration: 1
+    reason: ActivationRecorded
+    status: "True"
+    type: Activated
+  - lastTransitionTime: "2026-10-01T23:23:18Z"
+    message: device is reachable on target version 17.18.02.0.4112.1766116039
+    observedGeneration: 1
+    reason: DeviceReachable
+    status: "True"
+    type: DeviceReachable
+  - lastTransitionTime: "2026-10-01T23:23:19Z"
+    message: gNOI OS.Verify reports target version 17.18.02.0.4112.1766116039
+    observedGeneration: 1
+    reason: Verified
+    status: "True"
+    type: Verified
+  executionModel: AtMostOnceV1
+  installStartTime: "2026-10-01T22:34:53Z"
+  inventoryState: Installed
+  managedMutationClaims:
+  - claimedAt: "2026-10-01T23:15:58Z"
+    controlRevision: 0
+    policyEpoch: 1
+    reservationID: 0f3c4e98245e52b85475fcbf06f74383
+    stage: PrimaryActivation
+  - claimedAt: "2026-10-01T22:34:53Z"
+    controlRevision: 0
+    policyEpoch: 1
+    reservationID: 0f3c4e98245e52b85475fcbf06f74383
+    stage: PrimaryInstall
+  managerAdmission:
+    campaignUID: b57d4bf9-3c3c-4998-8a79-954cfd2ff51e
+    controlRevision: 0
+    deviceGeneration: 7
+    deviceUID: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+    leafUID: 6419e3de-94b3-4a19-9f6e-4974f2ef2cad
+    ledgerUID: 8587a09e-451e-43a1-b638-0b2c11af78b6
+    networkEvidenceHash: sha256:9be7e3270c1c12265fe012180e7fa70e149b87d3c3750a12cd77751b22887598
+    networkEvidenceNotAfter: "2026-10-01T23:24:03Z"
+    networkEvidenceProducerRevision: sha256:1503fb81c1ab5382ee0622c07c25991bd05714907934f0815f1f2438db7d37c9
+    networkEvidenceSampleSequence: 8
+    networkEvidenceWorkerPodUID: 0c37b01d-d645-43f0-8d13-a033eceb0a1e
+    nodeUID: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+    physicalIdentity: foc2416u0mv
+    planHash: sha256:69887ad50f58fbe51a014b53559be34869331be35cbd384ced02a31771fced53
+    policyEpoch: 1
+    policyResourceVersion: "9694052"
+    policyUID: 525ff87f-b74a-44c4-b54e-408e63a3a2e7
+    protocolVersion: rollout-byte-pacing-v1
+    reservationID: 0f3c4e98245e52b85475fcbf06f74383
+    state: Settled
+    topologyLockID: faa4004e5e613aafa43edef7d08987da
+    updatedAt: "2026-10-01T23:25:05Z"
+  managerControl:
+    reason: CampaignControl
+    revision: 0
+    updatedAt: "2026-10-01T22:33:19Z"
+  message: upgrade complete
+  observedGeneration: 1
+  phase: Succeeded
+  previousVersion: 17.18.03.0.5496.1776157760
+  primarySupervisorActivationRequested: true
+  primarySupervisorInstallRequested: true
+  primarySupervisorInstalled: true
+  runningVersion: 17.18.02.0.4112.1766116039
+  sourceDigest: sha256:c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+  sourceSize: 1247897709
+  startTime: "2026-10-01T22:33:51Z"
+  transferProgress:
+    bytesTransferred: 1247897709
+    percent: 100
+    totalBytes: 1247897709
+  validatedVersion: 17.18.02.0.4112.1766116039
+  workerControl:
+    effectiveState: Settled
+    message: managed upgrade has a terminal and conclusively settled worker outcome
+    observedAdmissionState: Settled
+    observedControlRevision: 0
+    observedPolicyEpoch: 1
+    observedWorkerConfigRevision: sha256:1503fb81c1ab5382ee0622c07c25991bd05714907934f0815f1f2438db7d37c9
+    updatedAt: "2026-10-01T23:25:06Z"

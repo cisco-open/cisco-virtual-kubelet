@@ -1,6 +1,6 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **implemented and reviewed through `ae4f3a7b`; roadmap not complete**, 1 October 2026.
+Status: **implemented and reviewed through `2f27f302`; roadmap not complete**, 2 October 2026.
 Start with the current checkpoint and C0–C9 execution queue below. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
 and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
@@ -204,6 +204,34 @@ This closes E03-A's code/API overlapping-accounting portion. Byte pacing and
 the isolated physical redundant/singleton/critical/congested service-path
 matrix remain open; label accounting is not forwarding-path qualification.
 
+### C3 physical pacing and interrupted-Install recovery (`2f27f302`, 23:45 UTC)
+
+Risk-group aggregate byte limits now derive a per-leaf ceiling and the worker
+paces the actual gNOI content reader. A guarded IOS XE observer can settle a
+lost terminal Install response only when native inventory proves the exact
+target, every package is added, activity is quiescent, the exact source package
+is verified with the pinned size, and exactly one recent matching `install-add`
+operation succeeded. The neutral driver interface is optional; unsupported
+drivers remain unchanged. Managed replacement workers also require the exact
+plane-specific Pod name and UID before any status write.
+
+Candidate `2f27f302` and Helm revision 131 completed a physical `.103`
+17.18.03 → 17.18.02 → 17.18.03 cycle with the frozen 25,000,000 bytes/second
+ceiling. Both IOS XE Install streams lost their terminal response after the
+full image arrived. CVK retained ownership, accepted only the exact native
+proof, issued no duplicate Install, activated the validated target, survived
+both reloads and held the disruption reservation through current accepted-
+network-evidence soak. Secure gNOI Verify and IOS XE CLI proved the exact final
+versions in each direction; the final ledger contained no reservation.
+
+Repository-wide race, pinned Kubernetes 1.35 envtest, two-pass generation,
+Helm/render and strict documentation gates passed. See the
+[physical pacing record](evidence/topology-2026-10-01/c3-physical-pacing/README.md).
+This closes C3's worker-to-device physical pacing and interrupted-Install
+recovery portions. E02-B/E03-C–F remain open because there was no independent
+traffic source, predeclared measurement tolerance, controllable redundant or
+singleton path, critical-service probe, or congested forwarding fixture.
+
 ### Concrete completion queue — C0–C9
 
 Each row is a separately reviewable delivery increment, not a claim of
@@ -360,7 +388,7 @@ deliverables.
 | E00 | T0 | Lab ownership, capability inventory and evidence baseline | None | In progress: clean candidates through `11ae6704` deployed; C0 must preserve/diagnose `.103` uncertainty; C1 must finish binding-order and freeze regressions. Complete source/image, CLI/Verify and service evidence still required. |
 | E01 | T1 | Observation correctness, provenance and meaningful regression tests | E00 inventory | In progress: restart-safe ordering, bounded publication, interval checks and native bound-token suite advanced through `11ae6704`; C2 still needs manager acceptance, complete identity/migration matrix, original-source age and physical CLI qualification. |
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
-| E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: evidence-bound expiring grants, monotonic renewal, uncached pre-claim enforcement, bounded administrator critical-service/singleton-path prohibitions, exact overlapping membership with cross-campaign ledger accounting, continuous accepted-evidence recovery/soak enforcement, and worker byte pacing are implemented; measured physical pacing/headroom and service-path acceptance remain. |
+| E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: evidence-bound expiring grants, monotonic renewal, uncached pre-claim enforcement, bounded administrator critical-service/singleton-path prohibitions, exact overlapping membership with cross-campaign ledger accounting, continuous accepted-evidence recovery/soak enforcement, worker byte pacing and physical `.103` pacing in both image directions are implemented; independent loaded/headroom measurement and service-path acceptance remain. |
 | E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Investigated but unqualified: `3212f777` reconciled the earlier NoReboot timeout, but C4 must test a true Install-only hold; E04-A–D remain open. |
 | E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Not started: receipt/protocol/retained ownership absent; physical qualification depends on E04. |
 | E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Not started: independent authorization and phase accounting absent; physical qualification depends on E04–E05. |

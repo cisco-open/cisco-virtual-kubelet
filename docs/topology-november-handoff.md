@@ -1,30 +1,32 @@
 # November topology roadmap handoff
 
-Checkpoint date: **1 October 2026**. Continue on
+Checkpoint date: **2 October 2026**. Continue on
 **`pr/johalley/tas-extentions`**. This is a saved development checkpoint for
 November release work, **not a merge recommendation or completed roadmap**.
 No E00–E13 package has all its exit gates closed. Do not promote this branch
 on the strength of the physical software-transition results alone.
 
-Review update through `37db63c2`: the execution plan's
+Review update through `2f27f302`: the execution plan's
 [**C0–C9 queue**](topology-roadmap-execution.md#concrete-completion-queue-c0c9)
 is authoritative and supersedes the older N1–N5 queue and historical inventory
-below. Restart-safe publication, interval/schema safety and a real native
-bound-token suite have advanced. The manager currently runs `11ae6704`;
-`.103` remains fenced after a lost NoReboot activation response, despite a
-Ready Node reporting 17.18.2. Start with C0 evidence/recovery and C1 binding
-ordering/full-path planning regressions, not another three-device cycle.
-Install-only preparation is still unqualified; the NoReboot timeout does not
-prove it unsupported. Manager acceptance, claim-time/soak network protection,
-durable staging and independent activation remain substantive implementation.
+below. Manager-accepted evidence, claim-time authority, administrator
+protections, continuous post-operation soak, overlapping risk groups and
+worker byte pacing are implemented. Helm revision 131 ran exact candidate
+`2f27f302` on Ubuntu16. Physical `.103` downgrade and reverse upgrade both
+completed, including exact no-replay recovery from lost terminal IOS XE
+Install responses. Install-only preparation is still unqualified; neither
+the earlier NoReboot timeout nor the new combined Reload runs prove a durable
+staging boundary. Independent loaded/service-path qualification, durable
+staging and separate activation remain substantive work.
 
-Execution follow-up: `3212f777` subsequently completed the C0 `.103`
+Execution history: `3212f777` completed the C0 `.103`
 observation-only recovery and C1 binding/freeze increment on Helm revision 119.
 The leaf, parent soak, Lease and maintenance taint settled normally with no
 activation replay. C2 now has a physically qualified manager-acceptance trust
 boundary at `90bc690c`; resume with its measured-load/rollback remainder before
-C3. Treat C4 Install-only qualification as an independent guarded
-investigation.
+C3. C3 then advanced through `2f27f302`; see the
+[physical pacing and recovery record](evidence/topology-2026-10-01/c3-physical-pacing/README.md).
+Treat C4 Install-only qualification as an independent guarded investigation.
 
 ## Start here
 
@@ -56,6 +58,7 @@ git log -1 --format=fuller -- docs/topology-november-handoff.md
 | Clean candidate qualification | `9e578131` image and Helm revision 112 deployed on Ubuntu16; all three physical targets reported Ready, complete UID-bound observations and healthy topology/gNOI conditions; `.103` replacement worker advanced from sequence one to three | Read-only evidence only. Direct CLI/secure OS.Verify, complete log planes, claim-time enforcement and E04 preparation/activation remain open. See [`9e578131-observation-validation.md`](evidence/topology-2026-10-01/9e578131-observation-validation.md). |
 | Graph helper | Structured hash/field bounds, remote-port reverse identity and two-input conflict correction (`4711d3c7`) | Three-way permutations and duplicate-device cases still need qualification; no production consumer or physical drift acceptance. |
 | Harness | Explicit source/target validation, direction-specific runs, binding observation, log-plane capture attempt, exact preceding cleanup-log correlation | Binding observation does not establish RPC order; offline marker correlation does not prove service health or complete drain safety |
+| Physical pacing / lost Install response | Candidate `2f27f302`, Helm revision 131, completed `.103` 17.18.03 → 17.18.02 → 17.18.03 with a frozen 25 MB/s ceiling, exact native Install corroboration, no replay, secure Verify, CLI health, network soak and empty final ledger | Worker/device acknowledgement measurement only; no independent forwarding load, service-continuity, alternate/singleton/critical/congested path qualification or independent staging |
 
 The saved full `.101` app log has preceding clean acknowledgements and
 `ProviderDeleteSuccess` for both deleted Pod UIDs. The revised classifier
@@ -89,7 +92,7 @@ envtest, admission and generation gates.
 | --- | --- | --- |
 | Lab control host | SSH alias `ubuntu16`, account `cisco`, address `192.0.2.43` | Reconfirm host ownership and CI exclusions; do not use Ubuntu17 or other CI nodes implicitly |
 | Cluster | On Ubuntu16: context `default`, k3s `v1.35.8+k3s1` | Verify server identity/version; never assume the workstation's `default` is this cluster |
-| CVK | Helm `cisco-vk` in `cisco-vk-system`; historical revision 107, now revision 118 / manager `11ae6704` at this review | Capture current values with credentials redacted, chart/CRD/admission hashes and every manager/app/network image ID |
+| CVK | Helm `cisco-vk` in `cisco-vk-system`; revision 131 / manager and C9K workers `cvk-tas-extentions:2f27f302` at this checkpoint | Capture current values with credentials redacted, chart/CRD/admission hashes and every manager/app/network image ID before later work |
 | Device inventory | `cvk-live`: `cat9k-live` = `198.51.100.100`; `cat9k-lab-101` = `.101`; `cat9k-lab-103` = `.103` | Match physical serial, CR/Node UID, worker identities and sole owner before any mutation |
 | Workloads | `cvk-pr194-workloads`; two `cvk-topology-drain-{a,b}-0926` Deployments, PDB `cvk-topology-drain-0926` | Fresh baseline, portable package/signing/storage support, spare destination capacity and independent endpoint probes |
 | Source | SFTP `10.0.2.2`, `/home/cisco/cvk-gnoi-images/`, Secret reference `pr194-iosxe-image-source` | Check image bytes, reachability, trust and Secret metadata/ownership; never print or archive Secret data |
@@ -102,12 +105,13 @@ Historical source checksums (recompute before use):
 | `cat9k_iosxe.17.18.03.SPA.bin` | `df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049` |
 | `cat9k_iosxe.17.18.02.SPA.bin` | `c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355` |
 
-The latest saved `.101` result is 17.18.02. Two replacement Pods were Ready
-on `.100` and PDB allowed disruptions was 1. Later read-only inspection
-reported all three Nodes Ready/untainted; this is not an archived continuous
-fleet stability test. No new lab mutation or cleanup was performed to create
-this checkpoint. The lab remains provisioned; this document does not reserve
-it indefinitely or assert its present state when read later.
+The latest saved `.101` result is 17.18.02. The new physical pacing run leaves
+`.103` conclusively committed and running 17.18.03. Two replacement Pods were
+Ready on `.100` and PDB allowed disruptions was 1. Final `.103` checks found
+the Node Ready, secure gNOI Verify exact, manager and both workers healthy, and
+the topology ledger empty. This is not an archived continuous fleet stability
+test. The lab remains provisioned; this document does not reserve it
+indefinitely or assert its present state when read later.
 
 A subsequent read-only Node listing reported all three C9Ks Ready with
 `.100`/`.103` on 17.18.2 and `.101` on 17.18.3. The discrepancy with archived
@@ -130,7 +134,7 @@ corresponding execution-plan section.
 | --- | --- | --- |
 | 1 | E00 evidence/tooling and binding: repair initialization ordering in DeviceOperation/software-upgrade reconcilers; distinguish absent binding from permanently wrong identity; retain old-worker history read-only | E00-E/F/G/H: exact status-write/RPC spies, delayed/wrong/missing binding, API read error, worker replacement with settled and unresolved leaves; real API server; no denial hot loop or premature mutation; reproducible generation twice |
 | 2 | E01 trustworthy observation + E02 measured inputs: provider/driver identities, manager-owned acceptance, admission and RO wiring as one security increment | E01-A–E/E02-A–C: authenticated bound-token peer/stale-Pod denial, same-Pod process restart/replay, VRF/process adjacency, timeout/incomplete publication, valid zero vs absent/overflow rate, old/new schema compatibility, isolated controlled traffic and supported supervisor evidence |
-| 3 | E03 policy: overlapping risk groups and transfer pacing remain; bounded administrator critical-service/singleton-path protection, expiring evidence-bound grants, claim-time enforcement and continuous accepted-evidence recovery/soak revalidation are implemented through `ae4f3a7b` | Complete remaining E03-A/B real-API/CAS negatives before E03-C–F physical redundant/single-path/congested/critical-service tests. Assert zero forbidden RPCs after stale/unhealthy evidence or grant expiry |
+| 3 | E03 policy: overlapping risk groups, worker byte pacing, bounded administrator critical-service/singleton-path protection, expiring evidence-bound grants, claim-time enforcement, continuous accepted-evidence recovery/soak and lost-Install no-replay recovery are implemented through `2f27f302` | Complete E02-B/E03-C–F with an independent traffic source and predeclared tolerance on controllable redundant/single-path/congested/critical-service fixtures. Assert zero forbidden RPCs after stale/unhealthy evidence or grant expiry |
 | Parallel to 3 | E04 device boundary qualification, before designing the supported staged contract | E04-A–D in both image directions: prove exactly what Install/NoReboot does, durable prepared identity, behavior across restart and explicit activation. An incapable C9K/release stays blocked; a combined reload is not a staged pass |
 | 4 | E05 durable receipts/retained ownership, then E06 separate activation approval, windows, phase reservations and uncertainty recovery | E05-A–C/E06-A–E: API/admission/fault tests first, then E04-qualified hardware; stage across restarts/closed windows, independent approval, cancel/expiry and zero unapproved activation |
 | 5 | E08-A fail-closed group recognition before E07 hard placement/broader drain eligibility | E07-A–D: automatic relocation with supported packages, PDB, required placement/capacity negatives, manager/worker restart and independent probes in both directions. Manual scale-down does not qualify automatic drain |
@@ -138,12 +142,12 @@ corresponding execution-plan section.
 | 7 | E12 controlled ownership transfer before physical optional TAS move; E08 native lifecycle; E11 second platform and E12 scale | E12-B/C/D sole-authority and uncertain-operation tests, E08-B–D real scheduler/CVK lifecycle. E11-A–D needs a qualified second platform/image pair. E12-A measures 1/10/50/100 targets against explicit budgets; three C9Ks do not establish scale |
 | 8 | E13 one pinned integrated candidate, migrations, security and end-user documentation | Core F01–F08/F13 plus applicable F09–F12; clean candidate CI, baseline/optional-version lanes, physical upgrade and downgrade, restoration and complete durable evidence. All unresolved exclusions stay visible |
 
-Highest-priority unresolved safety/qualification issues are observation write
-ownership/replay, claim-time network enforcement, initialization binding
-ordering, and incomplete drain/service evidence. Also reproduce the transient
-`NodeProjectionFailed` resource-version conflicts/uninitialized taints across
-multiple reconcile periods (E00-D). Do not bypass these guards, disable
-admission, widen accounts or force-delete Pods to obtain a green test.
+Highest-priority unresolved safety/qualification issues are the independent
+Install-only boundary and durable staged receipt/activation authorization,
+controlled forwarding/service-path evidence, and incomplete drain/service
+qualification. Reverse compatibility/rollback, graph integration, second
+platform, ownership handoff and scale remain open. Do not bypass guards,
+disable admission, widen accounts or force-delete Pods to obtain a green test.
 
 The current review adds publisher negative/preservation tests, same-Pod restart
 recovery/overflow coverage, bounded malformed-source publication, and

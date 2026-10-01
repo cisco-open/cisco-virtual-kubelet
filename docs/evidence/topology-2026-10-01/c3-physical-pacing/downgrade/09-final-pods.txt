@@ -1,0 +1,8 @@
+NAME                                                             READY   STATUS    RESTARTS      AGE   IP           NODE       NOMINATED NODE   READINESS GATES
+cat9k-lab-101-vk-5f689b6b88-v2rgr                                1/1     Running   0             12m   10.0.0.201   ubuntu16   <none>           <none>
+cat9k-lab-103-vk-5b98c5c898-kn864                                1/1     Running   1 (11m ago)   11m   10.0.0.14    ubuntu16   <none>           <none>
+cat9k-live-vk-68b76574d9-mv2jk                                   1/1     Running   1 (11m ago)   12m   10.0.0.66    ubuntu16   <none>           <none>
+nexus9300v-live-vk-bf9cb99cf-s8lwx                               1/1     Running   0             11d   10.0.0.63    ubuntu16   <none>           <none>
+u20f3e68e-b127-4f2e-9a36-b66945135051-network-69cdf4ffd4-2882n   1/1     Running   0             12m   10.0.0.72    ubuntu16   <none>           <none>
+u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network-6f77ff856d-gd2mh   1/1     Running   0             11m   10.0.0.74    ubuntu16   <none>           <none>
+u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-54fbcb798-b889f    1/1     Running   0             10m   10.0.0.129   ubuntu16   <none>           <none>
