@@ -1007,11 +1007,16 @@ spec:
            object.status.networkWorkerRevision.podStartTime &&
          has(object.status.healthObservation.network.collectionStartedAt) &&
          has(object.status.healthObservation.network.collectionEndedAt) &&
+         has(object.status.healthObservation.network.observedAt) &&
          object.status.healthObservation.network.producerRevision ==
            object.status.networkWorkerRevision.observedRevision &&
          object.status.healthObservation.network.sampleSequence > 0 &&
          object.status.healthObservation.network.collectionEndedAt >=
            object.status.healthObservation.network.collectionStartedAt &&
+         object.status.healthObservation.network.observedAt >=
+           object.status.healthObservation.network.collectionStartedAt &&
+         object.status.healthObservation.network.observedAt <=
+           object.status.healthObservation.network.collectionEndedAt &&
          (!has(oldObject.status.healthObservation) ||
           !has(oldObject.status.healthObservation.network) ||
           oldObject.status.healthObservation.network.workerPodUID !=

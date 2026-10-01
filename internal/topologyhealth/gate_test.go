@@ -73,6 +73,20 @@ func TestEvaluateChecksPathsAndHeadroom(t *testing.T) {
 	}
 }
 
+func TestEvaluateRejectsHeadroomWithoutEffectiveInterfaceScope(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	minimum := 30.0
+	decision := Evaluate(now, Observation{
+		ObservedAt: now, Complete: true, DeviceIdentityHash: "sha256:" + strings.Repeat("a", 64),
+	}, Policy{
+		MinimumHeadroomPercent: &minimum,
+		RequiredInterfaces:     []string{" ", "\t"},
+	})
+	if decision.Allowed || decision.Reason != "HeadroomScopeMissing" {
+		t.Fatalf("blank required-interface scope bypassed headroom policy: %+v", decision)
+	}
+}
+
 func TestEvaluateRejectsAmbiguousEvidence(t *testing.T) {
 	now := time.Now().UTC()
 	decision := Evaluate(now, Observation{ObservedAt: now, Complete: true, DeviceIdentityHash: "sha256:" + strings.Repeat("b", 64), Interfaces: []InterfaceObservation{{Name: "Gi1"}, {Name: "Gi1"}}}, Policy{RequireCompleteEvidence: true})
@@ -121,5 +135,17 @@ func TestEvaluateRejectsMissingOrUnexpectedSampleProvenance(t *testing.T) {
 	slow.CollectionStartedAt = now.Add(-20 * time.Second)
 	if decision := Evaluate(now, slow, policy); decision.Allowed || decision.Reason != "EvidenceCollectionSlow" {
 		t.Fatalf("slow collection was not rejected: %+v", decision)
+	}
+	for name, observedAt := range map[string]time.Time{
+		"before collection": base.CollectionStartedAt.Add(-time.Nanosecond),
+		"after collection":  base.CollectionEndedAt.Add(time.Nanosecond),
+	} {
+		t.Run(name, func(t *testing.T) {
+			forged := base
+			forged.ObservedAt = observedAt
+			if decision := Evaluate(now, forged, policy); decision.Allowed || decision.Reason != "EvidenceProvenanceInvalid" {
+				t.Fatalf("out-of-interval evidence was accepted: %+v", decision)
+			}
+		})
 	}
 }

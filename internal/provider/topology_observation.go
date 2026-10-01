@@ -213,7 +213,6 @@ func BuildNetworkObservation(
 	if provider == nil {
 		return nil, fmt.Errorf("topology provider is nil")
 	}
-	collectionStarted := time.Now().UTC()
 	identity, err := topology.CanonicalPhysicalIdentity(physicalIdentity)
 	if err != nil {
 		return nil, fmt.Errorf("canonical physical identity: %w", err)
@@ -224,6 +223,10 @@ func BuildNetworkObservation(
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
+	// Preserve the earliest time at which this sample could have reflected
+	// device state. A slow collection or delayed status publication must not
+	// refresh the freshness window for data collected earlier.
+	collectionStarted := now.UTC()
 
 	interfaces, interfaceErr := provider.GetInterfaceStats(ctx)
 	cdp, cdpErr := provider.GetCDPNeighbors(ctx)
@@ -353,6 +356,10 @@ func PublishNetworkObservation(
 	}
 	if observation.CollectionEndedAt.Before(&observation.CollectionStartedAt) {
 		return fmt.Errorf("observation collection interval is invalid")
+	}
+	if observation.ObservedAt.IsZero() || observation.ObservedAt.Before(&observation.CollectionStartedAt) ||
+		observation.ObservedAt.After(observation.CollectionEndedAt.Time) {
+		return fmt.Errorf("observation time is outside its collection interval")
 	}
 	physicalIdentity, err := topology.CanonicalPhysicalIdentity(device.Status.NodeIdentity.PhysicalIdentity)
 	if err != nil {

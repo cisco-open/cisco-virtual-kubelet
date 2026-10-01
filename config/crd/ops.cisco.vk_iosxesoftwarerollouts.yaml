@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.16.5
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: iosxesoftwarerollouts.ops.cisco.vk
 spec:
   group: ops.cisco.vk
@@ -299,6 +299,8 @@ spec:
                             type: boolean
                           requiredInterfaces:
                             items:
+                              minLength: 1
+                              pattern: ^.*[^[:space:]].*$
                               type: string
                             maxItems: 32
                             type: array
@@ -313,8 +315,8 @@ spec:
                         - enabled
                         type: object
                         x-kubernetes-validations:
-                        - message: minimumHeadroomPercent requires at least one required
-                            interface
+                        - message: minimumHeadroomPercent requires at least one non-blank
+                            required interface
                           rule: '!has(self.minimumHeadroomPercent) || size(self.requiredInterfaces)
                             > 0'
                       waveSoakSeconds:
@@ -568,8 +570,12 @@ spec:
                       - NoReboot
                     default: Reload
                     description: |-
-                      Strategy controls activation. Reload performs the existing combined flow;
-                      NoReboot records qualified preparation without rebooting.
+                      Strategy controls the leaf activation behavior. Reload preserves the
+                      existing combined install/activate flow. NoReboot is an explicitly
+                      qualified preparation mode: the leaf records a staged-for-next-boot
+                      receipt and never performs a reboot. It remains terminal until a future
+                      activation-approval protocol is added; it does not silently authorize a
+                      later activation.
                     type: string
                   targetVersion:
                     description: TargetVersion is the IOS-XE version accepted by the

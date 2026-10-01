@@ -82,6 +82,10 @@ func TestBuildNetworkObservationIsBoundedAndDeterministic(t *testing.T) {
 	if !observation.Complete || observation.DeviceIdentityHash == "" || observation.WorkerPodUID != "pod-uid" {
 		t.Fatalf("observation=%#v", observation)
 	}
+	if !observation.ObservedAt.Time.Equal(now) || !observation.CollectionStartedAt.Time.Equal(now) ||
+		observation.ObservedAt.After(observation.CollectionEndedAt.Time) {
+		t.Fatalf("observation time must be the conservative collection start: %#v", observation)
+	}
 	if got := observation.Interfaces[0].Name; got != "Gi1" {
 		t.Fatalf("interfaces not sorted: %#v", observation.Interfaces)
 	}
@@ -337,6 +341,12 @@ func TestPublishNetworkObservationRequiresExactManagedWorkerBinding(t *testing.T
 		{"reversed interval", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
 			o.CollectionEndedAt = metav1.NewTime(o.CollectionStartedAt.Add(-time.Second))
 		}, "interval is invalid"},
+		{"observed before collection", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
+			o.ObservedAt = metav1.NewTime(o.CollectionStartedAt.Add(-time.Nanosecond))
+		}, "outside its collection interval"},
+		{"observed after collection", func(_ *ciskov1.CiscoDevice, o *ciskov1.DeviceNetworkObservationStatus) {
+			o.ObservedAt = metav1.NewTime(o.CollectionEndedAt.Add(time.Nanosecond))
+		}, "outside its collection interval"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d, o := device.DeepCopy(), observation.DeepCopy()
@@ -417,6 +427,7 @@ func TestPublishNetworkObservationRejectsOlderCollection(t *testing.T) {
 	older.SampleSequence = 0
 	older.CollectionStartedAt = metav1.NewTime(accepted.CollectionStartedAt.Add(-2 * time.Minute))
 	older.CollectionEndedAt = metav1.NewTime(accepted.CollectionEndedAt.Add(-time.Minute))
+	older.ObservedAt = older.CollectionStartedAt
 	c := newTopologyObservationClient(t, d)
 	err := PublishNetworkObservation(context.Background(), c, client.ObjectKeyFromObject(d), d.UID, older)
 	if err == nil || !strings.Contains(err.Error(), "not newer than accepted") {

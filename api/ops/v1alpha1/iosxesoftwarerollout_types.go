@@ -542,7 +542,7 @@ type IOSXESoftwareRolloutHealthSpec struct {
 // have a current DeviceHealthObservationStatus.Network for every target when
 // this gate is enabled.
 //
-// +kubebuilder:validation:XValidation:rule="!has(self.minimumHeadroomPercent) || size(self.requiredInterfaces) > 0",message="minimumHeadroomPercent requires at least one required interface"
+// +kubebuilder:validation:XValidation:rule="!has(self.minimumHeadroomPercent) || size(self.requiredInterfaces) > 0",message="minimumHeadroomPercent requires at least one non-blank required interface"
 type IOSXESoftwareRolloutNetworkHealthSpec struct {
 	// +kubebuilder:validation:Required
 	Enabled bool `json:"enabled"`
@@ -551,6 +551,8 @@ type IOSXESoftwareRolloutNetworkHealthSpec struct {
 	RequireCompleteEvidence bool `json:"requireCompleteEvidence,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxItems=32
+	// +kubebuilder:validation:items:MinLength=1
+	// +kubebuilder:validation:items:Pattern=`^.*[^[:space:]].*$`
 	// +listType=set
 	RequiredInterfaces []string `json:"requiredInterfaces,omitempty"`
 	// +kubebuilder:validation:Optional

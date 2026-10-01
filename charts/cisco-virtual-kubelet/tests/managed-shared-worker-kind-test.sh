@@ -1065,6 +1065,21 @@ patch_network_observation() {
   patch_network_observation_from "$bound_network_kubeconfig" "$network_pod_uid" "$@"
 }
 
+# The observation timestamp represents the earliest sampling time, rather
+# than the status write time. A real bound token must not be able to extend
+# freshness by placing it outside the worker-reported collection interval.
+patch_network_observation_with_observed_at() {
+  local producer_revision="$1"
+  local sequence="$2"
+  local start_time="$3"
+  local end_time="$4"
+  local observed_at="$5"
+
+  kubectl --kubeconfig "$bound_network_kubeconfig" patch ciscodevice \
+    "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+    --type=merge -p "{\"status\":{\"healthObservation\":{\"network\":{\"workerPodUID\":\"${network_pod_uid}\",\"collectionStartedAt\":\"${start_time}\",\"collectionEndedAt\":\"${end_time}\",\"sampleSequence\":${sequence},\"observedAt\":\"${observed_at}\",\"complete\":true,\"producerRevision\":\"${producer_revision}\",\"deviceIdentityHash\":\"${network_observation_hash}\"}}}}"
+}
+
 expect_denied "bound network worker without manager ready proof" \
   "network observation requires the bound revision and strictly newer collection provenance" \
   patch_network_observation "$network_observation_revision" 1 \
@@ -1084,6 +1099,14 @@ expect_denied "bound network worker replayed observation sequence" \
   2026-10-01T00:00:04Z 2026-10-01T00:00:05Z
 patch_network_observation "$network_observation_revision" 2 \
   2026-10-01T00:00:04Z 2026-10-01T00:00:05Z >/dev/null
+expect_denied "bound network worker timestamp before collection" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation_with_observed_at "$network_observation_revision" 3 \
+  2026-10-01T00:00:06Z 2026-10-01T00:00:07Z 2026-10-01T00:00:05Z
+expect_denied "bound network worker timestamp after collection" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation_with_observed_at "$network_observation_revision" 3 \
+  2026-10-01T00:00:06Z 2026-10-01T00:00:07Z 2026-10-01T00:00:08Z
 
 # Keep the first Pod running and bind a second real Pod to the device. The old
 # Pod's token remains otherwise valid, so its rejection proves the admission

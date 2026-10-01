@@ -39,6 +39,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -53,6 +54,75 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
+
+// TestEnvtest_RolloutHeadroomScopeValidation ensures a configured transfer
+// headroom threshold can never be admitted with an empty effective interface
+// set. This must be an API-server test because fake.Client does not evaluate
+// the CRD's CEL rule or item constraints.
+func TestEnvtest_RolloutHeadroomScopeValidation(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-rollout-headroom"
+	envtestNamespace(t, c, namespace)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	newRollout := func(name string, interfaces []any) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "ops.cisco.vk/v1alpha1",
+			"kind":       "IOSXESoftwareRollout",
+			"metadata":   map[string]any{"name": name, "namespace": namespace},
+			"spec": map[string]any{
+				"plan": map[string]any{
+					"requestedBy": "envtest",
+					"requestedAt": "2026-10-01T00:00:00Z",
+					"targets": map[string]any{
+						"selector": map[string]any{"matchLabels": map[string]any{"topology.cisco.vk/managed": "true"}},
+					},
+					"image": map[string]any{
+						"sha256":      strings.Repeat("a", 64),
+						"imageFamily": "cat9k",
+						"sources": []any{map[string]any{
+							"name": "global", "priority": int64(100),
+							"url": "https://software.example.test/cat9k.bin",
+						}},
+					},
+					"targetVersion": "17.18.4",
+					"canaries":      []any{map[string]any{"name": "cat9k", "devices": []any{"switch-a"}}},
+					"budgets":       map[string]any{"maxConcurrentTransfers": int64(1), "maxUnavailable": int64(1)},
+					"workloads":     map[string]any{"policy": "BlockIfRunning"},
+					"health": map[string]any{"network": map[string]any{
+						"enabled": true, "minimumHeadroomPercent": int64(30), "requiredInterfaces": interfaces,
+					}},
+				},
+				"control": map[string]any{"revision": int64(0)},
+			},
+		}}
+	}
+
+	for _, tc := range []struct {
+		name       string
+		interfaces []any
+		accepted   bool
+	}{
+		{name: "empty item", interfaces: []any{""}},
+		{name: "whitespace item", interfaces: []any{" \t "}},
+		{name: "valid item", interfaces: []any{"GigabitEthernet1/0/1"}, accepted: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := c.Create(ctx, newRollout(fmt.Sprintf("headroom-%s", strings.ReplaceAll(tc.name, " ", "-")), tc.interfaces))
+			if tc.accepted {
+				if err != nil {
+					t.Fatalf("apiserver rejected valid headroom scope: %v", err)
+				}
+				return
+			}
+			if err == nil || !apierrors.IsInvalid(err) {
+				t.Fatalf("apiserver admitted invalid headroom scope: %v", err)
+			}
+		})
+	}
+}
 
 func TestEnvtest_CiscoDeviceExplicitGNOIRequiresVerifiedTLS(t *testing.T) {
 	c, stop := startEnvtest(t)

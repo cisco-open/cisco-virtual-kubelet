@@ -98,6 +98,9 @@ func Evaluate(now time.Time, observation Observation, policy Policy) Decision {
 		if observation.CollectionEndedAt.Before(observation.CollectionStartedAt) || observation.CollectionEndedAt.After(now.Add(30*time.Second)) {
 			return blocked("EvidenceProvenanceInvalid", "network observation collection interval is invalid", observation)
 		}
+		if observation.ObservedAt.Before(observation.CollectionStartedAt) || observation.ObservedAt.After(observation.CollectionEndedAt) {
+			return blocked("EvidenceProvenanceInvalid", "network observation time is outside its collection interval", observation)
+		}
 		if policy.MaxCollectionDuration > 0 && observation.CollectionEndedAt.Sub(observation.CollectionStartedAt) > policy.MaxCollectionDuration {
 			return blocked("EvidenceCollectionSlow", "network observation collection exceeded the configured duration", observation)
 		}
@@ -110,6 +113,14 @@ func Evaluate(now time.Time, observation Observation, policy Policy) Decision {
 	}
 	if policy.MaxAge > 0 && now.Sub(observation.ObservedAt) > policy.MaxAge {
 		return blocked("EvidenceStale", "network observation is older than the configured freshness bound", observation)
+	}
+	// The CRD rejects blank requiredInterfaces for newly-created policy. Keep
+	// this guard here as well: persisted objects predate that schema rule and
+	// direct callers must never turn a configured headroom threshold into an
+	// unconstrained pass by supplying only whitespace.
+	requiredInterfaces := sortedUnique(policy.RequiredInterfaces)
+	if policy.MinimumHeadroomPercent != nil && len(requiredInterfaces) == 0 {
+		return blocked("HeadroomScopeMissing", "minimum headroom requires at least one non-blank required interface", observation)
 	}
 	if policy.RequireCompleteEvidence && !observation.Complete {
 		reason := "EvidenceIncomplete"
@@ -130,7 +141,7 @@ func Evaluate(now time.Time, observation Observation, policy Policy) Decision {
 		}
 		interfaces[name] = item
 	}
-	for _, name := range sortedUnique(policy.RequiredInterfaces) {
+	for _, name := range requiredInterfaces {
 		item, ok := interfaces[name]
 		if !ok {
 			return blocked("InterfaceEvidenceMissing", fmt.Sprintf("required interface %q is absent", name), observation)

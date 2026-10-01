@@ -39,7 +39,10 @@ UV?=uv
 NPM?=npm
 
 GO_VERSION=$(shell $(GO_BIN) version 2>/dev/null | awk '{print $$3}' || echo "unknown")
-CONTROLLER_GEN?=$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.16.5
+# v0.16.5 no longer exposes cmd/controller-gen from the module path used here.
+# Keep the generator version executable and pinned so CRD regeneration is
+# reproducible in clean environments.
+CONTROLLER_GEN?=$(GO_BIN) run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0
 
 # Go build flags
 LDFLAGS=-ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT)"
@@ -268,7 +271,7 @@ deepcopy-gen: ## Generate DeepCopy methods for API types
 		paths=./api/...
 
 # rbac-gen must scan every package that carries +kubebuilder:rbac markers.
-# controller-gen v0.16.5 requires repeated paths= flags for multiple roots;
+# controller-gen requires repeated paths= flags for multiple roots;
 # comma-separated paths are not accepted. The aggregator markers grant leases
 # and config CR access, so omitting that package causes generated RBAC drift.
 rbac-gen: ## Generate controller ClusterRole into the Helm chart templates dir
