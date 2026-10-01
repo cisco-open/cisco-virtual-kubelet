@@ -1137,6 +1137,21 @@ patch_network_observation_from "$replacement_network_kubeconfig" \
   "$replacement_network_pod_uid" "$replacement_network_revision" 1 \
   2026-10-01T00:00:08Z 2026-10-01T00:00:09Z >/dev/null
 
+# During a manager-observed replacement gap, there is no Pod proof to which a
+# still-authenticated worker can bind. It must fail closed until the manager
+# restores the exact ready-Pod identity.
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p '{"status":{"networkWorkerRevision":{"podUID":null,"podStartTime":null,"podReadyTime":null}}}' >/dev/null
+expect_denied "bound network worker without current manager Pod proof" \
+  "network observation status requires the authenticated bound network-worker Pod UID" \
+  patch_network_observation_from "$replacement_network_kubeconfig" \
+  "$replacement_network_pod_uid" "$replacement_network_revision" 2 \
+  2026-10-01T00:00:10Z 2026-10-01T00:00:11Z
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p "{\"status\":{\"networkWorkerRevision\":{\"podUID\":\"${replacement_network_pod_uid}\",\"podStartTime\":\"2026-10-01T00:00:06Z\",\"podReadyTime\":\"2026-10-01T00:00:07Z\"}}}" >/dev/null
+
 # A bound network object remains manager/native-controller owned even when a
 # namespace principal has broad DELETE and DELETECOLLECTION RBAC. Native GC may
 # remove the exact incarnation only with its normal UID precondition.

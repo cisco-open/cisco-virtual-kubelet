@@ -986,6 +986,8 @@ spec:
         (has(object.status.networkWorkerRevision) &&
          has(object.status.healthObservation) &&
          has(object.status.healthObservation.network) &&
+         has(object.status.networkWorkerRevision.podUID) &&
+         has(object.status.healthObservation.network.workerPodUID) &&
          variables.networkObservationPodUIDs.size() == 1 &&
          object.status.networkWorkerRevision.podUID == variables.networkObservationPodUIDs[0] &&
          object.status.healthObservation.network.workerPodUID == variables.networkObservationPodUIDs[0])
