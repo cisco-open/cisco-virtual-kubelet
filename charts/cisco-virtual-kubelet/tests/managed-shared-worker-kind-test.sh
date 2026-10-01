@@ -1021,6 +1021,64 @@ kubectl config --kubeconfig "$bound_network_kubeconfig" \
 test "$(kubectl --kubeconfig "$bound_network_kubeconfig" auth whoami \
   -o jsonpath='{.status.userInfo.username}')" = "$network_username"
 
+# A genuine Pod-bound network-worker token may update only the network
+# observation subtree. The manager establishes the immutable device/worker
+# proof first; the API server must then reject not-ready, forged-revision, and
+# same-worker-replay observations even though the request has otherwise valid
+# RBAC and Pod authentication.
+kubectl --context "$context" create -f - >/dev/null <<EOF
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: ${network_device_name}
+  namespace: ${worker_namespace}
+spec:
+  driver: FAKE
+  address: 192.0.2.2
+  username: probe
+  physicalIdentity: network-observation-owner
+  maxPods: 1
+EOF
+network_device_actual_uid="$(kubectl --context "$context" get ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" -o jsonpath='{.metadata.uid}')"
+test -n "$network_device_actual_uid"
+network_observation_revision="sha256:$(printf 'a%.0s' {1..64})"
+network_observation_hash="sha256:$(printf 'b%.0s' {1..64})"
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p "{\"status\":{\"phase\":\"Ready\",\"nodeIdentity\":{\"nodeName\":\"network-observation-owner\",\"nodeUID\":\"network-observation-node-uid\",\"deviceUID\":\"${network_device_actual_uid}\",\"physicalIdentity\":\"network-observation-owner\"},\"healthObservation\":{\"observedAt\":\"2026-10-01T00:00:00Z\",\"nodeReadyHeartbeatTime\":\"2026-10-01T00:00:00Z\",\"deviceConditionsHash\":\"${network_observation_hash}\"},\"networkWorkerRevision\":{\"desiredRevision\":\"${network_observation_revision}\",\"observedRevision\":\"${network_observation_revision}\",\"deploymentUID\":\"network-observation-deployment-uid\",\"deploymentGeneration\":1,\"podUID\":\"${network_pod_uid}\",\"podStartTime\":\"2026-10-01T00:00:00Z\",\"observedAt\":\"2026-10-01T00:00:01Z\"}}}" >/dev/null
+
+patch_network_observation() {
+  local producer_revision="$1"
+  local sequence="$2"
+  local start_time="$3"
+  local end_time="$4"
+
+  kubectl --kubeconfig "$bound_network_kubeconfig" patch ciscodevice \
+    "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+    --type=merge -p "{\"status\":{\"healthObservation\":{\"network\":{\"workerPodUID\":\"${network_pod_uid}\",\"collectionStartedAt\":\"${start_time}\",\"collectionEndedAt\":\"${end_time}\",\"sampleSequence\":${sequence},\"observedAt\":\"${end_time}\",\"complete\":true,\"producerRevision\":\"${producer_revision}\",\"deviceIdentityHash\":\"${network_observation_hash}\"}}}}"
+}
+
+expect_denied "bound network worker without manager ready proof" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation "$network_observation_revision" 1 \
+  2026-10-01T00:00:02Z 2026-10-01T00:00:03Z
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p '{"status":{"networkWorkerRevision":{"podReadyTime":"2026-10-01T00:00:01Z"}}}' >/dev/null
+patch_network_observation "$network_observation_revision" 1 \
+  2026-10-01T00:00:02Z 2026-10-01T00:00:03Z >/dev/null
+expect_denied "bound network worker forged observation revision" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation "sha256:$(printf 'c%.0s' {1..64})" 2 \
+  2026-10-01T00:00:04Z 2026-10-01T00:00:05Z
+expect_denied "bound network worker replayed observation sequence" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation "$network_observation_revision" 1 \
+  2026-10-01T00:00:04Z 2026-10-01T00:00:05Z
+patch_network_observation "$network_observation_revision" 2 \
+  2026-10-01T00:00:04Z 2026-10-01T00:00:05Z >/dev/null
+
 # A bound network object remains manager/native-controller owned even when a
 # namespace principal has broad DELETE and DELETECOLLECTION RBAC. Native GC may
 # remove the exact incarnation only with its normal UID precondition.

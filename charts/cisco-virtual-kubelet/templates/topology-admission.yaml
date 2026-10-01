@@ -719,9 +719,16 @@ spec:
            (object.status.healthObservation.observedAt == oldObject.status.healthObservation.observedAt &&
             object.status.healthObservation.nodeReadyHeartbeatTime == oldObject.status.healthObservation.nodeReadyHeartbeatTime &&
             object.status.healthObservation.deviceConditionsHash == oldObject.status.healthObservation.deviceConditionsHash &&
-            object.status.healthObservation.conditionObservations == oldObject.status.healthObservation.conditionObservations))) &&
-         object.status.phase == oldObject.status.phase &&
-         object.status.workerTopology == oldObject.status.workerTopology)
+            (has(object.status.healthObservation.conditionObservations) ==
+             has(oldObject.status.healthObservation.conditionObservations)) &&
+            (!has(object.status.healthObservation.conditionObservations) ||
+             object.status.healthObservation.conditionObservations ==
+               oldObject.status.healthObservation.conditionObservations)))) &&
+         (has(object.status.phase) == has(oldObject.status.phase)) &&
+         (!has(object.status.phase) || object.status.phase == oldObject.status.phase) &&
+         (has(object.status.workerTopology) == has(oldObject.status.workerTopology)) &&
+         (!has(object.status.workerTopology) ||
+          object.status.workerTopology == oldObject.status.workerTopology))
     - name: networkObservationPodUIDs
       expression: >-
         'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
@@ -983,6 +990,35 @@ spec:
          object.status.networkWorkerRevision.podUID == variables.networkObservationPodUIDs[0] &&
          object.status.healthObservation.network.workerPodUID == variables.networkObservationPodUIDs[0])
       message: network observation status requires the authenticated bound network-worker Pod UID
+    - expression: >-
+        variables.manager || !variables.networkObservationOnly ||
+        (has(object.status.networkWorkerRevision) &&
+         has(object.status.healthObservation) &&
+         has(object.status.healthObservation.network) &&
+         has(object.status.networkWorkerRevision.desiredRevision) &&
+         has(object.status.networkWorkerRevision.observedRevision) &&
+         has(object.status.networkWorkerRevision.podStartTime) &&
+         has(object.status.networkWorkerRevision.podReadyTime) &&
+         object.status.networkWorkerRevision.observedRevision ==
+           object.status.networkWorkerRevision.desiredRevision &&
+         object.status.networkWorkerRevision.podReadyTime >=
+           object.status.networkWorkerRevision.podStartTime &&
+         has(object.status.healthObservation.network.collectionStartedAt) &&
+         has(object.status.healthObservation.network.collectionEndedAt) &&
+         object.status.healthObservation.network.producerRevision ==
+           object.status.networkWorkerRevision.observedRevision &&
+         object.status.healthObservation.network.sampleSequence > 0 &&
+         object.status.healthObservation.network.collectionEndedAt >=
+           object.status.healthObservation.network.collectionStartedAt &&
+         (!has(oldObject.status.healthObservation) ||
+          !has(oldObject.status.healthObservation.network) ||
+          oldObject.status.healthObservation.network.workerPodUID !=
+            object.status.healthObservation.network.workerPodUID ||
+          (object.status.healthObservation.network.sampleSequence >
+             oldObject.status.healthObservation.network.sampleSequence &&
+           object.status.healthObservation.network.collectionEndedAt >
+             oldObject.status.healthObservation.network.collectionEndedAt)))
+      message: network observation requires the bound revision and strictly newer collection provenance
     - expression: >-
         !has(request.subResource) || request.subResource != 'status' ||
         ((!has(oldObject.status) ||

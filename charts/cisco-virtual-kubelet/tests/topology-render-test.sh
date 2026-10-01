@@ -316,7 +316,7 @@ assert_policy_shape legacy-node-marker 1 1 1
 assert_policy_shape managed-pod-status 1 2 3
 assert_policy_shape managed-pod-delete 1 2 4
 assert_policy_shape managed-drain-pod 1 5 3
-assert_policy_shape managed-device 0 10 15
+assert_policy_shape managed-device 0 10 16
 assert_policy_shape managed-rollout 0 1 6
 assert_policy_shape managed-upgrade-leaf 1 5 8
 assert_policy_shape managed-maintenance-lease 1 11 8
