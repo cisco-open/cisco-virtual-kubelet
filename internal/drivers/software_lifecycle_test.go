@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
@@ -49,6 +50,12 @@ func (lifecycleBackendStub) RegisterDeviceFile(context.Context, softwarelifecycl
 }
 func (lifecycleBackendStub) ObserveDeviceFile(context.Context, string, string) (softwarelifecycle.DeviceFileObservation, error) {
 	return softwarelifecycle.DeviceFileObservation{}, nil
+}
+func (s lifecycleBackendStub) ObserveInterruptedInstall(_ context.Context, request softwarelifecycle.InterruptedInstallRequest) (softwarelifecycle.InterruptedInstallObservation, error) {
+	return softwarelifecycle.InterruptedInstallObservation{
+		Image:       softwarelifecycle.InventoryImage{Version: s.version, State: softwarelifecycle.InventoryStateInstalled},
+		CompletedAt: request.ObservedAt,
+	}, nil
 }
 
 func TestNewSoftwareLifecycleUnsupported(t *testing.T) {
@@ -87,6 +94,17 @@ func TestDynamicSoftwareLifecycleUsesCurrentTransport(t *testing.T) {
 	}
 	if image.Version != "17.18.04" || factoryCalls != 1 {
 		t.Fatalf("image=%+v factoryCalls=%d", image, factoryCalls)
+	}
+	observer, ok := backend.(softwarelifecycle.InterruptedInstallObserver)
+	if !ok {
+		t.Fatal("dynamic lifecycle does not forward interrupted-install observation")
+	}
+	now := time.Now()
+	observation, err := observer.ObserveInterruptedInstall(context.Background(), softwarelifecycle.InterruptedInstallRequest{
+		TargetVersion: "17.18.04", SourceSize: 1, NotBefore: now.Add(-time.Minute), ObservedAt: now,
+	})
+	if err != nil || observation.Image.Version != "17.18.04" || !observation.Image.State.Activatable() {
+		t.Fatalf("interrupted observation=%+v err=%v", observation, err)
 	}
 }
 
