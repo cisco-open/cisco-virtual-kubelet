@@ -65,6 +65,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/platforms"
 	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
@@ -1469,6 +1470,11 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 			sa.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] = r.WorkerServiceAccountPolicyEpoch
 			return controllerutil.SetControllerReference(device, sa, r.Scheme)
 		}
+		if sharedCompatibility {
+			if err := releaseExactLegacySharedOwner(&sa.ObjectMeta, device); err != nil {
+				return fmt.Errorf("migrate shared compatibility ServiceAccount ownership: %w", err)
+			}
+		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
@@ -1517,6 +1523,10 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 		if generated {
 			if err := applyGeneratedWorkerBindingMetadata(rb, device, managed, r.Scheme); err != nil {
 				return err
+			}
+		} else if sharedCompatibility {
+			if err := releaseExactLegacySharedOwner(&rb.ObjectMeta, device); err != nil {
+				return fmt.Errorf("migrate shared compatibility RoleBinding ownership: %w", err)
 			}
 		}
 		return nil
@@ -1567,6 +1577,24 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 			return err
 		}
 	}
+	return nil
+}
+
+// releaseExactLegacySharedOwner migrates the historical per-device owner from
+// an object whose name is now namespace-shared. It removes no ambiguous or
+// foreign ownership: only a sole controller reference to this exact
+// CiscoDevice incarnation is safe to release.
+func releaseExactLegacySharedOwner(objectMeta *metav1.ObjectMeta, device *ciskov1.CiscoDevice) error {
+	if objectMeta != nil && len(objectMeta.OwnerReferences) == 0 {
+		return nil
+	}
+	if objectMeta == nil || device == nil || device.UID == "" {
+		return fmt.Errorf("object metadata or CiscoDevice identity is incomplete")
+	}
+	if len(objectMeta.OwnerReferences) != 1 || !managedServiceAccountOwnedByDeviceMeta(objectMeta, device) {
+		return fmt.Errorf("object has non-canonical or foreign ownership")
+	}
+	objectMeta.OwnerReferences = nil
 	return nil
 }
 
@@ -2692,12 +2720,30 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 		if !managedBinding {
 			continue
 		}
+		// A successful PrepareOnly leaf deliberately remains terminal Prepared
+		// with a durable receipt even after its disruption reservation settles.
+		// That receipt retains exclusive device/software ownership for a later
+		// exact activation, so generic "settled" admission is not permission to
+		// delete the device or transfer it to another writer. Keep the handoff
+		// fenced until a separate audited receipt-invalidation contract exists;
+		// never copy the receipt or its approval into a new owner implicitly.
+		if (upgrade.Status.Phase == opsv1alpha1.UpgradePhasePrepared || upgrade.Status.PreparedReceipt != nil) &&
+			!softwareupgrade.PreparedReceiptConsumed(upgrade, upgrades.Items) {
+			return fmt.Errorf("%s is blocked by retained prepared software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
+		if upgrade.Status.Phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
+			return fmt.Errorf("%s is blocked by retained next-boot software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
 		admission := upgrade.Status.ManagerAdmission
 		if admission == nil || admission.DeviceUID != string(device.UID) {
 			return fmt.Errorf("%s is blocked by incomplete software-upgrade admission %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 		if admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled {
 			return fmt.Errorf("%s is blocked by unsettled software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
+		if !terminalManagedLeaf(upgrade.Status.Phase) &&
+			!softwareupgrade.SettledUnclaimedManagedOperation(upgrade) {
+			return fmt.Errorf("%s is blocked by non-terminal software upgrade %s/%s in phase %q", operation, upgrade.Namespace, upgrade.Name, upgrade.Status.Phase)
 		}
 	}
 
@@ -3507,24 +3553,19 @@ func (r *CiscoDeviceReconciler) fenceManagedWorkerRevision(
 	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, true, false); err != nil {
 		return fmt.Errorf("clear prior app worker Pod binding before rollout: %w", err)
 	}
-	before := device.DeepCopy()
-	device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
-		DesiredRevision: desiredRevision,
-		ObservedAt:      metav1.NewTime(r.now()),
-	}
-	if err := r.applyCiscoDeviceConditionObserved(device, metav1.Condition{
-		Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             "WorkerRolloutPending",
-		Message:            "managed worker configuration changed; the old worker is fenced before Deployment rollout",
-		ObservedGeneration: device.Generation,
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		current.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+			DesiredRevision: desiredRevision,
+			ObservedAt:      metav1.NewTime(r.now()),
+		}
+		return r.applyCiscoDeviceConditionObserved(current, metav1.Condition{
+			Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "WorkerRolloutPending",
+			Message:            "managed worker configuration changed; the old worker is fenced before Deployment rollout",
+			ObservedGeneration: current.Generation,
+		})
 	}); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
 		return fmt.Errorf("persist managed worker revision pre-rollout fence: %w", err)
 	}
 	return nil
@@ -3541,24 +3582,19 @@ func (r *CiscoDeviceReconciler) fenceManagedNetworkWorkerRevision(
 	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, false, true); err != nil {
 		return fmt.Errorf("clear prior network worker Pod binding before rollout: %w", err)
 	}
-	before := device.DeepCopy()
-	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
-		DesiredRevision: desiredRevision,
-		ObservedAt:      metav1.NewTime(r.now()),
-	}
-	if err := r.applyCiscoDeviceConditionObserved(device, metav1.Condition{
-		Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             "NetworkWorkerRolloutPending",
-		Message:            "managed network worker configuration changed; the old mutation worker is fenced before Deployment rollout",
-		ObservedGeneration: device.Generation,
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		current.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+			DesiredRevision: desiredRevision,
+			ObservedAt:      metav1.NewTime(r.now()),
+		}
+		return r.applyCiscoDeviceConditionObserved(current, metav1.Condition{
+			Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "NetworkWorkerRolloutPending",
+			Message:            "managed network worker configuration changed; the old mutation worker is fenced before Deployment rollout",
+			ObservedGeneration: current.Generation,
+		})
 	}); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
 		return fmt.Errorf("persist managed network worker revision pre-rollout fence: %w", err)
 	}
 	return nil

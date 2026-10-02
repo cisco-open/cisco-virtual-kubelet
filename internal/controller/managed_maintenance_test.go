@@ -107,6 +107,19 @@ func managerMaintenanceFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.C
 	return r, device, node, leaf, lease
 }
 
+func TestValidateMaintenanceLeafBindingAcceptsRequiredPacingProtocol(t *testing.T) {
+	_, device, node, leaf, _ := managerMaintenanceFixture(t)
+	leaf.Spec.MaxTransferBytesPerSecond = 1_000_000
+	leaf.Status.ManagerAdmission.ProtocolVersion = ops.ManagedUpgradeProtocolRolloutBytePacingV1
+	if err := validateMaintenanceLeafBinding(device, node, leaf, 7); err != nil {
+		t.Fatalf("paced maintenance leaf binding rejected: %v", err)
+	}
+	leaf.Status.ManagerAdmission.ProtocolVersion = ops.ManagedUpgradeProtocolRolloutV1
+	if err := validateMaintenanceLeafBinding(device, node, leaf, 7); err == nil {
+		t.Fatal("legacy protocol accepted for paced maintenance leaf")
+	}
+}
+
 func cancelledMaintenanceRecoveryFixture(t *testing.T) (*CiscoDeviceReconciler, *ciskov1.CiscoDevice, *corev1.Node, *ops.IOSXESoftwareUpgrade, *coordv1.Lease) {
 	t.Helper()
 	r, device, node, leaf, lease := managerMaintenanceFixture(t)
@@ -389,7 +402,15 @@ func TestManagedMaintenanceRetainsClaimedSessionAfterRevocation(t *testing.T) {
 }
 
 func TestManagedMaintenanceSettlesOnlyExactManagerSettledOutcome(t *testing.T) {
-	for _, phase := range []ops.UpgradePhase{ops.UpgradePhaseSucceeded, ops.UpgradePhasePreflightFailed, ops.UpgradePhaseValidationFailed, ops.UpgradePhaseRebootTimeout, ops.UpgradePhaseCancelled} {
+	for _, phase := range []ops.UpgradePhase{
+		ops.UpgradePhaseSucceeded,
+		ops.UpgradePhasePrepared,
+		ops.UpgradePhaseStagedForNextBoot,
+		ops.UpgradePhasePreflightFailed,
+		ops.UpgradePhaseValidationFailed,
+		ops.UpgradePhaseRebootTimeout,
+		ops.UpgradePhaseCancelled,
+	} {
 		t.Run(string(phase), func(t *testing.T) {
 			r, device, node, leaf, lease := managerMaintenanceFixture(t)
 			ctx := context.Background()

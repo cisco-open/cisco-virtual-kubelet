@@ -1,0 +1,10 @@
+{
+  "applications": {
+    "cvk0000_87287bd689e74f2c81b7be03d6d821d0": "RUNNING",
+    "cvk0000_bdd08bc53347410fbd2f3415394dd23c": "RUNNING"
+  },
+  "committedVersion": "17.18.02.0.4112",
+  "controlProcessor": "1-RP0",
+  "model": "C9300-24P",
+  "serial": "FOC2520L6H1"
+}

@@ -176,7 +176,7 @@ func runShowCommandsViaSSH(cfg sshCLIConfig, commands []string) ([]CommandResult
 		// Strip the echoed command (first line) and the trailing
 		// prompt from `body`. IOS echoes the command back as the
 		// first line of the response.
-		out = append(out, CommandResult{Command: cmd, Output: trimEchoAndPrompt(body, cmd)})
+		out = append(out, diagnosticCLIResult(body, cmd))
 	}
 
 	// 4. Best-effort exit — close stdin then ignore session error.
@@ -184,6 +184,32 @@ func runShowCommandsViaSSH(cfg sshCLIConfig, commands []string) ([]CommandResult
 	_ = stdin.Close()
 	_ = session.Wait()
 	return out, nil
+}
+
+// diagnosticCLIResult distinguishes a completed SSH exchange from a command
+// accepted by IOS XE. Match only a bare parser rejection (optionally preceded
+// by the command echo and caret), not error text inside a config or log dump.
+// Keep the transcript for the existing output redaction path; Err is constant
+// so arbitrary device output cannot enter status messages or traces.
+func diagnosticCLIResult(body, command string) CommandResult {
+	result := CommandResult{Command: command, Output: trimEchoAndPrompt(body, command)}
+	lines := strings.Split(strings.TrimSpace(result.Output), "\n")
+	last := strings.TrimSpace(lines[len(lines)-1])
+	rejected := last == "% Invalid input detected at '^' marker." ||
+		last == "% Incomplete command." ||
+		last == "% Ambiguous command:  \""+command+"\"" ||
+		last == "% Ambiguous command: \""+command+"\""
+	if !rejected {
+		return result
+	}
+	for _, line := range lines[:len(lines)-1] {
+		line = strings.TrimSpace(line)
+		if line != "" && line != command && line != "^" {
+			return result
+		}
+	}
+	result.Err = "IOS XE rejected diagnostic command syntax"
+	return result
 }
 
 // sshReadBuffer is a small wrapper over an io.Reader that drains

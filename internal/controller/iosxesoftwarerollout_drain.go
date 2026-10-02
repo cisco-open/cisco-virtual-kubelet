@@ -221,6 +221,9 @@ func (r *IOSXESoftwareRolloutReconciler) drainPodEvidence(
 	if pod.Spec.SchedulerName != "" && pod.Spec.SchedulerName != corev1.DefaultSchedulerName {
 		return opsv1alpha1.UpgradeDrainPodStatus{}, fmt.Errorf("non-default scheduler %q is not drain eligible", pod.Spec.SchedulerName)
 	}
+	if err := r.rejectUnqualifiedSchedulingGroup(ctx, pod); err != nil {
+		return opsv1alpha1.UpgradeDrainPodStatus{}, err
+	}
 	if err := validateDrainPodSpec(&pod.Spec); err != nil {
 		return opsv1alpha1.UpgradeDrainPodStatus{}, err
 	}
@@ -229,6 +232,10 @@ func (r *IOSXESoftwareRolloutReconciler) drainPodEvidence(
 		return opsv1alpha1.UpgradeDrainPodStatus{}, fmt.Errorf("Pod has no controlling owner")
 	}
 	controller, workloadController, templates, err := r.resolveDrainController(ctx, pod.Namespace, owner)
+	if err != nil {
+		return opsv1alpha1.UpgradeDrainPodStatus{}, err
+	}
+	placementHash, err := drainPlacementHash(&pod.Spec)
 	if err != nil {
 		return opsv1alpha1.UpgradeDrainPodStatus{}, err
 	}
@@ -245,6 +252,16 @@ func (r *IOSXESoftwareRolloutReconciler) drainPodEvidence(
 		if err := validateDrainPodSpec(&template.Spec); err != nil {
 			return opsv1alpha1.UpgradeDrainPodStatus{}, fmt.Errorf("%s template: %w", name, err)
 		}
+		templatePlacementHash, err := drainPlacementHash(&template.Spec)
+		if err != nil {
+			return opsv1alpha1.UpgradeDrainPodStatus{}, fmt.Errorf("%s template placement: %w", name, err)
+		}
+		if templatePlacementHash != placementHash {
+			return opsv1alpha1.UpgradeDrainPodStatus{}, fmt.Errorf("%s template placement does not match the bound Pod", name)
+		}
+	}
+	if err := r.validateDrainPlacementFeasibility(ctx, pod, placementHash); err != nil {
+		return opsv1alpha1.UpgradeDrainPodStatus{}, err
 	}
 	pdbs, err := r.drainPDBEvidence(ctx, pod)
 	if err != nil {
@@ -263,7 +280,8 @@ func (r *IOSXESoftwareRolloutReconciler) drainPodEvidence(
 	candidate := opsv1alpha1.UpgradeDrainPodStatus{
 		Namespace: pod.Namespace, Name: pod.Name, UID: string(pod.UID),
 		Controller: controller, WorkloadController: workloadController, PDBs: pdbs,
-		TerminationGracePeriodSeconds: grace, Phase: opsv1alpha1.UpgradeDrainPodSelected,
+		TerminationGracePeriodSeconds: grace, PlacementHash: placementHash,
+		Phase: opsv1alpha1.UpgradeDrainPodSelected,
 	}
 	hash, err := workloaddrain.EligibilityHash(&candidate)
 	if err != nil {
@@ -277,14 +295,7 @@ func validateDrainPodSpec(spec *corev1.PodSpec) error {
 	if spec == nil {
 		return fmt.Errorf("Pod spec is missing")
 	}
-	if len(spec.NodeSelector) != 0 {
-		return fmt.Errorf("nodeSelector is not supported by the portable drain contract")
-	}
 	if spec.Affinity != nil {
-		if spec.Affinity.NodeAffinity != nil &&
-			spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil {
-			return fmt.Errorf("required node affinity is not supported by the portable drain contract")
-		}
 		if spec.Affinity.PodAffinity != nil &&
 			len(spec.Affinity.PodAffinity.RequiredDuringSchedulingIgnoredDuringExecution) != 0 {
 			return fmt.Errorf("required Pod affinity is not supported by the portable drain contract")
@@ -292,11 +303,6 @@ func validateDrainPodSpec(spec *corev1.PodSpec) error {
 		if spec.Affinity.PodAntiAffinity != nil &&
 			len(spec.Affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution) != 0 {
 			return fmt.Errorf("required Pod anti-affinity is not supported by the portable drain contract")
-		}
-	}
-	for _, constraint := range spec.TopologySpreadConstraints {
-		if constraint.WhenUnsatisfiable == corev1.DoNotSchedule {
-			return fmt.Errorf("hard topology spread is not supported by the portable drain contract")
 		}
 	}
 	for _, toleration := range spec.Tolerations {
@@ -590,9 +596,14 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileDrainGrant(
 				current.Status.ManagerAdmission.State != opsv1alpha1.UpgradeManagerAdmissionPending {
 				return fmt.Errorf("drain promotion status changed after ledger promotion")
 			}
+			evidence, err := r.currentNetworkGrantEvidence(ctx, rollout, currentPolicy, target)
+			if err != nil {
+				return err
+			}
 			revision := rollout.Spec.Control.Revision
 			current.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
 			current.Status.ManagerAdmission.ControlRevision = &revision
+			applyNetworkGrantEvidence(current.Status.ManagerAdmission, evidence)
 			current.Status.ManagerAdmission.UpdatedAt = metav1.NewTime(now)
 			current.Status.ManagerDrain.State = opsv1alpha1.UpgradeManagerDrainPromoted
 			current.Status.ManagerDrain.UpdatedAt = metav1.NewTime(now)
@@ -1010,8 +1021,9 @@ func (r *IOSXESoftwareRolloutReconciler) validateFrozenDrainPod(
 		return err
 	}
 	if current.Controller != frozen.Controller || !reflect.DeepEqual(current.WorkloadController, frozen.WorkloadController) ||
-		current.TerminationGracePeriodSeconds != frozen.TerminationGracePeriodSeconds {
-		return fmt.Errorf("selected Pod controller or termination policy changed")
+		current.TerminationGracePeriodSeconds != frozen.TerminationGracePeriodSeconds ||
+		(frozen.PlacementHash != "" && current.PlacementHash != frozen.PlacementHash) {
+		return fmt.Errorf("selected Pod controller, termination policy, or placement changed")
 	}
 	if len(current.PDBs) != len(frozen.PDBs) {
 		return fmt.Errorf("selected Pod PDB set changed")
@@ -1834,7 +1846,7 @@ func (r *IOSXESoftwareRolloutReconciler) drainControllerReady(
 		if string(object.UID) != ref.UID || !object.DeletionTimestamp.IsZero() {
 			return false, nil
 		}
-		if err := validateRecoveredDrainTemplate("Deployment", object.Spec.Selector, &object.Spec.Template); err != nil {
+		if err := validateRecoveredDrainTemplate("Deployment", object.Spec.Selector, &object.Spec.Template, pod.PlacementHash); err != nil {
 			return false, err
 		}
 		desired := int32(1)
@@ -1856,7 +1868,7 @@ func (r *IOSXESoftwareRolloutReconciler) drainControllerReady(
 		if string(object.UID) != ref.UID || !object.DeletionTimestamp.IsZero() {
 			return false, nil
 		}
-		if err := validateRecoveredDrainTemplate("ReplicaSet", object.Spec.Selector, &object.Spec.Template); err != nil {
+		if err := validateRecoveredDrainTemplate("ReplicaSet", object.Spec.Selector, &object.Spec.Template, pod.PlacementHash); err != nil {
 			return false, err
 		}
 		desired := int32(1)
@@ -1874,6 +1886,7 @@ func validateRecoveredDrainTemplate(
 	kind string,
 	selector *metav1.LabelSelector,
 	template *corev1.PodTemplateSpec,
+	expectedPlacementHash string,
 ) error {
 	if selector == nil || template == nil || template.Labels[drainSafeLabel] != "true" {
 		return fmt.Errorf("current %s template is not explicitly drain-safe", kind)
@@ -1890,6 +1903,15 @@ func validateRecoveredDrainTemplate(
 	}
 	if err := validateDrainPodSpec(&template.Spec); err != nil {
 		return fmt.Errorf("current %s template is not portable: %w", kind, err)
+	}
+	if expectedPlacementHash == "" && hasHardDrainPlacement(&template.Spec) {
+		return fmt.Errorf("current %s template has hard placement but the legacy drain did not freeze it", kind)
+	}
+	if expectedPlacementHash != "" {
+		actualPlacementHash, err := drainPlacementHash(&template.Spec)
+		if err != nil || actualPlacementHash != expectedPlacementHash {
+			return fmt.Errorf("current %s template placement differs from the frozen drain", kind)
+		}
 	}
 	return nil
 }
@@ -1911,7 +1933,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentDrainTemplateLabels(
 		if string(object.UID) != ref.UID || !object.DeletionTimestamp.IsZero() {
 			return nil, fmt.Errorf("frozen Deployment identity is no longer current")
 		}
-		if err := validateRecoveredDrainTemplate("Deployment", object.Spec.Selector, &object.Spec.Template); err != nil {
+		if err := validateRecoveredDrainTemplate("Deployment", object.Spec.Selector, &object.Spec.Template, pod.PlacementHash); err != nil {
 			return nil, err
 		}
 		return object.Spec.Template.Labels, nil
@@ -1923,7 +1945,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentDrainTemplateLabels(
 		if string(object.UID) != ref.UID || !object.DeletionTimestamp.IsZero() {
 			return nil, fmt.Errorf("frozen ReplicaSet identity is no longer current")
 		}
-		if err := validateRecoveredDrainTemplate("ReplicaSet", object.Spec.Selector, &object.Spec.Template); err != nil {
+		if err := validateRecoveredDrainTemplate("ReplicaSet", object.Spec.Selector, &object.Spec.Template, pod.PlacementHash); err != nil {
 			return nil, err
 		}
 		return object.Spec.Template.Labels, nil
@@ -2189,7 +2211,7 @@ func validateSettledSuccessorBinding(
 	// before its original maintenance session settles, so its retained
 	// admission revision is monotonic rather than identical. The PDB protocol
 	// binds all three revisions exactly below.
-	if admission == nil || admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolRolloutV1 ||
+	if admission == nil || !opsv1alpha1.ManagedUpgradeProtocolMatches(successor) ||
 		admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
 		admission.LeafUID != string(successor.UID) || admission.DeviceUID != target.DeviceUID ||
 		admission.NodeUID != target.NodeUID || session.Operation.UID != admission.LeafUID ||

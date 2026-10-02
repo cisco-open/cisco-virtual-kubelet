@@ -10,9 +10,13 @@ trap 'rm -rf -- "$scratch_dir"' EXIT
 default_render="$scratch_dir/default.yaml"
 vk_pull_policy_render="$scratch_dir/vk-pull-policy.yaml"
 managed_render="$scratch_dir/managed.yaml"
+managed_graph_render="$scratch_dir/managed-graph.yaml"
 managed_short_account_render="$scratch_dir/managed-short-accounts.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
 managed_drain_render="$scratch_dir/managed-drain.yaml"
+managed_protection_render="$scratch_dir/managed-protection.yaml"
+managed_risk_group_render="$scratch_dir/managed-risk-group.yaml"
+managed_legacy_values_render="$scratch_dir/managed-legacy-values.yaml"
 managed_lease_namespace_render="$scratch_dir/managed-lease-namespace.yaml"
 strict_render_bundle="$scratch_dir/managed-and-examples.yaml"
 error_output="$scratch_dir/error.txt"
@@ -106,6 +110,17 @@ helm template cvk "$chart_dir" \
   --set controller.leaderElect=true \
   --set rbac.profile=strict >"$managed_render"
 
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set topology.graph.enabled=true \
+  --set-json 'topology.graph.peerMappings=[{"source":"cdp","observedPeer":"C9K-2","physicalID":"FOC2520L6H1"}]' \
+  --set-json 'topology.graph.declaredLinks=[{"local":"FOC2520L6E8","peer":"FOC2520L6H1","source":"cdp","interface":"GigabitEthernet1/0/1","remoteInterface":"GigabitEthernet1/0/1"}]' \
+  >"$managed_graph_render"
+
 # Valid short account names can overlap fixed CEL vocabulary. The manager must
 # canonicalize only the exact chart-bound literals, not matching substrings in
 # annotation keys or other compiled policy text.
@@ -141,6 +156,30 @@ helm template cvk "$chart_dir" \
   --set topology.policy.workloadDrain.maxTimeoutSeconds=900 \
   --set topology.policy.workloadDrain.maxPods=8 \
   --set topology.policy.workloadDrain.maxTerminationGraceSeconds=180 >"$managed_drain_render"
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set-json 'topology.policy.requiredTopologyKeys=["topology.kubernetes.io/region","topology.kubernetes.io/zone","operations.cisco.vk/service-tier"]' \
+  --set-json 'topology.policy.disruptionProtections=[{"name":"critical-services","reason":"CriticalService","selector":{"matchLabels":{"operations.cisco.vk/service-tier":"critical"},"matchExpressions":[]}}]' >"$managed_protection_render"
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set-json 'topology.policy.requiredTopologyKeys=["topology.kubernetes.io/region","topology.kubernetes.io/zone","operations.cisco.vk/service-group"]' \
+  --set-json 'topology.policy.riskGroups=[{"name":"customer-a","selector":{"matchLabels":{"operations.cisco.vk/service-group":"customer-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1,"maxAggregateTransferBytesPerSecond":12500000}]' >"$managed_risk_group_render"
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set-json 'topology.policy.disruptionProtections=null' \
+  --set-json 'topology.policy.riskGroups=null' >"$managed_legacy_values_render"
 helm template cvk "$chart_dir" --namespace cisco-vk-system --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
   --set config.leaseNamespace=cvk-leases >"$managed_lease_namespace_render"
 
@@ -239,6 +278,7 @@ grep -Fq -- '- --app-hosting-service-account=cvk-peer-cisco-virtual-kubelet-app-
 grep -Fq -- '- --network-management-service-account=cvk-peer-cisco-virtual-kubelet-network-management' "$peer_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-policy' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-ledger' "$managed_render"
+grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-graph-viewer' "$managed_render"
 grep -Fq 'topology.cisco.vk/admission-policy-prefix: "cvk-cisco-virtual-kubelet"' "$managed_render"
 test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 55
 test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 66
@@ -250,6 +290,14 @@ grep -Fq '"configLeaseNamespace":""' "$managed_render"
 grep -Fq 'topology.cisco.vk/app-hosting-service-account: "cvk-cisco-virtual-kubelet-app-hosting"' "$managed_render"
 grep -Fq 'topology.cisco.vk/network-management-service-account: "cvk-cisco-virtual-kubelet-network-management"' "$managed_render"
 grep -Fq 'topology.cisco.vk/config-lease-namespace: ""' "$managed_render"
+if grep -Fq 'graph.json:' "$managed_render"; then
+  echo "disabled graph policy rendered graph.json" >&2
+  exit 1
+fi
+grep -Fq 'graph.json: |-' "$managed_graph_render"
+grep -Fq '"observedPeer":"C9K-2"' "$managed_graph_render"
+grep -Fq '"remoteInterface":"GigabitEthernet1/0/1"' "$managed_graph_render"
+grep -Fq '"version":"v1"' "$managed_graph_render"
 grep -Fq '"configLeaseNamespace":"cvk-leases"' "$managed_lease_namespace_render"
 grep -Fq 'topology.cisco.vk/config-lease-namespace: "cvk-leases"' "$managed_lease_namespace_render"
 grep -Fq 'name: CONFIG_LEASE_NAMESPACE' "$managed_lease_namespace_render"
@@ -258,6 +306,24 @@ if grep -Fq '"workloadDrain"' "$managed_render"; then
   echo "disabled workload drain changed the v1 administrator policy" >&2
   exit 1
 fi
+if grep -Fq '"disruptionProtections"' "$managed_render"; then
+  echo "empty disruption protection changed the v1 administrator policy" >&2
+  exit 1
+fi
+if grep -Fq '"riskGroups"' "$managed_render"; then
+  echo "empty risk groups changed the v1 administrator policy" >&2
+  exit 1
+fi
+if grep -Fq '"disruptionProtections"' "$managed_legacy_values_render"; then
+  echo "absent legacy disruption protection changed the v1 administrator policy" >&2
+  exit 1
+fi
+if grep -Fq '"riskGroups"' "$managed_legacy_values_render"; then
+  echo "absent legacy risk groups changed the v1 administrator policy" >&2
+  exit 1
+fi
+grep -Fq '"disruptionProtections":[{"name":"critical-services","reason":"CriticalService","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-tier":"critical"}}}]' "$managed_protection_render"
+grep -Fq '"riskGroups":[{"maxAggregateTransferBytesPerSecond":12500000,"maxConcurrentTransfers":1,"maxUnavailable":1,"name":"customer-a","selector":{"matchExpressions":[],"matchLabels":{"operations.cisco.vk/service-group":"customer-a"}}}]' "$managed_risk_group_render"
 grep -Fq '"workloadDrain":{' "$managed_drain_render"
 grep -Fq '"allowedNamespaces":["apps","edge-services"]' "$managed_drain_render"
 grep -Fq '"enabled":true' "$managed_drain_render"
@@ -316,8 +382,8 @@ assert_policy_shape legacy-node-marker 1 1 1
 assert_policy_shape managed-pod-status 1 2 3
 assert_policy_shape managed-pod-delete 1 2 4
 assert_policy_shape managed-drain-pod 1 5 3
-assert_policy_shape managed-device 0 7 14
-assert_policy_shape managed-rollout 0 1 6
+assert_policy_shape managed-device 0 10 16
+assert_policy_shape managed-rollout 0 1 7
 assert_policy_shape managed-upgrade-leaf 1 5 8
 assert_policy_shape managed-maintenance-lease 1 11 8
 assert_policy_shape topology-policy 1 4 5
@@ -419,6 +485,7 @@ grep -Fq "object.spec == oldObject.spec" "$managed_render"
 grep -Fq "object.spec.approval.planHash == oldObject.status.frozenPlan.hash" "$managed_render"
 grep -Fq "object.spec.control.revision == 0" "$managed_render"
 grep -Fq "check('approve').allowed()" "$managed_render"
+grep -Fq "check('activate').allowed()" "$managed_render"
 grep -Fq "check('control').allowed()" "$managed_render"
 grep -Fq "check('topology').allowed()" "$managed_render"
 grep -Fq "changing the projection labels, taints, region, or zone of an established managed device" "$managed_render"
@@ -1117,6 +1184,55 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   exit 1
 fi
 grep -Fq 'globalMaxUnavailable' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set-json 'topology.policy.disruptionProtections=[{"name":"critical","reason":"Advisory","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-a"},"matchExpressions":[]}}]' >"$error_output" 2>&1; then
+  echo "unknown disruption-protection reason passed values schema" >&2
+  exit 1
+fi
+grep -Fq '/topology/policy/disruptionProtections/0/reason' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.disruptionProtections=[{"name":"critical","reason":"CriticalService","selector":{"matchLabels":{"operations.cisco.vk/service-tier":"critical"},"matchExpressions":[]}}]' >"$error_output" 2>&1; then
+  echo "disruption-protection selector outside required keys rendered" >&2
+  exit 1
+fi
+grep -Fq 'is not in requiredTopologyKeys' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.riskGroups=[{"name":"path-east","selector":{"matchLabels":{"operations.cisco.vk/service-group":"customer-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1}]' >"$error_output" 2>&1; then
+  echo "risk-group selector outside required keys rendered" >&2
+  exit 1
+fi
+grep -Fq 'is not in requiredTopologyKeys' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.riskGroups=[{"name":"path-east","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-a"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1},{"name":"path-east","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-b"},"matchExpressions":[]},"maxConcurrentTransfers":1,"maxUnavailable":1}]' >"$error_output" 2>&1; then
+  echo "duplicate risk-group names rendered" >&2
+  exit 1
+fi
+grep -Fq 'contains duplicate name "path-east"' "$error_output"
+
+if helm template cvk "$chart_dir" --kube-version 1.35.0 \
+    --set topology.enabled=true \
+    --set controller.leaderElect=true \
+    --set rbac.profile=strict \
+    --set-json 'topology.policy.riskGroups=[{"name":"path-east","selector":{"matchLabels":{"topology.kubernetes.io/zone":"zone-a"},"matchExpressions":[]},"maxConcurrentTransfers":2,"maxUnavailable":1,"maxAggregateTransferBytesPerSecond":1}]' >"$error_output" 2>&1; then
+  echo "risk-group aggregate transfer rate below its slot count rendered" >&2
+  exit 1
+fi
+grep -Fq 'must provide at least one byte per second for every transfer slot' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \

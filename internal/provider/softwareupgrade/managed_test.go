@@ -37,6 +37,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 )
 
 const (
@@ -52,6 +53,7 @@ const (
 	managedTestReservationID    = "reservation-1"
 	managedTestDeviceGeneration = int64(7)
 	managedTestWorkerRevision   = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	managedTestWorkerPodName    = "dev1-worker-abc123"
 	managedTestWorkerPodUID     = "pod-uid-1"
 	managedTestPhysicalIdentity = "serial-1"
 )
@@ -99,6 +101,7 @@ func managedTestNode() *corev1.Node {
 			managedprotocol.AnnotationDeviceUID:              managedTestDeviceUID,
 			managedprotocol.AnnotationNodeUID:                managedTestNodeUID,
 			managedprotocol.AnnotationWorkerUsername:         managedTestWorkerUsername,
+			managedprotocol.AnnotationNetworkWorkerUsername:  managedTestWorkerUsername,
 			managedprotocol.AnnotationWorkerProtocol:         managedprotocol.Version,
 			managedprotocol.AnnotationWorkerObservedRevision: managedTestWorkerRevision,
 		},
@@ -140,19 +143,23 @@ func managedTestLeaf(name string) *opsv1alpha1.IOSXESoftwareUpgrade {
 	up := newUpgrade(name, func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 		up.UID = types.UID(managedTestLeafUID + "-" + name)
 		up.Annotations = map[string]string{
-			managedprotocol.AnnotationManaged:          "true",
-			managedprotocol.AnnotationWorkerUsername:   managedTestWorkerUsername,
-			managedprotocol.AnnotationCampaignUID:      managedTestCampaignUID,
-			managedprotocol.AnnotationPlanHash:         "sha256:" + strings.Repeat("a", 64),
-			managedprotocol.AnnotationLedgerUID:        managedTestLedgerUID,
-			managedprotocol.AnnotationReservationID:    managedTestReservationID,
-			managedprotocol.AnnotationDeviceNamespace:  managedTestDeviceNamespace,
-			managedprotocol.AnnotationDeviceName:       managedTestDeviceName,
-			managedprotocol.AnnotationDeviceUID:        managedTestDeviceUID,
-			managedprotocol.AnnotationDeviceGeneration: strconv.FormatInt(managedTestDeviceGeneration, 10),
-			managedprotocol.AnnotationNodeName:         managedTestNodeName,
-			managedprotocol.AnnotationNodeUID:          managedTestNodeUID,
-			managedprotocol.AnnotationWorkerProtocol:   managedprotocol.Version,
+			managedprotocol.AnnotationManaged:              "true",
+			managedprotocol.AnnotationWorkerUsername:       managedTestWorkerUsername,
+			managedprotocol.AnnotationCampaignUID:          managedTestCampaignUID,
+			managedprotocol.AnnotationPlanHash:             "sha256:" + strings.Repeat("a", 64),
+			managedprotocol.AnnotationLedgerUID:            managedTestLedgerUID,
+			managedprotocol.AnnotationReservationID:        managedTestReservationID,
+			managedprotocol.AnnotationDeviceNamespace:      managedTestDeviceNamespace,
+			managedprotocol.AnnotationDeviceName:           managedTestDeviceName,
+			managedprotocol.AnnotationDeviceUID:            managedTestDeviceUID,
+			managedprotocol.AnnotationDeviceGeneration:     strconv.FormatInt(managedTestDeviceGeneration, 10),
+			managedprotocol.AnnotationNodeName:             managedTestNodeName,
+			managedprotocol.AnnotationNodeUID:              managedTestNodeUID,
+			managedprotocol.AnnotationWorkerProtocol:       managedprotocol.Version,
+			managedprotocol.AnnotationAppWorkerPodName:     managedTestWorkerPodName,
+			managedprotocol.AnnotationAppWorkerPodUID:      managedTestWorkerPodUID,
+			managedprotocol.AnnotationNetworkWorkerPodName: managedTestWorkerPodName,
+			managedprotocol.AnnotationNetworkWorkerPodUID:  managedTestWorkerPodUID,
 		}
 		up.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
 			ProtocolVersion:       opsv1alpha1.ManagedUpgradeProtocolVersion(managedprotocol.Version),
@@ -273,6 +280,7 @@ func newManagedTestReconciler(
 		NodeName:        managedTestNodeName,
 		ManagedTopology: true,
 		WorkerRevision:  managedTestWorkerRevision,
+		WorkerPodName:   managedTestWorkerPodName,
 		WorkerPodUID:    managedTestWorkerPodUID,
 		DevicePodLister: func(context.Context) ([]*corev1.Pod, error) { return nil, nil },
 		Now:             func() time.Time { return managedTestTime },
@@ -388,6 +396,96 @@ func managedTestMutationClaim(stage opsv1alpha1.UpgradeManagedMutationStage) ops
 	}
 }
 
+func TestManagedTerminalNoRebootOutcomeRecoveryRequiresExactClaimsAndBinding(t *testing.T) {
+	rig := newRig(t)
+	started := metav1.NewTime(managedTestTime.Add(-5 * time.Minute))
+	up := managedTestLeaf("terminal-activation-recovery")
+	up.Finalizers = []string{Finalizer}
+	up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
+	up.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+	up.Status.FailureReason = "ActivationOutcomeUnknown"
+	up.Status.ValidatedVersion = up.Spec.TargetVersion
+	up.Status.PrimarySupervisorInstallRequested = true
+	up.Status.PrimarySupervisorInstalled = true
+	up.Status.PrimarySupervisorActivationRequested = true
+	up.Status.ActivationStartTime = &started
+	up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+		managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryInstall),
+		managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryActivation),
+	}
+	up.Status.Conditions = []metav1.Condition{{
+		Type: conditionTypeMutationSettled, Status: metav1.ConditionFalse, Reason: "MutationRequested",
+	}}
+
+	r := newManagedTestReconciler(t, up, nil)
+	r.GNOI = &staticGNOI{c: rig.client}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}}
+	// The first pass durably acknowledges the current manager control revision;
+	// only the next pass may use the exact binding and claim proof.
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("acknowledge managed control: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("recover managed activation outcome: %v", err)
+	}
+
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), req.NamespacedName, &got); err != nil {
+		t.Fatalf("get recovered managed leaf: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded || got.Status.FailureReason != "" ||
+		got.Status.RunningVersion != up.Spec.TargetVersion {
+		t.Fatalf("managed recovered status = %#v", got.Status)
+	}
+	if rig.os.verifyCalls != 1 || rig.os.activateCalls != 0 {
+		t.Fatalf("Verify calls=%d Activate calls=%d, want one read and no replay",
+			rig.os.verifyCalls, rig.os.activateCalls)
+	}
+}
+
+func TestManagedTerminalNoRebootOutcomeRecoveryRejectsIncompleteClaims(t *testing.T) {
+	rig := newRig(t)
+	started := metav1.NewTime(managedTestTime.Add(-5 * time.Minute))
+	up := managedTestLeaf("terminal-activation-incomplete-claims")
+	up.Finalizers = []string{Finalizer}
+	up.Spec.Strategy = opsv1alpha1.UpgradeStrategyNoReboot
+	up.Status.Phase = opsv1alpha1.UpgradePhaseFailed
+	up.Status.FailureReason = "ActivationOutcomeUnknown"
+	up.Status.ValidatedVersion = up.Spec.TargetVersion
+	up.Status.PrimarySupervisorInstallRequested = true
+	up.Status.PrimarySupervisorInstalled = true
+	up.Status.PrimarySupervisorActivationRequested = true
+	up.Status.ActivationStartTime = &started
+	// Deliberately omit the primary-activation claim even though its durable
+	// request marker is present.
+	up.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{
+		managedTestMutationClaim(opsv1alpha1.UpgradeManagedMutationPrimaryInstall),
+	}
+	up.Status.Conditions = []metav1.Condition{{
+		Type: conditionTypeMutationSettled, Status: metav1.ConditionFalse, Reason: "MutationRequested",
+	}}
+
+	r := newManagedTestReconciler(t, up, nil)
+	r.GNOI = &staticGNOI{c: rig.client}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: up.Namespace, Name: up.Name}}
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("acknowledge managed control: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), req); err != nil {
+		t.Fatalf("hold incomplete managed proof: %v", err)
+	}
+
+	var got opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), req.NamespacedName, &got); err != nil {
+		t.Fatalf("get retained managed leaf: %v", err)
+	}
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseFailed ||
+		got.Status.FailureReason != "ActivationOutcomeUnknown" || rig.os.verifyCalls != 0 {
+		t.Fatalf("incomplete proof escaped quarantine: phase=%q reason=%q Verify calls=%d",
+			got.Status.Phase, got.Status.FailureReason, rig.os.verifyCalls)
+	}
+}
+
 func TestManagedLeafRejectsPredecessorPodUsingReplacementProof(t *testing.T) {
 	up := managedTestLeaf("predecessor-pod")
 	r := newManagedTestReconciler(t, up, nil)
@@ -427,6 +525,78 @@ func TestManagedLeafGateAcknowledgesExactBinding(t *testing.T) {
 	}
 }
 
+func TestManagedLeafGateAcknowledgesExactNetworkWorkerPodBinding(t *testing.T) {
+	up := managedTestLeaf("network-gate-ready")
+	delete(up.Annotations, managedprotocol.AnnotationAppWorkerPodName)
+	delete(up.Annotations, managedprotocol.AnnotationAppWorkerPodUID)
+	up.Annotations[managedprotocol.AnnotationNetworkWorkerPodName] = managedTestWorkerPodName
+	up.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] = managedTestWorkerPodUID
+	r := newManagedTestReconciler(t, up, nil)
+
+	var device ciskov1.CiscoDevice
+	key := client.ObjectKey{Namespace: managedTestDeviceNamespace, Name: managedTestDeviceName}
+	if err := r.Client.Get(context.Background(), key, &device); err != nil {
+		t.Fatalf("get managed CiscoDevice: %v", err)
+	}
+	started := metav1.NewTime(managedTestTime.Add(-time.Minute))
+	ready := metav1.NewTime(managedTestTime)
+	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+		DesiredRevision:      managedTestWorkerRevision,
+		ObservedRevision:     managedTestWorkerRevision,
+		DeploymentUID:        "network-deployment-uid",
+		DeploymentGeneration: 1,
+		PodUID:               managedTestWorkerPodUID,
+		PodStartTime:         &started,
+		PodReadyTime:         &ready,
+		ObservedAt:           ready,
+	}
+	if err := r.Client.Update(context.Background(), &device); err != nil {
+		t.Fatalf("update managed CiscoDevice: %v", err)
+	}
+
+	decision, updated, err := r.syncManagedLeafGate(context.Background(), up, managedTestTime)
+	if err != nil {
+		t.Fatalf("syncManagedLeafGate() error = %v", err)
+	}
+	if !updated || !decision.allowProgress || !decision.allowClaim {
+		t.Fatalf("decision = %+v, updated=%t; want exact network worker acknowledgement", decision, updated)
+	}
+}
+
+func TestManagedLeafGateDoesNotWriteRetainedPredecessor(t *testing.T) {
+	up := managedTestLeaf("retained-predecessor")
+	r := newManagedTestReconciler(t, up, nil)
+	r.WorkerPodUID = "replacement-pod-uid"
+
+	decision, updated, err := r.syncManagedLeafGate(context.Background(), up, managedTestTime)
+	if err != nil {
+		t.Fatalf("syncManagedLeafGate() error = %v", err)
+	}
+	if !decision.bindingDenied || updated {
+		t.Fatalf("decision=%+v updated=%t; want read-only predecessor handling", decision, updated)
+	}
+	if up.Status.WorkerControl != nil {
+		t.Fatalf("retained predecessor received a worker-control write: %#v", up.Status.WorkerControl)
+	}
+}
+
+func TestManagedLeafGateWaitsForExactPodNameBinding(t *testing.T) {
+	up := managedTestLeaf("pod-name-not-converged")
+	up.Annotations[managedprotocol.AnnotationAppWorkerPodName] = "terminating-predecessor-pod"
+	r := newManagedTestReconciler(t, up, nil)
+
+	decision, updated, err := r.syncManagedLeafGate(context.Background(), up, managedTestTime)
+	if err != nil {
+		t.Fatalf("syncManagedLeafGate() error = %v", err)
+	}
+	if !decision.bindingDenied || updated {
+		t.Fatalf("decision=%+v updated=%t; want read-only wait for manager Pod binding", decision, updated)
+	}
+	if up.Status.WorkerControl != nil {
+		t.Fatalf("unbound worker received a worker-control write: %#v", up.Status.WorkerControl)
+	}
+}
+
 func TestManagedLeafRequiresEveryManagedAnnotation(t *testing.T) {
 	keys := []string{
 		managedprotocol.AnnotationManaged,
@@ -442,6 +612,8 @@ func TestManagedLeafRequiresEveryManagedAnnotation(t *testing.T) {
 		managedprotocol.AnnotationNodeName,
 		managedprotocol.AnnotationNodeUID,
 		managedprotocol.AnnotationWorkerProtocol,
+		managedprotocol.AnnotationAppWorkerPodName,
+		managedprotocol.AnnotationAppWorkerPodUID,
 	}
 	for _, key := range keys {
 		t.Run(key, func(t *testing.T) {
@@ -470,6 +642,8 @@ func TestManagedLeafRejectsEveryManagedAnnotationMismatch(t *testing.T) {
 		managedprotocol.AnnotationNodeName,
 		managedprotocol.AnnotationNodeUID,
 		managedprotocol.AnnotationWorkerProtocol,
+		managedprotocol.AnnotationAppWorkerPodName,
+		managedprotocol.AnnotationAppWorkerPodUID,
 	}
 	for _, key := range keys {
 		t.Run(key, func(t *testing.T) {
@@ -500,6 +674,9 @@ func TestManagedLeafRejectsAdmissionAndNodeIdentityMismatch(t *testing.T) {
 		}},
 		{name: "protocol", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *corev1.Node) {
 			up.Status.ManagerAdmission.ProtocolVersion = "future"
+		}},
+		{name: "legacy protocol on paced leaf", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *corev1.Node) {
+			up.Spec.MaxTransferBytesPerSecond = 1_000_000
 		}},
 		{name: "leaf UID", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *corev1.Node) {
 			up.Status.ManagerAdmission.LeafUID = "recreated-leaf"
@@ -1235,7 +1412,7 @@ func TestManagedPendingAdmissionAcknowledgesIdentityWithoutAdvancing(t *testing.
 	}
 }
 
-func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
+func TestInertManagedSettledTombstoneFailsClosed(t *testing.T) {
 	markTime := metav1.NewTime(managedTestTime)
 	tests := []struct {
 		name   string
@@ -1314,13 +1491,14 @@ func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
 		{name: "missing manager control", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl = nil
 		}},
-		{name: "control is not cancellation", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		{name: "settled policy fence is terminal", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl.Cancel = false
+			up.Status.ManagerControl.Reason = "AdministratorPolicyChanged"
 		}},
-		{name: "control also pauses", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		{name: "settled admission supersedes pause", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl.Pause = true
 		}},
-		{name: "neutral cancellation revision", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		{name: "zero revision remains exactly bound", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl.Revision = 0
 			*up.Status.ManagerAdmission.ControlRevision = 0
 		}},
@@ -1388,7 +1566,7 @@ func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
 		})
 	}
 
-	if inertManagedCancellationTombstone(nil) {
+	if inertManagedSettledTombstone(nil) {
 		t.Fatal("nil upgrade was treated as an inert cancellation tombstone")
 	}
 	for _, test := range tests {
@@ -1397,8 +1575,8 @@ func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
 			if test.mutate != nil {
 				test.mutate(up)
 			}
-			if got := inertManagedCancellationTombstone(up); got != test.want {
-				t.Fatalf("inertManagedCancellationTombstone() = %t, want %t; status=%+v", got, test.want, up.Status)
+			if got := inertManagedSettledTombstone(up); got != test.want {
+				t.Fatalf("inertManagedSettledTombstone() = %t, want %t; status=%+v", got, test.want, up.Status)
 			}
 		})
 	}
@@ -1458,6 +1636,7 @@ func TestSettledManagedCancellationAuditRecordFailsClosed(t *testing.T) {
 		opsv1alpha1.UpgradePhaseVerifying,
 		opsv1alpha1.UpgradePhaseRollingBack,
 		opsv1alpha1.UpgradePhaseSucceeded,
+		opsv1alpha1.UpgradePhasePrepared,
 		opsv1alpha1.UpgradePhaseStagedForNextBoot,
 		opsv1alpha1.UpgradePhaseFailed,
 		opsv1alpha1.UpgradePhasePreflightFailed,
@@ -1709,6 +1888,10 @@ func TestDeviceUpgradeOwnerSkipsOnlyInertManagedCancellationTombstone(t *testing
 		wantNext  bool
 	}{
 		{name: "settled cancellation tombstone", wantNext: true},
+		{name: "settled pre-dispatch policy fence", wantNext: true, mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Cancel = false
+			up.Status.ManagerControl.Reason = "AdministratorPolicyChanged"
+		}},
 		{name: "ordinary empty-phase leaf", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			delete(up.Annotations, managedprotocol.AnnotationManaged)
 		}},
@@ -1933,6 +2116,124 @@ func TestManagedDurableClaimCASRecordsEveryMutationStage(t *testing.T) {
 				got.Status.WorkerControl.EffectiveState != opsv1alpha1.UpgradeWorkerControlClaimed ||
 				got.Status.WorkerControl.ObservedControlRevision != 7 {
 				t.Fatalf("claim acknowledgement = %#v", got.Status.WorkerControl)
+			}
+		})
+	}
+}
+
+func TestManagedNetworkGrantIsRevalidatedAtMutationClaim(t *testing.T) {
+	tests := []struct {
+		name       string
+		mutate     func(*opsv1alpha1.IOSXESoftwareUpgrade, *ciskov1.CiscoDevice)
+		wantClaim  bool
+		wantReason string
+	}{
+		{name: "exact evidence permits claim", wantClaim: true},
+		{name: "omitted required authority blocks claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *ciskov1.CiscoDevice) {
+			up.Status.ManagerAdmission.NetworkEvidenceHash = ""
+			up.Status.ManagerAdmission.NetworkEvidenceProducerRevision = ""
+			up.Status.ManagerAdmission.NetworkEvidenceWorkerPodUID = ""
+			up.Status.ManagerAdmission.NetworkEvidenceSampleSequence = nil
+			up.Status.ManagerAdmission.NetworkEvidenceNotAfter = nil
+		}, wantReason: "NetworkEvidenceAuthorityInvalid"},
+		{name: "legacy protocol blocks claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *ciskov1.CiscoDevice) {
+			up.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.ManagedUpgradeProtocolRolloutV1
+		}, wantReason: "ManagedAdmissionDenied"},
+		{name: "expired authority blocks claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *ciskov1.CiscoDevice) {
+			up.Status.ManagerAdmission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(managedTestTime))
+		}, wantReason: "NetworkEvidenceAuthorityInvalid"},
+		{name: "new accepted sample blocks old grant", mutate: func(_ *opsv1alpha1.IOSXESoftwareUpgrade, device *ciskov1.CiscoDevice) {
+			device.Status.HealthObservation.AcceptedNetwork.SampleSequence++
+		}, wantReason: "NetworkEvidenceAuthorityInvalid"},
+		{name: "worker rotation blocks grant", mutate: func(_ *opsv1alpha1.IOSXESoftwareUpgrade, device *ciskov1.CiscoDevice) {
+			device.Status.NetworkWorkerRevision.PodUID = "replacement-pod"
+		}, wantReason: "ManagedAdmissionDenied"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			up := managedTestLeaf("network-grant-" + strings.ReplaceAll(tt.name, " ", "-"))
+			up.Spec.RequireNetworkEvidence = true
+			up.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.RequiredManagedUpgradeProtocol(up.Spec)
+			up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+			node := managedTestNode()
+			node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] = managedTestWorkerUsername
+			sample := &ciskov1.DeviceNetworkObservationStatus{
+				WorkerPodUID:        managedTestWorkerPodUID,
+				CollectionStartedAt: metav1.NewTime(managedTestTime.Add(-time.Minute)),
+				CollectionEndedAt:   metav1.NewTime(managedTestTime.Add(-30 * time.Second)),
+				SampleSequence:      17,
+				ObservedAt:          metav1.NewTime(managedTestTime.Add(-30 * time.Second)),
+				Complete:            true,
+				ProducerRevision:    managedTestWorkerRevision,
+				DeviceIdentityHash:  "sha256:" + strings.Repeat("b", 64),
+			}
+			digest, err := topologyhealth.AcceptedNetworkDigest(sample)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sequence := sample.SampleSequence
+			up.Status.ManagerAdmission.NetworkEvidenceHash = digest
+			up.Status.ManagerAdmission.NetworkEvidenceProducerRevision = sample.ProducerRevision
+			up.Status.ManagerAdmission.NetworkEvidenceWorkerPodUID = sample.WorkerPodUID
+			up.Status.ManagerAdmission.NetworkEvidenceSampleSequence = &sequence
+			up.Status.ManagerAdmission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(managedTestTime.Add(time.Minute)))
+
+			device := managedTestDevice()
+			device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+				DesiredRevision:      managedTestWorkerRevision,
+				ObservedRevision:     managedTestWorkerRevision,
+				DeploymentUID:        "network-deployment-uid-1",
+				DeploymentGeneration: 1,
+				PodUID:               managedTestWorkerPodUID,
+				PodStartTime:         ptr.To(metav1.NewTime(managedTestTime.Add(-2 * time.Minute))),
+				PodReadyTime:         ptr.To(metav1.NewTime(managedTestTime.Add(-time.Minute))),
+				ObservedAt:           metav1.NewTime(managedTestTime),
+			}
+			device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{
+				ObservedAt:             metav1.NewTime(managedTestTime),
+				NodeReadyHeartbeatTime: metav1.NewTime(managedTestTime),
+				DeviceConditionsHash:   "sha256:" + strings.Repeat("c", 64),
+				AcceptedNetwork:        sample,
+			}
+			if tt.mutate != nil {
+				tt.mutate(up, device)
+			}
+			r := newManagedTestReconciler(t, up, node)
+			var stored ciskov1.CiscoDevice
+			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(device), &stored); err != nil {
+				t.Fatal(err)
+			}
+			stored.Status = *device.Status.DeepCopy()
+			if err := r.Client.Update(context.Background(), &stored); err != nil {
+				t.Fatal(err)
+			}
+			var snapshot opsv1alpha1.IOSXESoftwareUpgrade
+			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &snapshot); err != nil {
+				t.Fatal(err)
+			}
+			*up = *snapshot.DeepCopy()
+			claimed, _, err := r.claimActivation(
+				context.Background(), up, false, "ActivationRequested", "activate", managedTestTime,
+			)
+			if err != nil {
+				t.Fatalf("claimActivation() error = %v", err)
+			}
+			if claimed != tt.wantClaim {
+				t.Fatalf("claimed=%t, want %t", claimed, tt.wantClaim)
+			}
+			var got opsv1alpha1.IOSXESoftwareUpgrade
+			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &got); err != nil {
+				t.Fatal(err)
+			}
+			if tt.wantClaim {
+				if len(got.Status.ManagedMutationClaims) != 1 {
+					t.Fatalf("valid evidence did not produce one claim: %+v", got.Status)
+				}
+				return
+			}
+			if len(got.Status.ManagedMutationClaims) != 0 || got.Status.PrimarySupervisorActivationRequested ||
+				readyReason(got.Status.Conditions) != tt.wantReason {
+				t.Fatalf("invalid evidence claim status = %+v", got.Status)
 			}
 		})
 	}

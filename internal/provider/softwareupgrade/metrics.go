@@ -15,7 +15,10 @@
 package softwareupgrade
 
 import (
+	"context"
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -24,6 +27,8 @@ var (
 	metricsOnce sync.Once
 
 	phaseTransitions *prometheus.CounterVec
+	transferBytes    *prometheus.CounterVec
+	transferDuration *prometheus.HistogramVec
 )
 
 // RegisterMetrics registers IOSXESoftwareUpgrade metrics. It is safe to call
@@ -37,7 +42,16 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			},
 			[]string{"device", "target_version", "from", "to", "reason"},
 		)
-		reg.MustRegister(phaseTransitions)
+		transferBytes = prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "cisco_vk_iosxe_software_upgrade_transfer_bytes_total",
+			Help: "IOS XE software image bytes fetched or completely streamed by the worker, by bounded transfer segment, source, cache result, and outcome.",
+		}, []string{"segment", "source", "cache", "result"})
+		transferDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "cisco_vk_iosxe_software_upgrade_transfer_duration_seconds",
+			Help:    "IOS XE software image transfer duration by bounded segment, source, cache result, and outcome.",
+			Buckets: prometheus.ExponentialBuckets(0.1, 2, 18),
+		}, []string{"segment", "source", "cache", "result"})
+		reg.MustRegister(phaseTransitions, transferBytes, transferDuration)
 	})
 }
 
@@ -46,4 +60,41 @@ func recordPhaseTransition(device, targetVersion, from, to, reason string) {
 		return
 	}
 	phaseTransitions.WithLabelValues(device, targetVersion, from, to, reason).Inc()
+}
+
+func recordImageTransfer(segment, source, cache, result string, bytes int64, duration time.Duration) {
+	if transferBytes == nil || transferDuration == nil {
+		return
+	}
+	segment = boundedMetricValue(segment, "origin_to_worker", "worker_to_device")
+	source = boundedMetricValue(source, "https", "sftp", "http", "ftp", "scp", "tftp", "configmap", "other")
+	cache = boundedMetricValue(cache, "hit", "miss", "not_applicable", "unknown")
+	result = boundedMetricValue(result, "success", "error", "cancelled")
+	if bytes < 0 {
+		bytes = 0
+	}
+	if duration < 0 {
+		duration = 0
+	}
+	transferBytes.WithLabelValues(segment, source, cache, result).Add(float64(bytes))
+	transferDuration.WithLabelValues(segment, source, cache, result).Observe(duration.Seconds())
+}
+
+func boundedMetricValue(value string, allowed ...string) string {
+	for _, candidate := range allowed {
+		if value == candidate {
+			return value
+		}
+	}
+	return "other"
+}
+
+func transferMetricResult(err error) string {
+	if err == nil {
+		return "success"
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return "cancelled"
+	}
+	return "error"
 }

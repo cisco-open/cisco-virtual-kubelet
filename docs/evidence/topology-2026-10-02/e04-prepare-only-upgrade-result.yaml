@@ -1,0 +1,21 @@
+candidateCommit: c001f8f0
+device: cat9k-lab-101
+direction: upgrade-preparation
+runningVersionBefore: 17.18.02.0.4112.1766116039
+targetVersion: "17.18.03"
+validatedInactiveVersion: 17.18.03.0.5496.1776157760
+runningVersionAfter: 17.18.02.0.4112.1766116039
+phase: Prepared
+receiptHash: sha256:42bf1fb56e7cc0e8247fb2e866a637a96342e2971046ecb66f1477c6eb2f1a68
+sourceDigest: sha256:df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049
+nativeOperationCountBeforeWorkerRestart: 3
+nativeOperationCountAfterWorkerRestart: 3
+activateMentionCountAfterWorkerRestart: 0
+postRestartReadOnlyChecks:
+  - show version
+  - show install summary
+  - show boot
+  - show gnxi state detail
+  - show platform software status control-processor brief
+  - show app-hosting list
+result: passed

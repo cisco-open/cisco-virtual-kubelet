@@ -191,43 +191,42 @@ func TestSnapshotDrainPodsRejectsWildcardMaintenanceTolerationOnPodOrTemplate(t 
 	}
 }
 
-func TestValidateDrainPodSpecRejectsHardReplacementPlacement(t *testing.T) {
+func TestValidateDrainPodSpecSupportsNodePlacementButRejectsPodCoupling(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
+	rejected := []struct {
 		name string
 		spec corev1.PodSpec
 	}{
-		{name: "node selector", spec: corev1.PodSpec{NodeSelector: map[string]string{"kubernetes.io/hostname": "switch-a"}}},
-		{name: "required node affinity", spec: corev1.PodSpec{Affinity: &corev1.Affinity{
-			NodeAffinity: &corev1.NodeAffinity{RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{}},
-		}}},
 		{name: "required pod affinity", spec: corev1.PodSpec{Affinity: &corev1.Affinity{
 			PodAffinity: &corev1.PodAffinity{RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{TopologyKey: "topology.kubernetes.io/zone"}}},
 		}}},
 		{name: "required pod anti-affinity", spec: corev1.PodSpec{Affinity: &corev1.Affinity{
 			PodAntiAffinity: &corev1.PodAntiAffinity{RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{TopologyKey: "topology.kubernetes.io/zone"}}},
 		}}},
-		{name: "hard topology spread", spec: corev1.PodSpec{TopologySpreadConstraints: []corev1.TopologySpreadConstraint{{
-			TopologyKey: "topology.kubernetes.io/zone", WhenUnsatisfiable: corev1.DoNotSchedule,
-		}}}},
 	}
-	for _, test := range tests {
+	for _, test := range rejected {
 		t.Run(test.name, func(t *testing.T) {
 			if err := validateDrainPodSpec(&test.spec); err == nil {
-				t.Fatal("hard replacement placement was accepted")
+				t.Fatal("Pod-coupled replacement placement was accepted")
 			}
 		})
 	}
-	soft := &corev1.PodSpec{
+	supported := &corev1.PodSpec{
+		NodeSelector: map[string]string{"type": "virtual-kubelet"},
 		Affinity: &corev1.Affinity{NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{NodeSelectorTerms: []corev1.NodeSelectorTerm{{
+				MatchExpressions: []corev1.NodeSelectorRequirement{{Key: "topology.cisco.vk/site", Operator: corev1.NodeSelectorOpIn, Values: []string{"lab"}}},
+			}}},
 			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{{Weight: 1}},
 		}},
 		TopologySpreadConstraints: []corev1.TopologySpreadConstraint{{
+			TopologyKey: "topology.cisco.vk/rack", MaxSkew: 1, WhenUnsatisfiable: corev1.DoNotSchedule,
+		}, {
 			TopologyKey: "topology.kubernetes.io/zone", WhenUnsatisfiable: corev1.ScheduleAnyway,
 		}},
 	}
-	if err := validateDrainPodSpec(soft); err != nil {
-		t.Fatalf("soft portable placement was rejected: %v", err)
+	if err := validateDrainPodSpec(supported); err != nil {
+		t.Fatalf("supported node placement was rejected: %v", err)
 	}
 }
 

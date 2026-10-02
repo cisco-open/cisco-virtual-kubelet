@@ -64,13 +64,16 @@ type IOSXESoftwareRolloutList struct {
 }
 
 // IOSXESoftwareRolloutSpec separates executable intent from authorization and
-// runtime controls. Plan is immutable. Approval may be added exactly once and
-// must name the manager-produced hash. Control is the only repeatably mutable
-// part and carries a monotonic revision. Native admission policy must bind the
-// three identity fields to request.userInfo and authorize approval separately.
+// runtime controls. Plan is immutable. Approval and ActivationApproval may
+// each be added exactly once and must name the manager-produced hash. Control
+// is the only repeatably mutable part and carries a monotonic revision. Native
+// admission policy must bind identity fields to request.userInfo and authorize
+// plan approval, activation approval, and control separately.
 //
 // +kubebuilder:validation:XValidation:rule="self.plan == oldSelf.plan",message="plan is immutable; create a new rollout to change executable intent"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.approval) || (has(self.approval) && self.approval == oldSelf.approval)",message="approval is append-only and immutable once recorded"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.activationApproval) || (has(self.activationApproval) && self.activationApproval == oldSelf.activationApproval)",message="activationApproval is append-only and immutable once recorded"
+// +kubebuilder:validation:XValidation:rule="!has(self.activationApproval) || self.plan.strategy == 'PrepareOnly'",message="activationApproval is valid only for a PrepareOnly plan"
 type IOSXESoftwareRolloutSpec struct {
 	// Plan is the immutable requested campaign input from which the manager
 	// creates a canonical frozen target plan.
@@ -81,6 +84,13 @@ type IOSXESoftwareRolloutSpec struct {
 	// IOSXESoftwareUpgrade child may receive mutation permission.
 	// +kubebuilder:validation:Optional
 	Approval *IOSXESoftwareRolloutApproval `json:"approval,omitempty"`
+
+	// ActivationApproval independently authorizes activation of the exact
+	// immutable receipts produced by a completed PrepareOnly plan. It does not
+	// authorize preparation, receipt substitution, or activation outside its
+	// explicit UTC window. Omission preserves the install-only boundary.
+	// +kubebuilder:validation:Optional
+	ActivationApproval *IOSXESoftwareRolloutActivationApproval `json:"activationApproval,omitempty"`
 
 	// Control carries pause/resume/cancel requests. Revision zero is the
 	// required neutral value at creation.
@@ -116,10 +126,12 @@ type IOSXESoftwareRolloutPlan struct {
 	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)+([a-z])?$`
 	TargetVersion string `json:"targetVersion"`
 
-	// Strategy is Reload for the Phase 2 MVP. ISSU and NoReboot do not expose
-	// the durable stage/activate boundary required by this campaign contract.
+	// Strategy controls leaf lifecycle behavior. Reload preserves the combined
+	// install/activate flow. NoReboot still calls OS.Activate and is not an
+	// install-only boundary. PrepareOnly stops after installation, native
+	// inventory convergence and read-only OS verification; its receipt does not
+	// authorize a later activation.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=Reload
 	// +kubebuilder:default=Reload
 	Strategy IOSXESoftwareRolloutStrategy `json:"strategy,omitempty"`
 
@@ -184,11 +196,13 @@ type IOSXESoftwareRolloutPlan struct {
 
 // IOSXESoftwareRolloutStrategy is intentionally IOS-XE- and MVP-specific.
 //
-// +kubebuilder:validation:Enum=Reload
+// +kubebuilder:validation:Enum=Reload;NoReboot;PrepareOnly
 type IOSXESoftwareRolloutStrategy string
 
 const (
-	IOSXESoftwareRolloutStrategyReload IOSXESoftwareRolloutStrategy = "Reload"
+	IOSXESoftwareRolloutStrategyReload      IOSXESoftwareRolloutStrategy = "Reload"
+	IOSXESoftwareRolloutStrategyNoReboot    IOSXESoftwareRolloutStrategy = "NoReboot"
+	IOSXESoftwareRolloutStrategyPrepareOnly IOSXESoftwareRolloutStrategy = "PrepareOnly"
 )
 
 // IOSXESoftwareRolloutLabelSelector preserves the Kubernetes LabelSelector
@@ -525,6 +539,43 @@ type IOSXESoftwareRolloutHealthSpec struct {
 	// +kubebuilder:validation:Maximum=604800
 	// +kubebuilder:default=300
 	WaveSoakSeconds int32 `json:"waveSoakSeconds,omitempty"`
+
+	// Network enables explicit network-management evidence gates. It is nil by
+	// default so existing rollout objects retain their current behavior.
+	// +kubebuilder:validation:Optional
+	Network *IOSXESoftwareRolloutNetworkHealthSpec `json:"network,omitempty"`
+}
+
+// IOSXESoftwareRolloutNetworkHealthSpec selects bounded, read-only evidence
+// required before a target can enter device-disruptive work. The manager must
+// have a current DeviceHealthObservationStatus.Network for every target when
+// this gate is enabled.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.minimumHeadroomPercent) || size(self.requiredInterfaces) > 0",message="minimumHeadroomPercent requires at least one non-blank required interface"
+type IOSXESoftwareRolloutNetworkHealthSpec struct {
+	// +kubebuilder:validation:Required
+	Enabled bool `json:"enabled"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	RequireCompleteEvidence bool `json:"requireCompleteEvidence,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	// +kubebuilder:validation:items:MinLength=1
+	// +kubebuilder:validation:items:Pattern=`^.*[^[:space:]].*$`
+	// +listType=set
+	RequiredInterfaces []string `json:"requiredInterfaces,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=32
+	// +listType=set
+	RequiredNeighbors []string `json:"requiredNeighbors,omitempty"`
+	// +kubebuilder:validation:Optional
+	RequireInterfacesUp bool `json:"requireInterfacesUp,omitempty"`
+	// +kubebuilder:validation:Optional
+	RequireNeighborsFull bool `json:"requireNeighborsFull,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	MinimumHeadroomPercent *int32 `json:"minimumHeadroomPercent,omitempty"`
 }
 
 // IOSXESoftwareRolloutApproval is append-only authorization for one exact
@@ -545,6 +596,63 @@ type IOSXESoftwareRolloutApproval struct {
 	// ApprovedAt records when the exact plan was authorized.
 	// +kubebuilder:validation:Required
 	ApprovedAt metav1.Time `json:"approvedAt"`
+}
+
+// IOSXESoftwareRolloutActivationApproval is append-only authorization for a
+// bounded, complete set of prepared receipts from one exact frozen plan.
+// Receipt order has no semantic meaning; callers sort by deviceUID when
+// computing or displaying the canonical authorization hash.
+//
+// +kubebuilder:validation:XValidation:rule="self.notBefore < self.notAfter",message="activation notBefore must be earlier than notAfter"
+type IOSXESoftwareRolloutActivationApproval struct {
+	// PlanHash must equal status.frozenPlan.hash at admission time.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	PlanHash string `json:"planHash"`
+
+	// Receipts names exactly one immutable prepared receipt for every frozen
+	// target. The manager rejects missing, duplicate, foreign, invalid, or
+	// currently unobservable receipts before reserving activation capacity.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=100
+	// +listType=map
+	// +listMapKey=deviceUID
+	Receipts []IOSXESoftwareRolloutActivationReceipt `json:"receipts"`
+
+	// NotBefore and NotAfter are the UTC activation-claim window. Closing the
+	// window blocks new claims but never abandons an accepted device operation.
+	// +kubebuilder:validation:Required
+	NotBefore metav1.Time `json:"notBefore"`
+	// +kubebuilder:validation:Required
+	NotAfter metav1.Time `json:"notAfter"`
+
+	// ApprovedBy must be bound to request.userInfo.username by native admission
+	// and authorized with the distinct activate custom verb.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ApprovedBy string `json:"approvedBy"`
+
+	// ApprovedAt records when the exact receipt set and window were authorized.
+	// +kubebuilder:validation:Required
+	ApprovedAt metav1.Time `json:"approvedAt"`
+}
+
+// IOSXESoftwareRolloutActivationReceipt binds activation authority to one
+// exact target, preparation leaf incarnation, and content-addressed receipt.
+type IOSXESoftwareRolloutActivationReceipt struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	DeviceUID string `json:"deviceUID"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	UpgradeUID string `json:"upgradeUID"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	ReceiptHash string `json:"receiptHash"`
 }
 
 // IOSXESoftwareRolloutControl is the mutable, monotonic campaign control.
@@ -733,6 +841,13 @@ type IOSXESoftwareRolloutFrozenPlanStatus struct {
 	// Policy binds the administrator-owned policy object and version.
 	// +kubebuilder:validation:Required
 	Policy IOSXESoftwareRolloutPolicySnapshot `json:"policy"`
+
+	// RiskGroupMembershipHash binds approval to the exact physical membership
+	// of every administrator-declared overlapping risk group. It is omitted
+	// when no risk groups are configured.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	RiskGroupMembershipHash string `json:"riskGroupMembershipHash,omitempty"`
 
 	// Targets contains the complete immutable target/topology snapshot.
 	// +kubebuilder:validation:Required
@@ -1002,6 +1117,21 @@ type IOSXESoftwareRolloutPlannedTarget struct {
 	// +listType=map
 	// +listMapKey=key
 	Topology []IOSXESoftwareRolloutTopologyValue `json:"topology"`
+
+	// RiskGroups contains the sorted administrator-declared overlapping groups
+	// which included this target when the plan was frozen.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:items:Pattern=`^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$`
+	RiskGroups []string `json:"riskGroups,omitempty"`
+
+	// MaxTransferBytesPerSecond is the conservative worker-enforced byte rate
+	// derived from every matching administrator risk-group aggregate ceiling.
+	// Zero means no administrator pacing policy covered this target.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1099511627776
+	MaxTransferBytesPerSecond int64 `json:"maxTransferBytesPerSecond,omitempty"`
 
 	// CanaryCohort is non-empty for explicitly selected canaries.
 	// +kubebuilder:validation:Optional

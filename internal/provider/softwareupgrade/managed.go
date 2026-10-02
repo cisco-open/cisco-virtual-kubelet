@@ -34,12 +34,14 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 )
 
 const managedAdmissionPoll = 15 * time.Second
 
 type managedLeafDecision struct {
 	applies         bool
+	bindingDenied   bool
 	allowProgress   bool
 	allowClaim      bool
 	admissionState  opsv1alpha1.UpgradeManagerAdmissionState
@@ -79,6 +81,16 @@ func (r *Reconciler) syncManagedLeafGate(
 			return err
 		}
 		decision = r.evaluateManagedLeaf(ctx, &current)
+		// A retained leaf from a predecessor worker can remain in the API
+		// while its old Pod is being fenced. Its status mutation is correctly
+		// denied by the admission policy because this worker is not the exact
+		// bound Pod. Do not turn that expected denial into a reconcile hot loop;
+		// settled history is observed read-only and unresolved claims remain
+		// fenced for the manager's recovery path.
+		if decision.bindingDenied {
+			*up = *current.DeepCopy()
+			return nil
+		}
 		desired := workerControlForDecision(&current, decision, now)
 		if reflect.DeepEqual(current.Status.WorkerControl, desired) {
 			*up = *current.DeepCopy()
@@ -126,6 +138,7 @@ func (r *Reconciler) evaluateManagedLeaf(ctx context.Context, up *opsv1alpha1.IO
 		return decision
 	}
 	if err := r.validateManagedLeafBinding(ctx, up); err != nil {
+		decision.bindingDenied = true
 		decision.message = boundedWorkerMessage("managed upgrade binding denied: " + err.Error())
 		return decision
 	}
@@ -277,6 +290,7 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 		{name: "runtime device UID", value: r.DeviceUID},
 		{name: "runtime Node name", value: r.NodeName},
 		{name: "runtime worker configuration revision", value: r.WorkerRevision},
+		{name: "runtime worker Pod name", value: r.WorkerPodName},
 		{name: "runtime worker Pod UID", value: r.WorkerPodUID},
 	} {
 		if strings.TrimSpace(field.value) == "" {
@@ -303,6 +317,18 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 	}
 	if !managedUpgradeWorkerReady(&device, r.WorkerRevision, r.WorkerPodUID) {
 		return fmt.Errorf("live CiscoDevice has no ready worker proof for runtime revision %q", r.WorkerRevision)
+	}
+	podNameAnnotation := managedprotocol.AnnotationAppWorkerPodName
+	podUIDAnnotation := managedprotocol.AnnotationAppWorkerPodUID
+	if device.Status.NetworkWorkerRevision != nil {
+		podNameAnnotation = managedprotocol.AnnotationNetworkWorkerPodName
+		podUIDAnnotation = managedprotocol.AnnotationNetworkWorkerPodUID
+	}
+	if err := requireAnnotation(up.Annotations, podNameAnnotation, r.WorkerPodName); err != nil {
+		return fmt.Errorf("runtime worker Pod binding: %w", err)
+	}
+	if err := requireAnnotation(up.Annotations, podUIDAnnotation, r.WorkerPodUID); err != nil {
+		return fmt.Errorf("runtime worker Pod binding: %w", err)
 	}
 	if err := r.validateManagedRuntimeSecretRevisions(ctx, &device); err != nil {
 		return err
@@ -389,8 +415,9 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 	if admission == nil {
 		return fmt.Errorf("status.managerAdmission is absent")
 	}
-	if admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolVersion(managedprotocol.Version) {
-		return fmt.Errorf("manager protocol %q does not match worker protocol %q", admission.ProtocolVersion, managedprotocol.Version)
+	expectedProtocol := opsv1alpha1.RequiredManagedUpgradeProtocol(up.Spec)
+	if !opsv1alpha1.ManagedUpgradeProtocolMatches(up) {
+		return fmt.Errorf("manager protocol %q does not match required leaf protocol %q", admission.ProtocolVersion, expectedProtocol)
 	}
 	if up.UID == "" || admission.LeafUID != string(up.UID) {
 		return fmt.Errorf("manager leaf UID %q does not match metadata.uid %q", admission.LeafUID, up.UID)
@@ -470,6 +497,186 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 		return err
 	}
 	return validateManagedClaimCoverage(up, up.Status.ManagerControl.Revision)
+}
+
+// validateManagedActivationBinding makes a manager-created preinstalled leaf
+// unusable unless it names the exact independently approved preparation
+// receipt and the worker is still using the same device trust inputs. Native
+// inventory is checked separately immediately before entering Activating.
+func (r *Reconciler) validateManagedActivationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) error {
+	if up == nil || up.Annotations[managedprotocol.AnnotationManaged] != "true" {
+		return nil
+	}
+	if up.Spec.ImageSource.Preinstalled == nil {
+		if up.Annotations[managedprotocol.AnnotationActivationApprovalHash] != "" {
+			return fmt.Errorf("activation authorization is present on a non-preinstalled image source")
+		}
+		return nil
+	}
+	annotations := up.Annotations
+	for _, key := range []string{
+		managedprotocol.AnnotationActivationApprovalHash,
+		managedprotocol.AnnotationPreparedReceiptHash,
+		managedprotocol.AnnotationPreparedSourceDigest,
+	} {
+		if !validManagedSHA256(annotations[key]) {
+			return fmt.Errorf("annotation %s is missing or is not a canonical sha256 identity", key)
+		}
+	}
+	if strings.TrimSpace(annotations[managedprotocol.AnnotationPreparedUpgradeUID]) == "" {
+		return fmt.Errorf("annotation %s is missing", managedprotocol.AnnotationPreparedUpgradeUID)
+	}
+	if strings.TrimSpace(annotations[managedprotocol.AnnotationPreparedUpgradeName]) == "" {
+		return fmt.Errorf("annotation %s is missing", managedprotocol.AnnotationPreparedUpgradeName)
+	}
+	expectedTrust := annotations[managedprotocol.AnnotationPreparedTrustHash]
+	currentTrust := ""
+	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" {
+		var err error
+		currentTrust, err = PreparedTrustIdentityHash(
+			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision)
+		if err != nil {
+			return err
+		}
+	}
+	if currentTrust != expectedTrust {
+		return fmt.Errorf("current device trust identity does not match the prepared receipt")
+	}
+	return nil
+}
+
+func (r *Reconciler) validateManagedActivationReceipt(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	_, err := r.validatedPreparedActivationParent(ctx, up)
+	return err
+}
+
+func (r *Reconciler) validatedPreparedActivationParent(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+) (*opsv1alpha1.IOSXESoftwareUpgrade, error) {
+	if err := r.validateManagedActivationBinding(up); err != nil {
+		return nil, err
+	}
+	if up == nil || up.Annotations[managedprotocol.AnnotationManaged] != "true" || up.Spec.ImageSource.Preinstalled == nil {
+		return nil, nil
+	}
+	var prepared opsv1alpha1.IOSXESoftwareUpgrade
+	name := up.Annotations[managedprotocol.AnnotationPreparedUpgradeName]
+	if err := r.apiReader().Get(ctx, client.ObjectKey{Namespace: up.Namespace, Name: name}, &prepared); err != nil {
+		return nil, fmt.Errorf("read authorized prepared leaf %s/%s: %w", up.Namespace, name, err)
+	}
+	if err := validatePreparedActivationParent(up, &prepared); err != nil {
+		return nil, err
+	}
+	return &prepared, nil
+}
+
+// validatePreparedActivationParent proves that a preinstalled activation leaf
+// names this exact immutable Prepared object and receipt. The per-device queue
+// uses the same predicate as activation reconciliation so the retained receipt
+// can yield only to its own authorized activation, never to an unrelated leaf.
+func validatePreparedActivationParent(
+	up, prepared *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	if up == nil || prepared == nil {
+		return fmt.Errorf("activation or prepared leaf is absent")
+	}
+	annotations := up.Annotations
+	if annotations[managedprotocol.AnnotationManaged] != "true" || up.Spec.ImageSource.Preinstalled == nil ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationActivationApprovalHash]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPreparedReceiptHash]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPreparedSourceDigest]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPreparedTrustHash]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPlanHash]) ||
+		strings.TrimSpace(annotations[managedprotocol.AnnotationCampaignUID]) == "" ||
+		strings.TrimSpace(annotations[managedprotocol.AnnotationDeviceUID]) == "" {
+		return fmt.Errorf("activation leaf authority binding is incomplete")
+	}
+	receipt := prepared.Status.PreparedReceipt
+	if string(prepared.UID) != annotations[managedprotocol.AnnotationPreparedUpgradeUID] ||
+		prepared.Name != annotations[managedprotocol.AnnotationPreparedUpgradeName] ||
+		prepared.Namespace != up.Namespace ||
+		prepared.Status.Phase != opsv1alpha1.UpgradePhasePrepared || receipt == nil {
+		return fmt.Errorf("authorized prepared leaf identity or phase changed")
+	}
+	if err := ValidatePreparedReceipt(receipt); err != nil {
+		return fmt.Errorf("authorized prepared receipt is invalid: %w", err)
+	}
+	if receipt.ReceiptHash != annotations[managedprotocol.AnnotationPreparedReceiptHash] ||
+		receipt.UpgradeUID != annotations[managedprotocol.AnnotationPreparedUpgradeUID] ||
+		receipt.DeviceUID != annotations[managedprotocol.AnnotationDeviceUID] ||
+		receipt.CampaignUID != annotations[managedprotocol.AnnotationCampaignUID] ||
+		receipt.PlanHash != annotations[managedprotocol.AnnotationPlanHash] ||
+		receipt.TargetVersion != up.Spec.TargetVersion ||
+		receipt.SourceDigest != annotations[managedprotocol.AnnotationPreparedSourceDigest] ||
+		receipt.TrustIdentityHash != annotations[managedprotocol.AnnotationPreparedTrustHash] {
+		return fmt.Errorf("authorized prepared receipt no longer matches the activation leaf binding")
+	}
+	return nil
+}
+
+// ValidatePreparedActivationParent verifies that an activation leaf is bound
+// to one exact immutable Prepared object and receipt. Manager-side ownership
+// settlement uses the same predicate as worker-side activation dispatch.
+func ValidatePreparedActivationParent(
+	activation, prepared *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	return validatePreparedActivationParent(activation, prepared)
+}
+
+// PreparedReceiptConsumed reports whether an immutable preparation has one
+// exact, conclusively settled activation successor. The Prepared object remains
+// append-only audit evidence; only a terminal, verified successor with the same
+// frozen manager and content bindings releases its per-device queue ownership.
+// Policy resourceVersion is deliberately not an equality fence: metadata-only
+// policy churn advances it within the same policy UID and safety epoch.
+func PreparedReceiptConsumed(
+	prepared *opsv1alpha1.IOSXESoftwareUpgrade,
+	candidates []opsv1alpha1.IOSXESoftwareUpgrade,
+) bool {
+	if prepared == nil || prepared.Status.Phase != opsv1alpha1.UpgradePhasePrepared ||
+		prepared.Status.PreparedReceipt == nil ||
+		ValidatePreparedReceipt(prepared.Status.PreparedReceipt) != nil {
+		return false
+	}
+	receipt := prepared.Status.PreparedReceipt
+	for i := range candidates {
+		consumer := &candidates[i]
+		admission := consumer.Status.ManagerAdmission
+		if consumer.UID == prepared.UID ||
+			validatePreparedActivationParent(consumer, prepared) != nil ||
+			consumer.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded ||
+			consumer.Status.CompletionTime == nil ||
+			(consumer.Status.RunningVersion != receipt.TargetVersion &&
+				!strings.HasPrefix(consumer.Status.RunningVersion, receipt.TargetVersion+".")) ||
+			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "Verified") ||
+			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "DeviceMutationSettled") ||
+			admission == nil || (admission.ProtocolVersion != receipt.ManagedProtocolVersion &&
+			admission.ProtocolVersion != opsv1alpha1.RequiredManagedUpgradeProtocol(consumer.Spec)) ||
+			admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
+			admission.LeafUID != string(consumer.UID) ||
+			admission.DeviceUID != receipt.DeviceUID || admission.NodeUID != receipt.NodeUID ||
+			admission.DeviceGeneration != receipt.DeviceGeneration ||
+			admission.PhysicalIdentity != receipt.PhysicalIdentity ||
+			admission.CampaignUID != receipt.CampaignUID || admission.PlanHash != receipt.PlanHash ||
+			admission.PolicyUID != receipt.PolicyUID ||
+			admission.PolicyEpoch != receipt.PolicyEpoch {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func validManagedSHA256(value string) bool {
+	if len(value) != len("sha256:")+64 || !strings.HasPrefix(value, "sha256:") || strings.ToLower(value) != value {
+		return false
+	}
+	_, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return err == nil
 }
 
 // managedUpgradeWorkerReady verifies the worker which owns the software
@@ -592,6 +799,20 @@ func (r *Reconciler) prepareManagedMutationClaim(
 		return true, nil
 	}
 	if decision.allowClaim {
+		var evidenceErr error
+		if current.Spec.RequireNetworkEvidence && current.Status.ManagerAdmission.NetworkEvidenceHash == "" {
+			evidenceErr = fmt.Errorf("leaf requires network evidence but manager grant omits it")
+		} else {
+			evidenceErr = r.validateManagedNetworkGrant(ctx, current.Status.ManagerAdmission, now)
+		}
+		if evidenceErr != nil {
+			decision.allowClaim = false
+			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
+			decision.reason = "NetworkEvidenceAuthorityInvalid"
+			decision.message = boundedWorkerMessage(evidenceErr.Error())
+		}
+	}
+	if decision.allowClaim {
 		devicePodLister, workloadGate, gateErr := r.managedClaimPodLister(current)
 		if gateErr != nil {
 			decision.allowClaim = false
@@ -655,6 +876,71 @@ func (r *Reconciler) prepareManagedMutationClaim(
 	decision.message = fmt.Sprintf("claimed %s at manager control revision %d", stage, decision.controlRevision)
 	applyWorkerControlDecision(current, decision, now)
 	return true, nil
+}
+
+// validateManagedNetworkGrant closes the manager-grant/worker-claim race for
+// an opted-in network gate. It uses an uncached read immediately before a new
+// durable mutation claim and requires the exact manager-accepted observation
+// bound into the grant to remain current and unexpired. An omitted authority
+// is the compatibility contract for campaigns without a network policy.
+func (r *Reconciler) validateManagedNetworkGrant(
+	ctx context.Context,
+	admission *opsv1alpha1.UpgradeManagerAdmissionStatus,
+	now time.Time,
+) error {
+	if admission == nil {
+		return fmt.Errorf("manager admission is absent")
+	}
+	present := []bool{
+		admission.NetworkEvidenceHash != "",
+		admission.NetworkEvidenceProducerRevision != "",
+		admission.NetworkEvidenceWorkerPodUID != "",
+		admission.NetworkEvidenceSampleSequence != nil,
+		admission.NetworkEvidenceNotAfter != nil,
+	}
+	for _, value := range present[1:] {
+		if value != present[0] {
+			return fmt.Errorf("manager network evidence authority is incomplete")
+		}
+	}
+	if !present[0] {
+		return nil
+	}
+	if *admission.NetworkEvidenceSampleSequence < 1 || admission.NetworkEvidenceNotAfter.IsZero() {
+		return fmt.Errorf("manager network evidence authority is invalid")
+	}
+	if !now.UTC().Before(admission.NetworkEvidenceNotAfter.Time.UTC()) {
+		return fmt.Errorf("manager network evidence authority expired at %s",
+			admission.NetworkEvidenceNotAfter.Time.UTC().Format(time.RFC3339Nano))
+	}
+	var device ciskov1.CiscoDevice
+	if err := r.apiReader().Get(ctx, client.ObjectKey{Namespace: r.DeviceNamespace, Name: r.DeviceName}, &device); err != nil {
+		return fmt.Errorf("read current network evidence: %w", err)
+	}
+	networkWorker := device.Status.NetworkWorkerRevision
+	if networkWorker == nil || networkWorker.DesiredRevision != admission.NetworkEvidenceProducerRevision ||
+		networkWorker.ObservedRevision != admission.NetworkEvidenceProducerRevision ||
+		networkWorker.PodUID != admission.NetworkEvidenceWorkerPodUID {
+		return fmt.Errorf("current network worker no longer matches the manager grant")
+	}
+	accepted := device.Status.HealthObservation
+	if accepted == nil || accepted.AcceptedNetwork == nil {
+		return fmt.Errorf("current manager-accepted network evidence is absent")
+	}
+	sample := accepted.AcceptedNetwork
+	if sample.ProducerRevision != admission.NetworkEvidenceProducerRevision ||
+		sample.WorkerPodUID != admission.NetworkEvidenceWorkerPodUID ||
+		sample.SampleSequence != *admission.NetworkEvidenceSampleSequence {
+		return fmt.Errorf("current manager-accepted network evidence identity changed")
+	}
+	digest, err := topologyhealth.AcceptedNetworkDigest(sample)
+	if err != nil {
+		return err
+	}
+	if digest != admission.NetworkEvidenceHash {
+		return fmt.Errorf("current manager-accepted network evidence digest changed")
+	}
+	return nil
 }
 
 // managedClaimPodLister selects the final device-side workload fence. The

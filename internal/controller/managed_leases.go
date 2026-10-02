@@ -26,6 +26,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -237,21 +238,33 @@ func (r *CiscoDeviceReconciler) repairManagedLeaseBindings(ctx context.Context, 
 			immutable[key] = value
 		}
 	}
-	if err := validateManagedBoundLeaseMetadata(lease, immutable, labels, owners); err != nil {
-		return err
-	}
-	before := lease.DeepCopy()
-	for _, key := range workerKeys {
-		if value, ok := annotations[key]; ok {
-			lease.Annotations[key] = value
-		} else {
-			delete(lease.Annotations, key)
+	key := client.ObjectKeyFromObject(lease)
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		current := &coordv1.Lease{}
+		if err := r.reader().Get(ctx, key, current); err != nil {
+			return err
 		}
-	}
-	if reflect.DeepEqual(before.Annotations, lease.Annotations) {
+		if err := validateManagedBoundLeaseMetadata(current, immutable, labels, owners); err != nil {
+			return err
+		}
+		before := current.DeepCopy()
+		for _, key := range workerKeys {
+			if value, ok := annotations[key]; ok {
+				current.Annotations[key] = value
+			} else {
+				delete(current.Annotations, key)
+			}
+		}
+		if reflect.DeepEqual(before.Annotations, current.Annotations) {
+			*lease = *current
+			return nil
+		}
+		if err := r.Patch(ctx, current, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})); err != nil {
+			return err
+		}
+		*lease = *current
 		return nil
-	}
-	return r.Patch(ctx, lease, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{}))
+	})
 }
 
 func validateManagedBoundLeaseMetadata(

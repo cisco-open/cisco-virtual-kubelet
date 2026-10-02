@@ -2362,10 +2362,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
-Package: urllib3 2.7.0
+Package: urllib3 2.8.0
 License: MIT
 
---- urllib3-2.7.0.dist-info/licenses/LICENSE.txt ---
+--- urllib3-2.8.0.dist-info/licenses/LICENSE.txt ---
 
 MIT License
 

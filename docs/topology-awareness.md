@@ -838,10 +838,20 @@ when the manager freezes drain evidence and again before eviction:
 - the bound Pod names the default scheduler, every controlling template leaves
   `nodeName` unset, and neither Pod nor template tolerates
   `cisco.vk/device-maintenance=gnoi:NoSchedule` or all `NoSchedule` taints;
-- it has no `nodeSelector`, required node/Pod affinity or anti-affinity, or
-  `DoNotSchedule` topology spread. Preferred affinity and `ScheduleAnyway`
-  spread are supported; hard placement remains supported only with
-  `BlockIfRunning` in this preview;
+- `nodeSelector`, required node affinity and `DoNotSchedule` topology spread
+  are preserved in an immutable placement digest. Before protection or
+  Eviction, CVK must observe another Ready, schedulable Node that satisfies
+  those constraints, relevant taints, allocatable Pod/resources and current
+  hard-spread skew. This is a conservative feasibility check, not a capacity
+  reservation; kube-scheduler remains authoritative and the replacement must
+  still become natively Ready. Required Pod affinity/anti-affinity remains
+  unsupported because its peer-set race has not been qualified. Preferred
+  affinity and `ScheduleAnyway` spread remain scheduler hints;
+- CVK performs an uncached unstructured read of the exact Pod UID and
+  resourceVersion. If the served Pod contains native
+  `spec.schedulingGroup`, drain fails closed. This prevents an older typed
+  client from silently dropping Kubernetes 1.37 TAS membership; group-aware
+  eviction remains disabled until the E08 physical lifecycle contract passes;
 - the Pod is controlled by an exact `apps/v1` ReplicaSet incarnation, either
   directly or through an exact Deployment incarnation; bare Pods, Jobs,
   CronJobs, DaemonSets, StatefulSets, and custom controllers are unsupported;
@@ -1069,9 +1079,11 @@ kubectl delete role,rolebinding \
 PDBs govern voluntary Kubernetes eviction; they do not prove network
 redundancy, forwarding health, storage portability, or that a switch outage is
 safe. Qualify the application's behavior and every target IOS-XE
-release/platform combination independently. This phase continues to use the
-existing combined IOS-XE install/activate leaf. A separately durable
-stage/approve/activate protocol is not implemented or implied.
+release/platform combination independently. The original drain qualification
+used the combined IOS-XE install/activate leaf. This branch also implements
+separate PrepareOnly receipts and approved activation; that does not extend
+the earlier drain test's physical coverage. See the
+[separate-activation evidence and boundaries](evidence/topology-2026-10-02/e06-separate-activation.md).
 
 The manager-side Eviction/PDB, identity, reservation, and recovery mechanics
 are deliberately above the IOS-XE driver. A future NX-OS or IOS XR adapter can
@@ -1146,7 +1158,7 @@ ConfigMap `resourceVersion` as executable drift:
   previously effective, and current values, so an existing rollout can never
   be loosened by a policy edit; and
 - changing policy/ledger identity, policy version, selector, required or
-  projected topology-key sets, domain-key or optional-budget shape, or setting
+  projected topology-key sets, domain-key, risk-group or optional-budget shape, or setting
   `maxCampaignTargets` below the frozen target count sets
   `PolicyChanged=True` with `Reason=ReplanRequired` and requires a new rollout.
 
@@ -1172,6 +1184,67 @@ Already-claimed work keeps its reservation and is observed to a conclusive
 outcome; policy or target drift never silently expands or abandons existing
 mutation authority.
 
+Administrator policy may also define up to 16 `disruptionProtections`. Each
+rule has a DNS-label name, a reason (`CriticalService` or `SingletonPath`) and
+a non-empty Kubernetes label selector whose keys are included in
+`requiredTopologyKeys`. These rules are prohibitions, not hints: a matching
+CiscoDevice cannot enter the current combined software lifecycle. The manager
+checks them while freezing the plan and again from current protected labels
+before admission. Adding or changing a rule changes both policy hashes and
+requires re-planning; already-claimed physical work remains under observation
+instead of being abandoned. Because the current lifecycle is not independently
+staged, the rule also blocks image preparation. Never infer redundancy merely
+from a label—use qualified path and service evidence before removing a
+singleton or critical-service protection.
+
+Administrator policy may additionally define up to 16 `riskGroups`. Each
+group has a DNS-label name, a non-empty Kubernetes selector restricted to
+`requiredTopologyKeys`, `maxConcurrentTransfers`, and `maxUnavailable`. It may
+also set `maxAggregateTransferBytesPerSecond` for a known shared distribution
+or forwarding path. A
+device may match multiple groups. The frozen plan records each target's sorted
+groups and a SHA-256 digest of the complete relevant physical membership.
+Before admission, the manager recomputes that membership and requires an exact
+match. In the same ledger compare-and-swap used for global/domain budgets, it
+counts unhealthy non-target members and reservations from every campaign
+against every applicable group. All groups must pass. Changing a selector,
+budget, or membership requires a new plan and approval. Risk groups are
+explicit operator constraints; they do not prove that a forwarding path is
+redundant or healthy.
+
+For each matching group with an aggregate byte ceiling, the manager derives a
+conservative per-transfer share by dividing that ceiling by the group's
+`maxConcurrentTransfers`. The lowest share across overlapping groups is frozen
+in the approved target and copied into the immutable leaf. The worker enforces
+that value independently while materializing remote image bytes and while
+streaming the verified image through gNOI OS.Install. Cache hits skip the
+source-network segment but never the device segment. A resolver that cannot
+enforce an opted-in source limit is rejected before install; an omitted limit
+preserves existing behavior. An ordinary paced leaf requires the
+`rollout-byte-pacing-v1` manager/worker admission protocol, which makes a
+rolling deployment fail closed when an older worker does not understand the
+new rate field. The ceiling applies only to CVK-owned traffic and does not
+replace measured headroom or service-path validation. Ensure the install
+timeout and maintenance window accommodate the paced image size plus device
+validation and activation.
+
+Managed preparation and receipt-bound activation use
+`rollout-staged-activation-v1`, which also enforces pacing when configured.
+Network-enabled campaigns freeze `requireNetworkEvidence: true` in their
+immutable leaves. Non-staged network leaves use `rollout-network-evidence-v1`;
+staged network leaves use the staged protocol. Both require the exact fresh
+network evidence at each mutation claim; missing evidence cannot silently
+disable that gate. Older workers reject these new protocols.
+
+Before replacing controllers, settle active older staging **and** network-gated
+campaigns using their compatible runtime. Do not edit immutable leaves or
+protocols, erase claims, or assume an arbitrary Helm rollback is safe. Apply
+new CRDs before the matching manager/workers, with new campaigns paused.
+The exact released-manager protocol check and stored neighbor map-to-atomic
+migration now pass. Interrupted deployment and the reverse-manager/rollback
+matrix remain merge gates; see the
+[compatibility follow-up](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
+
 ### Admission and execution behavior
 
 For each target, the manager checks:
@@ -1181,12 +1254,18 @@ For each target, the manager checks:
   Node UID, projection hash, and worker protocol;
 - deterministic source selection still resolves to the exact frozen endpoint
   and Secret incarnation;
+- no administrator `CriticalService` or `SingletonPath` disruption protection
+  matches the current protected device labels;
 - fresh device and Node health, including current producer observations for
   `NodeIdentityReady`, `TopologyReady`, and `GNOIConfigurationReady`;
 - the selected workload policy: `BlockIfRunning` requires no live Kubernetes
   or device workload, while `Drain` requires the exact bounded eligibility,
   PDB, session, teardown, replacement-readiness, and inventory proofs above;
 - global and every independent domain transfer/unavailability ceiling;
+- every matching administrator risk-group transfer/unavailability ceiling,
+  including non-target health and reservations from other campaigns;
+- the strictest frozen risk-group byte-rate share on every applicable image
+  transfer segment;
 - existing unhealthy or maintained fleet members, including non-targets; and
 - no conflicting device mutation.
 
@@ -1361,8 +1440,11 @@ domain, image, or policy values as labels:
 - `cisco_vk_topology_projection_reconciliations_total{result}` with the bounded
   `projected`, `skipped`, `error`, or `other` result;
 - `cisco_vk_topology_rollout_reconciliations_total`;
+- `cisco_vk_topology_rollout_reconcile_duration_seconds` for bounded
+  p50/p95/p99 latency queries;
 - `cisco_vk_topology_rollout_target_transitions_total`;
 - `cisco_vk_topology_rollout_admission_waits_total`;
+- `cisco_vk_topology_rollout_ledger_conflict_retries_total`;
 - `cisco_vk_topology_rollout_ledger_active_reservations`; and
 - `cisco_vk_topology_rollout_ledger_serialized_bytes`.
 
@@ -1584,6 +1666,30 @@ already hashed and checked by the topology-enabled manager preflight.
    removed. The controller has already restored the configured legacy account
    for topology-disabled compatibility; it is not a managed-topology identity.
 
+A retained `Prepared` leaf is intentionally not idle ownership even when its
+manager admission is `Settled`: its receipt reserves that exact device and
+installed image for a later separately authorized activation. Reverse handoff
+and managed device deletion therefore remain blocked while any exact managed
+leaf is `Prepared` or carries a preparation receipt. Complete its approved
+activation while the managed owner is intact, or retain managed ownership. Do
+not copy the receipt/approval to another owner or delete the leaf as an
+invalidation shortcut; a device-reconciled receipt invalidation contract is
+not yet supported.
+
+One exact activation consumes that queue ownership only after it is terminal
+`Succeeded`, verifies the prepared target version, records a conclusively
+settled device mutation, and settles the same manager/device/Node/campaign/
+policy/plan bindings. The Prepared object and receipt stay append-only for
+audit, but a later campaign may then acquire the device queue. The manager and
+provider use the same predicate; any missing completion, condition or identity
+binding continues to block.
+
+The same fail-closed rule applies to `StagedForNextBoot` and to every
+non-terminal leaf, even if a contradictory historical object says manager
+admission is `Settled`. Resolve and independently verify that device-side state
+before requesting handoff; settlement alone must not reinterpret an uncertain
+or future boot mutation as terminal.
+
 If workload drain was ever enabled, include each retained cleanup Role/Binding
 in the evidence export. After step 2, verify that its namespace has no reserved
 drain marker/finalizer, then remove the exact pair with the command above before
@@ -1637,6 +1743,35 @@ forward enrollment until the shared readiness proof and credential retirement
 finish. The request annotation can be removed by a topology-author
 after topology is disabled; the Complete status and Node audit marker remain
 identity state.
+
+### Offline transfer to another cluster
+
+Cross-cluster transfer is an offline ownership move, not active/active
+failover. A Lease in one cluster cannot fence a writer in another cluster.
+Before the destination receives device credentials or creates a CiscoDevice:
+
+1. pause source-cluster campaigns and prove there is no topology lock, ledger
+   reservation, unsettled maintenance session, claimed operation, or retained
+   `Prepared` receipt for the device;
+2. complete the UID-bound reverse handoff above, then delete the source
+   CiscoDevice through its normal finalizer and verify its worker Deployments,
+   Pods, per-device Leases, generated bindings and Node are absent;
+3. remove the source credential Secret or rotate/revoke the device credential
+   and trust material so a retained source-cluster copy cannot authenticate;
+4. retain the exported device UID, Node UID, handoff status, ledger and
+   operation history as audit evidence, but do not import approvals, claims,
+   receipts, Leases or Kubernetes UIDs into the destination; and
+5. only after source revocation is independently verified, create a fresh
+   destination Secret/CiscoDevice and require new read-only discovery, exact
+   physical identity, topology projection and worker-binding health before any
+   mutation is approved.
+
+Exercise a negative old-writer request after revocation and a positive
+destination observation before declaring the move complete. If the source
+cluster is unreachable and the device credential cannot be rotated or revoked,
+the transfer is blocked. Cross-cluster Lease expiry, copied Kubernetes state,
+or merely scaling the source controller to zero is not sufficient fencing.
+Automated multi-cluster failover remains out of scope.
 
 An interrupted upgrade from the earlier per-device model has one additional
 recovery state: exact generated legacy RBAC can exist before its UID marker.
@@ -1736,19 +1871,101 @@ gNOI OS provisioning, image digest/compatibility, configuration persistence,
 health evidence, and physical redundancy. Synthetic labels on co-located
 switches are not evidence of real multi-site fault tolerance.
 
+### Read-only accepted topology graph
+
+`kubectl ciscovk topology graph` renders a bounded diagnostic using only the
+manager-owned `acceptedNetwork` snapshots. It carries local and remote ports,
+protocol/routing context, freshness and sample provenance. It never opens a
+device session, edits labels or becomes rollout authority.
+
+For protocol-local names such as CDP device IDs, enable `topology.graph` and
+declare exact `peerMappings` only after verifying the mapping from
+authenticated device inventory. Helm stores the resulting `graph.json` beside
+`policy.json` in the existing admission-protected topology-policy ConfigMap,
+but the keys have separate semantics: graph data is excluded from campaign
+policy and approval hashes. `declaredLinks` can then report missing or
+unexpected accepted links. Use `external: true` for a verified endpoint that
+is intentionally outside CVK management. Discovery never writes mappings or
+declarations back to Kubernetes.
+
+Operators pass the exact ConfigMap coordinate with `--policy-configmap`; JSON
+output binds the ConfigMap UID, resourceVersion and canonical content hash
+into graph provenance. This proves which accepted observations and declared
+model produced a finding. It does not prove forwarding reachability,
+redundancy, service health, bandwidth headroom or permission to upgrade.
+
 ## Deferred roadmap and limitations
 
-The following are intentionally not implemented in the current phases:
+The [remaining implementation roadmap](topology-roadmap.md) maps these gaps
+to PR slices, ownership boundaries, dependencies and qualification gates. The
+[execution plan](topology-roadmap-execution.md) records outstanding code and
+test work. The current code includes a partial T1/T2 evidence gate, a bounded
+ReplicaSet/Deployment drain path with partial physical evidence, ephemeral
+digest-addressed worker-local image caching, an optional Kubernetes 1.37
+native-TAS conformance lane, and a NoReboot strategy mapping. Independent
+prepare/approval/activate semantics are implemented with physical evidence for
+the tested IOS-XE cohort; image invalidation/recovery and the complete combined
+service-continuity matrix remain open. Read-only graph comparison and
+manager-owned persisted diagnostics passed the recorded controlled
+link-change/restore qualification. Graphs do not establish independent
+forwarding-path safety. The wider roadmap is not complete; use the
+[current evidence index](evidence/topology-2026-10-02/README.md) rather than
+inferring untested acceptance from feature availability.
 
-- durable prefetch, shared/PVC cache, independent transfer-only admission, or
-  claims that the worker's location represents the device data path (later
-  Phase 3 work, pending measured need and a complete cache-loss protocol);
+To opt into the network gate, require complete evidence and name the exact
+interfaces and adjacencies that must be healthy:
+
+```yaml
+spec:
+  plan:
+    strategy: Reload # NoReboot is a combined strategy, not a proven prepare-only hold
+    health:
+      network:
+        enabled: true
+        requireCompleteEvidence: true
+        requiredInterfaces: [GigabitEthernet1/0/1]
+        requiredNeighbors: [core-a]
+        requireInterfacesUp: true
+        requireNeighborsFull: true
+```
+
+The network-management worker publishes only a bounded producer sample under
+`CiscoDevice.status.healthObservation.network`; it does not publish raw CLI,
+credentials, or arbitrary topology. That raw field is not rollout authority.
+The manager validates the exact device incarnation, physical-identity hash,
+current worker revision and Pod UID, positive sequence, original collection
+interval and duplicate-free interface/adjacency identities. Only then does it
+copy the sample to the manager-owned
+`CiscoDevice.status.healthObservation.acceptedNetwork`. Native admission lets
+the worker change the raw field but rejects worker changes to the accepted
+field. Rollouts consume only the accepted copy and calculate freshness from
+the start of collection, so a late status write or manager restart cannot
+refresh old evidence.
+
+Missing, unaccepted or stale evidence blocks the rollout with a reason such as
+`EvidenceMissing`, `EvidenceStale`, `AlternatePathUnavailable`, or
+`DeviceIdentityMismatch`. The gate is nil by default, so existing campaigns
+retain their behavior. Physical idle-state CLI comparison is recorded, but
+loaded directional-rate accuracy and redundant-supervisor health remain
+unqualified until their declared E02 test fixtures exist; these signals must
+not be inferred from labels or an unrelated successful device read.
+
+The following remain intentionally bounded or deferred:
+
+- shared/PVC cache, independent transfer-only admission, or claims that the
+  worker's location represents the device data path. The implemented
+  per-worker cache is digest-addressed and fail-closed; shared caching still
+  requires measured WAN benefit and a separate ownership protocol;
 - general-purpose drain, StatefulSet/PVC/DaemonSet/Job/custom-controller
-  evacuation, forced deletion or PDB bypass, and independently durable
-  install/stage/activate reservations (later Phase 4 work);
+  evacuation, forced deletion or PDB bypass, and independently approved
+  activation. The implemented path is limited to ReplicaSet/Deployment owners
+  with portable workloads and PDB-aware eviction; complete physical service
+  qualification and hard-placement support require E07;
 - an authoritative discovered graph, graph-cost workload scheduling, a custom
   scheduler, or automatic declared-topology mutation;
-- a mandatory dependency on alpha native Workload/PodGroup/TAS APIs; and
+- a mandatory dependency on alpha native Workload/PodGroup/TAS APIs. Native
+  TAS is validated only in the separate Kubernetes 1.37 disposable conformance
+  lane and is not enabled in the Kubernetes 1.35 production baseline; and
 - a generic NX-OS/IOS XR rollout CRD before a second driver demonstrates
   compatible lifecycle guarantees (Phase 5).
 

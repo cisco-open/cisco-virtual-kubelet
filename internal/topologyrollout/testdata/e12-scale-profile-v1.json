@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "cisco.vk/e12-scale-profile/v1",
+  "fleetMembers": 1000,
+  "campaignTargets": [1, 10, 50, 100],
+  "maxActiveReservations": 256,
+  "maxLedgerBytes": 262144,
+  "reconcileLatencyBudgetSeconds": {
+    "p50": 0.5,
+    "p95": 2.0,
+    "p99": 5.0
+  },
+  "maxManagerResidentBytes": 536870912,
+  "maxAPIRequestsPerReconcile": 250,
+  "maxLedgerConflictRetriesPerMutation": 5,
+  "maxControllerWatchKinds": 8
+}

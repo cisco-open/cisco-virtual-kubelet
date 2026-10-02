@@ -48,6 +48,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
 
@@ -84,6 +85,7 @@ func (r *IOSXESoftwareRolloutReconciler) reader() client.Reader {
 }
 
 func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
+	started := time.Now()
 	defer func() {
 		metricResult := "complete"
 		if retErr != nil {
@@ -92,6 +94,7 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 			metricResult = "requeue"
 		}
 		topologyrollout.RecordReconcile(metricResult, retErr)
+		topologyrollout.RecordReconcileDuration(metricResult, retErr, time.Since(started))
 	}()
 	var rollout opsv1alpha1.IOSXESoftwareRollout
 	if err := r.reader().Get(ctx, req.NamespacedName, &rollout); err != nil {
@@ -144,7 +147,10 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 	// their immutable audit result across later policy or source changes, while
 	// replaying the narrow exact-Pod cleanup needed to repair a stale Preparing
 	// writer. Deletion still runs through the finalizer path above.
-	if rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded ||
+	activationRequested := rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded &&
+		rollout.Spec.Plan.Strategy == opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly &&
+		rollout.Spec.ActivationApproval != nil
+	if (rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded && !activationRequested) ||
 		rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled {
 		if err := r.reconcileTerminalDrainProtection(ctx, &rollout); err != nil {
 			return ctrl.Result{}, err
@@ -199,6 +205,16 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 	if rollout.Status.FrozenPlan == nil {
 		frozen, targets, err := r.buildFrozenPlan(ctx, &rollout, policy, now)
 		if err != nil {
+			// A managed Node can briefly retain the initialization guard while
+			// the worker republishes its post-reboot identity/topology proof.
+			// Treat that narrow handoff window as retryable planning state rather
+			// than freezing a terminal PlanningFailed result that forces operators
+			// to delete and recreate an otherwise valid rollout. No child leaf or
+			// device mutation exists before the frozen plan is published.
+			if isRetryableRolloutPlanningError(err) {
+				r.emitRolloutEvent(&rollout, corev1.EventTypeNormal, "PlanningDeferred", err.Error())
+				return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+			}
 			return r.failRollout(ctx, &rollout, "PlanningFailed", err.Error(), true)
 		}
 		before := rollout.DeepCopy()
@@ -261,6 +277,10 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 	return r.reconcileExecution(ctx, &rollout, policy, now)
+}
+
+func isRetryableRolloutPlanningError(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "topology initialization guard")
 }
 
 func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
@@ -356,18 +376,30 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 		CreatedAt: metav1.NewTime(now), CampaignGeneration: rollout.Generation,
 		Policy: policySnapshot, Targets: planned,
 	}
+	if len(policy.Config.RiskGroups) > 0 {
+		members, _, err := r.currentFleetMembers(ctx, rollout, policy, policy.AdmissionPolicy(now))
+		if err != nil {
+			return nil, nil, fmt.Errorf("freeze administrator risk-group membership: %w", err)
+		}
+		frozen.RiskGroupMembershipHash, err = topologyrollout.RiskGroupMembershipHash(members)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
 	canonical := struct {
-		CampaignUID string                                          `json:"campaignUID"`
-		Generation  int64                                           `json:"generation"`
-		Plan        opsv1alpha1.IOSXESoftwareRolloutPlan            `json:"plan"`
-		Policy      opsv1alpha1.IOSXESoftwareRolloutPolicySnapshot  `json:"policy"`
-		Targets     []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget `json:"targets"`
+		CampaignUID             string                                          `json:"campaignUID"`
+		Generation              int64                                           `json:"generation"`
+		Plan                    opsv1alpha1.IOSXESoftwareRolloutPlan            `json:"plan"`
+		Policy                  opsv1alpha1.IOSXESoftwareRolloutPolicySnapshot  `json:"policy"`
+		RiskGroupMembershipHash string                                          `json:"riskGroupMembershipHash,omitempty"`
+		Targets                 []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget `json:"targets"`
 	}{
-		CampaignUID: string(rollout.UID),
-		Generation:  rollout.Generation,
-		Plan:        rollout.Spec.Plan,
-		Policy:      policySnapshot,
-		Targets:     planned,
+		CampaignUID:             string(rollout.UID),
+		Generation:              rollout.Generation,
+		Plan:                    rollout.Spec.Plan,
+		Policy:                  policySnapshot,
+		RiskGroupMembershipHash: frozen.RiskGroupMembershipHash,
+		Targets:                 planned,
 	}
 	encoded, err := json.Marshal(canonical)
 	if err != nil {
@@ -604,6 +636,15 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if device.Spec.Driver != ciskov1.DeviceDriverXE {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("driver %s is unsupported by IOSXESoftwareRollout", device.Spec.Driver)
 	}
+	protection, err := policy.DisruptionProtection(device.Labels)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("evaluate administrator disruption protection: %w", err)
+	}
+	if protection != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf(
+			"%sProtected: administrator rule %q prohibits the current disruptive lifecycle",
+			protection.Reason, protection.Name)
+	}
 	if device.UID == "" || device.Status.NodeIdentity == nil || device.Status.TopologyProjection == nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("managed Node identity and topology projection are not ready")
 	}
@@ -669,6 +710,10 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
 	}
+	if err := r.revalidateNetworkEvidence(ctx, rollout, device, physicalID,
+		policy.Config.HealthFreshnessSeconds, now); err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, err
+	}
 	if device.Labels[managedprotocol.ImageFamilyLabel] != rollout.Spec.Plan.Image.ImageFamily {
 		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("%s must equal imageFamily %q", managedprotocol.ImageFamilyLabel, rollout.Spec.Plan.Image.ImageFamily)
 	}
@@ -685,6 +730,14 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		topologyValues = append(topologyValues, opsv1alpha1.IOSXESoftwareRolloutTopologyValue{Key: key, Value: value})
 	}
 	sort.Slice(topologyValues, func(i, j int) bool { return topologyValues[i].Key < topologyValues[j].Key })
+	riskGroups, err := policy.RiskGroups(device.Labels)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("evaluate administrator risk groups: %w", err)
+	}
+	maxTransferBytesPerSecond, err := policy.MaxTransferBytesPerSecond(device.Labels)
+	if err != nil {
+		return opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{}, fmt.Errorf("evaluate administrator transfer pacing: %w", err)
+	}
 	wave := int32(1)
 	if cohort != "" {
 		wave = 0
@@ -696,8 +749,178 @@ func (r *IOSXESoftwareRolloutReconciler) freezeTarget(
 		ImageFamily: rollout.Spec.Plan.Image.ImageFamily, Source: source, QualificationCohort: qualificationCohort,
 		WorkerProtocolVersion: managedprotocol.Version,
 		ProjectionHash:        device.Status.TopologyProjection.EffectiveLabelHash, Topology: topologyValues,
+		RiskGroups: riskGroups, MaxTransferBytesPerSecond: maxTransferBytesPerSecond,
 		CanaryCohort: cohort, Wave: wave, ChildName: rolloutChildName(rollout, device),
 	}, nil
+}
+
+func evaluateNetworkHealth(
+	health *ciskov1.DeviceHealthObservationStatus,
+	physicalIdentity string,
+	expectedProducerRevision string,
+	expectedWorkerPodUID string,
+	now time.Time,
+	maxAge time.Duration,
+	policy *opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec,
+) topologyhealth.Decision {
+	if strings.TrimSpace(expectedProducerRevision) == "" || strings.TrimSpace(expectedWorkerPodUID) == "" {
+		return topologyhealth.Decision{Reason: "ExpectedIdentityMissing", Message: "network gate requires a bound worker revision and Pod identity"}
+	}
+	if health == nil || health.AcceptedNetwork == nil {
+		return topologyhealth.Decision{Reason: "EvidenceMissing", Message: "manager has not accepted a network observation"}
+	}
+	accepted := health.AcceptedNetwork
+	observation := topologyhealth.Observation{
+		CollectionStartedAt: accepted.CollectionStartedAt.Time,
+		CollectionEndedAt:   accepted.CollectionEndedAt.Time,
+		SampleSequence:      accepted.SampleSequence,
+		WorkerPodUID:        accepted.WorkerPodUID,
+		ObservedAt:          accepted.ObservedAt.Time,
+		Complete:            accepted.Complete,
+		UnknownReason:       accepted.UnknownReason,
+		ProducerRevision:    accepted.ProducerRevision,
+		DeviceIdentityHash:  accepted.DeviceIdentityHash,
+	}
+	for _, item := range accepted.Interfaces {
+		var headroom *float64
+		if item.HeadroomPercent != nil {
+			value := float64(*item.HeadroomPercent)
+			headroom = &value
+		}
+		observation.Interfaces = append(observation.Interfaces, topologyhealth.InterfaceObservation{
+			Name: item.Name, OperUp: item.OperUp, HeadroomPct: headroom,
+		})
+	}
+	for _, item := range accepted.Neighbors {
+		observation.Neighbors = append(observation.Neighbors, topologyhealth.NeighborObservation{
+			Identity: item.Identity, ID: item.ID, Interface: item.Interface,
+			RoutingDomain: item.RoutingDomain, State: item.State, Source: item.Source,
+		})
+	}
+	var minimumHeadroom *float64
+	if policy.MinimumHeadroomPercent != nil {
+		value := float64(*policy.MinimumHeadroomPercent)
+		minimumHeadroom = &value
+	}
+	return topologyhealth.Evaluate(now, observation, topologyhealth.Policy{
+		ExpectedProducerRevision: expectedProducerRevision,
+		ExpectedWorkerPodUID:     expectedWorkerPodUID,
+		RequireSampleProvenance:  true,
+		MaxCollectionDuration:    60 * time.Second,
+		MaxAge:                   maxAge, RequiredInterfaces: policy.RequiredInterfaces,
+		RequiredNeighbors: policy.RequiredNeighbors, RequireInterfacesUp: policy.RequireInterfacesUp,
+		RequireNeighborsFull: policy.RequireNeighborsFull, MinimumHeadroomPercent: minimumHeadroom,
+		RequireCompleteEvidence:    policy.RequireCompleteEvidence,
+		ExpectedDeviceIdentityHash: identityHashForPhysicalID(physicalIdentity),
+	})
+}
+
+type networkGrantEvidence struct {
+	hash             string
+	producerRevision string
+	workerPodUID     string
+	sampleSequence   uint64
+	notAfter         metav1.Time
+}
+
+// currentNetworkGrantEvidence performs an uncached final read and converts a
+// network-enabled rollout gate into immutable, expiring worker authority. The
+// deadline starts at collection start, never at manager acceptance or grant.
+func (r *IOSXESoftwareRolloutReconciler) currentNetworkGrantEvidence(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	currentPolicy *topologyrollout.ParsedAdminPolicy,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+) (*networkGrantEvidence, error) {
+	networkPolicy := rollout.Spec.Plan.Health.Network
+	if networkPolicy == nil || !networkPolicy.Enabled {
+		return nil, nil
+	}
+	var device ciskov1.CiscoDevice
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: rollout.Namespace, Name: target.DeviceName}, &device); err != nil {
+		return nil, fmt.Errorf("read network evidence grant target: %w", err)
+	}
+	if string(device.UID) != target.DeviceUID || device.Generation != target.DeviceGeneration {
+		return nil, fmt.Errorf("network evidence grant target incarnation changed")
+	}
+	physicalIdentity, err := topology.CanonicalPhysicalIdentity(device.Spec.PhysicalIdentity)
+	if err != nil || physicalIdentity != target.PhysicalIdentity {
+		return nil, fmt.Errorf("network evidence grant physical identity changed")
+	}
+	producerRevision, err := r.currentReadyWorkerRevision(ctx, &device)
+	if err != nil {
+		return nil, fmt.Errorf("network evidence grant worker binding: %w", err)
+	}
+	if device.Status.NetworkWorkerRevision == nil || strings.TrimSpace(device.Status.NetworkWorkerRevision.PodUID) == "" {
+		return nil, fmt.Errorf("network evidence grant requires a current network worker Pod identity")
+	}
+	workerPodUID := device.Status.NetworkWorkerRevision.PodUID
+	freshnessSeconds := networkEvidenceFreshnessSeconds(currentPolicy.Config.HealthFreshnessSeconds,
+		rollout.Spec.Plan.Health.MaxObservationAgeSeconds)
+	decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalIdentity, producerRevision,
+		workerPodUID, r.now(), time.Duration(freshnessSeconds)*time.Second, networkPolicy)
+	if !decision.Allowed {
+		return nil, fmt.Errorf("network evidence grant %s: %s", decision.Reason, decision.Message)
+	}
+	accepted := device.Status.HealthObservation.AcceptedNetwork
+	digest, err := topologyhealth.AcceptedNetworkDigest(accepted)
+	if err != nil {
+		return nil, err
+	}
+	notAfter := accepted.CollectionStartedAt.Add(time.Duration(freshnessSeconds) * time.Second)
+	if !notAfter.After(r.now()) {
+		return nil, fmt.Errorf("network evidence grant expired before publication")
+	}
+	return &networkGrantEvidence{
+		hash: digest, producerRevision: accepted.ProducerRevision,
+		workerPodUID: accepted.WorkerPodUID, sampleSequence: accepted.SampleSequence,
+		notAfter: metav1.NewTime(notAfter),
+	}, nil
+}
+
+// revalidateNetworkEvidence uses a fresh API read path at planning and every
+// manager admission attempt. A previously healthy plan must not authorize a
+// later reservation after the worker identity or network evidence changed.
+func (r *IOSXESoftwareRolloutReconciler) revalidateNetworkEvidence(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	device *ciskov1.CiscoDevice,
+	physicalIdentity string,
+	policyHealthFreshnessSeconds int,
+	now time.Time,
+) error {
+	networkPolicy := rollout.Spec.Plan.Health.Network
+	if networkPolicy == nil || !networkPolicy.Enabled {
+		return nil
+	}
+	workerRevision, err := r.currentReadyWorkerRevision(ctx, device)
+	if err != nil {
+		return fmt.Errorf("network health gate worker binding: %w", err)
+	}
+	if device.Status.NetworkWorkerRevision == nil || strings.TrimSpace(device.Status.NetworkWorkerRevision.PodUID) == "" {
+		return fmt.Errorf("network health gate requires a current network worker Pod identity")
+	}
+	freshnessSeconds := networkEvidenceFreshnessSeconds(policyHealthFreshnessSeconds,
+		rollout.Spec.Plan.Health.MaxObservationAgeSeconds)
+	decision := evaluateNetworkHealth(device.Status.HealthObservation, physicalIdentity, workerRevision,
+		device.Status.NetworkWorkerRevision.PodUID, now, time.Duration(freshnessSeconds)*time.Second, networkPolicy)
+	if !decision.Allowed {
+		return fmt.Errorf("network health gate %s: %s", decision.Reason, decision.Message)
+	}
+	return nil
+}
+
+// networkEvidenceFreshnessSeconds is deliberately independent of rollout
+// status. Planning evaluates the administrator policy before it publishes the
+// frozen plan and therefore cannot depend on Status.EffectivePolicy, which is
+// created only after every target has passed its planning checks.
+func networkEvidenceFreshnessSeconds(policyHealthFreshnessSeconds int, requestedMaxAgeSeconds int32) int {
+	return minPositive(policyHealthFreshnessSeconds, int(defaultInt32(requestedMaxAgeSeconds, 300)))
+}
+
+func identityHashForPhysicalID(physicalIdentity string) string {
+	digest := sha256.Sum256([]byte(physicalIdentity))
+	return "sha256:" + hex.EncodeToString(digest[:])
 }
 
 func hasTopologyInitializationGuard(node *corev1.Node) bool {
@@ -887,6 +1110,60 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		return ctrl.Result{}, err
 	}
 	summaries := indexTargetSummaries(rollout.Status.Targets)
+	executionTargets := rollout.Status.FrozenPlan.Targets
+	var activation *validatedActivationApproval
+	activationWindowOpen := true
+	if rollout.Spec.ActivationApproval != nil {
+		activation, err = validateActivationApproval(rollout, children)
+		if err != nil {
+			return r.failRollout(ctx, rollout, "ActivationAuthorizationInvalid", err.Error(), false)
+		}
+		executionTargets = make([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget, 0, len(rollout.Status.FrozenPlan.Targets))
+		activationChildren := make(map[string]opsv1alpha1.IOSXESoftwareUpgrade, len(rollout.Status.FrozenPlan.Targets))
+		for _, preparedTarget := range rollout.Status.FrozenPlan.Targets {
+			target := activationTarget(preparedTarget)
+			executionTargets = append(executionTargets, target)
+			if leaf, ok := children[target.ChildName]; ok {
+				activationChildren[target.ChildName] = leaf
+			}
+		}
+		children = activationChildren
+		approval := rollout.Spec.ActivationApproval
+		if now.Before(approval.NotBefore.Time) {
+			for _, target := range executionTargets {
+				summary := summaries[target.DeviceUID]
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+					"ActivationWindowNotOpen", fmt.Sprintf("activation is authorized but cannot begin before %s", approval.NotBefore.UTC().Format(time.RFC3339)), now)
+				summaries[target.DeviceUID] = summary
+			}
+			if _, patchErr := r.patchExecutionStatus(ctx, rollout, summaries, opsv1alpha1.IOSXESoftwareRolloutPhasePaused,
+				"prepared receipts are retained until the authorized activation window opens", now); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+			return ctrl.Result{RequeueAfter: boundedActivationRequeue(now, approval.NotBefore.Time)}, nil
+		}
+		activationWindowOpen = now.Before(approval.NotAfter.Time)
+		if shouldInitializeActivationExecution(rollout, children) {
+			for _, target := range executionTargets {
+				summary := summaries[target.DeviceUID]
+				reason := "ActivationAuthorized"
+				message := "exact prepared receipt is authorized for a separate activation reservation"
+				if !activationWindowOpen {
+					reason = "ActivationWindowClosed"
+					message = "activation window closed before a separate activation leaf was admitted"
+				}
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, reason, message, now)
+				summaries[target.DeviceUID] = summary
+			}
+			phase := opsv1alpha1.IOSXESoftwareRolloutPhaseExecuting
+			message := "activation authorization accepted; preparing distinct activation reservations"
+			if !activationWindowOpen {
+				phase = opsv1alpha1.IOSXESoftwareRolloutPhasePaused
+				message = "activation authorization is retained but its claim window has closed"
+			}
+			return r.patchExecutionStatus(ctx, rollout, summaries, phase, message, now)
+		}
+	}
 	terminalFailurePresent := false
 	for _, leaf := range children {
 		if terminalLeafFailure(leaf.Status.Phase) {
@@ -909,7 +1186,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		}
 	}
 	if terminalFailurePresent && rollout.Status.Phase != opsv1alpha1.IOSXESoftwareRolloutPhaseFailed {
-		for _, target := range rollout.Status.FrozenPlan.Targets {
+		for _, target := range executionTargets {
 			if leaf, ok := children[target.ChildName]; ok && terminalLeafFailure(leaf.Status.Phase) {
 				summary := summaries[target.DeviceUID]
 				summary.LeafUID, summary.LeafName = string(leaf.UID), leaf.Name
@@ -929,7 +1206,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 	progressionBlocked := false
 	rearmedPolicyLeaf := false
 
-	for _, target := range rollout.Status.FrozenPlan.Targets {
+	for _, target := range executionTargets {
 		leaf, exists := children[target.ChildName]
 		if !exists {
 			allTargetsSettled = false
@@ -940,6 +1217,11 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		}
 		if err := validateManagedLeafBinding(rollout, target, &leaf); err != nil {
 			return r.failRollout(ctx, rollout, "ChildIdentityConflict", err.Error(), false)
+		}
+		if activation != nil {
+			if err := validateActivationLeafAnnotations(&leaf, activation, target.DeviceUID); err != nil {
+				return r.failRollout(ctx, rollout, "ActivationChildIdentityConflict", err.Error(), false)
+			}
 		}
 		if leaf.Status.ManagerAdmission == nil {
 			if err := r.ensureChildAdmission(ctx, rollout, target, &leaf, now); err != nil {
@@ -1038,7 +1320,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 			if target.CanaryCohort != "" {
 				allCanariesSettled = false
 			}
-			if leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionPending && !terminalFailurePresent {
+			if leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionPending && !terminalFailurePresent && activationWindowOpen {
 				granted, grantErr := r.tryGrantLeaf(ctx, rollout, currentPolicy, effectivePolicy, target, &leaf, now)
 				if grantErr != nil {
 					if !errors.Is(grantErr, errDrainSafetyBlocked) {
@@ -1054,6 +1336,30 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 				} else if grantErr == nil {
 					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetWaitingForAdmission, "WorkerProtocolPending", "waiting for worker protocol acknowledgement", now)
 				}
+			} else if leaf.Status.ManagerAdmission != nil &&
+				leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionGranted &&
+				rollout.Spec.Plan.Health.Network != nil && rollout.Spec.Plan.Health.Network.Enabled {
+				renewed, renewErr := r.refreshNetworkGrantEvidence(
+					ctx, rollout, currentPolicy, target, &leaf, now,
+				)
+				if renewErr != nil {
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+						"NetworkEvidenceAuthorityInvalid", renewErr.Error(), now)
+					progressionBlocked = true
+				} else if renewed {
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetRunning,
+						"NetworkEvidenceRenewed", "manager renewed claim authority from current accepted network evidence", now)
+					hasRunning = true
+				} else {
+					transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetRunning,
+						string(leaf.Status.Phase), leaf.Status.Message, now)
+					hasRunning = true
+				}
+			} else if !activationWindowOpen && leaf.Status.ManagerAdmission != nil &&
+				leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionPending {
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+					"ActivationWindowClosed", "activation window closed before the manager granted a device mutation", now)
+				progressionBlocked = true
 			} else {
 				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetRunning, string(leaf.Status.Phase), leaf.Status.Message, now)
 				hasRunning = true
@@ -1093,7 +1399,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 	}
 
 	admitted := false
-	for _, target := range rollout.Status.FrozenPlan.Targets {
+	for _, target := range executionTargets {
 		if progressionBlocked {
 			break
 		}
@@ -1103,11 +1409,23 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		if !allCanariesSettled && target.Wave > 0 {
 			continue
 		}
-		if err := r.admitTarget(ctx, rollout, currentPolicy, effectivePolicy, target, now); err != nil {
+		if !activationWindowOpen {
+			summary := summaries[target.DeviceUID]
+			transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+				"ActivationWindowClosed", "activation window closed before this target acquired a reservation", now)
+			summaries[target.DeviceUID] = summary
+			continue
+		}
+		if err := r.admitTarget(ctx, rollout, currentPolicy, effectivePolicy, target, activation, now); err != nil {
 			if errors.Is(err, topologyrollout.ErrBudgetExceeded) || errors.Is(err, topologyrollout.ErrTargetUnavailable) ||
-				errors.Is(err, errWorkloadsRunning) || errors.Is(err, errDrainSafetyBlocked) {
+				errors.Is(err, errWorkloadsRunning) || errors.Is(err, errDrainSafetyBlocked) ||
+				errors.Is(err, errPreparedOwnershipRetained) {
 				summary := summaries[target.DeviceUID]
-				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, "AdmissionBlocked", err.Error(), now)
+				reason := "AdmissionBlocked"
+				if errors.Is(err, errPreparedOwnershipRetained) {
+					reason = "PreparedOwnershipRetained"
+				}
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, reason, err.Error(), now)
 				summaries[target.DeviceUID] = summary
 				continue
 			}
@@ -1126,6 +1444,20 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		}
 	}
 	return r.patchExecutionStatus(ctx, rollout, summaries, phase, message, now, completionConditions...)
+}
+
+// shouldInitializeActivationExecution distinguishes the completed preparation
+// campaign from a completed activation campaign. Once any deterministic
+// activation child exists, normal child reconciliation is authoritative; a
+// terminal activation must not be reset to the one-time authorization state on
+// every later watch event.
+func shouldInitializeActivationExecution(
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	activationChildren map[string]opsv1alpha1.IOSXESoftwareUpgrade,
+) bool {
+	return rollout != nil &&
+		rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded &&
+		len(activationChildren) == 0
 }
 
 func pauseAfterCanary(rollout *opsv1alpha1.IOSXESoftwareRollout) bool {

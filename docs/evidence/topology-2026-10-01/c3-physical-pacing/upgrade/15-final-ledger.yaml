@@ -1,0 +1,22 @@
+apiVersion: v1
+data:
+  ledger.json: '{"version":"v1","uid":"8587a09e-451e-43a1-b638-0b2c11af78b6","reservations":{},"lastReleaseFence":{"reservationID":"55f6d2ef5cc5bbc772ec2114f0a70ad9","policyEpoch":1,"topologyLockID":"5aa9da53362e4ec32b8471d00aa6f581"}}'
+kind: ConfigMap
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    meta.helm.sh/release-name: cisco-vk
+    meta.helm.sh/release-namespace: cisco-vk-system
+    topology.cisco.vk/managed-ledger: "true"
+  creationTimestamp: "2026-09-19T13:34:26Z"
+  labels:
+    app.kubernetes.io/component: topology-ledger
+    app.kubernetes.io/instance: cisco-vk
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: cisco-virtual-kubelet
+    app.kubernetes.io/version: v2026.9.2
+    helm.sh/chart: cisco-virtual-kubelet-0.1.0
+  name: cisco-vk-cisco-virtual-kubelet-topology-ledger
+  namespace: cisco-vk-system
+  resourceVersion: "9713264"
+  uid: 8587a09e-451e-43a1-b638-0b2c11af78b6

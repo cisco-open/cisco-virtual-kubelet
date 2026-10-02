@@ -55,4 +55,9 @@ func TestEligibilityHashCoversSnapshotAndIgnoresProgress(t *testing.T) {
 	if err := VerifyEligibilityHash(changed); err == nil {
 		t.Fatal("changed frozen PDB evidence retained eligibility authority")
 	}
+	changed = pod.DeepCopy()
+	changed.PlacementHash = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	if err := VerifyEligibilityHash(changed); err == nil {
+		t.Fatal("changed placement evidence retained eligibility authority")
+	}
 }

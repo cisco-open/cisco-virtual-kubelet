@@ -23,6 +23,71 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+func TestExpectedManagedUpgradeProtocol(t *testing.T) {
+	if got := ExpectedManagedUpgradeProtocol(0); got != ManagedUpgradeProtocolRolloutV1 {
+		t.Fatalf("unpaced protocol = %q", got)
+	}
+	if got := ExpectedManagedUpgradeProtocol(1); got != ManagedUpgradeProtocolRolloutBytePacingV1 {
+		t.Fatalf("paced protocol = %q", got)
+	}
+}
+
+func TestRequiredManagedUpgradeProtocol(t *testing.T) {
+	for _, rate := range []int64{0, 1} {
+		for _, strategy := range []UpgradeStrategy{UpgradeStrategyReload, UpgradeStrategyNoReboot, UpgradeStrategyPrepareOnly} {
+			for _, preinstalled := range []bool{false, true} {
+				spec := IOSXESoftwareUpgradeSpec{Strategy: strategy, MaxTransferBytesPerSecond: rate}
+				if preinstalled {
+					spec.ImageSource.Preinstalled = &PreinstalledImageSource{}
+				}
+				want := ExpectedManagedUpgradeProtocol(rate)
+				if strategy == UpgradeStrategyPrepareOnly || preinstalled {
+					want = ManagedUpgradeProtocolStagedActivationV1
+				}
+				if got := RequiredManagedUpgradeProtocol(spec); got != want {
+					t.Fatalf("rate=%d strategy=%s preinstalled=%t: got %s, want %s", rate, strategy, preinstalled, got, want)
+				}
+			}
+		}
+	}
+}
+
+func TestLegacyStagedProtocolIsSettledAuditOnly(t *testing.T) {
+	for _, phase := range []UpgradePhase{UpgradePhasePrepared, UpgradePhaseSucceeded, UpgradePhaseTransferring, UpgradePhaseActivating} {
+		for _, state := range []UpgradeManagerAdmissionState{UpgradeManagerAdmissionPending, UpgradeManagerAdmissionGranted, UpgradeManagerAdmissionRevoked, UpgradeManagerAdmissionSettled} {
+			up := &IOSXESoftwareUpgrade{
+				Spec: IOSXESoftwareUpgradeSpec{Strategy: UpgradeStrategyPrepareOnly},
+				Status: IOSXESoftwareUpgradeStatus{
+					Phase:            phase,
+					ManagerAdmission: &UpgradeManagerAdmissionStatus{ProtocolVersion: ManagedUpgradeProtocolRolloutV1, State: state},
+					WorkerControl:    &UpgradeWorkerControlStatus{EffectiveState: UpgradeWorkerControlSettled},
+				},
+			}
+			want := state == UpgradeManagerAdmissionSettled && (phase == UpgradePhasePrepared || phase == UpgradePhaseSucceeded)
+			if ManagedUpgradeProtocolMatches(up) != want {
+				t.Fatalf("phase=%s state=%s: expected compatible=%t", phase, state, want)
+			}
+			up.Status.WorkerControl = nil
+			if ManagedUpgradeProtocolMatches(up) {
+				t.Fatal("legacy audit accepted without worker settlement")
+			}
+		}
+	}
+}
+
+func TestRequiredNetworkProtocol(t *testing.T) {
+	for _, rate := range []int64{0, 1} {
+		spec := IOSXESoftwareUpgradeSpec{Strategy: UpgradeStrategyReload, RequireNetworkEvidence: true, MaxTransferBytesPerSecond: rate}
+		if got := RequiredManagedUpgradeProtocol(spec); got != ManagedUpgradeProtocolNetworkEvidenceV1 {
+			t.Fatalf("network rate=%d: got %s", rate, got)
+		}
+		spec.Strategy = UpgradeStrategyPrepareOnly
+		if got := RequiredManagedUpgradeProtocol(spec); got != ManagedUpgradeProtocolStagedActivationV1 {
+			t.Fatalf("staged network rate=%d: got %s", rate, got)
+		}
+	}
+}
+
 func TestUpgradeImageSourceIntentJSON(t *testing.T) {
 	validSHA := strings.Repeat("a", 64)
 	tests := []struct {

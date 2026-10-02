@@ -54,6 +54,7 @@ import (
 
 	coordv1 "k8s.io/api/coordination/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
@@ -93,6 +94,7 @@ type configReconcilerOptions struct {
 	NodeName                 string
 	ManagedTopology          bool
 	WorkerRevision           string
+	WorkerPodName            string
 	WorkerPodUID             string
 	CredentialSecretRevision string
 	GNOITLSSecretRevision    string
@@ -130,6 +132,9 @@ type configReconcilerOptions struct {
 	// DrainDevicePodLister is present only when the platform driver can prove a
 	// complete inventory for destructive drain. It must fail on partial reads.
 	DrainDevicePodLister func(context.Context) ([]*corev1.Pod, error)
+	// NetworkObservationProvider is supplied only by the network-management
+	// worker. App-hosting workers never receive this status-write capability.
+	NetworkObservationProvider drivers.TopologyProvider
 	// ManagerLifecycle is set only by a dedicated network-management worker.
 	// It gates Pod readiness on cache/controller startup and turns an unexpected
 	// controller-runtime manager exit into a process failure. The standalone
@@ -444,6 +449,10 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		Recorder:        recorder,
 		SubscribeNotify: notify,
 		RuntimeID:       runtimeID,
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodName:   opts.WorkerPodName,
+		WorkerPodUID:    runtimeID,
 	}
 	if opts.Maintenance != nil {
 		r.AcquireMutation = opts.Maintenance.AcquireWrite
@@ -551,6 +560,9 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		// uses it to refuse cross-namespace DeviceOperation requests.
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodUID:    opts.WorkerPodUID,
 		Platform:        diagnostic.CommandPlatformIOSXE,
 		TP:              r,
 		GNOI:            gnoiProv,
@@ -584,6 +596,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			NodeName:                 opts.NodeName,
 			ManagedTopology:          opts.ManagedTopology,
 			WorkerRevision:           opts.WorkerRevision,
+			WorkerPodName:            opts.WorkerPodName,
 			WorkerPodUID:             runtimeID,
 			CredentialSecretRevision: opts.CredentialSecretRevision,
 			GNOITLSSecretRevision:    opts.GNOITLSSecretRevision,
@@ -704,6 +717,22 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 	}
 	if err := telemetryReconciler.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("telemetry SetupWithManager: %w", err)
+	}
+	// Network read-only workers still publish their bounded, read-only
+	// observation. ReadOnly disables every mutation reconciler above; it must
+	// not disable the telemetry needed for topology gates. The provider is
+	// injected only for the network-management worker, so app workers cannot
+	// enter this path accidentally.
+	if opts.ManagedTopology && opts.NetworkObservationProvider != nil {
+		// Ordering and binding checks need an uncached read: an informer-delayed
+		// high-water mark could assign a duplicate or stale observation sequence.
+		observationClient, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
+		if err != nil {
+			return fmt.Errorf("build direct network observation client: %w", err)
+		}
+		go provider.RunNetworkObservationPublisher(ctx, observationClient, client.ObjectKey{
+			Namespace: opts.DeviceNamespace, Name: deviceName,
+		}, types.UID(opts.DeviceUID), opts.Spec.PhysicalIdentity, opts.WorkerRevision, opts.NetworkObservationProvider, runtimeID)
 	}
 
 	// Diagnostics-RFC Phase C: HTTP admin endpoint for ad-hoc

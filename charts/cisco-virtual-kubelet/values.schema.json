@@ -279,7 +279,7 @@
     "topology": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "workerAccounts", "policy", "ledger"],
+      "required": ["enabled", "workerAccounts", "graph", "policy", "ledger"],
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -292,6 +292,62 @@
           "properties": {
             "appHosting": { "$ref": "#/definitions/workerAccount" },
             "networkManagement": { "$ref": "#/definitions/workerAccount" }
+          }
+        },
+        "graph": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "peerMappings", "declaredLinks"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "peerMappings": {
+              "type": "array",
+              "maxItems": 1024,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["source", "observedPeer", "physicalID"],
+                "properties": {
+                  "source": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "observedPeer": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "routingDomain": { "type": "string", "maxLength": 256 },
+                  "physicalID": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._:/-]*[A-Za-z0-9])?$"
+                  },
+                  "external": { "type": "boolean" }
+                }
+              }
+            },
+            "declaredLinks": {
+              "type": "array",
+              "maxItems": 1024,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["local", "peer", "interface", "remoteInterface"],
+                "properties": {
+                  "local": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._:/-]*[A-Za-z0-9])?$"
+                  },
+                  "peer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._:/-]*[A-Za-z0-9])?$"
+                  },
+                  "source": { "type": "string", "maxLength": 256 },
+                  "interface": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "remoteInterface": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "routingDomain": { "type": "string", "maxLength": 256 }
+                }
+              }
+            }
           }
         },
         "policy": {
@@ -401,6 +457,135 @@
               "maxProperties": 16,
               "propertyNames": { "$ref": "#/definitions/topologyKey" },
               "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 100 }
+            },
+            "disruptionProtections": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "reason", "selector"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": ["CriticalService", "SingletonPath"]
+                  },
+                  "selector": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["matchLabels", "matchExpressions"],
+                    "anyOf": [
+                      { "properties": { "matchLabels": { "minProperties": 1 } } },
+                      { "properties": { "matchExpressions": { "minItems": 1 } } }
+                    ],
+                    "properties": {
+                      "matchLabels": {
+                        "type": "object",
+                        "maxProperties": 32,
+                        "propertyNames": { "$ref": "#/definitions/topologyKey" },
+                        "additionalProperties": {
+                          "type": "string",
+                          "maxLength": 63,
+                          "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                        }
+                      },
+                      "matchExpressions": {
+                        "type": "array",
+                        "maxItems": 32,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["key", "operator", "values"],
+                          "properties": {
+                            "key": { "$ref": "#/definitions/topologyKey" },
+                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                            "values": {
+                              "type": "array",
+                              "maxItems": 32,
+                              "uniqueItems": true,
+                              "items": {
+                                "type": "string",
+                                "maxLength": 63,
+                                "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "riskGroups": {
+              "type": "array",
+              "maxItems": 16,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["name", "selector", "maxConcurrentTransfers", "maxUnavailable"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 63,
+                    "pattern": "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$"
+                  },
+                  "maxConcurrentTransfers": { "type": "integer", "minimum": 1, "maximum": 100 },
+                  "maxUnavailable": { "type": "integer", "minimum": 1, "maximum": 100 },
+                  "maxAggregateTransferBytesPerSecond": { "type": "integer", "minimum": 1, "maximum": 1099511627776 },
+                  "selector": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["matchLabels", "matchExpressions"],
+                    "anyOf": [
+                      { "properties": { "matchLabels": { "minProperties": 1 } } },
+                      { "properties": { "matchExpressions": { "minItems": 1 } } }
+                    ],
+                    "properties": {
+                      "matchLabels": {
+                        "type": "object",
+                        "maxProperties": 32,
+                        "propertyNames": { "$ref": "#/definitions/topologyKey" },
+                        "additionalProperties": {
+                          "type": "string",
+                          "maxLength": 63,
+                          "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                        }
+                      },
+                      "matchExpressions": {
+                        "type": "array",
+                        "maxItems": 32,
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": ["key", "operator", "values"],
+                          "properties": {
+                            "key": { "$ref": "#/definitions/topologyKey" },
+                            "operator": { "type": "string", "enum": ["In", "NotIn", "Exists", "DoesNotExist"] },
+                            "values": {
+                              "type": "array",
+                              "maxItems": 32,
+                              "uniqueItems": true,
+                              "items": {
+                                "type": "string",
+                                "maxLength": 63,
+                                "pattern": "^$|^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             },
             "healthFreshnessSeconds": { "type": "integer", "minimum": 30, "maximum": 3600 },
             "maxCampaignTargets": { "type": "integer", "minimum": 1, "maximum": 100 },

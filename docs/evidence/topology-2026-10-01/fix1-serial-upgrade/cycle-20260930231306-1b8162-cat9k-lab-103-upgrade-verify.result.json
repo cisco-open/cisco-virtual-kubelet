@@ -1,0 +1,52 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "DeviceOperation",
+  "metadata": {
+    "annotations": {
+      "topology.cisco.vk/device-name": "cat9k-lab-103",
+      "topology.cisco.vk/device-namespace": "cvk-live",
+      "topology.cisco.vk/device-uid": "782dc4b2-7e43-4188-8436-87633f0bf4fb",
+      "topology.cisco.vk/managed": "true",
+      "topology.cisco.vk/network-worker-pod-name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-7fb86b89cd-bwrss",
+      "topology.cisco.vk/network-worker-pod-uid": "64deb9ab-850d-492f-8749-38efaec22b85",
+      "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+    },
+    "creationTimestamp": "2026-10-01T00:33:31Z",
+    "generation": 1,
+    "name": "cycle-20260930231306-1b8162-cat9k-lab-103-upgrade-verify",
+    "namespace": "cvk-live",
+    "resourceVersion": "9430944",
+    "uid": "102629cc-f0a8-4fab-8da2-46bd0cb16d81"
+  },
+  "spec": {
+    "deviceRef": {
+      "name": "cat9k-lab-103"
+    },
+    "operation": {
+      "kind": "GNOIOSVerify"
+    }
+  },
+  "status": {
+    "completionTime": "2026-10-01T00:33:40Z",
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-01T00:33:40Z",
+        "message": "running version: 17.18.03.0.5496.1776157760",
+        "observedGeneration": 1,
+        "reason": "Succeeded",
+        "status": "True",
+        "type": "Ready"
+      }
+    ],
+    "message": "running version: 17.18.03.0.5496.1776157760",
+    "observedGeneration": 1,
+    "outputs": [
+      {
+        "command": "GNOIOSVerify",
+        "output": "{\n  \"Version\": \"17.18.03.0.5496.1776157760\",\n  \"ActivationFailMessage\": \"\",\n  \"IndividualSupervisorInstall\": false,\n  \"Standby\": {\n    \"State\": \"UNSUPPORTED\",\n    \"ID\": \"\",\n    \"Version\": \"\",\n    \"ActivationFailMessage\": \"\"\n  }\n}"
+      }
+    ],
+    "phase": "Succeeded",
+    "startTime": "2026-10-01T00:33:40Z"
+  }
+}

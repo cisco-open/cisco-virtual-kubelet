@@ -133,6 +133,15 @@ jobs:
           test -s out/NOTICE
           test -s out/THIRD_PARTY_LICENSES.txt
 
+      - name: Audit locked documentation dependencies
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/cvk-docs-audit"
+          "$RUNNER_TEMP/cvk-docs-audit/bin/python" -m pip install \
+            --disable-pip-version-check pip-audit==2.10.1
+          "$RUNNER_TEMP/cvk-docs-audit/bin/python" -m pip_audit \
+            --strict --disable-pip --require-hashes -r requirements.txt
+
       # MkDocs vendors exact runtime assets from the npm ci tree above. Keep
       # both documentation builds after the recursive Go package test.
       - name: MkDocs strict build and license gate
@@ -225,6 +234,12 @@ jobs:
 
       - name: Generated family reference drift check
         run: make check-config-docs
+
+      - name: Released manager/worker and stored-schema compatibility inputs
+        run: |
+          git fetch --no-tags origin cf33e51c8ffc6d47acb313857665366d74eefe6c
+          git fetch --no-tags origin 44d02a4b1f17c832e79ea554e7f77795e4472fc4
+          bash scripts/test-staged-protocol-compat.sh
 
       - name: Kubernetes generated artefact drift check
         # Regenerate CRDs, DeepCopy, RBAC, and Helm CRDs, then assert no

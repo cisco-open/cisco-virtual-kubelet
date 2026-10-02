@@ -187,6 +187,12 @@ rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
+  # Read-only network workers may publish only the bounded network
+  # observation subtree under admission. Exact authenticated Pod-to-device
+  # ownership still requires E01 qualification; RBAC alone does not confine it.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices/status"]
+    verbs: ["get", "update", "patch"]
   - apiGroups: ["config.cisco.vk"]
     resources:
       - iosxedevicegroupconfigs
@@ -251,6 +257,11 @@ rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
+  # The network worker may publish only its bounded status observation. The
+  # admission policy below rejects every other status-field mutation.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices/status"]
+    verbs: ["get", "update", "patch"]
   - apiGroups: ["config.cisco.vk"]
     resources:
       - iosxedevicegroupconfigs
@@ -558,6 +569,32 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwarerollouts"]
     verbs: ["get", "list", "watch", "update", "patch", "approve"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-rollout-activator
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwarerollouts"]
+    verbs: ["get", "list", "watch", "update", "patch", "activate"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-topology-graph-viewer
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: [{{ include "cisco-virtual-kubelet.topologyPolicyName" . | quote }}]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

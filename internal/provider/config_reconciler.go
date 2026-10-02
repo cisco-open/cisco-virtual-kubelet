@@ -232,6 +232,16 @@ type ConfigReconciler struct {
 	// device.
 	RuntimeID string
 
+	// ManagedTopology requires the manager-authenticated network-worker Pod
+	// binding before this reconciler writes object metadata, status, Leases, or
+	// the device. This closes the replacement-Pod window where native admission
+	// correctly rejects the new worker until the manager stamps its exact Pod
+	// identity on each device-scoped object.
+	ManagedTopology bool
+	DeviceUID       string
+	WorkerPodName   string
+	WorkerPodUID    string
+
 	// subscribeNotifyTime records the wall-clock time of the most
 	// recent Subscribe notification. Reconcile compares it against
 	// cr.Status.LastDeviceCheck to decide whether THIS reconcile is
@@ -240,6 +250,19 @@ type ConfigReconciler struct {
 	// read by Reconcile via Load. UnixNano so a zero value is
 	// "never fired" and any later time is strictly greater.
 	subscribeNotifyTime atomic.Int64
+}
+
+func managedNetworkObjectBindingReady(obj client.Object, deviceNamespace, deviceName, deviceUID, workerPodName, workerPodUID string) bool {
+	if obj == nil || !managedprotocol.NetworkObjectBindingComplete(obj.GetAnnotations()) {
+		return false
+	}
+	annotations := obj.GetAnnotations()
+	return obj.GetNamespace() == deviceNamespace &&
+		annotations[managedprotocol.AnnotationDeviceNamespace] == deviceNamespace &&
+		annotations[managedprotocol.AnnotationDeviceName] == deviceName &&
+		annotations[managedprotocol.AnnotationDeviceUID] == deviceUID &&
+		annotations[managedprotocol.AnnotationNetworkWorkerPodName] == workerPodName &&
+		annotations[managedprotocol.AnnotationNetworkWorkerPodUID] == workerPodUID
 }
 
 // NotifySubscribeFired is called by the bridge that converts the

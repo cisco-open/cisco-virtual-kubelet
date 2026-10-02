@@ -1,0 +1,858 @@
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  annotations:
+    cvk.cisco.com/lab-reconcile: 20261001T231220Z
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"cisco.vk/v1alpha1","kind":"CiscoDevice","metadata":{"annotations":{},"name":"cat9k-lab-103","namespace":"cvk-live"},"spec":{"address":"198.51.100.103","credentialSecretRef":{"name":"cat9k-creds"},"driver":"XE","gnoi":{"port":9339,"transportSecurity":"tls"},"logLevel":"info","maxPods":16,"port":443,"tls":{"enabled":true,"insecureSkipVerify":true},"transport":"restconf","username":"AI_AGENT_RW","xe":{"gnoi":{"certificateProvisioning":{"certificateID":"cvk-gnoi-c9k103-20260910","replaceTargetCABundle":true,"secretRef":{"name":"cat9k-lab-103-gnoi-identity"}}},"networking":{"interface":{"management":{"dhcp":true},"type":"Management"}}}}}
+    topology.cisco.vk/adopt-node-uid: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+  creationTimestamp: "2026-09-10T05:03:19Z"
+  finalizers:
+  - cisco.vk/device-cleanup
+  generation: 7
+  labels:
+    distribution.cisco.vk/cache-domain: ubuntu16
+    operations.cisco.vk/image-family: cat9k
+    operations.cisco.vk/qualification-cohort: c9300-24p
+    operations.cisco.vk/redundancy-domain: physical-c9k-lab
+    topology.cisco.vk/lab-node: cat9k-lab-103
+    topology.cisco.vk/lab-set: pr194-physical-c9k
+    topology.cisco.vk/managed: "true"
+    topology.cisco.vk/site: ubuntu16-physical
+    topology.kubernetes.io/region: lab
+    topology.kubernetes.io/zone: physical-c9k-lab
+  name: cat9k-lab-103
+  namespace: cvk-live
+  resourceVersion: "9713514"
+  uid: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+spec:
+  address: 198.51.100.103
+  allowUnsignedApps: false
+  credentialSecretRef:
+    name: cat9k-creds
+  driver: XE
+  gnoi:
+    port: 9339
+    transportSecurity: tls
+  logLevel: info
+  maxPods: 2
+  physicalIdentity: FOC2416U0MV
+  port: 443
+  resourceLimits: {}
+  tls:
+    enabled: true
+    insecureSkipVerify: true
+  transport: restconf
+  username: AI_AGENT_RW
+  worker:
+    resources:
+      limits:
+        cpu: "2"
+        ephemeral-storage: 4Gi
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        ephemeral-storage: 3Gi
+        memory: 256Mi
+    tmpSizeLimit: 3Gi
+  xe:
+    gnoi:
+      certificateProvisioning:
+        certificateID: cvk-gnoi-c9k103-20260910
+        replaceTargetCABundle: true
+        secretRef:
+          name: cat9k-lab-103-gnoi-identity
+    networking:
+      interface:
+        management:
+          dhcp: true
+        type: Management
+status:
+  conditions:
+  - lastTransitionTime: "2026-10-01T23:15:09Z"
+    message: Referenced gNOI Secret material is valid and the exact network worker
+      is ready; device connectivity has not been checked
+    observedGeneration: 7
+    reason: Validated
+    status: "True"
+    type: GNOIConfigurationReady
+  - lastTransitionTime: "2026-09-19T13:39:24Z"
+    message: Node name and UID are bound to this CiscoDevice incarnation
+    observedGeneration: 7
+    reason: UIDBound
+    status: "True"
+    type: NodeIdentityReady
+  - lastTransitionTime: "2026-10-01T23:41:37Z"
+    message: required topology is projected and the live physical identity is verified
+    observedGeneration: 7
+    reason: ProjectionComplete
+    status: "True"
+    type: TopologyReady
+  - lastTransitionTime: "2026-10-01T23:42:35Z"
+    message: no managed maintenance session is active
+    observedGeneration: 7
+    reason: Idle
+    status: "True"
+    type: MaintenanceReady
+  - lastTransitionTime: "2026-09-19T13:41:20Z"
+    message: all required topology labels are present
+    observedGeneration: 7
+    reason: ProjectionComplete
+    status: "False"
+    type: TopologyIncomplete
+  - lastTransitionTime: "2026-10-01T23:40:48Z"
+    message: no topology ownership conflict is present
+    observedGeneration: 7
+    reason: ProjectionComplete
+    status: "False"
+    type: TopologyConflict
+  healthObservation:
+    acceptedNetwork:
+      collectionEndedAt: "2026-10-01T23:43:35Z"
+      collectionStartedAt: "2026-10-01T23:43:33Z"
+      complete: true
+      deviceIdentityHash: sha256:6bfed42aecb52b5da0e8cf98c10f1bfc3b36e327fafb61c672e159b805b712e7
+      interfaces:
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: AppGigabitEthernet1/0/1
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 40000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: FortyGigabitEthernet1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 40000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: FortyGigabitEthernet1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 18000
+        headroomPercent: 99
+        ingressBitsPerSecond: 1000
+        name: GigabitEthernet0/0
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/10
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/11
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/12
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/13
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/14
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/15
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/16
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/17
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/18
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/19
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/20
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/21
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/22
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/23
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/24
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/3
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/4
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/5
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/6
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/7
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/8
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/9
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/3
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/4
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/3
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/4
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/5
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/6
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/7
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/8
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 25000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TwentyFiveGigE1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 25000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TwentyFiveGigE1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: Vlan1
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: Vlan99
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      neighbors:
+      - id: C9K-1
+        identity: cdp|C9K-1|GigabitEthernet1/0/23|
+        interface: GigabitEthernet1/0/23
+        source: cdp
+        state: discovered
+      - id: MaC_Outside_Switch
+        identity: cdp|MaC_Outside_Switch|GigabitEthernet0/0|
+        interface: GigabitEthernet0/0
+        source: cdp
+        state: discovered
+      observedAt: "2026-10-01T23:43:33Z"
+      producerRevision: sha256:1503fb81c1ab5382ee0622c07c25991bd05714907934f0815f1f2438db7d37c9
+      sampleSequence: 57
+      workerPodUID: 0c37b01d-d645-43f0-8d13-a033eceb0a1e
+    conditionObservations:
+    - observedAt: "2026-10-01T23:43:48Z"
+      observedGeneration: 7
+      status: "True"
+      type: GNOIConfigurationReady
+    - observedAt: "2026-10-01T23:43:44Z"
+      observedGeneration: 7
+      status: "True"
+      type: NodeIdentityReady
+    - observedAt: "2026-10-01T23:43:44Z"
+      observedGeneration: 7
+      status: "True"
+      type: TopologyReady
+    deviceConditionsHash: sha256:606cef2deb0d47563c037769722055a347b0f0873c4b34120808fee6ee5b8968
+    network:
+      collectionEndedAt: "2026-10-01T23:43:35Z"
+      collectionStartedAt: "2026-10-01T23:43:33Z"
+      complete: true
+      deviceIdentityHash: sha256:6bfed42aecb52b5da0e8cf98c10f1bfc3b36e327fafb61c672e159b805b712e7
+      interfaces:
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: AppGigabitEthernet1/0/1
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 40000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: FortyGigabitEthernet1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 40000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: FortyGigabitEthernet1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 18000
+        headroomPercent: 99
+        ingressBitsPerSecond: 1000
+        name: GigabitEthernet0/0
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/10
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/11
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/12
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/13
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/14
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/15
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/16
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/17
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/18
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/19
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/20
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/21
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/22
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/23
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/24
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/3
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/4
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/5
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/6
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/7
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/8
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/0/9
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/3
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: GigabitEthernet1/1/4
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/3
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/4
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/5
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/6
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/7
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 10000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TenGigabitEthernet1/1/8
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 25000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TwentyFiveGigE1/1/1
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 25000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: TwentyFiveGigE1/1/2
+        operUp: false
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: Vlan1
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      - capacityBitsPerSecond: 1000000000
+        egressBitsPerSecond: 0
+        headroomPercent: 100
+        ingressBitsPerSecond: 0
+        name: Vlan99
+        operUp: true
+        rateSource: cisco-ios-xe-interfaces-oper:statistics-kbps
+      neighbors:
+      - id: C9K-1
+        identity: cdp|C9K-1|GigabitEthernet1/0/23|
+        interface: GigabitEthernet1/0/23
+        source: cdp
+        state: discovered
+      - id: MaC_Outside_Switch
+        identity: cdp|MaC_Outside_Switch|GigabitEthernet0/0|
+        interface: GigabitEthernet0/0
+        source: cdp
+        state: discovered
+      observedAt: "2026-10-01T23:43:33Z"
+      producerRevision: sha256:1503fb81c1ab5382ee0622c07c25991bd05714907934f0815f1f2438db7d37c9
+      sampleSequence: 57
+      workerPodUID: 0c37b01d-d645-43f0-8d13-a033eceb0a1e
+    nodeReadyHeartbeatTime: "2026-10-01T23:43:31Z"
+    observedAt: "2026-10-01T23:43:48Z"
+  maintenanceSession:
+    acknowledgedAt: "2026-10-01T23:28:49Z"
+    controlRevision: 0
+    deviceUID: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+    lease:
+      holder: software-upgrade/ce27ac91-7898-403d-9535-3bea40857222
+      name: cvk-device-94384ab3a069a1ea-device-disruptive-mutation-9e53c76c
+      namespace: cvk-live
+      uid: 3f7f3950-0b2d-490d-8ff5-220c37cda14b
+    message: manager settled the operation outcome and released its reservation
+    nodeName: cat9k-lab-103
+    nodeUID: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+    operation:
+      name: roadmap-pacing-upgrade-20261002-103-cat9k-lab-103-55f6d2ef
+      namespace: cvk-live
+      uid: ce27ac91-7898-403d-9535-3bea40857222
+    phase: Settled
+    requestedAt: "2026-10-01T23:28:29Z"
+    sessionToken: <redacted>
+  netAsCode:
+    format: netascode-iosxe
+    sections:
+    - entity
+    - device
+    - interface
+    stripe: iosxe
+    type: DeviceCentric
+  networkWorkerRevision:
+    deploymentGeneration: 41
+    deploymentUID: dc558bdb-45f4-4f38-bf60-0f48d0730e6e
+    desiredRevision: sha256:1503fb81c1ab5382ee0622c07c25991bd05714907934f0815f1f2438db7d37c9
+    observedAt: "2026-10-01T23:15:06Z"
+    observedRevision: sha256:1503fb81c1ab5382ee0622c07c25991bd05714907934f0815f1f2438db7d37c9
+    podReadyTime: "2026-10-01T23:14:37Z"
+    podStartTime: "2026-10-01T23:14:30Z"
+    podUID: 0c37b01d-d645-43f0-8d13-a033eceb0a1e
+  nodeIdentity:
+    deviceUID: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+    nodeName: cat9k-lab-103
+    nodeUID: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+    physicalIdentity: foc2416u0mv
+  phase: Ready
+  topologyProjection:
+    effectiveLabelHash: sha256:d275f403dab2101e862b0dbd5de7c90baaf45b680d250ee93736313adc3429a2
+    lastSuccessfulTime: "2026-09-19T13:41:20Z"
+    sourceResourceVersion: "6907528"
+  workerCapabilities:
+  - enabled: true
+    name: apphosting
+    runtime: per-device-worker
+  - enabled: true
+    name: config
+    runtime: per-device-worker
+  - enabled: true
+    name: telemetry
+    runtime: per-device-worker
+  - enabled: true
+    name: diagnostics
+    runtime: per-device-worker
+  - enabled: true
+    name: operations
+    runtime: per-device-worker
+  - enabled: true
+    name: lifecycle
+    runtime: per-device-worker
+  workerRevision:
+    deploymentGeneration: 38
+    deploymentUID: a8928354-c319-4356-a123-6ad2fb3aedc4
+    desiredRevision: sha256:dd4d20a19a93d00885123bf83db581af553323e218467a4c33d60db77efba0e5
+    observedAt: "2026-10-01T23:43:45Z"
+    observedRevision: sha256:dd4d20a19a93d00885123bf83db581af553323e218467a4c33d60db77efba0e5
+    podStartTime: "2026-10-01T23:13:39Z"
+    podUID: a2cdaeb1-ff39-4ca4-8a41-c40fbc61e692
+    readyHeartbeatTime: "2026-10-01T23:43:31Z"
+  workerTopology: PerDevice

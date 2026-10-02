@@ -1021,6 +1021,185 @@ kubectl config --kubeconfig "$bound_network_kubeconfig" \
 test "$(kubectl --kubeconfig "$bound_network_kubeconfig" auth whoami \
   -o jsonpath='{.status.userInfo.username}')" = "$network_username"
 
+# A genuine Pod-bound network-worker token may update only the network
+# observation subtree. The manager establishes the immutable device/worker
+# proof first; the API server must then reject not-ready, forged-revision, and
+# same-worker-replay observations even though the request has otherwise valid
+# RBAC and Pod authentication.
+kubectl --context "$context" create -f - >/dev/null <<EOF
+apiVersion: cisco.vk/v1alpha1
+kind: CiscoDevice
+metadata:
+  name: ${network_device_name}
+  namespace: ${worker_namespace}
+spec:
+  driver: FAKE
+  address: 192.0.2.2
+  username: probe
+  physicalIdentity: network-observation-owner
+  maxPods: 1
+EOF
+network_device_actual_uid="$(kubectl --context "$context" get ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" -o jsonpath='{.metadata.uid}')"
+test -n "$network_device_actual_uid"
+network_observation_revision="sha256:$(printf 'a%.0s' {1..64})"
+network_observation_hash="sha256:$(printf 'b%.0s' {1..64})"
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p "{\"status\":{\"phase\":\"Ready\",\"nodeIdentity\":{\"nodeName\":\"network-observation-owner\",\"nodeUID\":\"network-observation-node-uid\",\"deviceUID\":\"${network_device_actual_uid}\",\"physicalIdentity\":\"network-observation-owner\"},\"healthObservation\":{\"observedAt\":\"2026-10-01T00:00:00Z\",\"nodeReadyHeartbeatTime\":\"2026-10-01T00:00:00Z\",\"deviceConditionsHash\":\"${network_observation_hash}\"},\"networkWorkerRevision\":{\"desiredRevision\":\"${network_observation_revision}\",\"observedRevision\":\"${network_observation_revision}\",\"deploymentUID\":\"network-observation-deployment-uid\",\"deploymentGeneration\":1,\"podUID\":\"${network_pod_uid}\",\"podStartTime\":\"2026-10-01T00:00:00Z\",\"observedAt\":\"2026-10-01T00:00:01Z\"}}}" >/dev/null
+
+patch_network_observation_from() {
+  local kubeconfig="$1"
+  local worker_pod_uid="$2"
+  local producer_revision="$3"
+  local sequence="$4"
+  local start_time="$5"
+  local end_time="$6"
+
+  kubectl --kubeconfig "$kubeconfig" patch ciscodevice \
+    "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+    --type=merge -p "{\"status\":{\"healthObservation\":{\"network\":{\"workerPodUID\":\"${worker_pod_uid}\",\"collectionStartedAt\":\"${start_time}\",\"collectionEndedAt\":\"${end_time}\",\"sampleSequence\":${sequence},\"observedAt\":\"${end_time}\",\"complete\":true,\"producerRevision\":\"${producer_revision}\",\"deviceIdentityHash\":\"${network_observation_hash}\"}}}}"
+}
+
+patch_network_observation() {
+  patch_network_observation_from "$bound_network_kubeconfig" "$network_pod_uid" "$@"
+}
+
+# The observation timestamp represents the earliest sampling time, rather
+# than the status write time. A real bound token must not be able to extend
+# freshness by placing it outside the worker-reported collection interval.
+patch_network_observation_with_observed_at() {
+  local producer_revision="$1"
+  local sequence="$2"
+  local start_time="$3"
+  local end_time="$4"
+  local observed_at="$5"
+
+  kubectl --kubeconfig "$bound_network_kubeconfig" patch ciscodevice \
+    "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+    --type=merge -p "{\"status\":{\"healthObservation\":{\"network\":{\"workerPodUID\":\"${network_pod_uid}\",\"collectionStartedAt\":\"${start_time}\",\"collectionEndedAt\":\"${end_time}\",\"sampleSequence\":${sequence},\"observedAt\":\"${observed_at}\",\"complete\":true,\"producerRevision\":\"${producer_revision}\",\"deviceIdentityHash\":\"${network_observation_hash}\"}}}}"
+}
+
+expect_denied "bound network worker without manager ready proof" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation "$network_observation_revision" 1 \
+  2026-10-01T00:00:02Z 2026-10-01T00:00:03Z
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p '{"status":{"networkWorkerRevision":{"podReadyTime":"2026-10-01T00:00:01Z"}}}' >/dev/null
+patch_network_observation "$network_observation_revision" 1 \
+  2026-10-01T00:00:02Z 2026-10-01T00:00:03Z >/dev/null
+expect_denied "bound network worker forged observation revision" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation "sha256:$(printf 'c%.0s' {1..64})" 2 \
+  2026-10-01T00:00:04Z 2026-10-01T00:00:05Z
+expect_denied "bound network worker replayed observation sequence" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation "$network_observation_revision" 1 \
+  2026-10-01T00:00:04Z 2026-10-01T00:00:05Z
+patch_network_observation "$network_observation_revision" 2 \
+  2026-10-01T00:00:04Z 2026-10-01T00:00:05Z >/dev/null
+# The manager may copy an authenticated sample into the separate accepted
+# subtree. The same genuine bound worker token must not be able to create or
+# alter that acceptance record, even though it owns the adjacent raw sample.
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p "{\"status\":{\"healthObservation\":{\"acceptedNetwork\":{\"workerPodUID\":\"${network_pod_uid}\",\"collectionStartedAt\":\"2026-10-01T00:00:04Z\",\"collectionEndedAt\":\"2026-10-01T00:00:05Z\",\"sampleSequence\":2,\"observedAt\":\"2026-10-01T00:00:05Z\",\"complete\":true,\"producerRevision\":\"${network_observation_revision}\",\"deviceIdentityHash\":\"${network_observation_hash}\"}}}}" >/dev/null
+expect_denied "bound network worker cannot forge manager acceptance" \
+  "manager-owned CiscoDevice identity, topology, health" \
+  kubectl --kubeconfig "$bound_network_kubeconfig" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p '{"status":{"healthObservation":{"acceptedNetwork":{"sampleSequence":999}}}}'
+expect_denied "bound network worker timestamp before collection" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation_with_observed_at "$network_observation_revision" 3 \
+  2026-10-01T00:00:06Z 2026-10-01T00:00:07Z 2026-10-01T00:00:05Z
+expect_denied "bound network worker timestamp after collection" \
+  "network observation requires the bound revision and strictly newer collection provenance" \
+  patch_network_observation_with_observed_at "$network_observation_revision" 3 \
+  2026-10-01T00:00:06Z 2026-10-01T00:00:07Z 2026-10-01T00:00:08Z
+
+# Keep the first Pod running and bind a second real Pod to the device. The old
+# Pod's token remains otherwise valid, so its rejection proves the admission
+# contract uses the manager's current worker identity. The replacement may
+# restart its sequence at one only after that binding change.
+replacement_network_deployment="${network_deployment}-replacement"
+create_reserved_deployment "$manager_username" "$replacement_network_deployment" \
+  "$network_service_account" >/dev/null
+kubectl --context "$context" rollout status "deployment/${replacement_network_deployment}" \
+  --namespace "$worker_namespace" --timeout=90s >/dev/null
+kubectl --context "$context" wait pod --namespace "$worker_namespace" \
+  --selector="app=${replacement_network_deployment}" --for=condition=Ready --timeout=90s >/dev/null
+replacement_network_pod="$(kubectl --context "$context" get pod \
+  --namespace "$worker_namespace" --selector="app=${replacement_network_deployment}" \
+  -o jsonpath='{.items[0].metadata.name}')"
+replacement_network_pod_uid="$(kubectl --context "$context" get pod "$replacement_network_pod" \
+  --namespace "$worker_namespace" -o jsonpath='{.metadata.uid}')"
+replacement_network_pod_node="$(kubectl --context "$context" get pod "$replacement_network_pod" \
+  --namespace "$worker_namespace" -o jsonpath='{.spec.nodeName}')"
+test -n "$replacement_network_pod"
+test -n "$replacement_network_pod_uid"
+test -n "$replacement_network_pod_node"
+replacement_network_token="$(kubectl --context "$context" \
+  --as="system:node:${replacement_network_pod_node}" --as-group=system:nodes \
+  --as-group=system:authenticated \
+  create token "$network_service_account" --namespace "$worker_namespace" \
+  --duration=10m --bound-object-kind=Pod --bound-object-name="$replacement_network_pod" \
+  --bound-object-uid="$replacement_network_pod_uid")"
+test -n "$replacement_network_token"
+replacement_network_kubeconfig="$scratch_dir/replacement-network-worker.kubeconfig"
+kind export kubeconfig --name "$cluster_name" \
+  --kubeconfig "$replacement_network_kubeconfig" >/dev/null
+kubectl config --kubeconfig "$replacement_network_kubeconfig" \
+  set-credentials replacement-network-worker --token="$replacement_network_token" >/dev/null
+kubectl config --kubeconfig "$replacement_network_kubeconfig" \
+  set-context replacement-network-worker --cluster="$context" \
+  --user=replacement-network-worker --namespace="$worker_namespace" >/dev/null
+kubectl config --kubeconfig "$replacement_network_kubeconfig" \
+  use-context replacement-network-worker >/dev/null
+test "$(kubectl --kubeconfig "$replacement_network_kubeconfig" auth whoami \
+  -o jsonpath='{.status.userInfo.username}')" = "$network_username"
+replacement_network_revision="sha256:$(printf 'd%.0s' {1..64})"
+
+# Both Pods use the same intentionally narrow network-management ServiceAccount.
+# Its namespace RBAC therefore cannot be the authorization boundary between
+# devices.  Before the replacement is bound to this CiscoDevice, prove that a
+# genuine token from the peer Pod cannot publish an otherwise well-formed
+# sample for it.  The policy must bind the authenticated Pod UID to the
+# manager-recorded device worker, rather than trusting the shared identity or
+# a caller-supplied observation UID.
+expect_denied "peer-device network worker cannot publish this device observation" \
+  "network observation status requires the authenticated bound network-worker Pod UID" \
+  patch_network_observation_from "$replacement_network_kubeconfig" \
+  "$replacement_network_pod_uid" "$network_observation_revision" 3 \
+  2026-10-01T00:00:06Z 2026-10-01T00:00:07Z
+
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p "{\"status\":{\"networkWorkerRevision\":{\"desiredRevision\":\"${replacement_network_revision}\",\"observedRevision\":\"${replacement_network_revision}\",\"podUID\":\"${replacement_network_pod_uid}\",\"podStartTime\":\"2026-10-01T00:00:06Z\",\"podReadyTime\":\"2026-10-01T00:00:07Z\",\"observedAt\":\"2026-10-01T00:00:07Z\"}}}" >/dev/null
+expect_denied "old bound network worker after replacement" \
+  "network observation status requires the authenticated bound network-worker Pod UID" \
+  patch_network_observation "$network_observation_revision" 3 \
+  2026-10-01T00:00:08Z 2026-10-01T00:00:09Z
+patch_network_observation_from "$replacement_network_kubeconfig" \
+  "$replacement_network_pod_uid" "$replacement_network_revision" 1 \
+  2026-10-01T00:00:08Z 2026-10-01T00:00:09Z >/dev/null
+
+# During a manager-observed replacement gap, there is no Pod proof to which a
+# still-authenticated worker can bind. It must fail closed until the manager
+# restores the exact ready-Pod identity.
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p '{"status":{"networkWorkerRevision":{"podUID":null,"podStartTime":null,"podReadyTime":null}}}' >/dev/null
+expect_denied "bound network worker without current manager Pod proof" \
+  "network observation status requires the authenticated bound network-worker Pod UID" \
+  patch_network_observation_from "$replacement_network_kubeconfig" \
+  "$replacement_network_pod_uid" "$replacement_network_revision" 2 \
+  2026-10-01T00:00:10Z 2026-10-01T00:00:11Z
+kubectl --context "$context" --as="$manager_username" patch ciscodevice \
+  "$network_device_name" --namespace "$worker_namespace" --subresource=status \
+  --type=merge -p "{\"status\":{\"networkWorkerRevision\":{\"podUID\":\"${replacement_network_pod_uid}\",\"podStartTime\":\"2026-10-01T00:00:06Z\",\"podReadyTime\":\"2026-10-01T00:00:07Z\"}}}" >/dev/null
+
 # A bound network object remains manager/native-controller owned even when a
 # namespace principal has broad DELETE and DELETECOLLECTION RBAC. Native GC may
 # remove the exact incarnation only with its normal UID precondition.

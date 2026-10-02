@@ -67,16 +67,22 @@ const (
 // Policy is the already-validated administrator ceiling used for one admission
 // decision. CampaignLimits can only tighten DomainBudgets.
 type Policy struct {
-	UID                          string         `json:"uid"`
-	Version                      string         `json:"version"`
-	Epoch                        int64          `json:"epoch"`
-	GlobalMaxConcurrentTransfers int            `json:"globalMaxConcurrentTransfers"`
-	GlobalMaxUnavailable         int            `json:"globalMaxUnavailable"`
-	DomainTransferBudgets        map[string]int `json:"domainTransferBudgets"`
-	DomainBudgets                map[string]int `json:"domainBudgets"`
-	MaxActiveRecords             int            `json:"maxActiveRecords"`
-	MaxSerializedBytes           int            `json:"maxSerializedBytes"`
-	RequiredHealthFreshBy        time.Time      `json:"-"`
+	UID                          string                     `json:"uid"`
+	Version                      string                     `json:"version"`
+	Epoch                        int64                      `json:"epoch"`
+	GlobalMaxConcurrentTransfers int                        `json:"globalMaxConcurrentTransfers"`
+	GlobalMaxUnavailable         int                        `json:"globalMaxUnavailable"`
+	DomainTransferBudgets        map[string]int             `json:"domainTransferBudgets"`
+	DomainBudgets                map[string]int             `json:"domainBudgets"`
+	RiskGroupBudgets             map[string]RiskGroupBudget `json:"riskGroupBudgets,omitempty"`
+	MaxActiveRecords             int                        `json:"maxActiveRecords"`
+	MaxSerializedBytes           int                        `json:"maxSerializedBytes"`
+	RequiredHealthFreshBy        time.Time                  `json:"-"`
+}
+
+type RiskGroupBudget struct {
+	MaxConcurrentTransfers int `json:"maxConcurrentTransfers"`
+	MaxUnavailable         int `json:"maxUnavailable"`
 }
 
 // Member is a current, uncached fleet-health input. Domain values must already
@@ -86,6 +92,7 @@ type Member struct {
 	DeviceUID      string            `json:"deviceUID"`
 	NodeUID        string            `json:"nodeUID"`
 	Domains        map[string]string `json:"domains"`
+	RiskGroups     []string          `json:"riskGroups,omitempty"`
 	HealthKnown    bool              `json:"healthKnown"`
 	Healthy        bool              `json:"healthy"`
 	Maintenance    bool              `json:"maintenance"`
@@ -111,6 +118,7 @@ type ReservationRequest struct {
 	ChildNamespace                 string            `json:"childNamespace"`
 	ChildName                      string            `json:"childName"`
 	Domains                        map[string]string `json:"domains"`
+	RiskGroups                     []string          `json:"riskGroups,omitempty"`
 	CampaignMaxConcurrentTransfers int               `json:"-"`
 	CampaignMaxUnavailable         int               `json:"-"`
 	CampaignTransferLimits         map[string]int    `json:"-"`
@@ -310,6 +318,9 @@ func validatePersistedReservation(reservation Reservation) error {
 			return fmt.Errorf("domain value for %q is invalid: %s", key, strings.Join(problems, "; "))
 		}
 	}
+	if err := validateRiskGroupNames(reservation.RiskGroups); err != nil {
+		return err
+	}
 	hasDrainProvenance := reservation.DrainSessionToken != "" || reservation.DrainStartedAt != "" || reservation.DrainCompletedAt != ""
 	if hasDrainProvenance {
 		if !validDrainSessionToken(reservation.DrainSessionToken) {
@@ -477,6 +488,9 @@ func Reserve(ledger *Ledger, policy Policy, members []Member, request Reservatio
 			return fmt.Errorf("invalid or stale domain %q for target", key)
 		}
 	}
+	if !equalStrings(request.RiskGroups, target.RiskGroups) {
+		return fmt.Errorf("invalid or stale risk-group membership for target")
+	}
 	for id, reservation := range ledger.Reservations {
 		if reservation.PhysicalID == request.PhysicalID {
 			return fmt.Errorf("%w: %s holds %s", ErrAlreadyReserved, id, reservation.State)
@@ -544,8 +558,26 @@ func Reserve(ledger *Ledger, policy Policy, members []Member, request Reservatio
 			}
 		}
 	}
+	for _, group := range request.RiskGroups {
+		budget, applies := policy.RiskGroupBudgets[group]
+		if !applies {
+			return fmt.Errorf("target references unknown risk group %q", group)
+		}
+		unavailable := unavailablePhysicalIDsInRiskGroup(canonicalMembers, ledger, policy, group)
+		unavailable[request.PhysicalID] = struct{}{}
+		if len(unavailable) > budget.MaxUnavailable {
+			return fmt.Errorf("%w: administrator risk group %s unavailable=%d limit=%d",
+				ErrBudgetExceeded, group, len(unavailable), budget.MaxUnavailable)
+		}
+		transfers := activeReservationsInRiskGroup(ledger, group) + 1
+		if transfers > budget.MaxConcurrentTransfers {
+			return fmt.Errorf("%w: administrator risk group %s transfers=%d limit=%d",
+				ErrBudgetExceeded, group, transfers, budget.MaxConcurrentTransfers)
+		}
+	}
 
 	request.Domains = cloneStringMap(request.Domains)
+	request.RiskGroups = append([]string(nil), request.RiskGroups...)
 	request.CampaignLimits = nil
 	request.CampaignTransferLimits = nil
 	request.CampaignMaxConcurrentTransfers = 0
@@ -560,6 +592,95 @@ func Reserve(ledger *Ledger, policy Policy, members []Member, request Reservatio
 		return err
 	}
 	return nil
+}
+
+func activeReservationsInRiskGroup(ledger *Ledger, group string) int {
+	count := 0
+	for _, reservation := range ledger.Reservations {
+		if containsSorted(reservation.RiskGroups, group) {
+			count++
+		}
+	}
+	return count
+}
+
+func unavailablePhysicalIDsInRiskGroup(
+	members map[string]Member,
+	ledger *Ledger,
+	policy Policy,
+	group string,
+) map[string]struct{} {
+	unavailable := map[string]struct{}{}
+	for physicalID, member := range members {
+		if containsSorted(member.RiskGroups, group) && member.unavailable(policy) {
+			unavailable[physicalID] = struct{}{}
+		}
+	}
+	for _, reservation := range ledger.Reservations {
+		if containsSorted(reservation.RiskGroups, group) {
+			unavailable[reservation.PhysicalID] = struct{}{}
+		}
+	}
+	return unavailable
+}
+
+func containsSorted(values []string, value string) bool {
+	index := sort.SearchStrings(values, value)
+	return index < len(values) && values[index] == value
+}
+
+func equalStrings(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for i := range left {
+		if left[i] != right[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func validateRiskGroupNames(groups []string) error {
+	if len(groups) > 16 {
+		return fmt.Errorf("risk groups may contain at most 16 entries")
+	}
+	for i, group := range groups {
+		if problems := validation.IsDNS1123Label(group); len(problems) > 0 {
+			return fmt.Errorf("risk group %q is invalid: %s", group, strings.Join(problems, "; "))
+		}
+		if i > 0 && groups[i-1] >= group {
+			return fmt.Errorf("risk groups must be strictly sorted and unique")
+		}
+	}
+	return nil
+}
+
+// RiskGroupMembershipHash freezes the exact relevant physical membership for
+// administrator-declared overlapping groups. Ungrouped members are excluded.
+func RiskGroupMembershipHash(members []Member) (string, error) {
+	type entry struct {
+		PhysicalID string   `json:"physicalID"`
+		Groups     []string `json:"groups"`
+	}
+	canonical, err := canonicalizeMembers(members)
+	if err != nil {
+		return "", fmt.Errorf("canonicalize risk-group membership: %w", err)
+	}
+	entries := make([]entry, 0, len(canonical))
+	for _, member := range canonical {
+		if len(member.RiskGroups) == 0 {
+			continue
+		}
+		entries = append(entries, entry{PhysicalID: member.PhysicalID, Groups: append([]string(nil), member.RiskGroups...)})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i].PhysicalID < entries[j].PhysicalID })
+	encoded, err := json.Marshal(entries)
+	if err != nil {
+		return "", fmt.Errorf("encode risk-group membership: %w", err)
+	}
+	digest := sha256.Sum256(encoded)
+	return "sha256:" + hex.EncodeToString(digest[:]), nil
 }
 
 func activeReservationsInDomain(ledger *Ledger, key, value string) int {
@@ -918,6 +1039,20 @@ func validateInputs(ledger *Ledger, policy Policy, request ReservationRequest) e
 	if policy.GlobalMaxConcurrentTransfers < 1 || policy.GlobalMaxUnavailable < 1 {
 		return fmt.Errorf("administrator global transfer and unavailable budgets must be positive")
 	}
+	if err := validateRiskGroupNames(request.RiskGroups); err != nil {
+		return err
+	}
+	if len(policy.RiskGroupBudgets) > 16 {
+		return fmt.Errorf("administrator risk-group budgets exceed 16 entries")
+	}
+	for name, budget := range policy.RiskGroupBudgets {
+		if problems := validation.IsDNS1123Label(name); len(problems) > 0 {
+			return fmt.Errorf("administrator risk group %q is invalid: %s", name, strings.Join(problems, "; "))
+		}
+		if budget.MaxConcurrentTransfers < 1 || budget.MaxUnavailable < 1 {
+			return fmt.Errorf("administrator risk group %q budgets must be positive", name)
+		}
+	}
 	for name, value := range map[string]string{
 		"reservation ID": request.ID, "campaign UID": request.CampaignUID, "plan hash": request.PlanHash,
 		"physical ID": request.PhysicalID, "device UID": request.DeviceUID, "node UID": request.NodeUID,
@@ -1138,8 +1273,12 @@ func canonicalizeMembers(members []Member) (map[string]Member, error) {
 		if member.PhysicalID == "" || member.DeviceUID == "" || member.NodeUID == "" {
 			return nil, fmt.Errorf("fleet member has incomplete identity")
 		}
+		if err := validateRiskGroupNames(member.RiskGroups); err != nil {
+			return nil, fmt.Errorf("fleet member %q: %w", member.PhysicalID, err)
+		}
 		if previous, ok := out[member.PhysicalID]; ok {
-			if previous.DeviceUID != member.DeviceUID || previous.NodeUID != member.NodeUID || !equalStringMap(previous.Domains, member.Domains) {
+			if previous.DeviceUID != member.DeviceUID || previous.NodeUID != member.NodeUID ||
+				!equalStringMap(previous.Domains, member.Domains) || !equalStrings(previous.RiskGroups, member.RiskGroups) {
 				return nil, fmt.Errorf("duplicate physical identity %q has conflicting membership", member.PhysicalID)
 			}
 			// Duplicate observations never make health more optimistic.
@@ -1153,6 +1292,7 @@ func canonicalizeMembers(members []Member) (map[string]Member, error) {
 			continue
 		}
 		member.Domains = cloneStringMap(member.Domains)
+		member.RiskGroups = append([]string(nil), member.RiskGroups...)
 		out[member.PhysicalID] = member
 	}
 	return out, nil

@@ -543,6 +543,45 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- fail (printf "topology.policy.projectedTopologyKeys contains %q, which is not in requiredTopologyKeys" $key) -}}
 {{- end -}}
 {{- end -}}
+{{- $protectionNames := dict -}}
+{{- range $protection := .Values.topology.policy.disruptionProtections -}}
+{{- if hasKey $protectionNames $protection.name -}}
+{{- fail (printf "topology.policy.disruptionProtections contains duplicate name %q" $protection.name) -}}
+{{- end -}}
+{{- $_ := set $protectionNames $protection.name true -}}
+{{- range $key, $_ := $protection.selector.matchLabels -}}
+{{- if not (hasKey $required $key) -}}
+{{- fail (printf "topology.policy.disruptionProtections rule %q selector key %q is not in requiredTopologyKeys" $protection.name $key) -}}
+{{- end -}}
+{{- end -}}
+{{- range $expression := $protection.selector.matchExpressions -}}
+{{- if not (hasKey $required $expression.key) -}}
+{{- fail (printf "topology.policy.disruptionProtections rule %q selector key %q is not in requiredTopologyKeys" $protection.name $expression.key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $riskGroupNames := dict -}}
+{{- range $group := (.Values.topology.policy.riskGroups | default (list)) -}}
+{{- if hasKey $riskGroupNames $group.name -}}
+{{- fail (printf "topology.policy.riskGroups contains duplicate name %q" $group.name) -}}
+{{- end -}}
+{{- $_ := set $riskGroupNames $group.name true -}}
+{{- if hasKey $group "maxAggregateTransferBytesPerSecond" -}}
+{{- if lt (int64 $group.maxAggregateTransferBytesPerSecond) (int64 $group.maxConcurrentTransfers) -}}
+{{- fail (printf "topology.policy.riskGroups group %q maxAggregateTransferBytesPerSecond must provide at least one byte per second for every transfer slot" $group.name) -}}
+{{- end -}}
+{{- end -}}
+{{- range $key, $_ := $group.selector.matchLabels -}}
+{{- if not (hasKey $required $key) -}}
+{{- fail (printf "topology.policy.riskGroups group %q selector key %q is not in requiredTopologyKeys" $group.name $key) -}}
+{{- end -}}
+{{- end -}}
+{{- range $expression := $group.selector.matchExpressions -}}
+{{- if not (hasKey $required $expression.key) -}}
+{{- fail (printf "topology.policy.riskGroups group %q selector key %q is not in requiredTopologyKeys" $group.name $expression.key) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- $domainKeys := dict -}}
 {{- range $key, $_ := .Values.topology.policy.domainMaxConcurrentTransfers -}}
 {{- if not (hasKey $required $key) -}}

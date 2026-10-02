@@ -607,6 +607,162 @@ type DeviceHealthObservationStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	ConditionObservations []DeviceConditionObservationStatus `json:"conditionObservations,omitempty"`
+
+	// Network is an optional bounded sample published by the network-management
+	// worker. It is untrusted producer input until the manager validates its
+	// device, worker, Pod, sequence, and collection provenance and copies it to
+	// AcceptedNetwork. Rollout admission never consumes this field directly.
+	// +kubebuilder:validation:Optional
+	Network *DeviceNetworkObservationStatus `json:"network,omitempty"`
+
+	// AcceptedNetwork is the manager-owned copy of the latest Network sample
+	// whose provenance matches the current device and network-worker binding.
+	// The original collection times are preserved so manager processing cannot
+	// make stale device evidence appear fresh.
+	// +kubebuilder:validation:Optional
+	AcceptedNetwork *DeviceNetworkObservationStatus `json:"acceptedNetwork,omitempty"`
+}
+
+// DeviceNetworkObservationStatus is a compact topology and path-health sample.
+// Full device output stays in telemetry or diagnostic result sinks; status
+// carries only the bounded inputs needed by an explicitly opted-in rollout
+// gate. A value is trusted only when present in the manager-owned
+// AcceptedNetwork field.
+//
+// +kubebuilder:validation:XValidation:rule="self.complete || has(self.unknownReason)",message="incomplete network evidence requires an unknown reason"
+type DeviceNetworkObservationStatus struct {
+	// WorkerPodUID records the network-management Pod incarnation that collected
+	// this sample. The manager must compare it with its independently observed
+	// worker proof before using the sample for disruptive admission; the field
+	// alone is not authentication.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	WorkerPodUID string `json:"workerPodUID,omitempty"`
+
+	// CollectionStartedAt and CollectionEndedAt delimit the worker-reported
+	// collection interval. The manager validates this provenance before using
+	// it. They make slow or unexpectedly long device
+	// reads visible to rollout diagnostics without retaining raw CLI output.
+	// +kubebuilder:validation:Optional
+	CollectionStartedAt metav1.Time `json:"collectionStartedAt,omitempty"`
+	// +kubebuilder:validation:Optional
+	CollectionEndedAt metav1.Time `json:"collectionEndedAt,omitempty"`
+
+	// SampleSequence is monotonic for one worker incarnation and resets when
+	// that worker is replaced. The manager binds the producer revision before
+	// using a sample for admission; a zero value is retained for older workers.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	SampleSequence uint64 `json:"sampleSequence,omitempty"`
+
+	// ObservedAt is the worker collection time, validated by the manager.
+	// +kubebuilder:validation:Required
+	ObservedAt metav1.Time `json:"observedAt"`
+
+	// Complete is false when any required source was unavailable or partial.
+	// +kubebuilder:validation:Required
+	Complete bool `json:"complete"`
+
+	// UnknownReason explains why Complete is false without including device
+	// output or credentials.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=256
+	UnknownReason string `json:"unknownReason,omitempty"`
+
+	// ProducerRevision identifies the current network worker incarnation.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	ProducerRevision string `json:"producerRevision"`
+
+	// DeviceIdentityHash binds the observation to the manager's physical-device
+	// identity without copying raw inventory into status.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	DeviceIdentityHash string `json:"deviceIdentityHash"`
+
+	// Interfaces and Neighbors are bounded and normalized by the worker; the
+	// manager validates ownership and duplicate identities before persistence.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=64
+	// +listType=map
+	// +listMapKey=name
+	Interfaces []DeviceNetworkInterfaceObservation `json:"interfaces,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxItems=64
+	// Atomic is intentional: multiple source-qualified adjacencies may share
+	// the same human-facing peer ID, and the network worker owns this complete
+	// bounded snapshot rather than merging individual entries.
+	// +listType=atomic
+	Neighbors []DeviceNetworkNeighborObservation `json:"neighbors,omitempty"`
+}
+
+type DeviceNetworkInterfaceObservation struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	Name string `json:"name"`
+	// +kubebuilder:validation:Required
+	OperUp bool `json:"operUp"`
+	// HeadroomPercent is omitted when the driver cannot provide a trustworthy
+	// sample; zero is therefore a real measured value, not Unknown.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	HeadroomPercent *int32 `json:"headroomPercent,omitempty"`
+
+	// CapacityBitsPerSecond and directional rates retain the bounded inputs
+	// from which HeadroomPercent was derived. Their absence is Unknown, while a
+	// present zero directional rate is a measured zero.
+	// +kubebuilder:validation:Optional
+	// The ceiling is the largest exactly representable JSON integer. Keeping
+	// the CRD boundary below int64's maximum avoids rounding that older API
+	// servers can reinterpret as a negative validation bound.
+	// +kubebuilder:validation:Maximum=9007199254740991
+	CapacityBitsPerSecond *uint64 `json:"capacityBitsPerSecond,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Maximum=9007199254740991
+	IngressBitsPerSecond *uint64 `json:"ingressBitsPerSecond,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Maximum=9007199254740991
+	EgressBitsPerSecond *uint64 `json:"egressBitsPerSecond,omitempty"`
+
+	// RateSource identifies the device data model used for the directional
+	// rates. It documents provenance, not an independent health grant.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	RateSource string `json:"rateSource,omitempty"`
+}
+
+type DeviceNetworkNeighborObservation struct {
+	// Identity is a canonical source-plus-adjacency key. It intentionally
+	// includes the discovery source and local routing context so equal device
+	// names from separate VRFs or interfaces cannot be silently merged.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	Identity string `json:"identity"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	ID string `json:"id"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	Interface string `json:"interface,omitempty"`
+	// RemoteInterface is the peer-reported port identity when the discovery
+	// protocol supplies it. It is observational evidence, not an authenticated
+	// physical-device identity.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	RemoteInterface string `json:"remoteInterface,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=64
+	RoutingDomain string `json:"routingDomain,omitempty"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=32
+	State string `json:"state"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=32
+	Source string `json:"source,omitempty"`
 }
 
 // DeviceWorkerRevisionStatus is manager-authenticated evidence that the

@@ -24,6 +24,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func newTestRESTCONF(t *testing.T, h http.HandlerFunc) (Interface, *httptest.Server) {
@@ -272,6 +273,48 @@ func TestNewRESTCONFRejectsEmptyConfig(t *testing.T) {
 	}
 	if _, err := NewRESTCONF(RESTCONFConfig{BaseURL: "https://x"}); err == nil {
 		t.Error("expected error when HTTPClient nil")
+	}
+}
+
+func TestRESTCONFFetchWithDeviceTimeUsesSuccessfulResponseDate(t *testing.T) {
+	deviceTime := time.Date(2026, 10, 2, 2, 24, 26, 0, time.UTC)
+	cli, server := newTestRESTCONF(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Date", deviceTime.Format(http.TimeFormat))
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+	defer server.Close()
+	timed, ok := cli.(interface {
+		FetchWithDeviceTime(context.Context, string) ([]byte, time.Time, time.Time, error)
+	})
+	if !ok {
+		t.Fatal("RESTCONF transport does not expose device-time fetch")
+	}
+	before := time.Now().UTC()
+	body, gotDevice, gotLocal, err := timed.FetchWithDeviceTime(context.Background(), "/clocked")
+	after := time.Now().UTC()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != `{"ok":true}` || !gotDevice.Equal(deviceTime) {
+		t.Fatalf("body/device time = %q, %s", body, gotDevice)
+	}
+	if gotLocal.Before(before) || gotLocal.After(after) {
+		t.Fatalf("local midpoint %s outside request interval [%s, %s]", gotLocal, before, after)
+	}
+}
+
+func TestRESTCONFFetchWithDeviceTimeFallsBackOnMalformedDate(t *testing.T) {
+	cli, server := newTestRESTCONF(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.Header()["Date"] = []string{"not-a-time"}
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	})
+	defer server.Close()
+	timed := cli.(interface {
+		FetchWithDeviceTime(context.Context, string) ([]byte, time.Time, time.Time, error)
+	})
+	body, deviceTime, localTime, err := timed.FetchWithDeviceTime(context.Background(), "/clocked")
+	if err != nil || string(body) != `{"ok":true}` || !deviceTime.IsZero() || !localTime.IsZero() {
+		t.Fatalf("malformed Date result = %q, %s, %s, %v", body, deviceTime, localTime, err)
 	}
 }
 

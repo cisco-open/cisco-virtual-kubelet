@@ -20,6 +20,34 @@ import (
 	"time"
 )
 
+func TestDiagnosticCLIResult(t *testing.T) {
+	for _, tc := range []struct {
+		name, command, body string
+		wantError           bool
+	}{
+		{"physical invalid syntax", "verify /sha256 flash:nginx.tar", "verify /sha256 flash:nginx.tar\r\n           ^\r\n% Invalid input detected at '^' marker.\r\nSwitch#", true},
+		{"retained echo", "show unknown", "\r\nshow unknown\n   ^\n% Invalid input detected at '^' marker.\nSwitch#", true},
+		{"incomplete", "show", "show\n% Incomplete command.\nSwitch#", true},
+		{"ambiguous", "show i", "show i\n% Ambiguous command:  \"show i\"\nSwitch#", true},
+		{"ambiguous single space", "show i", "% Ambiguous command: \"show i\"\nSwitch#", true},
+		{"version", "show version", "show version\nCisco IOS XE Software, Version 17.18.03\nSwitch#", false},
+		{"empty filtered log", "show logging | include absent", "show logging | include absent\nSwitch#", false},
+		{"syslog", "show logging", "show logging\nOct 2 10:00:00: % Invalid input detected at '^' marker.\nSwitch#", false},
+		{"error in output", "show logging", "show logging\nLog Buffer\n% Invalid input detected at '^' marker.\nSwitch#", false},
+		{"unrelated ambiguous command", "show logging", "% Ambiguous command: \"show i\"\nSwitch#", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := diagnosticCLIResult(tc.body, tc.command)
+			if (got.Err != "") != tc.wantError {
+				t.Fatalf("Err=%q, want rejection=%t; output=%q", got.Err, tc.wantError, got.Output)
+			}
+			if got.Command != tc.command || got.Output != trimEchoAndPrompt(tc.body, tc.command) {
+				t.Fatal("diagnostic classification changed the original evidence")
+			}
+		})
+	}
+}
+
 // TestIsCiscoPrompt covers the prompt patterns the SSH-CLI helper
 // matches against to decide where one command's output ends.
 func TestIsCiscoPrompt(t *testing.T) {

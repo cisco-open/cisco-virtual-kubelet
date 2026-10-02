@@ -80,6 +80,12 @@ limitations under the License.
       "maxLedgerBytes" .Values.topology.policy.maxLedgerBytes
       "ledgerName" $ledgerName
 }}
+{{- if gt (len (.Values.topology.policy.disruptionProtections | default (list))) 0 }}
+{{- $_ := set $policy "disruptionProtections" .Values.topology.policy.disruptionProtections }}
+{{- end }}
+{{- if gt (len (.Values.topology.policy.riskGroups | default (list))) 0 }}
+{{- $_ := set $policy "riskGroups" .Values.topology.policy.riskGroups }}
+{{- end }}
 {{- if .Values.topology.policy.workloadDrain.enabled }}
 {{- if lt (int .Values.topology.policy.workloadDrain.maxTimeoutSeconds) (add (int .Values.topology.policy.workloadDrain.maxTerminationGraceSeconds) 120) }}
 {{- fail "topology.policy.workloadDrain.maxTimeoutSeconds must be at least maxTerminationGraceSeconds plus 120" }}
@@ -91,6 +97,13 @@ limitations under the License.
       "maxPods" .Values.topology.policy.workloadDrain.maxPods
       "maxTerminationGraceSeconds" .Values.topology.policy.workloadDrain.maxTerminationGraceSeconds
 ) }}
+{{- end }}
+{{- $graphJSON := "" }}
+{{- if .Values.topology.graph.enabled }}
+{{- $graphJSON = dict "version" "v1" "peerMappings" .Values.topology.graph.peerMappings "declaredLinks" .Values.topology.graph.declaredLinks | toJson }}
+{{- if gt (len $graphJSON) 262144 }}
+{{- fail "topology graph policy exceeds the 262144-byte diagnostic contract" }}
+{{- end }}
 {{- end }}
 ---
 apiVersion: v1
@@ -119,6 +132,12 @@ data:
   # Helm never renders a guessed or placeholder UID.
   policy.json: |-
     {{ $policy | toJson }}
+  {{- if .Values.topology.graph.enabled }}
+  # Diagnostic-only input. Admission protects this ConfigMap, but graph.json
+  # is deliberately excluded from rollout policy and approval hashes.
+  graph.json: |-
+    {{ $graphJSON }}
+  {{- end }}
 {{- if empty $liveLedger }}
 ---
 apiVersion: v1

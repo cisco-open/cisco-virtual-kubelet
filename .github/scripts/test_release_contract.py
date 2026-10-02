@@ -698,6 +698,9 @@ go_version_is_supported go1.27.9
         deploy = (ROOT / ".github/workflows/develop.yml").read_text(encoding="utf-8")
         for workflow in (smoke, deploy):
             self.assertIn("--require-hashes -r requirements.txt", workflow)
+            self.assertIn("--strict --disable-pip --require-hashes -r requirements.txt", workflow)
+            self.assertIn("pip-audit==2.10.1", workflow)
+            self.assertIn('python -m venv "$RUNNER_TEMP/cvk-docs-audit"', workflow)
             self.assertIn("generate_mkdocs_licenses.py --check", workflow)
             self.assertIn("--check --site site", workflow)
             self.assertIn("mkdocs build --strict", workflow)
