@@ -1957,6 +1957,19 @@ func TestMarkTransferCompleteSetsTerminalProgress(t *testing.T) {
 	}
 }
 
+func TestSuccessfulDeviceTransferBytesUsesCompleteVerifiedStream(t *testing.T) {
+	const verifiedSize = int64(1_249_368_115)
+	if got := successfulDeviceTransferBytes(true, verifiedSize); got != verifiedSize {
+		t.Fatalf("primary transfer bytes=%d, want verified size %d", got, verifiedSize)
+	}
+	if got := successfulDeviceTransferBytes(false, verifiedSize); got != 0 {
+		t.Fatalf("supervisor sync bytes=%d, want 0 worker-streamed bytes", got)
+	}
+	if got := successfulDeviceTransferBytes(true, -1); got != 0 {
+		t.Fatalf("invalid verified size bytes=%d, want 0", got)
+	}
+}
+
 func TestVerifyMismatchWithRollbackReactivatesPreviousVersion(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyVersions = []string{"17.14.01a", "17.13.01a"}

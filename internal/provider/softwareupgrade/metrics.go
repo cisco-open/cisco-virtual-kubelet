@@ -44,7 +44,7 @@ func RegisterMetrics(reg prometheus.Registerer) {
 		)
 		transferBytes = prometheus.NewCounterVec(prometheus.CounterOpts{
 			Name: "cisco_vk_iosxe_software_upgrade_transfer_bytes_total",
-			Help: "Observed IOS XE software image bytes by bounded transfer segment, source, cache result, and outcome.",
+			Help: "IOS XE software image bytes fetched or completely streamed by the worker, by bounded transfer segment, source, cache result, and outcome.",
 		}, []string{"segment", "source", "cache", "result"})
 		transferDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 			Name:    "cisco_vk_iosxe_software_upgrade_transfer_duration_seconds",

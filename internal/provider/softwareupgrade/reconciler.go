@@ -2554,7 +2554,8 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		return r.handleInstallErr(ctx, up, err, now)
 	}
 	var validated *gnoi.InstallValidated
-	transferred := false
+	sentContent := false
+	transferObserved := false
 	contentProven := false
 	for ev := range progress {
 		switch {
@@ -2564,10 +2565,12 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			r.resetGNOIClientIfTransient(ctx, ev.Err)
 			return r.handleInstallErr(ctx, up, ev.Err, now)
 		case ev.TransferReady:
-			transferred = true
+			sentContent = true
+			transferObserved = true
 			contentProven = true
 		case ev.TransferProgress != nil:
-			transferred = true
+			sentContent = true
+			transferObserved = true
 			received := resolved.Size
 			if ev.TransferProgress.BytesReceived <= uint64(resolved.Size) {
 				received = int64(ev.TransferProgress.BytesReceived)
@@ -2577,7 +2580,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			}
 			r.updateTransferProgress(ctx, up, ev.TransferProgress.BytesReceived, resolved.Size, now)
 		case ev.SyncProgress != nil:
-			transferred = true
+			transferObserved = true
 			// The standby may safely synchronize from the primary only after
 			// this operation durably installed the pinned content there.
 			contentProven = standby && up.Status.PrimarySupervisorInstalled
@@ -2614,9 +2617,12 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			fmt.Sprintf("standby supervisor validated exact version %q, but the primary supervisor validated %q",
 				validated.Version, up.Status.ValidatedVersion), now)
 	}
-	if transferred && deviceTransferredBytes == 0 {
-		deviceTransferredBytes = resolved.Size
-	}
+	// Validated is emitted only after the gNOI client has joined the content
+	// sender. A successful primary transfer therefore consumed the complete
+	// verified source even when IOS XE's last TransferProgress sample stopped
+	// just short of EOF. Conversely, supervisor SyncProgress sends no bytes
+	// from this worker and must remain zero.
+	deviceTransferredBytes = successfulDeviceTransferBytes(sentContent, resolved.Size)
 	recordDeviceTransfer("success")
 	if requiresIndividualInstall && !standby {
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
@@ -2654,7 +2660,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		markTransferComplete(cur)
 		transferReason := "AlreadyInstalled"
 		transferMessage := "gNOI OS.Install reported that the content was already installed"
-		if transferred {
+		if transferObserved {
 			transferReason = "Transferred"
 			transferMessage = "image transfer or supervisor synchronization completed and the install stream closed cleanly"
 		}
@@ -2670,6 +2676,13 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, activationReason, activationMessage, now)
 		r.setReady(cur, metav1.ConditionFalse, "Validated", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
+}
+
+func successfulDeviceTransferBytes(sentContent bool, verifiedSize int64) int64 {
+	if !sentContent || verifiedSize < 0 {
+		return 0
+	}
+	return verifiedSize
 }
 
 func (r *Reconciler) waitForTransferPreflight(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time) (reconcile.Result, error) {
