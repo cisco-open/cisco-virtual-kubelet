@@ -1,7 +1,7 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **implementation and physical evidence reviewed through `3899e327`;
-roadmap not complete**, 2 October 2026.
+Status: **implementation and physical evidence reviewed through `1556238a`;
+remaining gates require the explicit inputs listed below**, 2 October 2026.
 Start with the current checkpoint and C0–C9 execution queue below. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
 and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
@@ -13,9 +13,9 @@ the base commit while the build includes uncommitted runtime changes; it is
 not a reproducible clean-commit candidate. The latest follow-up used
 `665a7954-settled5`; its stopped report and offline analysis are preserved in
 the [evidence index](evidence/topology-2026-10-01/README.md). The wider E03–E13
-roadmap remains open; this execution added a fresh disruptive six-rollout
-qualification of the currently implemented combined path on all three target
-C9Ks and recorded its limitations below.
+roadmap is followed by clean-candidate implementation and physical evidence
+through Helm revision 155. The latest exact candidate adds safe ownership
+settlement/handoff and measured distribution without relabelling older runs.
 
 This document converts the [topology roadmap](topology-roadmap.md) into work
 packages with implementation scope, test procedures and completion gates.
@@ -24,21 +24,22 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
-### Latest checkpoint (2 October 2026, 05:25 UTC)
+### Latest checkpoint (2 October 2026, 08:20 UTC)
 
 This checkpoint supersedes older “current” snapshots below while retaining
 their historical evidence and the complete E00–E13 acceptance definitions.
 
 | Area | Result on the current candidate | Remaining gate |
 | --- | --- | --- |
-| Source | E06 evidence, E07 placement safety, E08-A fail-closed group recognition and the complete E08-B scheduler lane are committed and pushed at `8e09daa2`. The current worktree adds the E12 retained-receipt ownership fence, versioned scale profile, benchmarks and bounded metrics. | Complete full validation and push the E12 increment, then run candidate CI when a PR exists. |
-| Automated validation | `go test -race ./...`, pinned Kubernetes 1.35 envtest, `go vet`, 26 lab-harness safety tests, generator no-drift, strict topology Helm lint/render, strict MkDocs build/license audit and CI-pinned `govulncheck` all pass. Symbol-aware scan reports zero called vulnerabilities. | Run candidate CI once a PR exists; optional/version-specific lanes remain governed by their prerequisites. |
-| Deployed candidate | Helm revision 143 runs exact tag `740ffd0e` on the manager and all six app/network workers for the three physical C9Ks. All three virtual Nodes are `Ready=True/KubeletReady`. | The older Nexus worker is outside this C9K candidate and is not qualified by this result. |
+| Source | E06 evidence, E07 placement safety and E08-A/B are followed by the complete E12/E09 hardening chain through pushed candidate `1556238a`. Full and race-targeted tests pass; Helm revision 155 runs that exact manager and all six physical C9K workers. | Publish candidate CI when a PR exists. Do not infer closure of hardware/service gates that lack lab inputs. |
+| Automated validation | On exact `1556238a`, the full Go suite, race-enabled changed controller/provider packages, pinned Kubernetes 1.35 envtest, `go vet`, strict topology Helm lint/render and strict MkDocs/license audit pass. Earlier full-race, harness, generation and vulnerability gates retain their recorded candidate scope. | Run exact-candidate remote CI once a PR exists; optional/version-specific lanes remain governed by their prerequisites. |
+| Deployed candidate | Helm revision 155 runs exact tag `1556238a` on the manager and all six app/network workers for the three physical C9Ks. All three virtual Nodes are `Ready=True/KubeletReady`. | The older Nexus worker is outside this C9K candidate and is not qualified by this result. |
 | E04 preparation | Physical `.103` downgrade-direction and `.101` upgrade-direction `PrepareOnly` both reached `Prepared`, retained the original running version and issued no activation. `.101` survived worker replacement; native operation count stayed unchanged and read-only CLI/gNXI/platform/app checks passed. | Native image removal/replacement and a safe explicit invalidation contract remain open. |
 | E05 ownership | Both receipts remain immutable and `Settled`. A competing exact-plan-approved campaign created no child and durably reported `Blocked/PreparedOwnershipRetained`; `ddc02b82` removed the reconcile-error loop. Live server dry-run denied receipt removal. | Later activation must revalidate receipt, native inventory, trust, source and topology; that belongs to E06. |
-| Authorization/settlement | Strict two-account RBAC and all 27 native validating policies passed live checks with no type warnings. The topology ledger has no reservations; disruptive Leases have no holder; the manager logged zero reconcile errors in the final interval. | Dedicated activation-approver authority does not yet exist. |
+| Authorization/settlement | Strict two-account RBAC and all 27 native validating policies passed live checks with no type warnings. Dedicated activation-approver authority is distinct and physically qualified. The topology ledger has no reservations after the `.103` run; both manager and worker settled. | Preserve least-privilege role separation; do not bind activation approval to either functional worker account. |
+| E09 distribution | Two physical PrepareOnly campaigns now separate verified origin→worker and worker→device bytes/time. Candidate `9e6cdfcc` repaired IOS XE terminal-progress undercount; `.103` on `1556238a` reported the exact 1,249,368,115-byte stream, remained on its original running version and settled healthy. | Shared PVC cache is explicitly deferred for this local path: its measured benefit does not justify new storage/ownership/security machinery. Revisit only with a predeclared WAN/cross-site target. |
 | E10 graph diagnostics | Complete for the defined read-only scope. A deliberate isolated `.101` link shutdown changed the accepted graph from 5/9/0 to 5/7/3 and `--require-complete` failed. Exact-path no-shutdown recovery on `740ffd0e` respected the full retained lease, returned the config to `InSync`, restored device/CDP state and produced a fresh 5/9/0 graph without changing protected policy provenance. Manager replacement preserved graph content under fresh provenance; live native admission denied a functional worker's accepted-status write. | No E10 implementation gate remains. Graph output is diagnostic, not independent path-health proof or rollout authority. |
-| E06 and wider roadmap | E06 is complete for the tested C9300/IOS XE cohort. A closed-window hold followed by a separately approved `.101` upgrade and reciprocal `.103` downgrade produced one activation claim each, exact post-reload Verify, healthy secure gNXI, Ready Nodes and an empty ledger. [`e06-separate-activation.md`](evidence/topology-2026-10-02/e06-separate-activation.md) records three physical defects fixed through `3899e327`. E08-B now passes all specified disposable scheduler cases. E12 has a reproducible synthetic 1,000-member/100-target core benchmark and retained preparation now blocks ownership transfer. | E02/E03 traffic-path proof, E07 physical service continuity, E08-C/D physical native TAS lifecycle and group drain, E09 segment measurement, E11 second-platform images and E12 runtime/physical ownership inputs remain explicit prerequisites, not implied passes. |
+| E06 and wider roadmap | E06 is complete for the tested C9300/IOS XE cohort. A closed-window hold followed by a separately approved `.101` upgrade and reciprocal `.103` downgrade produced one activation claim each, exact post-reload Verify, healthy secure gNXI, Ready Nodes and an empty ledger. [`e06-separate-activation.md`](evidence/topology-2026-10-02/e06-separate-activation.md) records three physical defects fixed through `3899e327`. E08-B passes all specified disposable scheduler cases. E12 has a reproducible synthetic 1,000-member/100-target core benchmark, small-runtime latency/RSS data, and a physical `.100` reverse/forward handoff with old-writer denial. | E02/E03 traffic-path proof, E07 physical service continuity, E08-C/D physical native TAS lifecycle/group drain, E11 second-platform images and E12-D cross-cluster inputs remain explicit prerequisites, not implied passes. |
 
 The current physical/sanitized record is indexed at
 [`evidence/topology-2026-10-02/`](evidence/topology-2026-10-02/README.md). Raw
@@ -275,9 +276,9 @@ separately bound roles; they must not be granted implicitly to those workers.
 | **C3 — execution-time network safety** / E03 | Evidence-bound expiring grants, monotonic renewal, uncached worker enforcement, bounded administrator critical-service/singleton-path prohibitions, overlapping risk groups including non-target peers and all campaigns, post-operation continuous network recovery/soak evaluation, and administrator-derived worker byte pacing are implemented. Retain reservations for work already accepted. | Claim-time expiry/replacement/rotation, native tuple transitions, planning/pre-execution protection, risk-group CAS/drift, pacing/fail-closed resolver tests and soak-reset tests pass. Complete tightened-policy/API-lag/restart cases and E03-C–F physical tests with measured pacing, redundant, single-path, critical-service and congested-path scenarios. Labels alone do not qualify redundancy. |
 | **C4 — independent Install qualification** / E04 | `PrepareOnly` is implemented as a guarded lifecycle path ending at exact native inventory plus read-only `OS.Verify`; no branch reaches `OS.Activate` or reboot. Activation-only source intents fail closed. | Local unit and real-API gates pass. Complete E04-A–D on an isolated target: baseline/console/service probes, exact digest/version and inventory before/after, worker/manager restart with no replay, external removal/replacement detection and both image directions. Lack of durable identity is an explicit cohort blocker, not a fabricated pass. |
 | **C5 — durable prepare and separate activation** / E05–E06 | Complete for the tested C9300/IOS XE cohort. E05 immutable retained receipts and E06 append-only exact-receipt authorization, distinct permission, explicit windows, separate leaves/reservations, claim-time trust/native-inventory checks and no-replay recovery passed local and physical qualification. | Keep external image removal/replacement and any supported receipt invalidation as an explicit E04/E05 extension; do not weaken immutable ownership to add it. |
-| **C6 — workload continuity and eligibility** / E07, E08-A | Current worktree adds an uncached unstructured scheduling-group guard plus placement hashing and conservative alternative-Node feasibility for Deployment/ReplicaSet node selectors, required node affinity and hard topology spread. PDB, device-clean acknowledgement and native replacement readiness remain mandatory. | Complete real-API placement/group race coverage, then E07-A–D physical portable-application and continuous endpoint probes through both directions. Grouped workloads remain blocked pending E08-C/D. Unsigned apps without required C9K SSD/USB storage are expected unsupported, not an upgrade failure. |
-| **C7 — graph and distribution** / E09–E10 | Wire bounded graph diagnostics to accepted evidence; prove three-way conflicts/duplicates/order invariance, freshness and declared-link drift before exposing results. Measure source→worker and worker→device traffic, then record the durable-cache decision. | E10-A–D with controlled physical link change/restore; diagnostics never independently grant disruption authority. E09-A measures bytes/time/concurrency/storage for both segments. If measurements justify persistent cache, implement E09-B–D with immutable digest/trust/Secret identity, PVC reservation/GC and disk-full/restart tests; otherwise record an evidence-backed deferral, not a cache implementation pass. |
-| **C8 — broader platform, ownership and TAS** / E08, E11–E12 | Implement/test sole-authority staged/uncertain ownership transfer, measure bounded scale, qualify a second lifecycle driver with real images, and then real CVK native TAS group lifecycle. Keep these as independent reviewable changes. | E12-B–D before physical group movement; prove no simultaneous owners and no reuse of uncertain claims. E12-A synthetic API load at 1/10/50/100 targets plus measured real-worker limits. E11-A–D requires a qualified second platform/image pair, not the existing virtual NX-OS Node alone. Before E08-B–D, verify available upstream Kubernetes binaries/APIs/feature gates; the current 1.35 lab and a filename mentioning 1.37 are not TAS qualification. |
+| **C6 — workload continuity and eligibility** / E07, E08-A | The uncached unstructured scheduling-group guard and placement hashing/conservative alternative-Node feasibility for Deployment/ReplicaSet node selectors, required node affinity and hard topology spread are implemented. E08-A real-API recognition passes. PDB, device-clean acknowledgement and native replacement readiness remain mandatory. | E07-A–D physical portable-application and continuous endpoint probes still require a qualified artifact/fixture. Grouped workloads remain blocked pending E08-C/D. Unsigned apps without required C9K SSD/USB storage are expected unsupported, not an upgrade failure. |
+| **C7 — graph and distribution** / E09–E10 | Complete for the selected scope. E10 read-only diagnostics passed controlled physical drift/restoration. E09 measured both transfer segments on two physical devices, corrected complete-stream accounting and recorded an evidence-backed shared-PVC-cache deferral. | Preserve the published boundaries: graph diagnostics do not grant disruption authority and Pod-ephemeral cache is not persistent. Reopen durable cache only with a predeclared WAN/cross-site benefit target. |
+| **C8 — broader platform, ownership and TAS** / E08, E11–E12 | E12-A/B/C now cover the versioned synthetic envelope, fail-closed unresolved ownership and physical single-cluster reverse/forward handoff. E08-B's pinned scheduler lane passes. | E12-D still requires an independent second-cluster credential/authority boundary. E11-A–D requires a qualified second platform/image pair. E08-C/D requires a native controller-backed portable workload and physical group-aware lifecycle; none may be inferred from synthetic Nodes. |
 | **C9 — one-candidate acceptance** / E13 | Freeze a clean source/chart/CRD/admission/container digest set, publish PR/CI, deploy it with explicit migration order and run the complete applicable acceptance matrix. Update operator examples, supported capabilities and recovery instructions from actual evidence. | F01–F08/F13 core plus F09–F12 wider gates; all three physical targets upgrade and downgrade serially first, then only evidenced safe concurrency. Capture least-privilege approvals, both terminal views, service/path probes, recovery soak, final inventory and fence/budget settlement. Stop on unexplained discrepancy; fixes require a new candidate and affected reruns. Missing prerequisites remain open. |
 
 **Critical path:** C0/C1 → C2 → C3 → C5 → C6 → C9, with C4 gating
@@ -346,10 +347,11 @@ mutation safety or substitute for their integration gates.
 | Second platform / C8 | Eligible device, credentials, lifecycle API and two compatible images | E11 stays blocked; NX-OS virtual Node readiness is not lifecycle evidence |
 | Native group scheduling / C8 | Available supported Kubernetes release, actual APIs/feature gates and matching CVK ownership lifecycle | E08 optional physical qualification remains pending; do not upgrade based on a planned version number |
 
-The next executable coding increment is **C1 binding-order + real freeze-path
-regressions**, alongside C0 read-only preservation/diagnosis. Resolve C0
-before reusing `.103`; do not start another blanket three-device cycle first.
-No E00–E13 package is closed by this review.
+The old C0/C1 checkpoint below is historical: both were resolved by later
+clean candidates and `.103` has since completed qualified preparation and
+separate activation. Do not use this historical queue as the current next-step
+list. Current unresolved work begins with the explicit prerequisite table and
+the updated completion accounting above.
 
 ### Historical N1–N5 queue (superseded by C0–C9)
 
@@ -416,18 +418,20 @@ deliverables.
 | E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Complete for the tested C9300/IOS XE cohort. Exact receipt authorization, phase accounting, closed-window hold, independently approved upgrade and downgrade, no-replay recovery and final settlement passed through `3899e327`; see the E06 evidence record. |
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | In progress: placement hashing and conservative feasibility now support node selectors, required node affinity and hard topology spread for the existing Deployment/ReplicaSet subset. Physical signed portable workload, endpoint continuity, no-capacity and restart/cancel qualification remain. |
 | E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | In progress: E08-A fail-closed raw `spec.schedulingGroup` recognition is implemented and E08-B's complete pinned Kubernetes 1.37 scheduler matrix passes. A qualified workload controller, physical native owner lifecycle and group-aware drain (E08-C/D) remain. |
-| E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Not started for roadmap measurement/decision: ephemeral cache exists; E09-A and explicit cache selection decision remain mandatory. |
+| E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Measurement/design gate complete for the tested local path: cold and warm origin→worker plus worker→device bytes/time are recorded on two physical switches. Exact successful-stream accounting passed on `1556238a`. Shared PVC caching is deferred because the measured source-fetch saving does not justify its ownership/security surface; conditional cache tests remain out of scope unless that decision changes. |
 | E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | Complete for the defined read-only diagnostic scope. Bounded manager-accepted evidence, mapping/declaration drift, remote-port identity, protocol/VRF/LAG fixtures, stale/conflicting/truncated inputs, controlled physical link loss/restoration, manager restart and live status-ownership denial pass. Graph completeness remains explicitly non-authoritative for path health or mutation admission. |
 | E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Blocked — prerequisite for positive qualification: no qualified second-platform image pair/service evidence; discovery and fixtures can proceed. |
-| E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | In progress: the versioned 1/10/50/100-target, 1,000-member core benchmark passes on pinned Linux and retained `Prepared` ownership now fences deletion/reverse handoff. Production manager p50/p95/p99, RSS/API/contention sampling and physical E12-C/D owner transfer remain. |
-| E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Not started for final acceptance: no single candidate has passed the applicable F01–F13 matrix. |
+| E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | E12-A synthetic envelope and small-runtime latency/RSS/conflict sample, E12-B fail-closed unresolved ownership, and E12-C physical same-UID `.100` reverse/forward handoff with old-writer denial pass through `1556238a`. E12-D cross-cluster transfer and large-fleet production throughput remain. |
+| E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Partial candidate acceptance through `1556238a`: full/race-targeted tests and exact three-device deployment/health/ledger settlement pass. F01–F13 items depending on traffic/service fixtures, a portable app, native physical TAS, second platform or second cluster remain blocked by those explicit inputs. |
 
 **Completion accounting:** E06 is closed for the explicitly tested C9300/IOS
-XE cohort and E10 is closed for its read-only diagnostic scope. E05's core
-receipt/ownership contract is complete but external image invalidation remains
-an extension. E00–E03, E07–E09 and E11–E13 retain acceptance gates; the
-remaining work is not solely lab testing. A percentage based on commit counts
-or passing unit tests would obscure those dependencies and cohort limits.
+XE cohort, E09's measurement/cache-selection decision is closed for the tested
+local path, E10 is closed for its read-only diagnostic scope, and E12-C is
+closed for the tested single-cluster handoff. E05's core receipt/ownership
+contract is complete but external image invalidation remains an extension.
+E00–E03, E07–E08, E11, E12-D and the corresponding E13 gates retain explicit
+external acceptance prerequisites. A percentage based on commit counts or
+passing unit tests would obscure those dependencies and cohort limits.
 
 ### Historical baseline review (before the disruptive run)
 
@@ -481,10 +485,10 @@ can proceed alongside implementation.
 | 1 | Reconcile E00 evidence, repair the harness, binding retries and reproducible generation, then finish E01/E02 correctness: RO publication, exact producer acceptance, identity/VRF handling, rate validity. | E00-A–H; E01-A–E; E02-A first, followed by isolated E02-B/C. Compare device terminal output with published samples; reproduce old failures and assert exact blockers/zero dispatched mutations. |
 | 2 | Qualify E04 independently, while adding E03 administrator policy, risk groups and expiring grants. | E04-A–D in both image directions; E03-A/B CAS and real-API negative tests before E03-C–F physical path/load tests. Record incapable cohorts as blocked. |
 | 3 (complete for C9300 cohort) | E05 staged receipts/ownership and E06 independent activation approval, windows and atomic phase reservations. | Local fault/admission suites plus the closed-window physical upgrade and reciprocal downgrade passed; retain the documented cohort boundary. |
-| 4 (current) | Finish E08-A real-API coverage and E07 hard-placement/service-preserving drain qualification. Placement/group code is implemented in the current worktree. | E08-A old-client raw-read and membership-race tests; E07-A–D upgrade and downgrade with portable signed/supported artifacts, PDB, spare capacity and independent service probes. Manual workload scale-down does not pass this increment. |
-| 5 | Complete E10 graph corrections and manager/CLI integration; perform E09 transfer measurements and select or reject durable cache explicitly. | E10-A–D including isolated physical link change/restoration; E09-A warm/cold measurement of both segments. If cache is selected, implement and pass E09-B–D. |
-| 6 | Complete E12 ownership transfer before moving physical devices to the optional TAS cluster; finish E08 physical group lifecycle. | E12-B/C and E12-D when moving across clusters; complete remaining E08-B scenarios and E08-C/D. Remove old authority before destination enrollment. |
-| 7 | Qualify E11 second platform and E12 scale once shared contracts are stable. | E11-A capability discovery can start earlier; E11-B–D require qualified hardware/images. E12-A benchmarks at 1/10/50/100 targets and boundaries need predefined latency/resource budgets. |
+| 4 (external input) | E07 hard-placement/service-preserving drain and E08 physical group lifecycle. E08-A/B code/API/scheduler gates pass. | E07-A–D and E08-C/D require a portable signed/supported artifact, native controller, spare eligible device capacity, PDB and independent service probe. Manual scale-down or an unsigned package on storage-incapable C9K hardware is not a pass. |
+| 5 (complete for selected scope) | E10 read-only graph and E09 measured distribution/cache decision. | Controlled graph drift/restoration and both transfer segments pass. Shared PVC cache is rejected for this measured local path, so conditional cache implementation tests are not selected. |
+| 6 (partially complete) | E12 sole-authority ownership transfer before any optional cluster move. | E12-A/B/C pass for the synthetic/single-cluster scopes. E12-D requires a real second cluster and separately fenced credentials; remove old authority before destination enrollment. |
+| 7 (external input) | Qualify E11 second platform. | E11-A–D require eligible hardware, lifecycle service and two compatible images. The existing virtual NX-OS Node is not positive lifecycle evidence. |
 | 8 | Run E13 migration/security and the final integrated physical matrix on one pinned candidate; archive evidence and align release claims. | Core F01–F08/F13 plus applicable F09–F12; exact candidate CI, baseline and optional-version lanes, recovery and final ownership/maintenance checks. |
 
 **Next implementation checkpoint:** complete the following repairs within
@@ -1237,6 +1241,15 @@ E09-A and the design decision are mandatory. If caching is selected, E09-B–D
 must pass before closing its implementation. Ephemeral `emptyDir` reuse does
 not demonstrate persistence across Pod replacement or volume loss.
 
+The mandatory measurement/design decision is now recorded in
+[`e09-transfer-measurement-and-cache-decision.md`](evidence/topology-2026-10-02/e09-transfer-measurement-and-cache-decision.md).
+For the tested Ubuntu16-local source path, cold source materialization took
+39–51 seconds, same-Pod validation 8–9 seconds, and the complete physical gNOI
+stream 144–159 seconds. Shared durable caching is not selected. Therefore
+E09-B/C and persistent-volume loss in E09-D are conditional, not incomplete
+implementation for this branch. A future WAN/cross-site proposal must set its
+benefit target before reopening this decision.
+
 ## 13. E10 — implement graph diagnostics and policy drift
 
 Code: observation schema/normalization, pure comparison logic,
@@ -1373,6 +1386,15 @@ metrics, managed handoff/retirement controllers and operator runbook.
 Synthetic fleets qualify controller scale only. Physical tests qualify device
 semantics at the tested cohort size. Report both separately; three switches
 cannot substantiate large-fleet throughput.
+
+The current result is recorded in
+[`e12-synthetic-scale-and-handoff.md`](evidence/topology-2026-10-02/e12-synthetic-scale-and-handoff.md).
+The versioned synthetic profile passes through 100 targets against 1,000
+members; the three-device manager sample reports bounded p50/p95/p99, RSS and
+zero ledger conflicts; and `.100` passed reverse/forward ownership transfer
+with the same Node UID plus live denial of both old writer identities. E12-D
+remains open because no second cluster/credential boundary was available, and
+the small physical cohort is not a 100-worker throughput claim.
 
 ## 16. E13 — integrated acceptance and release closure
 

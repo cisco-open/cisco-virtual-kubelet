@@ -2,7 +2,7 @@
 
 Date: 2 October 2026
 
-Candidate base: `8e09daa2` plus the E12 worktree described here
+Final candidate: `1556238a`
 
 This record advances E12-A/B without overstating physical qualification. The
 versioned profile is
@@ -67,8 +67,61 @@ or one-byte-over serialized ledger fails closed.
 
 The benchmark allocation total is cumulative transient allocation for building
 100 reservations against a repeatedly canonicalized 1,000-member snapshot; it
-is not resident memory. The new production histogram/counter and standard
-process/client metrics must still be sampled on the real manager to close the
-profile's p50/p95/p99, RSS, API-rate and contention budgets. Consequently this
-is a reproducible synthetic controller-core result, not full E12-A production
-acceptance and not evidence for a fleet larger than the tested profile.
+is not resident memory.
+
+## Production-manager sample
+
+The three-device physical manager was sampled before its next rollout. Across
+1,367 complete/requeue observations, the bounded histogram established:
+
+- conservative p50 at or below 40 ms;
+- conservative p95 at or below 160 ms;
+- conservative p99 at or below 1.28 s;
+- combined average about 56.3 ms;
+- zero ledger-conflict retries;
+- resident memory 149,344,256 bytes (about 142.4 MiB).
+
+These values are within the versioned profile's latency, conflict and memory
+budgets for this three-device runtime. They do not establish production API
+rate or throughput at 100 physical workers; the synthetic 1,000-member/
+100-target benchmark remains the large-input evidence.
+
+## Physical single-cluster handoff
+
+Candidate `ae93ca37` migrated an exact historical shared-account owner to the
+ownerless steady-state account without adopting foreign RBAC. Candidate
+`050ab07a` then admitted only the manager's UID-bound two-step forward
+enrollment: the same-name Node had to retain its exact UID and immutable
+`topology.cisco.vk/legacy-handoff=<node UID>` marker while managed metadata was
+restored and the initialization taint was removed.
+
+On physical `.100`:
+
+1. reverse handoff reached `Complete` with the original Node UID
+   `1600578e-9e93-4164-9e47-b0c277a28d5e`;
+2. the shared account and RoleBinding became ownerless; temporary UID-scoped
+   access and the managed network worker were absent;
+3. the exact Node audit marker remained and the Node was Ready;
+4. old UID-derived and shared functional identities were denied Node get and
+   patch by live authorization checks;
+5. forward enrollment reused that exact Node UID, restored the managed
+   `NodeIdentity`, removed only the initialization taint and returned both
+   functional workers to Ready.
+
+No software mutation, receipt or activation approval was transferred. A new
+Prepared receipt created later on `.100` correctly makes another reverse
+handoff ineligible until that exact software ownership is resolved.
+
+This passes E12-C for a single physical C9300 within one Kubernetes cluster:
+the destination owner was established, old writers were denied, and Node
+identity/history were preserved. E12-D remains open because no second cluster
+and independently fenced destination credential set were available. Active/
+active ownership is still explicitly unsupported.
+
+## Result boundary
+
+E12-A's versioned synthetic core benchmark, bounded observability and small-
+runtime sample are complete. E12-B's fail-closed software/operation fences and
+E12-C's physical single-cluster handoff are complete for the tested path.
+Cross-cluster E12-D and a production throughput claim beyond the versioned
+synthetic envelope remain open prerequisites rather than inferred passes.

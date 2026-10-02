@@ -1,8 +1,8 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete; implementation and physical evidence reviewed through
-`3899e327`**, 2 October 2026.
-Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-0525-utc),
+Status: **incomplete only where explicitly listed below; implementation and
+physical evidence reviewed through `1556238a`**, 2 October 2026.
+Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-0820-utc),
 the [current physical evidence](evidence/topology-2026-10-02/README.md), and
 the [November handoff](topology-november-handoff.md). The earlier
 [versioned evidence](evidence/topology-2026-10-01/README.md) remains historical.
@@ -111,8 +111,9 @@ cleanup marker. Offline classification now requires preceding exact
 namespace/name/UID-correlated CVK device-clean and `ProviderDeleteSuccess`
 records. The stopped process was not rerun with this classifier.
 
-No E00–E13 package yet satisfies every exit gate. Separate staging/activation,
-application/forwarding continuity and full drain qualification remain open.
+The roadmap as a whole does not satisfy every exit gate. Separate staging and
+activation are complete for the tested C9300 cohort, while application/
+forwarding continuity and full drain qualification remain open.
 The corrected harness now validates explicit source URLs/digests, waits for
 manager-owned operation binding, resolves rollout targets for in-flight taint
 observation, captures manager/network/app logs and reports only the executed
@@ -142,10 +143,10 @@ remains the completion ledger.
 | T4 | E06 is complete for the tested C9300/IOS XE cohort: append-only exact-receipt approval, distinct `activate` RBAC, bounded UTC claim windows, separate activation leaves/reservations, claim-time trust/native-inventory revalidation and no-replay recovery passed the local fault matrix plus a closed-window physical upgrade and reciprocal downgrade. | Preserve the cohort boundary and [`e06-separate-activation.md`](evidence/topology-2026-10-02/e06-separate-activation.md). Another platform remains E11, not an E06 claim. |
 | T5 | `.101` historical drain evidence records ordered device-clean completion. The current increment preserves node selectors, required node affinity and hard topology spread in the eligibility digest and conservatively checks another Ready Node, taints, allocatable capacity and current skew before eviction. | E07: pass real-API placement races and physical portable-application/service tests in both directions, including no-spare-capacity and restart/cancel cases. This remains partial evidence, not full drain qualification. |
 | T6 | E08-B's pinned Kubernetes 1.37 lane passes co-location, partial-member replacement, maintenance block/recovery, capacity-shortage blocking and kube-scheduler process restart. Drain now uses an uncached unstructured Pod read and rejects any native `spec.schedulingGroup`, closing the old-client silent-bypass gap before eviction. | E08-C/D: qualify a native workload controller, physical service lifecycle and group-aware drain before grouped eviction can be enabled. |
-| T7 | Existing ephemeral cache only | E09: measure both transfer segments; implement durable prefetch/PVC cache only when its decision gate passes, then qualify failures. |
+| T7 | E09 physical measurement now separates origin→worker and worker→device bytes/time on `.100` and `.103`; `9e6cdfcc` corrects complete-stream accounting and `1556238a` physically reports the exact 1,249,368,115-byte stream. Same-Pod verified hits take 7.9–8.7 seconds; cold origin fetches take 39–51 seconds; device streaming takes 144–159 seconds. | The evidence-backed decision is to defer shared PVC caching for this local path. Reopen only with a predeclared WAN/cross-site benefit target; durable-cache failure gates are not applicable while it is not selected. |
 | T8 | Complete for the defined read-only diagnostic scope. Bounded manager-accepted evidence, authenticated freshness, duplicate/conflict handling, remote-port identity, strict administrator mappings/declarations, protected policy provenance, protocol/VRF/LAG fixtures and truncated-input bounds fail closed. Candidate `740ffd0e` passed a controlled isolated-link change/restoration plus manager replacement and live functional-worker status-forgery denial across all three C9Ks. | E10 is closed. The graph deliberately remains diagnostic: it neither proves end-to-end path health nor grants disruption authority. |
 | T9 | Second-platform qualification absent | E11: probe a suitable platform, qualify its lifecycle and record the public-API decision. Unsupported hardware leaves this gate open. |
-| T10 | Legacy handoff/convergence is hardened; retained `Prepared` receipts now explicitly fence deletion and reverse handoff. A versioned synthetic 1,000-member/100-target core benchmark and bounded latency/conflict metrics exist. | E12: sample the production manager p50/p95/p99, RSS/API/contention budgets and test physical single-cluster/offline handoff. Three switches do not prove fleet scale. |
+| T10 | Legacy handoff/convergence is hardened; retained unresolved `Prepared` receipts fence deletion/handoff, while an exact verified settled activation consumes queue ownership without deleting audit evidence. The versioned 1,000-member/100-target core benchmark, three-device manager latency/RSS sample, and physical `.100` reverse/forward handoff passed. | E12-D cross-cluster offline transfer and production throughput beyond the synthetic envelope remain open. Three switches do not prove fleet scale. |
 
 Previous status text overstated completion by equating baseline functionality
 with later roadmap deliverables. Existing test passes and physical upgrade

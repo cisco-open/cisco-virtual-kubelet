@@ -1657,6 +1657,14 @@ not copy the receipt/approval to another owner or delete the leaf as an
 invalidation shortcut; a device-reconciled receipt invalidation contract is
 not yet supported.
 
+One exact activation consumes that queue ownership only after it is terminal
+`Succeeded`, verifies the prepared target version, records a conclusively
+settled device mutation, and settles the same manager/device/Node/campaign/
+policy/plan bindings. The Prepared object and receipt stay append-only for
+audit, but a later campaign may then acquire the device queue. The manager and
+provider use the same predicate; any missing completion, condition or identity
+binding continues to block.
+
 The same fail-closed rule applies to `StagedForNextBoot` and to every
 non-terminal leaf, even if a contradictory historical object says manager
 admission is `Settled`. Resolve and independently verify that device-side state

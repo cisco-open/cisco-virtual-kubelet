@@ -22,6 +22,10 @@ published with the branch.
 | `af50c7af` | Yield the retained preparation queue only to its exact authorized activation | Physical activation acquired authority without weakening unrelated conflicts |
 | `2646e217` | Corroborate IOS XE 17.18 inactive inventory from exact retained install evidence | Physical activation passed without accepting generic `InProgress` |
 | `3899e327` | Keep activation completion terminal after a child exists | Upgrade and downgrade remained `Succeeded` across later reconciles |
+| `3f765999`–`23d8c060` | Add versioned scale evidence and settle safely consumed/unclaimed ownership | Synthetic scale and retained-audit paths passed |
+| `5fb1738f`–`050ab07a` | Harden replanning, exact legacy-account migration and UID-bound re-enrollment | Physical `.100` reverse/forward handoff passed without changing its Node UID |
+| `9e6cdfcc` | Count a successful content-bearing gNOI stream by its verified size | Corrected IOS XE's incomplete terminal progress accounting |
+| `1556238a` | Share exact consumed-Prepared ownership semantics between manager and provider | A later physical `.103` campaign advanced while the immutable audit record remained |
 
 The exact `ddc02b82` Linux/amd64 image was built locally. Its image config
 digest was `sha256:59d9fd46bdb91f1334af41043dfafb9844906ecaebd664c058e9b406ef5a61cb`
@@ -115,10 +119,17 @@ and retested through exact candidate `3899e327`.
 
 [`e12-synthetic-scale-and-handoff.md`](e12-synthetic-scale-and-handoff.md)
 records the versioned 1/10/50/100-target benchmark profile and pinned Linux
-results. It also records the retained-preparation fence added to managed device
-deletion and reverse writer handoff. This is synthetic E12-A and unit/API E12-B
-evidence only; manager runtime percentiles and physical E12-C/D handoff remain
-open.
+results, production-manager latency/RSS sampling, retained-preparation fence,
+and the physical `.100` reverse/forward handoff. E12-D cross-cluster transfer
+and large-fleet production throughput remain open.
+
+### E09 transfer measurement and cache decision
+
+[`e09-transfer-measurement-and-cache-decision.md`](e09-transfer-measurement-and-cache-decision.md)
+records separate origin-to-worker and worker-to-device bytes/times on `.100`
+and `.103`, the IOS XE terminal-progress accounting defect and exact physical
+retest. The evidence-backed decision is to retain the verified ephemeral cache
+and defer a shared PVC cache for this measured local path.
 
 ## Validation matrix
 
@@ -146,7 +157,8 @@ open.
 ## Qualification boundary
 
 This evidence closes physical install-only preparation, worker restart/no
-replay, retained ownership conflict behavior, and separately approved
-activation in both directions for the tested C9300/IOS XE cohort. It does not
-qualify E07 application continuity, E08 physical native TAS, E11 another
-platform, or E12 fleet scale/ownership transfer.
+replay, retained ownership conflict behavior, separately approved activation
+in both directions, the E09 measured cache decision, and E12-C single-cluster
+handoff for the tested C9300/IOS XE cohort. It does not qualify E07 application
+continuity, E08 physical native TAS, E11 another platform, E12-D cross-cluster
+transfer or large-fleet production throughput.

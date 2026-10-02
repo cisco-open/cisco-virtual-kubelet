@@ -215,13 +215,13 @@ but it cannot change labels, budgets, plans, approvals or device state.
 for critical-service and singleton-path devices. Every selector key must be in
 `requiredTopologyKeys`, which keeps the decision inside the protected,
 plan-frozen device inventory. A matching rule stops plan creation with
-`CriticalServiceProtected` or `SingletonPathProtected`; the manager evaluates it again before granting
-execution, so a newly tightened policy cannot leave an old disruptive target
-usable. The current IOS-XE workflow combines preparation and activation, so a
-match blocks the entire software lifecycle. Do not use labels alone to claim a
-path is redundant. A future prepare-only phase may bypass disruption
-protection only after it has a separate API, authorization, and physical
-non-disruption qualification.
+`CriticalServiceProtected` or `SingletonPathProtected`; the manager evaluates
+it again before granting execution, so a newly tightened policy cannot leave
+an old disruptive target usable. `PrepareOnly` has a distinct, physically
+qualified install boundary, but the current protection rules remain
+conservative and block a matching target's entire software lifecycle. Do not
+use labels alone to claim a path is redundant or relax that policy merely
+because preparation omits activation.
 
 `riskGroups` defines administrator-owned failure or service-risk sets which
 may overlap normal topology domains and each other. Examples include devices
@@ -266,6 +266,15 @@ the concrete source and endpoint-bound Secret UID independently for every
 target. There is no post-approval mirror failover. Transfer and disruption
 reservations remain conservatively coupled until a durable prefetch and
 cache-loss recovery protocol is qualified.
+
+The worker exposes separate `origin_to_worker` and `worker_to_device` transfer
+byte/duration metrics. A successful content-bearing gNOI stream is accounted
+by the verified resolved image size, not by IOS XE's last interim
+`TransferProgress` event; a supervisor synchronization which sends no image
+content records zero bytes. The verified cache is Pod-ephemeral. Physical
+measurements in `docs/evidence/topology-2026-10-02/` did not justify a shared
+PVC cache for the tested local path, so labels and cache-domain budgets do not
+imply persistent artifact availability.
 
 Every selected CiscoDevice must declare a verified, fleet-unique
 `spec.physicalIdentity` such as a chassis serial or hardware UUID. The field is
@@ -866,6 +875,12 @@ even after its manager admission settles. It blocks reverse handoff and device
 deletion. Complete the separately approved activation under the current owner
 or retain managed ownership; copying its receipt/approval or deleting the leaf
 is not a supported transfer or invalidation procedure.
+After one exact activation reaches `Succeeded`, is verified against the
+prepared target, and both its device mutation and manager admission settle,
+that activation consumes the receipt's queue ownership. The immutable
+Prepared object remains as audit evidence but no longer blocks a later
+campaign. Nonterminal, mismatched or unsettled activation records remain
+fail-closed owners.
 `StagedForNextBoot` and contradictory settled/non-terminal leaves also block
 handoff until their device-side outcome is conclusively resolved.
 
