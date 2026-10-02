@@ -434,6 +434,14 @@ func TestActivationApprovalBindsCompleteExactPreparedReceiptSet(t *testing.T) {
 	if err := validateActivationLeafAnnotations(activationLeaf, validated, targets[0].DeviceUID); err == nil {
 		t.Fatal("receipt-substituted activation leaf annotations were accepted")
 	}
+	if !shouldInitializeActivationExecution(rollout, map[string]opsv1alpha1.IOSXESoftwareUpgrade{}) {
+		t.Fatal("completed preparation without activation children did not initialize activation execution")
+	}
+	if shouldInitializeActivationExecution(rollout, map[string]opsv1alpha1.IOSXESoftwareUpgrade{
+		activationTarget.ChildName: *activationLeaf,
+	}) {
+		t.Fatal("completed activation with an existing child regressed to activation initialization")
+	}
 
 	// A future authorization changes the completed preparation campaign into a
 	// bounded waiting state, but creates no activation leaf or reservation.

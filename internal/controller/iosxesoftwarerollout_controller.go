@@ -1141,7 +1141,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 			return ctrl.Result{RequeueAfter: boundedActivationRequeue(now, approval.NotBefore.Time)}, nil
 		}
 		activationWindowOpen = now.Before(approval.NotAfter.Time)
-		if rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded {
+		if shouldInitializeActivationExecution(rollout, children) {
 			for _, target := range executionTargets {
 				summary := summaries[target.DeviceUID]
 				reason := "ActivationAuthorized"
@@ -1442,6 +1442,20 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		}
 	}
 	return r.patchExecutionStatus(ctx, rollout, summaries, phase, message, now, completionConditions...)
+}
+
+// shouldInitializeActivationExecution distinguishes the completed preparation
+// campaign from a completed activation campaign. Once any deterministic
+// activation child exists, normal child reconciliation is authoritative; a
+// terminal activation must not be reset to the one-time authorization state on
+// every later watch event.
+func shouldInitializeActivationExecution(
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	activationChildren map[string]opsv1alpha1.IOSXESoftwareUpgrade,
+) bool {
+	return rollout != nil &&
+		rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded &&
+		len(activationChildren) == 0
 }
 
 func pauseAfterCanary(rollout *opsv1alpha1.IOSXESoftwareRollout) bool {
