@@ -24,7 +24,7 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
-### Latest checkpoint (2 October 2026, 03:42 UTC)
+### Latest checkpoint (2 October 2026, 03:46 UTC)
 
 This checkpoint supersedes older “current” snapshots below while retaining
 their historical evidence and the complete E00–E13 acceptance definitions.
@@ -37,7 +37,7 @@ their historical evidence and the complete E00–E13 acceptance definitions.
 | E04 preparation | Physical `.103` downgrade-direction and `.101` upgrade-direction `PrepareOnly` both reached `Prepared`, retained the original running version and issued no activation. `.101` survived worker replacement; native operation count stayed unchanged and read-only CLI/gNXI/platform/app checks passed. | Native image removal/replacement and a safe explicit invalidation contract remain open. |
 | E05 ownership | Both receipts remain immutable and `Settled`. A competing exact-plan-approved campaign created no child and durably reported `Blocked/PreparedOwnershipRetained`; `ddc02b82` removed the reconcile-error loop. Live server dry-run denied receipt removal. | Later activation must revalidate receipt, native inventory, trust, source and topology; that belongs to E06. |
 | Authorization/settlement | Strict two-account RBAC and all 27 native validating policies passed live checks with no type warnings. The topology ledger has no reservations; disruptive Leases have no holder; the manager logged zero reconcile errors in the final interval. | Dedicated activation-approver authority does not yet exist. |
-| E10 physical drift | A deliberate isolated `.101` link shutdown changed the accepted graph from 5/9/0 to 5/7/3 and `--require-complete` failed. Exact-path no-shutdown recovery on `740ffd0e` respected the full retained lease, returned the config to `InSync`, restored device/CDP state and produced a fresh 5/9/0 graph without changing protected policy provenance. | Complete the remaining live stale-worker/unauthorized-status/restart matrix; graph output remains read-only diagnostics, not rollout authority. |
+| E10 graph diagnostics | Complete for the defined read-only scope. A deliberate isolated `.101` link shutdown changed the accepted graph from 5/9/0 to 5/7/3 and `--require-complete` failed. Exact-path no-shutdown recovery on `740ffd0e` respected the full retained lease, returned the config to `InSync`, restored device/CDP state and produced a fresh 5/9/0 graph without changing protected policy provenance. Manager replacement preserved graph content under fresh provenance; live native admission denied a functional worker's accepted-status write. | No E10 implementation gate remains. Graph output is diagnostic, not independent path-health proof or rollout authority. |
 | E06 and wider roadmap | Retained preparation is deliberately not activated. The combined Reload path is unchanged and remains only a regression capability. | E06 independent activation is the next code-critical package. E02/E03 traffic-path proof, E07/E08 portable workload/TAS hardware, E11 second-platform image pair and E12 scale inputs remain explicit prerequisites, not implied passes. |
 
 The current physical/sanitized record is indexed at
@@ -417,7 +417,7 @@ deliverables.
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | In progress: fresh combined rollouts used `Drain`, with final Running workloads; per-target eviction/replacement/service timelines, hard placement and independent-activation integration remain. |
 | E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | In progress: synthetic co-location/conflict evidence only; E08-A guard, remaining scheduler scenarios and physical native owner lifecycle remain. |
 | E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Not started for roadmap measurement/decision: ephemeral cache exists; E09-A and explicit cache selection decision remain mandatory. |
-| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | In progress: bounded helper and read-only kubectl consumer use only manager-accepted evidence; missing/stale evidence, duplicate physical identities and three-way conflicts fail closed. Candidate `e5660db4` passed exact physical remote-port deployment. Candidate `34050731` passed physical peer mapping and nine-link declaration comparison, protected ConfigMap provenance, unchanged rollout-policy hashing, replacement-Pod fail-closed behavior and reversible declaration mismatch/restoration on all three C9Ks. A controlled isolated physical link change plus remaining protocol/VRF/LAG and live authorization/restart fixtures remain. |
+| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | Complete for the defined read-only diagnostic scope. Bounded manager-accepted evidence, mapping/declaration drift, remote-port identity, protocol/VRF/LAG fixtures, stale/conflicting/truncated inputs, controlled physical link loss/restoration, manager restart and live status-ownership denial pass. Graph completeness remains explicitly non-authoritative for path health or mutation admission. |
 | E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Blocked — prerequisite for positive qualification: no qualified second-platform image pair/service evidence; discovery and fixtures can proceed. |
 | E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | In progress: legacy handoff/convergence exists; measured scale envelope and full staged/uncertain-operation ownership transfer remain. |
 | E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Not started for final acceptance: no single candidate has passed the applicable F01–F13 matrix. |
@@ -1242,10 +1242,11 @@ Code: observation schema/normalization, pure comparison logic,
 manager read-only diagnostics, status/Events and `kubectl ciscovk` output.
 
 Current implementation is a bounded helper in `internal/topology/graph.go`
-with a read-only kubectl-plugin caller over manager-accepted status. E10-A is
-partial. The exact `34050731` physical run passed E10-C's policy-hash and
-read-only-authority separation and part of E10-D's real API/CLI path. E10-B's
-physical isolated-link change and full runtime qualification remain open.
+with a read-only kubectl-plugin caller over manager-accepted status. The exact
+`34050731` physical run passed strict mapping/declaration, policy-hash and
+replacement-Pod boundaries. The `740ffd0e` run plus focused fixtures completed
+E10-A through E10-D: physical isolated-link drift/restoration, manager restart,
+fresh provenance and a live worker status-forgery denial all passed.
 `GraphObservation.ObservedAt` is checked only when `MaxObservationAge` is
 positive. CLI JSON separates a topology-content hash from a deterministic
 provenance hash over manager-accepted device/worker/sequence/collection
@@ -1299,7 +1300,7 @@ maximum-bound and physical-drift coverage still require the tests below.
 | E10-C | Compare protected labels, policy, approval hashes and RBAC before/after discovery changes | Diagnostics cannot grant mutation authority or silently edit the plan |
 | E10-D | Real API/CLI integration: publish/reconcile, watch observation/policy changes, restart manager, stale worker input, unauthorized diagnostic status writes | Reachable operator output updates and expires predictably; only manager owns acceptance/diagnostics; no per-node accounts or device sessions introduced |
 
-Close after usable diagnostic examples and physical drift evidence. An
+E10 is closed for usable read-only diagnostics and physical drift evidence. An
 authoritative discovered topology or graph-cost scheduler remains excluded.
 
 ## 14. E11 — qualify another platform and decide API portability

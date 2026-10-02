@@ -82,3 +82,29 @@ directional links, and explicitly truncated input at exact resource bounds is
 incomplete rather than healthy. The graph remains diagnostic/read-only; this
 result does not make it independent rollout authority or claim end-to-end
 service-path health.
+
+## Manager restart and status authority
+
+The manager was then replaced while the graph was complete. Before restart,
+the topology-content hash was
+`sha256:90d659d68a01259fdc6c1bbaf2cb56ce675a910449fb09a8a74f0d8a646dec30`.
+The replacement controller became Ready on the same exact image and returned
+the same complete 5/9/0 content hash. Its provenance hash changed, as expected,
+because fresh manager-accepted sample identities are part of provenance but
+not graph content. It logged zero reconcile errors, panics or fatal messages;
+all three physical virtual Nodes remained `Ready=True/KubeletReady`.
+
+A real API server-side dry-run used the shared network-management ServiceAccount
+to attempt removal of `status.healthObservation.acceptedNetwork`. The native
+validating policy denied it with:
+
+```text
+manager-owned CiscoDevice identity, topology, health, app/network worker
+revisions, handoff, lock, and maintenance status cannot be forged
+```
+
+Together with the earlier stale replacement-Pod rejection and protected graph
+ConfigMap tests, this closes E10-D's manager restart, stale producer and status
+ownership boundary. E10 is complete for its stated read-only diagnostic scope;
+authoritative path health or graph-driven rollout admission remains explicitly
+out of scope.

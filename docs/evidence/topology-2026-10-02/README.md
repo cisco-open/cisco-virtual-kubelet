@@ -92,6 +92,10 @@ seven, three), then returned to complete from fresh accepted evidence. The
 test exposed and repaired IOS XE no-shutdown convergence and managed-worker
 binding-order defects. Recovery respected the retained disruption lease; no
 fence was manually bypassed.
+Manager replacement preserved the topology-content hash while fresh evidence
+advanced provenance, and native admission denied a live functional-worker
+attempt to alter manager-owned accepted evidence. These results close E10's
+defined read-only diagnostic acceptance matrix.
 
 ## Validation matrix
 
