@@ -412,6 +412,63 @@ func TestEthernetDiffDropsTypeFromBody(t *testing.T) {
 	}
 }
 
+func TestEthernetDiffDeletesPresentShutdownForExplicitFalse(t *testing.T) {
+	t.Parallel()
+	w := Get("interface_ethernet")
+	desired := map[string]any{"interfaces": []any{
+		map[string]any{
+			"type":        "GigabitEthernet",
+			"name":        "1/0/1",
+			"description": "Topology uplink",
+			"shutdown":    false,
+		},
+	}}
+	observed := []map[string]any{{
+		"type":        "GigabitEthernet",
+		"name":        "1/0/1",
+		"description": "Topology uplink",
+		"shutdown":    true,
+	}}
+
+	ops, err := w.Diff(desired, observed)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 2 {
+		t.Fatalf("got %d ops, want MERGE plus shutdown DELETE: %+v", len(ops), ops)
+	}
+	if ops[0].Verb != transport.VerbMerge {
+		t.Fatalf("op[0] verb=%q, want MERGE", ops[0].Verb)
+	}
+	if ops[1].Verb != transport.VerbDelete {
+		t.Fatalf("op[1] verb=%q, want DELETE", ops[1].Verb)
+	}
+	wantPath := "/Cisco-IOS-XE-native:native/interface/GigabitEthernet=1%2F0%2F1/shutdown"
+	if ops[1].Path != wantPath {
+		t.Fatalf("delete path=%q, want %q", ops[1].Path, wantPath)
+	}
+	if len(ops[1].PathSpec) != 4 || ops[1].PathSpec[2].Keys["name"] != "1/0/1" || ops[1].PathSpec[3].Name != "shutdown" {
+		t.Fatalf("delete PathSpec=%+v, want keyed interface shutdown leaf", ops[1].PathSpec)
+	}
+}
+
+func TestEthernetDiffExplicitFalseEqualsAbsentShutdown(t *testing.T) {
+	t.Parallel()
+	w := Get("interface_ethernet")
+	desired := map[string]any{"interfaces": []any{
+		map[string]any{"type": "GigabitEthernet", "name": "1/0/1", "shutdown": false},
+	}}
+	observed := []map[string]any{{"type": "GigabitEthernet", "name": "1/0/1"}}
+
+	ops, err := w.Diff(desired, observed)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if len(ops) != 0 {
+		t.Fatalf("got %+v, want no ops for absent shutdown leaf", ops)
+	}
+}
+
 func TestEthernetFetchFlattensIPv4AndVRF(t *testing.T) {
 	t.Parallel()
 	w := Get("interface_ethernet")
