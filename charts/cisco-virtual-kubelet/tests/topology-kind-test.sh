@@ -3235,6 +3235,42 @@ kubectl annotate --as="$device_editor_username" ciscodevice device-a \
 kubectl annotate --as="$topology_author_username" ciscodevice device-a \
   --namespace "$device_namespace" \
   topology.cisco.vk/request-legacy-handoff- --dry-run=server >/dev/null
+
+# A forward enrollment is a two-step manager transaction: the Node metadata
+# becomes managed before the initialization fence can be removed. The exact
+# UID-bound handoff marker must authorize both steps; otherwise admission can
+# strand a healthy Node after the reverse handoff has completed.
+kubectl patch --as="$manager_username" node "$managed_node" --type=merge -p \
+  '{"spec":{"taints":[{"key":"topology.cisco.vk/uninitialized","value":"true","effect":"NoSchedule"}]}}' >/dev/null
+kubectl patch --as="$manager_username" node "$managed_node" --type=merge -p "{
+  \"metadata\":{\"annotations\":{
+    \"topology.cisco.vk/managed\":\"true\",
+    \"topology.cisco.vk/device-namespace\":\"${device_namespace}\",
+    \"topology.cisco.vk/device-name\":\"device-a\",
+    \"topology.cisco.vk/device-uid\":\"${device_uid}\",
+    \"topology.cisco.vk/node-uid\":\"${managed_node_uid}\",
+    \"topology.cisco.vk/worker-username\":\"${worker_username}\",
+    \"topology.cisco.vk/worker-protocol\":\"rollout-v1\"
+  }}
+}" >/dev/null
+kubectl patch --as="$manager_username" node "$managed_node" --type=json \
+  -p '[{"op":"remove","path":"/spec/taints/0"}]' >/dev/null
+test -z "$(kubectl get node "$managed_node" \
+  -o jsonpath='{.spec.taints[?(@.key=="topology.cisco.vk/uninitialized")].effect}')"
+kubectl patch --as="$manager_username" node "$managed_node" --type=merge -p '{
+  "metadata":{"annotations":{
+    "topology.cisco.vk/managed":null,
+    "topology.cisco.vk/device-namespace":null,
+    "topology.cisco.vk/device-name":null,
+    "topology.cisco.vk/device-uid":null,
+    "topology.cisco.vk/node-uid":null,
+    "topology.cisco.vk/worker-username":null,
+    "topology.cisco.vk/worker-protocol":null
+  }}
+}' >/dev/null
+test "$(kubectl get node "$managed_node" \
+  -o jsonpath='{.metadata.annotations.topology\.cisco\.vk/legacy-handoff}')" = "$managed_node_uid"
+
 if kubectl patch --as="$device_editor_username" ciscodevice device-a \
     --namespace "$device_namespace" --subresource=status --type=merge --dry-run=server \
     -p '{"status":{"legacyHandoff":null}}' \

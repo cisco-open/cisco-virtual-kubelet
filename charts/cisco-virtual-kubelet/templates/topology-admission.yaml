@@ -126,11 +126,11 @@ spec:
          'ops.cisco.vk/drain-taint-owner',
          'topology.cisco.vk/app-hosting-cordon-device-uid'].all(k,
          !(k in object.metadata.annotations))
-    - name: managerReleasedLegacyNodeUpdate
+    - name: managerUIDBoundLegacyNodeUpdate
       expression: >-
         variables.manager && request.operation == 'UPDATE' &&
         (!has(request.subResource) || request.subResource == '') &&
-        !variables.oldManaged && object != null &&
+        object != null &&
         object.metadata.name == oldObject.metadata.name &&
         object.metadata.uid == oldObject.metadata.uid &&
         has(oldObject.metadata.annotations) &&
@@ -140,8 +140,7 @@ spec:
         has(object.metadata.annotations) &&
         'topology.cisco.vk/legacy-handoff' in object.metadata.annotations &&
         object.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==
-          oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] &&
-        !('topology.cisco.vk/managed' in object.metadata.annotations)
+          oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff']
     - name: legacyHandoffMarkerPreserved
       expression: >-
         request.operation == 'CREATE' ?
@@ -227,7 +226,7 @@ spec:
       message: managed Nodes are manager/bound-worker owned; a legacy worker may mutate only its exact unmarked Node and must preserve its handoff marker
     - expression: >-
         variables.nativeNodeLifecycle || variables.managerLegacyHandoff ||
-        variables.managerReleasedLegacyNodeUpdate ||
+        variables.managerUIDBoundLegacyNodeUpdate ||
         (request.userInfo.username.matches(
           '^system:serviceaccount:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?:cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$') ?
         ((oldObject == null || !has(oldObject.metadata.annotations) ||
@@ -309,7 +308,7 @@ spec:
            t.key == 'topology.cisco.vk/uninitialized') ==
          object.spec.taints.filter(t,
            t.key == 'topology.cisco.vk/uninitialized')) ||
-        variables.managerReleasedLegacyNodeUpdate
+        variables.managerUIDBoundLegacyNodeUpdate
       message: only the manager may remove or change a released Node initialization fence while preserving the exact UID-bound handoff marker
     - expression: >-
         object == null ||

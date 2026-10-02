@@ -90,9 +90,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"managed-node": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
-		matchConditions: []string{"managed-node"}, variables: []string{"nativeNodeLifecycle", "manager", "oldManaged", "managerLegacyHandoff", "managerReleasedLegacyNodeUpdate", "legacyHandoffMarkerPreserved", "managerFunctionalWorkerBinding"}, validations: 5, coreTyped: true,
-		requiredFragments: []string{"worker-username", "app-worker-username", "network-worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "managerReleasedLegacyNodeUpdate", "legacy-handoff", "oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==", "oldObject.metadata.uid", "topology.cisco.vk/uninitialized", "t.effect == 'NoSchedule'", "oldObject.spec.taints.filter", "projected-keys", "managed-taints"},
-		digest:            "sha256:5d59b86010277307c9821769347b8a46e58696d0002eb3f7e92bbab5a31d2d34",
+		matchConditions: []string{"managed-node"}, variables: []string{"nativeNodeLifecycle", "manager", "oldManaged", "managerLegacyHandoff", "managerUIDBoundLegacyNodeUpdate", "legacyHandoffMarkerPreserved", "managerFunctionalWorkerBinding"}, validations: 5, coreTyped: true,
+		requiredFragments: []string{"worker-username", "app-worker-username", "network-worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "managerUIDBoundLegacyNodeUpdate", "legacy-handoff", "oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==", "oldObject.metadata.uid", "topology.cisco.vk/uninitialized", "t.effect == 'NoSchedule'", "oldObject.spec.taints.filter", "projected-keys", "managed-taints"},
+		digest:            "sha256:384e1d61eff5f86e6c6aa2b25088a57c740a575049b3c4078880466ead2beeb9",
 	},
 	"legacy-node-marker": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
