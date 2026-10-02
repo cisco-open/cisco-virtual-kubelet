@@ -137,9 +137,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		variables:         []string{"manager"},
-		validations:       6,
-		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "check('control')", "request.subResource != 'status'", "spec.control.revision == 0"},
-		digest:            "sha256:d9dd48735236cddeb73385993cafc67da0cb5177cd9e2482c056b4472665e0f4",
+		validations:       7,
+		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "activationApproval.receipts", "check('activate')", "check('control')", "request.subResource != 'status'", "spec.control.revision == 0"},
+		digest:            "sha256:8415a6e8149ef541200b7992a9dd0f494c54d99fdf5249869d81bf9cabc58ecf",
 	},
 	"managed-upgrade-leaf": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},

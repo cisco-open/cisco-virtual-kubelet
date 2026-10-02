@@ -64,13 +64,16 @@ type IOSXESoftwareRolloutList struct {
 }
 
 // IOSXESoftwareRolloutSpec separates executable intent from authorization and
-// runtime controls. Plan is immutable. Approval may be added exactly once and
-// must name the manager-produced hash. Control is the only repeatably mutable
-// part and carries a monotonic revision. Native admission policy must bind the
-// three identity fields to request.userInfo and authorize approval separately.
+// runtime controls. Plan is immutable. Approval and ActivationApproval may
+// each be added exactly once and must name the manager-produced hash. Control
+// is the only repeatably mutable part and carries a monotonic revision. Native
+// admission policy must bind identity fields to request.userInfo and authorize
+// plan approval, activation approval, and control separately.
 //
 // +kubebuilder:validation:XValidation:rule="self.plan == oldSelf.plan",message="plan is immutable; create a new rollout to change executable intent"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.approval) || (has(self.approval) && self.approval == oldSelf.approval)",message="approval is append-only and immutable once recorded"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.activationApproval) || (has(self.activationApproval) && self.activationApproval == oldSelf.activationApproval)",message="activationApproval is append-only and immutable once recorded"
+// +kubebuilder:validation:XValidation:rule="!has(self.activationApproval) || self.plan.strategy == 'PrepareOnly'",message="activationApproval is valid only for a PrepareOnly plan"
 type IOSXESoftwareRolloutSpec struct {
 	// Plan is the immutable requested campaign input from which the manager
 	// creates a canonical frozen target plan.
@@ -81,6 +84,13 @@ type IOSXESoftwareRolloutSpec struct {
 	// IOSXESoftwareUpgrade child may receive mutation permission.
 	// +kubebuilder:validation:Optional
 	Approval *IOSXESoftwareRolloutApproval `json:"approval,omitempty"`
+
+	// ActivationApproval independently authorizes activation of the exact
+	// immutable receipts produced by a completed PrepareOnly plan. It does not
+	// authorize preparation, receipt substitution, or activation outside its
+	// explicit UTC window. Omission preserves the install-only boundary.
+	// +kubebuilder:validation:Optional
+	ActivationApproval *IOSXESoftwareRolloutActivationApproval `json:"activationApproval,omitempty"`
 
 	// Control carries pause/resume/cancel requests. Revision zero is the
 	// required neutral value at creation.
@@ -586,6 +596,63 @@ type IOSXESoftwareRolloutApproval struct {
 	// ApprovedAt records when the exact plan was authorized.
 	// +kubebuilder:validation:Required
 	ApprovedAt metav1.Time `json:"approvedAt"`
+}
+
+// IOSXESoftwareRolloutActivationApproval is append-only authorization for a
+// bounded, complete set of prepared receipts from one exact frozen plan.
+// Receipt order has no semantic meaning; callers sort by deviceUID when
+// computing or displaying the canonical authorization hash.
+//
+// +kubebuilder:validation:XValidation:rule="self.notBefore < self.notAfter",message="activation notBefore must be earlier than notAfter"
+type IOSXESoftwareRolloutActivationApproval struct {
+	// PlanHash must equal status.frozenPlan.hash at admission time.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	PlanHash string `json:"planHash"`
+
+	// Receipts names exactly one immutable prepared receipt for every frozen
+	// target. The manager rejects missing, duplicate, foreign, invalid, or
+	// currently unobservable receipts before reserving activation capacity.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=100
+	// +listType=map
+	// +listMapKey=deviceUID
+	Receipts []IOSXESoftwareRolloutActivationReceipt `json:"receipts"`
+
+	// NotBefore and NotAfter are the UTC activation-claim window. Closing the
+	// window blocks new claims but never abandons an accepted device operation.
+	// +kubebuilder:validation:Required
+	NotBefore metav1.Time `json:"notBefore"`
+	// +kubebuilder:validation:Required
+	NotAfter metav1.Time `json:"notAfter"`
+
+	// ApprovedBy must be bound to request.userInfo.username by native admission
+	// and authorized with the distinct activate custom verb.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ApprovedBy string `json:"approvedBy"`
+
+	// ApprovedAt records when the exact receipt set and window were authorized.
+	// +kubebuilder:validation:Required
+	ApprovedAt metav1.Time `json:"approvedAt"`
+}
+
+// IOSXESoftwareRolloutActivationReceipt binds activation authority to one
+// exact target, preparation leaf incarnation, and content-addressed receipt.
+type IOSXESoftwareRolloutActivationReceipt struct {
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	DeviceUID string `json:"deviceUID"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	UpgradeUID string `json:"upgradeUID"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	ReceiptHash string `json:"receiptHash"`
 }
 
 // IOSXESoftwareRolloutControl is the mutable, monotonic campaign control.

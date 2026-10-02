@@ -125,6 +125,77 @@ func TestEnvtest_RolloutHeadroomScopeValidation(t *testing.T) {
 	}
 }
 
+func TestEnvtest_RolloutActivationApprovalIsPrepareOnlyAppendOnlyAndWindowed(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-rollout-activation"
+	envtestNamespace(t, c, namespace)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	hash := "sha256:" + strings.Repeat("a", 64)
+	newRollout := func(name, strategy, notBefore, notAfter string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "ops.cisco.vk/v1alpha1",
+			"kind":       "IOSXESoftwareRollout",
+			"metadata":   map[string]any{"name": name, "namespace": namespace},
+			"spec": map[string]any{
+				"plan": map[string]any{
+					"requestedBy": "envtest", "requestedAt": "2026-10-02T00:00:00Z",
+					"targets": map[string]any{"selector": map[string]any{}, "allowAll": true, "maxTargets": int64(1)},
+					"image": map[string]any{
+						"sha256": strings.Repeat("b", 64), "imageFamily": "cat9k",
+						"sources": []any{map[string]any{"name": "global", "priority": int64(100), "url": "https://software.example.test/cat9k.bin"}},
+					},
+					"targetVersion": "17.18.4", "strategy": strategy,
+					"canaries":  []any{map[string]any{"name": "cat9k", "devices": []any{"switch-a"}}},
+					"budgets":   map[string]any{"maxConcurrentTransfers": int64(1), "maxUnavailable": int64(1)},
+					"workloads": map[string]any{"policy": "BlockIfRunning"},
+					"health":    map[string]any{"maxObservationAgeSeconds": int64(300)},
+				},
+				"activationApproval": map[string]any{
+					"planHash": hash,
+					"receipts": []any{map[string]any{
+						"deviceUID": "device-uid", "upgradeUID": "upgrade-uid",
+						"receiptHash": "sha256:" + strings.Repeat("c", 64),
+					}},
+					"notBefore": notBefore, "notAfter": notAfter,
+					"approvedBy": "activator@example.test", "approvedAt": "2026-10-02T00:00:00Z",
+				},
+				"control": map[string]any{"revision": int64(0)},
+			},
+		}}
+	}
+
+	invalidStrategy := newRollout("reload", "Reload", "2026-10-02T01:00:00Z", "2026-10-02T02:00:00Z")
+	if err := c.Create(ctx, invalidStrategy); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("apiserver admitted activation approval for Reload: %v", err)
+	}
+
+	invalidWindow := newRollout("bad-window", "PrepareOnly", "2026-10-02T02:00:00Z", "2026-10-02T01:00:00Z")
+	if err := c.Create(ctx, invalidWindow); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("apiserver admitted reversed activation window: %v", err)
+	}
+
+	valid := newRollout("valid", "PrepareOnly", "2026-10-02T01:00:00Z", "2026-10-02T02:00:00Z")
+	if err := c.Create(ctx, valid); err != nil {
+		t.Fatalf("apiserver rejected valid activation approval: %v", err)
+	}
+	receipts, _, err := unstructured.NestedSlice(valid.Object, "spec", "activationApproval", "receipts")
+	if err != nil || len(receipts) != 1 {
+		t.Fatalf("read activation receipts: %v %#v", err, receipts)
+	}
+	receipt := receipts[0].(map[string]any)
+	receipt["receiptHash"] = "sha256:" + strings.Repeat("d", 64)
+	receipts[0] = receipt
+	if err := unstructured.SetNestedSlice(valid.Object, receipts, "spec", "activationApproval", "receipts"); err != nil {
+		t.Fatalf("mutate activation receipt fixture: %v", err)
+	}
+	if err := c.Update(ctx, valid); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("apiserver allowed activation receipt replacement: %v", err)
+	}
+}
+
 func TestEnvtest_CiscoDeviceExplicitGNOIRequiresVerifiedTLS(t *testing.T) {
 	c, stop := startEnvtest(t)
 	defer stop()

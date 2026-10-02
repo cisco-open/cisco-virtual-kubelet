@@ -63,11 +63,88 @@ spec:
           spec:
             description: |-
               IOSXESoftwareRolloutSpec separates executable intent from authorization and
-              runtime controls. Plan is immutable. Approval may be added exactly once and
-              must name the manager-produced hash. Control is the only repeatably mutable
-              part and carries a monotonic revision. Native admission policy must bind the
-              three identity fields to request.userInfo and authorize approval separately.
+              runtime controls. Plan is immutable. Approval and ActivationApproval may
+              each be added exactly once and must name the manager-produced hash. Control
+              is the only repeatably mutable part and carries a monotonic revision. Native
+              admission policy must bind identity fields to request.userInfo and authorize
+              plan approval, activation approval, and control separately.
             properties:
+              activationApproval:
+                description: |-
+                  ActivationApproval independently authorizes activation of the exact
+                  immutable receipts produced by a completed PrepareOnly plan. It does not
+                  authorize preparation, receipt substitution, or activation outside its
+                  explicit UTC window. Omission preserves the install-only boundary.
+                properties:
+                  approvedAt:
+                    description: ApprovedAt records when the exact receipt set and
+                      window were authorized.
+                    format: date-time
+                    type: string
+                  approvedBy:
+                    description: |-
+                      ApprovedBy must be bound to request.userInfo.username by native admission
+                      and authorized with the distinct activate custom verb.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  notAfter:
+                    format: date-time
+                    type: string
+                  notBefore:
+                    description: |-
+                      NotBefore and NotAfter are the UTC activation-claim window. Closing the
+                      window blocks new claims but never abandons an accepted device operation.
+                    format: date-time
+                    type: string
+                  planHash:
+                    description: PlanHash must equal status.frozenPlan.hash at admission
+                      time.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  receipts:
+                    description: |-
+                      Receipts names exactly one immutable prepared receipt for every frozen
+                      target. The manager rejects missing, duplicate, foreign, invalid, or
+                      currently unobservable receipts before reserving activation capacity.
+                    items:
+                      description: |-
+                        IOSXESoftwareRolloutActivationReceipt binds activation authority to one
+                        exact target, preparation leaf incarnation, and content-addressed receipt.
+                      properties:
+                        deviceUID:
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                        receiptHash:
+                          pattern: ^sha256:[a-f0-9]{64}$
+                          type: string
+                        upgradeUID:
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                      required:
+                      - deviceUID
+                      - receiptHash
+                      - upgradeUID
+                      type: object
+                    maxItems: 100
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - deviceUID
+                    x-kubernetes-list-type: map
+                required:
+                - approvedAt
+                - approvedBy
+                - notAfter
+                - notBefore
+                - planHash
+                - receipts
+                type: object
+                x-kubernetes-validations:
+                - message: activation notBefore must be earlier than notAfter
+                  rule: self.notBefore < self.notAfter
               approval:
                 description: |-
                   Approval authorizes exactly status.frozenPlan.hash. Its absence means no
@@ -765,6 +842,11 @@ spec:
             - message: approval is append-only and immutable once recorded
               rule: '!has(oldSelf.approval) || (has(self.approval) && self.approval
                 == oldSelf.approval)'
+            - message: activationApproval is append-only and immutable once recorded
+              rule: '!has(oldSelf.activationApproval) || (has(self.activationApproval)
+                && self.activationApproval == oldSelf.activationApproval)'
+            - message: activationApproval is valid only for a PrepareOnly plan
+              rule: '!has(self.activationApproval) || self.plan.strategy == ''PrepareOnly'''
           status:
             description: |-
               IOSXESoftwareRolloutStatus is a bounded manager-owned audit and progress

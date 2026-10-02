@@ -1076,8 +1076,9 @@ spec:
   matchResources: {}
 ---
 # Campaign creation and mutable controls bind their asserted identities to the
-# authenticated caller. Approval is append-only in the CRD and additionally
-# requires the custom `approve` verb for this exact namespaced rollout.
+# authenticated caller. Plan approval and later prepared-image activation are
+# independently append-only and require distinct custom verbs for this exact
+# namespaced rollout.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -1116,6 +1117,21 @@ spec:
         object.spec.approval.planHash == oldObject.status.frozenPlan.hash &&
         authorizer.group('ops.cisco.vk').resource('iosxesoftwarerollouts').namespace(request.namespace).name(request.name).check('approve').allowed())
       message: adding approval requires an authorized caller identity and the exact frozen-plan hash
+    - expression: >-
+        (has(request.subResource) && request.subResource != '') || request.operation != 'UPDATE' ||
+        has(oldObject.spec.activationApproval) || !has(object.spec.activationApproval) ||
+        (object.spec.activationApproval.approvedBy == request.userInfo.username &&
+        oldObject.spec.plan.strategy == 'PrepareOnly' &&
+        has(oldObject.status.frozenPlan) &&
+        oldObject.status.phase == 'Succeeded' &&
+        oldObject.status.targets.size() == oldObject.status.frozenPlan.targets.size() &&
+        oldObject.status.targets.all(t, t.phase == 'Succeeded') &&
+        object.spec.activationApproval.planHash == oldObject.status.frozenPlan.hash &&
+        object.spec.activationApproval.receipts.size() == oldObject.status.frozenPlan.targets.size() &&
+        object.spec.activationApproval.receipts.all(r,
+          oldObject.status.frozenPlan.targets.exists(t, t.deviceUID == r.deviceUID)) &&
+        authorizer.group('ops.cisco.vk').resource('iosxesoftwarerollouts').namespace(request.namespace).name(request.name).check('activate').allowed())
+      message: adding activationApproval requires completed PrepareOnly targets, one exact receipt per frozen target, the frozen-plan hash, and distinct activate permission
     - expression: >-
         (has(request.subResource) && request.subResource != '') || request.operation != 'UPDATE' ||
         object.spec.control == oldObject.spec.control ||

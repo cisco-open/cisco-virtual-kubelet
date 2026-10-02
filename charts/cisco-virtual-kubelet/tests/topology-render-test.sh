@@ -383,7 +383,7 @@ assert_policy_shape managed-pod-status 1 2 3
 assert_policy_shape managed-pod-delete 1 2 4
 assert_policy_shape managed-drain-pod 1 5 3
 assert_policy_shape managed-device 0 10 16
-assert_policy_shape managed-rollout 0 1 6
+assert_policy_shape managed-rollout 0 1 7
 assert_policy_shape managed-upgrade-leaf 1 5 8
 assert_policy_shape managed-maintenance-lease 1 11 8
 assert_policy_shape topology-policy 1 4 5
@@ -485,6 +485,7 @@ grep -Fq "object.spec == oldObject.spec" "$managed_render"
 grep -Fq "object.spec.approval.planHash == oldObject.status.frozenPlan.hash" "$managed_render"
 grep -Fq "object.spec.control.revision == 0" "$managed_render"
 grep -Fq "check('approve').allowed()" "$managed_render"
+grep -Fq "check('activate').allowed()" "$managed_render"
 grep -Fq "check('control').allowed()" "$managed_render"
 grep -Fq "check('topology').allowed()" "$managed_render"
 grep -Fq "changing the projection labels, taints, region, or zone of an established managed device" "$managed_render"
