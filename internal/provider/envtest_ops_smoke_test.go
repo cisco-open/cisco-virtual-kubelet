@@ -543,6 +543,7 @@ func TestEnvtest_IOSXESoftwareUpgradeStrategyEnumEnforced(t *testing.T) {
 		opsv1alpha1.UpgradeStrategyReload,
 		opsv1alpha1.UpgradeStrategyISSU,
 		opsv1alpha1.UpgradeStrategyNoReboot,
+		opsv1alpha1.UpgradeStrategyPrepareOnly,
 	} {
 		up := newUpgrade("ok-"+strings.ToLower(string(s)), "envtest-upgrade-strategy", "17.15.01")
 		up.Spec.Strategy = s
@@ -560,6 +561,63 @@ func TestEnvtest_IOSXESoftwareUpgradeStrategyEnumEnforced(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "supported value") && !strings.Contains(err.Error(), "Unsupported value") {
 		t.Fatalf("expected enum-rejection error, got %v", err)
+	}
+}
+
+func TestEnvtest_PreparedReceiptIsRequiredAndImmutable(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-prepared-receipt"
+	envtestNamespace(t, c, namespace)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	up := newUpgrade("prepared", namespace, "17.18.03")
+	up.Spec.Strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
+	up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+		URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+	}
+	if err := c.Create(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	if err := c.Status().Update(ctx, up); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("Prepared phase without receipt was not rejected: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	up.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: "prepare-v1", UpgradeUID: string(up.UID), DeviceUID: "device-uid",
+		SourceDigest:       "sha256:" + strings.Repeat("a", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("b", 64),
+		ContentBinding:     "source-digest-install-claim-v1",
+		TargetVersion:      "17.18.03", ValidatedVersion: "17.18.03.0.123", RunningVersion: "17.18.02",
+		PrimarySupervisorInstalled: true,
+		InstallStartedAt:           metav1.NewTime(time.Unix(100, 0).UTC()),
+		PreparedAt:                 metav1.NewTime(time.Unix(123, 0).UTC()),
+		ReceiptHash:                "sha256:" + strings.Repeat("c", 64),
+	}
+	if err := c.Status().Update(ctx, up); err != nil {
+		t.Fatalf("valid Prepared receipt rejected: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.PreparedReceipt.ValidatedVersion = "17.18.03.0.999"
+	if err := c.Status().Update(ctx, up); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("prepared receipt edit was not rejected: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.PreparedReceipt = nil
+	if err := c.Status().Update(ctx, up); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("prepared receipt removal was not rejected: %v", err)
 	}
 }
 

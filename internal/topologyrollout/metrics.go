@@ -180,7 +180,7 @@ func targetReasonClass(value string) string {
 		return "claimed_converging"
 	case "Pending", "Resolving", "Transferring", "Installing", "Activating", "Verifying", "RollingBack":
 		return "leaf_progress"
-	case "Succeeded", "StagedForNextBoot":
+	case "Succeeded", "Prepared", "StagedForNextBoot":
 		return "leaf_success"
 	case "Failed", "PreflightFailed", "ValidationFailed", "RolledBack", "RebootTimeout", "Cancelled":
 		return "leaf_failure"

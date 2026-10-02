@@ -1635,6 +1635,7 @@ func TestSettledManagedCancellationAuditRecordFailsClosed(t *testing.T) {
 		opsv1alpha1.UpgradePhaseVerifying,
 		opsv1alpha1.UpgradePhaseRollingBack,
 		opsv1alpha1.UpgradePhaseSucceeded,
+		opsv1alpha1.UpgradePhasePrepared,
 		opsv1alpha1.UpgradePhaseStagedForNextBoot,
 		opsv1alpha1.UpgradePhaseFailed,
 		opsv1alpha1.UpgradePhasePreflightFailed,

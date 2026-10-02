@@ -281,6 +281,64 @@ func TestExpectedLeafSpecIncludesAPIServerDefaults(t *testing.T) {
 	}
 }
 
+func TestExpectedLeafSpecMapsPrepareOnlyWithoutActivation(t *testing.T) {
+	target := policyFenceTarget("edge-a", "device-uid", "campaign-edge-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Spec.Plan.Strategy = opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly
+
+	got := expectedLeafSpec(rollout, target)
+	if got.Strategy != opsv1alpha1.UpgradeStrategyPrepareOnly {
+		t.Fatalf("expected leaf strategy = %q, want PrepareOnly", got.Strategy)
+	}
+}
+
+func TestPreparedReceiptRetainsExclusiveDeviceOwnership(t *testing.T) {
+	receipt := &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: "prepare-v1", UpgradeUID: "prepared-leaf-uid", DeviceUID: "device-uid",
+		SourceDigest:       "sha256:" + strings.Repeat("a", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("b", 64),
+		ContentBinding:     "source-digest-install-claim-v1",
+		TargetVersion:      "17.18.03", ValidatedVersion: "17.18.03.0.123", RunningVersion: "17.18.02",
+		PrimarySupervisorInstalled: true,
+		InstallStartedAt:           metav1.NewTime(time.Unix(100, 0).UTC()),
+		PreparedAt:                 metav1.NewTime(time.Unix(123, 0).UTC()),
+	}
+	var err error
+	receipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "retained-preparation", UID: "prepared-leaf-uid"},
+		Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+			Phase: opsv1alpha1.UpgradePhasePrepared, PreparedReceipt: receipt,
+		},
+	}
+	scheme := runtime.NewScheme()
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(leaf).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{Client: kubeClient, APIReader: kubeClient}
+
+	err = reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "device-uid")
+	if err == nil || !strings.Contains(err.Error(), "separate activation or explicit invalidation") {
+		t.Fatalf("conflicting preparation was not blocked: %v", err)
+	}
+	if err := reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "another-device"); err != nil {
+		t.Fatalf("unrelated device was blocked: %v", err)
+	}
+
+	leaf.Status.PreparedReceipt.ReceiptHash = "sha256:" + strings.Repeat("f", 64)
+	if err := kubeClient.Update(context.Background(), leaf); err != nil {
+		t.Fatal(err)
+	}
+	err = reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "device-uid")
+	if err == nil || !strings.Contains(err.Error(), "invalid and must be reconciled") {
+		t.Fatalf("invalid retained receipt did not fail closed: %v", err)
+	}
+}
+
 func TestCampaignStatusPatchRejectsStaleResourceVersion(t *testing.T) {
 	scheme := runtime.NewScheme()
 	if err := opsv1alpha1.AddToScheme(scheme); err != nil {

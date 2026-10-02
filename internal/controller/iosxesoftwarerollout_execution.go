@@ -692,8 +692,11 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 	// Materialize deprecated compatibility defaults so the generated spec
 	// remains exactly equal after an API-server round trip.
 	strategy := opsv1alpha1.UpgradeStrategyReload
-	if rollout.Spec.Plan.Strategy == opsv1alpha1.IOSXESoftwareRolloutStrategyNoReboot {
+	switch rollout.Spec.Plan.Strategy {
+	case opsv1alpha1.IOSXESoftwareRolloutStrategyNoReboot:
 		strategy = opsv1alpha1.UpgradeStrategyNoReboot
+	case opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly:
+		strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
 	}
 	return opsv1alpha1.IOSXESoftwareUpgradeSpec{
 		DeviceRef:                 configv1alpha1.DeviceRef{Name: target.DeviceName},
@@ -771,6 +774,9 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
 	now time.Time,
 ) error {
+	if err := r.ensureNoPreparedOwnershipConflict(ctx, rollout.Namespace, target.DeviceUID); err != nil {
+		return err
+	}
 	_, workerUsername, err := r.revalidateAdmission(ctx, rollout, currentPolicy, effectivePolicy, target)
 	if err != nil {
 		return err
@@ -879,6 +885,38 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 		return topologyrollout.ErrStaleControlRevision
 	}
 	return r.ensureChildAdmission(ctx, rollout, target, leaf, now)
+}
+
+// ensureNoPreparedOwnershipConflict treats every valid Prepared leaf as a
+// retained ownership record even after active transfer/disruption reservations
+// settle. A later activation protocol must explicitly consume or invalidate
+// that record; an unrelated campaign may not silently replace the intent.
+func (r *IOSXESoftwareRolloutReconciler) ensureNoPreparedOwnershipConflict(
+	ctx context.Context,
+	namespace, deviceUID string,
+) error {
+	var leaves opsv1alpha1.IOSXESoftwareUpgradeList
+	if err := r.reader().List(ctx, &leaves, client.InNamespace(namespace)); err != nil {
+		return fmt.Errorf("list retained prepared ownership: %w", err)
+	}
+	for i := range leaves.Items {
+		leaf := &leaves.Items[i]
+		receipt := leaf.Status.PreparedReceipt
+		if receipt == nil || receipt.DeviceUID != deviceUID {
+			continue
+		}
+		if leaf.Status.Phase != opsv1alpha1.UpgradePhasePrepared {
+			return fmt.Errorf("retained prepared ownership %s/%s has inconsistent phase %q",
+				leaf.Namespace, leaf.Name, leaf.Status.Phase)
+		}
+		if err := softwareupgrade.ValidatePreparedReceipt(receipt); err != nil {
+			return fmt.Errorf("retained prepared ownership %s/%s is invalid and must be reconciled: %w",
+				leaf.Namespace, leaf.Name, err)
+		}
+		return fmt.Errorf("device UID %s is owned by retained preparation %s/%s (%s); separate activation or explicit invalidation is required",
+			deviceUID, leaf.Namespace, leaf.Name, receipt.ReceiptHash)
+	}
+	return nil
 }
 
 func rolloutReservationRequest(
@@ -2039,6 +2077,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureNoRunningWorkloads(ctx context.Co
 func terminalLeafPhase(phase opsv1alpha1.UpgradePhase) bool {
 	switch phase {
 	case opsv1alpha1.UpgradePhaseSucceeded,
+		opsv1alpha1.UpgradePhasePrepared,
 		opsv1alpha1.UpgradePhaseStagedForNextBoot,
 		opsv1alpha1.UpgradePhaseFailed,
 		opsv1alpha1.UpgradePhasePreflightFailed,

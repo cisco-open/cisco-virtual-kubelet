@@ -32,7 +32,7 @@ import (
 // AwaitingReachability → device unreachable while it boots the new image
 // Verifying → gNOI OS.Verify running-version check
 // RollingBack → activating the previously observed version after verify failure
-// Terminal phases: Succeeded, StagedForNextBoot, Failed, PreflightFailed,
+// Terminal phases: Succeeded, Prepared, StagedForNextBoot, Failed, PreflightFailed,
 // ValidationFailed, RolledBack, RebootTimeout, Cancelled.
 type UpgradePhase string
 
@@ -48,6 +48,7 @@ const (
 	UpgradePhaseVerifying            UpgradePhase = "Verifying"
 	UpgradePhaseRollingBack          UpgradePhase = "RollingBack"
 	UpgradePhaseSucceeded            UpgradePhase = "Succeeded"
+	UpgradePhasePrepared             UpgradePhase = "Prepared"
 	UpgradePhaseStagedForNextBoot    UpgradePhase = "StagedForNextBoot"
 	UpgradePhaseFailed               UpgradePhase = "Failed"
 	UpgradePhasePreflightFailed      UpgradePhase = "PreflightFailed"
@@ -62,7 +63,7 @@ const (
 
 // UpgradeStrategy controls how the activate step is sequenced.
 //
-// +kubebuilder:validation:Enum=Reload;ISSU;NoReboot
+// +kubebuilder:validation:Enum=Reload;ISSU;NoReboot;PrepareOnly
 type UpgradeStrategy string
 
 const (
@@ -83,6 +84,12 @@ const (
 	// StagedForNextBoot. The operator triggers the reload via a separate
 	// IOSXEOperationalAction (Phase D).
 	UpgradeStrategyNoReboot UpgradeStrategy = "NoReboot"
+
+	// UpgradeStrategyPrepareOnly performs and validates image installation but
+	// never submits OS.Activate. It requires native install inventory and emits
+	// an immutable prepared receipt. That receipt is evidence, not activation
+	// authorization; a separately approved activation protocol must consume it.
+	UpgradeStrategyPrepareOnly UpgradeStrategy = "PrepareOnly"
 )
 
 // IOSXESoftwareUpgrade drives a multi-phase IOS-XE image upgrade via
@@ -151,9 +158,10 @@ type IOSXESoftwareUpgradeSpec struct {
 	// +kubebuilder:validation:Maximum=1099511627776
 	MaxTransferBytesPerSecond int64 `json:"maxTransferBytesPerSecond,omitempty"`
 
-	// Strategy controls whether Activate performs the reload itself
-	// (default Reload), requests the currently unsupported ISSU strategy, or stages without
-	// rebooting (NoReboot).
+	// Strategy controls whether Activate performs the reload itself (default
+	// Reload), requests the currently unsupported ISSU strategy, stages through
+	// OS.Activate without rebooting (NoReboot), or installs and validates without
+	// calling OS.Activate (PrepareOnly).
 	// +optional
 	// +kubebuilder:default=Reload
 	Strategy UpgradeStrategy `json:"strategy,omitempty"`
@@ -332,6 +340,145 @@ const (
 	UpgradeInventoryStateInvalid                UpgradeInventoryState = "Invalid"
 	UpgradeInventoryStateUnknown                UpgradeInventoryState = "Unknown"
 )
+
+// UpgradePreparedReceiptStatus is immutable worker-produced evidence that one
+// exact image was installed and remained inactive after read-only verification.
+// It does not authorize a later activation.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.campaignUID) == has(self.planHash)",message="campaignUID and planHash must be supplied together"
+type UpgradePreparedReceiptStatus struct {
+	// ProtocolVersion identifies the canonical receipt contract.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=prepare-v1
+	ProtocolVersion string `json:"protocolVersion"`
+
+	// UpgradeUID and DeviceUID bind the receipt to exact Kubernetes object
+	// incarnations rather than reusable names.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	UpgradeUID string `json:"upgradeUID"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	DeviceUID string `json:"deviceUID"`
+
+	// NodeUID and PhysicalIdentity bind managed preparation to the exact
+	// schedulable and physical targets selected by the frozen plan.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	NodeUID string `json:"nodeUID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	PhysicalIdentity string `json:"physicalIdentity,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	DeviceGeneration int64 `json:"deviceGeneration,omitempty"`
+
+	// CampaignUID and PlanHash are present on manager-created leaves and bind the
+	// receipt to the approved frozen plan. Standalone legacy leaves omit both.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	CampaignUID string `json:"campaignUID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	PlanHash string `json:"planHash,omitempty"`
+	// +kubebuilder:validation:Optional
+	ManagedProtocolVersion ManagedUpgradeProtocolVersion `json:"managedProtocolVersion,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	PolicyUID string `json:"policyUID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	PolicyResourceVersion string `json:"policyResourceVersion,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	PolicyEpoch int64 `json:"policyEpoch,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	WorkerRevision string `json:"workerRevision,omitempty"`
+
+	// SourceDigest is the verified content identity installed by this leaf.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	SourceDigest string `json:"sourceDigest"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	SourceSize int64 `json:"sourceSize,omitempty"`
+	// SourceIdentityHash covers the credential-free source locator and declared
+	// digest. SourceSecretUID, when present, binds managed transfer credentials
+	// without copying secret material into status.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	SourceIdentityHash string `json:"sourceIdentityHash"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	SourceSecretUID string `json:"sourceSecretUID,omitempty"`
+	// TrustIdentityHash covers the device credential, TLS and provisioning
+	// Secret revisions loaded by the worker that performed the install.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	TrustIdentityHash string `json:"trustIdentityHash,omitempty"`
+
+	// ContentBinding records the IOS XE limitation precisely: CVK binds verified
+	// source bytes to its durable install claim and exact installed version, but
+	// native inventory does not report an installed-image content digest.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=source-digest-install-claim-v1
+	ContentBinding string `json:"contentBinding"`
+
+	// TargetVersion is requested intent; ValidatedVersion is the exact native
+	// activation identity returned by installation/inventory.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	TargetVersion string `json:"targetVersion"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	ValidatedVersion string `json:"validatedVersion"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	RunningVersion string `json:"runningVersion"`
+
+	// IndividualSupervisorInstall records that both supervisor install claims
+	// were completed before the receipt was issued.
+	// +kubebuilder:validation:Optional
+	IndividualSupervisorInstall bool `json:"individualSupervisorInstall,omitempty"`
+	// +kubebuilder:validation:Required
+	PrimarySupervisorInstalled bool `json:"primarySupervisorInstalled"`
+	// +kubebuilder:validation:Optional
+	StandbySupervisorInstalled bool `json:"standbySupervisorInstalled,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	StandbySupervisorID string `json:"standbySupervisorID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	StandbyRunningVersion string `json:"standbyRunningVersion,omitempty"`
+
+	// InstallStartedAt and StagingOperationID retain the local durable claim
+	// identity. ManagedMutationClaims additionally retain manager reservation,
+	// policy and control-revision authority for managed preparations.
+	// +kubebuilder:validation:Required
+	InstallStartedAt metav1.Time `json:"installStartedAt"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Format=uuid
+	StagingOperationID string `json:"stagingOperationID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// Device-file registration plus primary and standby install can produce three
+	// distinct durable install claims.
+	// +kubebuilder:validation:MaxItems=3
+	// +listType=map
+	// +listMapKey=stage
+	ManagedMutationClaims []UpgradeManagedMutationClaimStatus `json:"managedMutationClaims,omitempty"`
+
+	// PreparedAt is the read-only inventory/OS verification time.
+	// +kubebuilder:validation:Required
+	PreparedAt metav1.Time `json:"preparedAt"`
+
+	// ReceiptHash is SHA-256 over the canonical receipt with this field empty.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	ReceiptHash string `json:"receiptHash"`
+}
 
 // UpgradeExecutionModel identifies the durable mutation-safety contract used
 // by the reconciler that owns an upgrade workflow.
@@ -1088,6 +1235,8 @@ type UpgradeManagedMutationClaimStatus struct {
 // only state-machine and observation progress.
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || has(self.managerDrain)",message="managerDrain cannot be removed once published"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.workerDrain) || has(self.workerDrain)",message="workerDrain cannot be removed once published"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.preparedReceipt) || (has(self.preparedReceipt) && self.preparedReceipt == oldSelf.preparedReceipt)",message="preparedReceipt is append-only and immutable once published"
+// +kubebuilder:validation:XValidation:rule="!has(self.phase) || self.phase != 'Prepared' || has(self.preparedReceipt)",message="Prepared phase requires an immutable preparedReceipt"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(oldSelf.managerDrain.pods) || (has(self.managerDrain) && has(self.managerDrain.pods) && oldSelf.managerDrain.pods.all(p, self.managerDrain.pods.exists(n, n.uid == p.uid)))",message="managerDrain Pod entries cannot be removed once published"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(self.managerDrain) || !has(self.managerDrain.pods) || (has(oldSelf.managerDrain.pods) && self.managerDrain.pods.all(p, oldSelf.managerDrain.pods.exists(o, o.uid == p.uid)))",message="managerDrain Pod entries cannot be added after publication"
 // +kubebuilder:validation:XValidation:rule="!has(self.workerDrain) || (has(self.managerDrain) && self.workerDrain.protocolVersion == self.managerDrain.protocolVersion && self.workerDrain.observedSessionToken == self.managerDrain.sessionToken && self.workerDrain.observedPolicyEpoch == self.managerDrain.policyEpoch && self.workerDrain.observedControlRevision <= self.managerDrain.controlRevision)",message="workerDrain must bind the current manager drain session and may only lag its control revision"
@@ -1174,6 +1323,11 @@ type IOSXESoftwareUpgradeStatus struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	SourceSize int64 `json:"sourceSize,omitempty"`
+
+	// PreparedReceipt is immutable evidence for PrepareOnly. It proves install
+	// and read-only inventory convergence but grants no activation authority.
+	// +kubebuilder:validation:Optional
+	PreparedReceipt *UpgradePreparedReceiptStatus `json:"preparedReceipt,omitempty"`
 
 	// StagingOperationID is the durable correlation key for a platform-native
 	// device-file registration operation. It is persisted before submission;

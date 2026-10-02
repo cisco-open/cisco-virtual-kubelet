@@ -301,13 +301,15 @@ spec:
               strategy:
                 default: Reload
                 description: |-
-                  Strategy controls whether Activate performs the reload itself
-                  (default Reload), requests the currently unsupported ISSU strategy, or stages without
-                  rebooting (NoReboot).
+                  Strategy controls whether Activate performs the reload itself (default
+                  Reload), requests the currently unsupported ISSU strategy, stages through
+                  OS.Activate without rebooting (NoReboot), or installs and validates without
+                  calling OS.Activate (PrepareOnly).
                 enum:
                 - Reload
                 - ISSU
                 - NoReboot
+                - PrepareOnly
                 type: string
               targetVersion:
                 description: |-
@@ -1327,6 +1329,231 @@ spec:
               phase:
                 description: Phase is the current state-machine position.
                 type: string
+              preparedReceipt:
+                description: |-
+                  PreparedReceipt is immutable evidence for PrepareOnly. It proves install
+                  and read-only inventory convergence but grants no activation authority.
+                properties:
+                  campaignUID:
+                    description: |-
+                      CampaignUID and PlanHash are present on manager-created leaves and bind the
+                      receipt to the approved frozen plan. Standalone legacy leaves omit both.
+                    maxLength: 128
+                    type: string
+                  contentBinding:
+                    description: |-
+                      ContentBinding records the IOS XE limitation precisely: CVK binds verified
+                      source bytes to its durable install claim and exact installed version, but
+                      native inventory does not report an installed-image content digest.
+                    enum:
+                    - source-digest-install-claim-v1
+                    type: string
+                  deviceGeneration:
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  deviceUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  individualSupervisorInstall:
+                    description: |-
+                      IndividualSupervisorInstall records that both supervisor install claims
+                      were completed before the receipt was issued.
+                    type: boolean
+                  installStartedAt:
+                    description: |-
+                      InstallStartedAt and StagingOperationID retain the local durable claim
+                      identity. ManagedMutationClaims additionally retain manager reservation,
+                      policy and control-revision authority for managed preparations.
+                    format: date-time
+                    type: string
+                  managedMutationClaims:
+                    description: |-
+                      Device-file registration plus primary and standby install can produce three
+                      distinct durable install claims.
+                    items:
+                      description: |-
+                        UpgradeManagedMutationClaimStatus binds a durable worker mutation claim to
+                        the exact reservation and manager-control revision it won against.
+                      properties:
+                        claimedAt:
+                          description: ClaimedAt is persisted before dispatch and
+                            never rewritten on recovery.
+                          format: date-time
+                          type: string
+                        controlRevision:
+                          description: |-
+                            ControlRevision is committed in the same resourceVersion update as the
+                            existing durable stage-request marker.
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        policyEpoch:
+                          description: |-
+                            PolicyEpoch must exactly match the granted manager admission won by this
+                            durable claim.
+                          format: int64
+                          minimum: 1
+                          type: integer
+                        reservationID:
+                          description: ReservationID must equal managerAdmission.reservationID.
+                          maxLength: 64
+                          minLength: 1
+                          pattern: ^[A-Za-z0-9][A-Za-z0-9._:-]*$
+                          type: string
+                        stage:
+                          description: Stage is the list-map key and claimed device
+                            mutation.
+                          enum:
+                          - Staging
+                          - PrimaryInstall
+                          - StandbyInstall
+                          - StandbyActivation
+                          - PrimaryActivation
+                          - RollbackActivation
+                          type: string
+                      required:
+                      - claimedAt
+                      - controlRevision
+                      - policyEpoch
+                      - reservationID
+                      - stage
+                      type: object
+                      x-kubernetes-validations:
+                      - message: managed mutation claim identity is immutable
+                        rule: self.reservationID == oldSelf.reservationID && self.policyEpoch
+                          == oldSelf.policyEpoch && self.controlRevision == oldSelf.controlRevision
+                          && self.claimedAt == oldSelf.claimedAt
+                    maxItems: 3
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - stage
+                    x-kubernetes-list-type: map
+                  managedProtocolVersion:
+                    description: |-
+                      ManagedUpgradeProtocolVersion identifies the manager/worker handshake that
+                      gates every new device mutation for a campaign-created leaf.
+                    enum:
+                    - rollout-v1
+                    - rollout-byte-pacing-v1
+                    type: string
+                  nodeUID:
+                    description: |-
+                      NodeUID and PhysicalIdentity bind managed preparation to the exact
+                      schedulable and physical targets selected by the frozen plan.
+                    maxLength: 128
+                    type: string
+                  physicalIdentity:
+                    maxLength: 128
+                    type: string
+                  planHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  policyEpoch:
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  policyResourceVersion:
+                    maxLength: 128
+                    type: string
+                  policyUID:
+                    maxLength: 128
+                    type: string
+                  preparedAt:
+                    description: PreparedAt is the read-only inventory/OS verification
+                      time.
+                    format: date-time
+                    type: string
+                  primarySupervisorInstalled:
+                    type: boolean
+                  protocolVersion:
+                    description: ProtocolVersion identifies the canonical receipt
+                      contract.
+                    enum:
+                    - prepare-v1
+                    type: string
+                  receiptHash:
+                    description: ReceiptHash is SHA-256 over the canonical receipt
+                      with this field empty.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  runningVersion:
+                    maxLength: 128
+                    type: string
+                  sourceDigest:
+                    description: SourceDigest is the verified content identity installed
+                      by this leaf.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  sourceIdentityHash:
+                    description: |-
+                      SourceIdentityHash covers the credential-free source locator and declared
+                      digest. SourceSecretUID, when present, binds managed transfer credentials
+                      without copying secret material into status.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  sourceSecretUID:
+                    maxLength: 128
+                    type: string
+                  sourceSize:
+                    format: int64
+                    minimum: 0
+                    type: integer
+                  stagingOperationID:
+                    format: uuid
+                    type: string
+                  standbyRunningVersion:
+                    maxLength: 128
+                    type: string
+                  standbySupervisorID:
+                    maxLength: 128
+                    type: string
+                  standbySupervisorInstalled:
+                    type: boolean
+                  targetVersion:
+                    description: |-
+                      TargetVersion is requested intent; ValidatedVersion is the exact native
+                      activation identity returned by installation/inventory.
+                    maxLength: 128
+                    type: string
+                  trustIdentityHash:
+                    description: |-
+                      TrustIdentityHash covers the device credential, TLS and provisioning
+                      Secret revisions loaded by the worker that performed the install.
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  upgradeUID:
+                    description: |-
+                      UpgradeUID and DeviceUID bind the receipt to exact Kubernetes object
+                      incarnations rather than reusable names.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  validatedVersion:
+                    maxLength: 128
+                    type: string
+                  workerRevision:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                required:
+                - contentBinding
+                - deviceUID
+                - installStartedAt
+                - preparedAt
+                - primarySupervisorInstalled
+                - protocolVersion
+                - receiptHash
+                - runningVersion
+                - sourceDigest
+                - sourceIdentityHash
+                - targetVersion
+                - upgradeUID
+                - validatedVersion
+                type: object
+                x-kubernetes-validations:
+                - message: campaignUID and planHash must be supplied together
+                  rule: has(self.campaignUID) == has(self.planHash)
               previousVersion:
                 description: |-
                   PreviousVersion is the device-reported OS version captured before
@@ -1642,6 +1869,11 @@ spec:
               rule: '!has(oldSelf.managerDrain) || has(self.managerDrain)'
             - message: workerDrain cannot be removed once published
               rule: '!has(oldSelf.workerDrain) || has(self.workerDrain)'
+            - message: preparedReceipt is append-only and immutable once published
+              rule: '!has(oldSelf.preparedReceipt) || (has(self.preparedReceipt) &&
+                self.preparedReceipt == oldSelf.preparedReceipt)'
+            - message: Prepared phase requires an immutable preparedReceipt
+              rule: '!has(self.phase) || self.phase != ''Prepared'' || has(self.preparedReceipt)'
             - message: managerDrain Pod entries cannot be removed once published
               rule: '!has(oldSelf.managerDrain) || !has(oldSelf.managerDrain.pods)
                 || (has(self.managerDrain) && has(self.managerDrain.pods) && oldSelf.managerDrain.pods.all(p,

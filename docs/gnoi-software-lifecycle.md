@@ -700,6 +700,7 @@ The upgrade strategy controls activation:
 | `Reload` | Default. Calls gNOI `OS.Activate` with reboot allowed, then waits for the device to return and verifies the running version. |
 | `ISSU` | Currently rejected during preflight. CVK will not advertise a non-disruptive upgrade until the platform backend can verify that IOS-XE actually selected an ISSU path. |
 | `NoReboot` | Calls gNOI `OS.Activate` with `NoReboot=true`, then performs `OS.Verify`. If the old version remains active, the terminal phase is `StagedForNextBoot`; only an independently authorized reboot can complete the transition. It does not prove ISSU, hitless forwarding, or readiness after that reboot. |
+| `PrepareOnly` | Installs and validates the exact image in native IOS-XE inventory, verifies that the running version did not change, and terminates as `Prepared` with an immutable receipt. It never calls `OS.Activate` and does not authorize a reboot. Use URL, ConfigMap, or `deviceFile` sources; activation-only `preinstalled` and deprecated `localPath` intents are rejected. |
 
 The normal lifecycle is:
 
@@ -715,6 +716,7 @@ The normal lifecycle is:
 | `AwaitingReachability` | Device may be rebooting after activation. |
 | `Verifying` | Running version and activation result are verified. |
 | `RollingBack` | Previous version is being re-activated after a verify mismatch. |
+| `Prepared` | `PrepareOnly` proved the exact target is installed and activatable while `OS.Verify` still reports the captured previous version. The immutable receipt retains device ownership; this release has no separate activation API, so do not delete the leaf as a substitute for authorization. |
 | `Succeeded` | Final `OS.Verify` proves the requested version is running (including the unusual case where a `NoReboot` request already resulted in the target). |
 | `StagedForNextBoot` | `NoReboot` was accepted, `OS.Verify` still reports the captured previous version, and a separately authorized reboot is required. |
 
@@ -725,6 +727,18 @@ Terminal failure phases include `Failed`, `PreflightFailed`,
 not issue a separate `System.Reboot` after activation. With rollback enabled,
 CVK re-activates the previously observed running version only after the
 lifecycle backend proves that exact version remains activatable.
+
+For `PrepareOnly`, CVK additionally records a versioned, content-addressed
+`status.preparedReceipt`. The receipt binds the upgrade and device identities,
+source digest and source intent, exact installed and running versions, install
+claims, trust and policy revisions, worker revision, and any required
+supervisor evidence. IOS-XE native inventory does not expose an installed-image
+digest, so the receipt accurately records a `source-digest-install-claim-v1`
+binding rather than claiming a later device-side digest measurement. The
+receipt is append-only and immutable at API admission. A retained valid receipt
+blocks direct upgrade leaves for the same device and another managed campaign
+for the same Device UID until a future, separately authorized activation or
+explicit invalidation protocol consumes it.
 
 When `OS.Verify` requires individual-supervisor handling, byte-stream sources
 install the active supervisor first and the standby second, using the same
@@ -781,7 +795,7 @@ Important defaults:
 
 | Field | Default | Notes |
 |---|---:|---|
-| `strategy` | `Reload` | `NoReboot` requests activation without an immediate reload; it is not a non-disruptive guarantee. |
+| `strategy` | `Reload` | `NoReboot` requests activation without an immediate reload. `PrepareOnly` performs install and validation but has no activation path in this release. |
 | `rollbackOnFailure` | `true` | Attempts to restore the previously observed version after verify mismatch when a safe rollback sequence can be proven. |
 | `installTimeoutSeconds` | `3600` | Bounds two consecutive windows: pre-install gNOI readiness, source resolution, and device-file `File.Get`; then, starting at the first `OS.Install` or native-registration claim, all per-supervisor installs/registration and inventory convergence share a fresh window. Repeated work within either window receives only its remaining time. |
 | `rebootTimeoutSeconds` | `1800` | Separately bounds initial activation-control readiness (`activationControlStartTime`), then activation/reachability/final verification from the first actual activation claim. Rollback receives an independent timer when `RollingBack` begins, including pre-dispatch reachability. Each RPC uses only the remaining sequence time. |
@@ -809,6 +823,8 @@ form for the staged image.
 For the complete upgrade and planned-downgrade manifests, the certificate
 prerequisites, and commands that correlate CR status with worker logs, follow
 the [IOS-XE upgrade and downgrade runbook](gnoi-iosxe-upgrade-runbook.md).
+For a managed topology-aware install-only campaign, start from the
+[`PrepareOnly` rollout example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/iosxe-software-prepare.yaml).
 
 Each CR is immutable and starts one upgrade after preflight. `notBefore` delays
 initial work; `notAfter` is rechecked before every not-yet-claimed device
@@ -894,7 +910,10 @@ that this option is a non-disruptive upgrade.
 6. After `Succeeded` or `StagedForNextBoot`, retain the CR as an immutable audit
    record or delete it when it is no longer needed. For `StagedForNextBoot`,
    authorize and observe the required reboot separately; the upgrade CR does
-   not claim that the target is running.
+   not claim that the target is running. A `Prepared` CR is different: retain
+   it because its receipt is the exclusive staged-ownership record. This
+   release has no supported activation or invalidation workflow for that
+   record, and deletion must not be treated as activation authorization.
 
 For `DeviceOperation` show-command and diagnostic examples see the
 [Operations Runbook](operations.md).

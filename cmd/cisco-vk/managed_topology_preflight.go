@@ -147,8 +147,8 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		matchConditions:   []string{"managed-leaf"},
 		variables:         []string{"manager", "appDrainWriter", "oldClaims", "newClaims", "managerFunctionalWorkerBinding"},
 		validations:       8,
-		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:b20d64d81c79a07900f62927c2420feb9cc489fb463763a3989ffc48bf8d2bdf",
+		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "preparedReceipt", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
+		digest:            "sha256:19d4ebd758a2d9fe7a7623784431f0e0a34902ba913a47bca6860c051bd3b172",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},

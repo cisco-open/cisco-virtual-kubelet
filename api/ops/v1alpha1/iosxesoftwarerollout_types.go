@@ -116,14 +116,12 @@ type IOSXESoftwareRolloutPlan struct {
 	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)+([a-z])?$`
 	TargetVersion string `json:"targetVersion"`
 
-	// Strategy controls the leaf activation behavior. Reload preserves the
-	// existing combined install/activate flow. NoReboot is an explicitly
-	// qualified preparation mode: the leaf records a staged-for-next-boot
-	// receipt and never performs a reboot. It remains terminal until a future
-	// activation-approval protocol is added; it does not silently authorize a
-	// later activation.
+	// Strategy controls leaf lifecycle behavior. Reload preserves the combined
+	// install/activate flow. NoReboot still calls OS.Activate and is not an
+	// install-only boundary. PrepareOnly stops after installation, native
+	// inventory convergence and read-only OS verification; its receipt does not
+	// authorize a later activation.
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:validation:Enum=Reload;NoReboot
 	// +kubebuilder:default=Reload
 	Strategy IOSXESoftwareRolloutStrategy `json:"strategy,omitempty"`
 
@@ -188,12 +186,13 @@ type IOSXESoftwareRolloutPlan struct {
 
 // IOSXESoftwareRolloutStrategy is intentionally IOS-XE- and MVP-specific.
 //
-// +kubebuilder:validation:Enum=Reload;NoReboot
+// +kubebuilder:validation:Enum=Reload;NoReboot;PrepareOnly
 type IOSXESoftwareRolloutStrategy string
 
 const (
-	IOSXESoftwareRolloutStrategyReload   IOSXESoftwareRolloutStrategy = "Reload"
-	IOSXESoftwareRolloutStrategyNoReboot IOSXESoftwareRolloutStrategy = "NoReboot"
+	IOSXESoftwareRolloutStrategyReload      IOSXESoftwareRolloutStrategy = "Reload"
+	IOSXESoftwareRolloutStrategyNoReboot    IOSXESoftwareRolloutStrategy = "NoReboot"
+	IOSXESoftwareRolloutStrategyPrepareOnly IOSXESoftwareRolloutStrategy = "PrepareOnly"
 )
 
 // IOSXESoftwareRolloutLabelSelector preserves the Kubernetes LabelSelector

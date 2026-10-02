@@ -766,7 +766,7 @@ func validateMaintenanceLeafBinding(
 
 func terminalManagedLeaf(phase opsv1alpha1.UpgradePhase) bool {
 	switch phase {
-	case opsv1alpha1.UpgradePhaseSucceeded, opsv1alpha1.UpgradePhaseStagedForNextBoot,
+	case opsv1alpha1.UpgradePhaseSucceeded, opsv1alpha1.UpgradePhasePrepared, opsv1alpha1.UpgradePhaseStagedForNextBoot,
 		opsv1alpha1.UpgradePhaseFailed, opsv1alpha1.UpgradePhaseRolledBack,
 		opsv1alpha1.UpgradePhaseCancelled, opsv1alpha1.UpgradePhasePreflightFailed,
 		opsv1alpha1.UpgradePhaseValidationFailed, opsv1alpha1.UpgradePhaseRebootTimeout:

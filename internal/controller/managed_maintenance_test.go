@@ -402,7 +402,15 @@ func TestManagedMaintenanceRetainsClaimedSessionAfterRevocation(t *testing.T) {
 }
 
 func TestManagedMaintenanceSettlesOnlyExactManagerSettledOutcome(t *testing.T) {
-	for _, phase := range []ops.UpgradePhase{ops.UpgradePhaseSucceeded, ops.UpgradePhasePreflightFailed, ops.UpgradePhaseValidationFailed, ops.UpgradePhaseRebootTimeout, ops.UpgradePhaseCancelled} {
+	for _, phase := range []ops.UpgradePhase{
+		ops.UpgradePhaseSucceeded,
+		ops.UpgradePhasePrepared,
+		ops.UpgradePhaseStagedForNextBoot,
+		ops.UpgradePhasePreflightFailed,
+		ops.UpgradePhaseValidationFailed,
+		ops.UpgradePhaseRebootTimeout,
+		ops.UpgradePhaseCancelled,
+	} {
 		t.Run(string(phase), func(t *testing.T) {
 			r, device, node, leaf, lease := managerMaintenanceFixture(t)
 			ctx := context.Background()

@@ -662,6 +662,7 @@ func runReconcile(t *testing.T, r *Reconciler, up *opsv1alpha1.IOSXESoftwareUpgr
 func isTerminal(p opsv1alpha1.UpgradePhase) bool {
 	switch p {
 	case opsv1alpha1.UpgradePhaseSucceeded,
+		opsv1alpha1.UpgradePhasePrepared,
 		opsv1alpha1.UpgradePhaseStagedForNextBoot,
 		opsv1alpha1.UpgradePhaseFailed,
 		opsv1alpha1.UpgradePhasePreflightFailed,
@@ -1032,6 +1033,94 @@ func TestHappyPathLocalPathReloadStrategy(t *testing.T) {
 	}
 	if got.Status.CompletionTime == nil {
 		t.Fatal("CompletionTime not set on Succeeded")
+	}
+}
+
+func TestPrepareOnlyInstallsAndIssuesImmutableReceiptWithoutActivate(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.14.01a"
+	up := newUpgrade("upgrade-prepare-only", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.UID = types.UID("upgrade-prepare-only-uid")
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+			URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+		}
+	})
+	r := newReconciler(t, rig, up)
+	r.DeviceUID = "device-uid"
+	r.ImageResolver = &countingImageResolver{}
+	r.Lifecycle = &fakeLifecycle{inspectImage: softwarelifecycle.InventoryImage{
+		Version: "17.15.01a", State: softwarelifecycle.InventoryStateInstalled,
+	}}
+
+	got := runReconcile(t, r, up, 12)
+	if got.Status.Phase != opsv1alpha1.UpgradePhasePrepared {
+		t.Fatalf("phase=%q reason=%q msg=%q", got.Status.Phase, got.Status.FailureReason, got.Status.Message)
+	}
+	if rig.os.installCalls != 1 || rig.os.activateCalls != 0 || rig.os.verifyCalls != 3 {
+		t.Fatalf("RPC calls Install=%d Activate=%d Verify=%d, want 1/0/3",
+			rig.os.installCalls, rig.os.activateCalls, rig.os.verifyCalls)
+	}
+	receipt := got.Status.PreparedReceipt
+	if err := ValidatePreparedReceipt(receipt); err != nil {
+		t.Fatalf("prepared receipt: %v; receipt=%+v", err, receipt)
+	}
+	if receipt.UpgradeUID != string(up.UID) || receipt.DeviceUID != r.DeviceUID ||
+		receipt.SourceDigest != "sha256:"+strings.Repeat("a", 64) ||
+		receipt.TargetVersion != up.Spec.TargetVersion || receipt.ValidatedVersion != "17.15.01a" ||
+		receipt.RunningVersion != "17.14.01a" {
+		t.Fatalf("prepared receipt does not bind exact identity/content/version: %+v", receipt)
+	}
+	if reason := conditionReason(got.Status.Conditions, conditionTypeActivated); reason != "ActivationNotAuthorized" {
+		t.Fatalf("Activated reason=%q, want ActivationNotAuthorized", reason)
+	}
+	if !apimeta.IsStatusConditionTrue(got.Status.Conditions, conditionTypeMutationSettled) {
+		t.Fatal("completed install was not marked settled before receipt publication")
+	}
+}
+
+func TestPrepareOnlyFailsClosedWhenRunningVersionChanges(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersions = []string{"17.14.01a", "17.14.01a", "17.15.01a"}
+	up := newUpgrade("upgrade-prepare-only-running-changed", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.UID = types.UID("upgrade-prepare-only-running-changed-uid")
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+			URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+		}
+	})
+	r := newReconciler(t, rig, up)
+	r.DeviceUID = "device-uid"
+	r.ImageResolver = &countingImageResolver{}
+	r.Lifecycle = &fakeLifecycle{inspectImage: softwarelifecycle.InventoryImage{
+		Version: "17.15.01a", State: softwarelifecycle.InventoryStateInstalled,
+	}}
+
+	got := runReconcile(t, r, up, 12)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseValidationFailed ||
+		got.Status.FailureReason != "PreparedRunningVersionChanged" {
+		t.Fatalf("phase=%q reason=%q msg=%q", got.Status.Phase, got.Status.FailureReason, got.Status.Message)
+	}
+	if got.Status.PreparedReceipt != nil || rig.os.activateCalls != 0 {
+		t.Fatalf("receipt=%+v Activate calls=%d, want no receipt and no Activate", got.Status.PreparedReceipt, rig.os.activateCalls)
+	}
+}
+
+func TestPrepareOnlyRejectsActivationOnlySource(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("upgrade-prepare-only-preinstalled", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}}
+	})
+	r := newReconciler(t, rig, up)
+
+	got := runReconcile(t, r, up, 4)
+	if got.Status.Phase != opsv1alpha1.UpgradePhasePreflightFailed || got.Status.FailureReason != "PrepareSourceUnsupported" {
+		t.Fatalf("phase=%q reason=%q msg=%q", got.Status.Phase, got.Status.FailureReason, got.Status.Message)
+	}
+	if rig.os.verifyCalls != 0 || rig.os.installCalls != 0 || rig.os.activateCalls != 0 {
+		t.Fatalf("unsupported preparation touched device: Verify=%d Install=%d Activate=%d",
+			rig.os.verifyCalls, rig.os.installCalls, rig.os.activateCalls)
 	}
 }
 
@@ -3041,6 +3130,47 @@ func TestPendingUpgradeWaitsForExistingDeviceOperation(t *testing.T) {
 	}
 	if rig.os.verifyCalls != 0 || rig.os.activateCalls != 0 {
 		t.Fatalf("device calls Verify=%d Activate=%d, want none while locked", rig.os.verifyCalls, rig.os.activateCalls)
+	}
+}
+
+func TestPendingStandaloneUpgradeWaitsForRetainedPreparedReceipt(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("upgrade-after-preparation", nil)
+	up.CreationTimestamp = metav1.NewTime(time.Unix(1_700_000_000, 0).UTC())
+	r := newReconciler(t, rig, up)
+	prepared := newUpgrade("prepared-owner", func(owner *opsv1alpha1.IOSXESoftwareUpgrade) {
+		owner.UID = types.UID("prepared-owner-uid")
+	})
+	prepared.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	prepared.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: "prepare-v1", UpgradeUID: string(prepared.UID), DeviceUID: "device-uid",
+		SourceDigest:       "sha256:" + strings.Repeat("a", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("b", 64),
+		ContentBinding:     "source-digest-install-claim-v1",
+		TargetVersion:      "17.15.01a", ValidatedVersion: "17.15.01a", RunningVersion: "17.14.01a",
+		PrimarySupervisorInstalled: true,
+		InstallStartedAt:           metav1.NewTime(time.Unix(100, 0).UTC()),
+		PreparedAt:                 metav1.NewTime(time.Unix(123, 0).UTC()),
+	}
+	var err error
+	prepared.Status.PreparedReceipt.ReceiptHash, err = PreparedReceiptHash(*prepared.Status.PreparedReceipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Client.Create(context.Background(), prepared); err != nil {
+		t.Fatalf("create prepared owner: %v", err)
+	}
+
+	got := runReconcile(t, r, up, 3)
+	if got.Status.Phase != opsv1alpha1.UpgradePhasePending ||
+		conditionReason(got.Status.Conditions, conditionTypeReady) != "DeviceUpgradeLocked" ||
+		!strings.Contains(got.Status.Message, prepared.Name) {
+		t.Fatalf("retained preparation did not own queue: phase=%q message=%q conditions=%+v",
+			got.Status.Phase, got.Status.Message, got.Status.Conditions)
+	}
+	if rig.os.verifyCalls != 0 || rig.os.installCalls != 0 || rig.os.activateCalls != 0 {
+		t.Fatalf("blocked upgrade touched device: Verify=%d Install=%d Activate=%d",
+			rig.os.verifyCalls, rig.os.installCalls, rig.os.activateCalls)
 	}
 }
 

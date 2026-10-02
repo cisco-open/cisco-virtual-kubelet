@@ -556,7 +556,12 @@ Unsupported capabilities, ambiguous versions, and non-activatable inventory
 states fail closed. `ISSU` is currently rejected because CVK cannot yet verify
 that IOS-XE selected a non-disruptive path. `NoReboot` normally terminates as
 `StagedForNextBoot` while the old version remains active; it does not claim a
-completed upgrade. IOS-XE individual-supervisor upgrades install active then
+completed upgrade. `PrepareOnly` never calls `OS.Activate`; after exact native
+inventory and unchanged-running-version verification it terminates as
+`Prepared` with an immutable `status.preparedReceipt`. The provider queue
+blocks direct upgrades for the same device, while the rollout manager also
+blocks competing campaigns for the same Device UID. This release does not yet
+expose the separate activation API that will consume the receipt. IOS-XE individual-supervisor upgrades install active then
 standby and activate standby then active, with durable milestones and no
 automatic rollback when a safe per-supervisor rollback sequence cannot be
 proven.

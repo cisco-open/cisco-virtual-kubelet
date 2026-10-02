@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -451,7 +452,7 @@ func setSoftwareUpgradeSpanOutcome(span oteltrace.Span, phase opsv1alpha1.Upgrad
 			description = string(phase)
 		}
 		span.SetStatus(otelcodes.Error, description)
-	} else if phase == opsv1alpha1.UpgradePhaseSucceeded || phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
+	} else if phase == opsv1alpha1.UpgradePhaseSucceeded || phase == opsv1alpha1.UpgradePhasePrepared || phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
 		span.SetStatus(otelcodes.Ok, "")
 	}
 }
@@ -488,6 +489,16 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyISSU {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "ISSUVerificationUnsupported",
 			"strategy ISSU is not available until the platform lifecycle backend can verify that IOS XE selected the ISSU activation path", now)
+	}
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		if r.Lifecycle == nil {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "SoftwareLifecycleUnsupported",
+				"PrepareOnly requires native install inventory to prove a durable inactive image", now)
+		}
+		if !imageSourceStreamsBytes(up.Spec.ImageSource) && up.Spec.ImageSource.DeviceFile == nil {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "PrepareSourceUnsupported",
+				"PrepareOnly requires a URL, ConfigMap, or authenticated device-file source", now)
+		}
 	}
 	owner, err := r.deviceUpgradeOwner(ctx, up, now)
 	if err != nil {
@@ -823,6 +834,9 @@ func (r *Reconciler) runValidating(ctx context.Context, up *opsv1alpha1.IOSXESof
 			fmt.Sprintf("target %s did not become activatable within %s", up.Spec.TargetVersion, installTimeout(up)), now)
 	}
 
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly && up.Status.StagingOperationID == "" {
+		return r.validatePreparedInstall(ctx, up, now)
+	}
 	if up.Status.StagingOperationID == "" {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "StagingOperationMissing",
 			"native install validation requires a durable device-file staging operation ID", now)
@@ -928,6 +942,9 @@ func (r *Reconciler) targetReadyForActivation(
 				fmt.Sprintf("inventory version %s came from %q, not verified device file %q", image.Version, image.SourcePath, boundSourcePath), now)
 		}
 	}
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		return r.completePreparation(ctx, up, image, previousVersion, requiresIndividual, now)
+	}
 	message := fmt.Sprintf("device install inventory resolved exact activatable version %s", image.Version)
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		if cur.Status.StartTime == nil {
@@ -949,6 +966,201 @@ func (r *Reconciler) targetReadyForActivation(
 			"waiting to submit gNOI OS.Activate", now)
 		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
+}
+
+func (r *Reconciler) validatePreparedInstall(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	now time.Time,
+) (reconcile.Result, error) {
+	if strings.TrimSpace(up.Status.ValidatedVersion) == "" {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedVersionMissing", "PrepareOnly reached inventory validation without an exact installed version", now)
+	}
+	image, err := r.inspectTarget(ctx, up.Spec.TargetVersion)
+	if err != nil {
+		switch {
+		case errors.Is(err, softwarelifecycle.ErrTargetNotFound):
+			return r.waitForValidation(ctx, up, "PreparedInventoryPending",
+				fmt.Sprintf("waiting for native inventory to expose prepared version %s", up.Status.ValidatedVersion), now)
+		case errors.Is(err, softwarelifecycle.ErrAmbiguousTarget):
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"AmbiguousTargetVersion", err.Error(), now)
+		case errors.Is(err, softwarelifecycle.ErrUnsupported):
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"SoftwareLifecycleUnsupported", err.Error(), now)
+		default:
+			return r.waitForValidation(ctx, up, "PreparedInventoryUnavailable", err.Error(), now)
+		}
+	}
+	if image.Version != up.Status.ValidatedVersion || !image.State.Activatable() {
+		if image.State == softwarelifecycle.InventoryStateInProgress {
+			return r.waitForValidation(ctx, up, "PreparedInventoryPending",
+				fmt.Sprintf("native inventory still reports %s in state %s", image.Version, image.State), now)
+		}
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedInventoryMismatch",
+			fmt.Sprintf("native inventory returned version %q in state %s; expected exact installed version %q",
+				image.Version, image.State, up.Status.ValidatedVersion), now)
+	}
+	return r.completePreparation(ctx, up, image, up.Status.PreviousVersion,
+		up.Status.IndividualSupervisorInstall, now)
+}
+
+func (r *Reconciler) completePreparation(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	image softwarelifecycle.InventoryImage,
+	previousVersion string,
+	requiresIndividual bool,
+	now time.Time,
+) (reconcile.Result, error) {
+	if up.Spec.Strategy != opsv1alpha1.UpgradeStrategyPrepareOnly {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"InvalidPreparationState", "prepared receipt generation requires strategy PrepareOnly", now)
+	}
+	if strings.TrimSpace(string(up.UID)) == "" || strings.TrimSpace(r.DeviceUID) == "" ||
+		!validContentDigest(up.Status.SourceDigest) || strings.TrimSpace(previousVersion) == "" ||
+		strings.TrimSpace(image.Version) == "" || !image.State.Activatable() {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedIdentityIncomplete", "prepared receipt identity or native inventory proof is incomplete", now)
+	}
+	if image.Version != up.Status.ValidatedVersion || !versionMatches(image.Version, up.Spec.TargetVersion) {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedInventoryMismatch", fmt.Sprintf("prepared inventory version %q does not match validated version %q and target %q",
+				image.Version, up.Status.ValidatedVersion, up.Spec.TargetVersion), now)
+	}
+	hasPrimaryInstallProof := up.Status.PrimarySupervisorInstalled ||
+		(up.Status.StagingRequested && up.Status.StagingOperationID != "")
+	if !hasPrimaryInstallProof || (requiresIndividual && !up.Status.StandbySupervisorInstalled) {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedSupervisorProofIncomplete", "not every required supervisor has a completed install claim", now)
+	}
+	if r.GNOI == nil {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"NoGNOIProvider", "gNOI OS.Verify is required before issuing a prepared receipt", now)
+	}
+	gnoiClient, err := r.gnoiClient(ctx)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return r.waitForValidation(ctx, up, "PreparedVerifyPending", err.Error(), now)
+	}
+	verify, err := verifyOS(ctx, gnoiClient)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return r.waitForValidation(ctx, up, "PreparedVerifyPending", err.Error(), now)
+	}
+	now = r.now()
+	if !versionMatches(verify.Version, previousVersion) {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedRunningVersionChanged",
+			fmt.Sprintf("OS.Verify reports running version %q after PrepareOnly; expected unchanged version %q",
+				verify.Version, previousVersion), now)
+	}
+	if requiresIndividual {
+		if verify.Standby.State == gnoi.StandbyStateUnavailable {
+			return r.waitForValidation(ctx, up, "PreparedStandbyVerifyPending",
+				"standby supervisor is temporarily unavailable during preparation verification", now)
+		}
+		if verify.Standby.State != gnoi.StandbyStateReady || strings.TrimSpace(verify.Standby.ID) == "" ||
+			strings.TrimSpace(verify.Standby.ActivationFailMessage) != "" ||
+			!versionMatches(verify.Standby.Version, previousVersion) {
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedStandbyMismatch", fmt.Sprintf("standby supervisor evidence is incomplete or no longer running %q: state=%s id=%q version=%q failure=%q",
+					previousVersion, verify.Standby.State, verify.Standby.ID, verify.Standby.Version,
+					verify.Standby.ActivationFailMessage), now)
+		}
+	}
+	if up.Status.InstallStartTime == nil {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedInstallClaimMissing", "prepared receipt has no durable install-start claim", now)
+	}
+	sourceIdentityHash, err := PreparedSourceIdentityHash(up.Spec.ImageSource)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	trustIdentityHash := ""
+	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" {
+		trustIdentityHash, err = PreparedTrustIdentityHash(
+			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	receipt := opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion:             preparedReceiptProtocolV1,
+		UpgradeUID:                  string(up.UID),
+		DeviceUID:                   r.DeviceUID,
+		SourceDigest:                up.Status.SourceDigest,
+		SourceSize:                  up.Status.SourceSize,
+		SourceIdentityHash:          sourceIdentityHash,
+		TrustIdentityHash:           trustIdentityHash,
+		ContentBinding:              preparedContentBindingV1,
+		TargetVersion:               up.Spec.TargetVersion,
+		ValidatedVersion:            image.Version,
+		RunningVersion:              verify.Version,
+		IndividualSupervisorInstall: requiresIndividual,
+		PrimarySupervisorInstalled:  hasPrimaryInstallProof,
+		StandbySupervisorInstalled:  up.Status.StandbySupervisorInstalled,
+		InstallStartedAt:            *up.Status.InstallStartTime.DeepCopy(),
+		StagingOperationID:          up.Status.StagingOperationID,
+		ManagedMutationClaims:       append([]opsv1alpha1.UpgradeManagedMutationClaimStatus(nil), up.Status.ManagedMutationClaims...),
+		PreparedAt:                  metav1.Time{Time: now},
+	}
+	if requiresIndividual {
+		receipt.StandbySupervisorID = verify.Standby.ID
+		receipt.StandbyRunningVersion = verify.Standby.Version
+	}
+	if up.Status.ManagerAdmission != nil {
+		admission := up.Status.ManagerAdmission
+		receipt.CampaignUID = admission.CampaignUID
+		receipt.PlanHash = admission.PlanHash
+		receipt.NodeUID = admission.NodeUID
+		receipt.PhysicalIdentity = admission.PhysicalIdentity
+		receipt.DeviceGeneration = admission.DeviceGeneration
+		receipt.ManagedProtocolVersion = admission.ProtocolVersion
+		receipt.PolicyUID = admission.PolicyUID
+		receipt.PolicyResourceVersion = admission.PolicyResourceVersion
+		receipt.PolicyEpoch = admission.PolicyEpoch
+		receipt.WorkerRevision = r.WorkerRevision
+		receipt.SourceSecretUID = up.Annotations[managedprotocol.AnnotationSourceSecretUID]
+		if admission.DeviceUID != "" && admission.DeviceUID != receipt.DeviceUID {
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedDeviceIdentityMismatch", "manager admission and worker device identities differ", now)
+		}
+		if up.Spec.ImageSource.URLSecretRef != nil && receipt.SourceSecretUID == "" {
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedSourceIdentityIncomplete", "managed credential-bearing source has no immutable Secret UID binding", now)
+		}
+	}
+	receipt.ReceiptHash, err = PreparedReceiptHash(receipt)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := ValidatePreparedReceipt(&receipt); err != nil {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedReceiptInvalid", err.Error(), now)
+	}
+	message := fmt.Sprintf("prepared exact installed version %s while running version remained %s; activation is not authorized",
+		image.Version, verify.Version)
+	return r.updateTerminalStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+		cur.Status.InventoryState = upgradeInventoryState(image.State)
+		cur.Status.RunningVersion = verify.Version
+		cur.Status.PreparedReceipt = &receipt
+		cur.Status.CompletionTime = &metav1.Time{Time: now}
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "PreparationCompleted", message, now)
+		r.setCondition(cur, conditionTypeStaged, metav1.ConditionTrue, "Prepared", message, now)
+		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "Prepared", message, now)
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationNotAuthorized",
+			"PrepareOnly never submits OS.Activate; a separate activation approval is required", now)
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "Prepared",
+			fmt.Sprintf("OS.Verify confirms the device remains reachable on %s", verify.Version), now)
+		r.setReady(cur, metav1.ConditionTrue, "Prepared", message, now)
+	}, reconcile.Result{})
 }
 
 func (r *Reconciler) advanceStagingValidation(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time) (reconcile.Result, error) {
@@ -1518,20 +1730,31 @@ func (r *Reconciler) acceptObservedInstall(
 			r.setReady(cur, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
 		}, reconcile.Result{RequeueAfter: time.Second})
 	}
+	nextPhase := opsv1alpha1.UpgradePhaseActivating
+	nextMessage := message + "; activating"
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		nextPhase = opsv1alpha1.UpgradePhaseValidating
+		nextMessage = message + "; validating durable preparation without activation"
+	}
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
-		cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		cur.Status.Phase = nextPhase
 		cur.Status.PrimarySupervisorInstalled = true
 		cur.Status.ValidatedVersion = observation.Image.Version
 		cur.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
-		cur.Status.Message = message + "; activating"
+		cur.Status.Message = nextMessage
 		cur.Status.FailureReason = ""
 		markTransferComplete(cur)
 		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "NativeInstallCorroborated", message, now)
 		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "NativeInstallCorroborated",
 			"pinned bytes were transferred and IOS XE recorded a verified, quiescent, completed install-add operation", now)
 		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "NativeInstallCorroborated", message, now)
-		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationPending",
-			"waiting to submit gNOI OS.Activate", now)
+		activationReason := "ActivationPending"
+		activationMessage := "waiting to submit gNOI OS.Activate"
+		if cur.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+			activationReason = "ActivationNotAuthorized"
+			activationMessage = "PrepareOnly does not authorize OS.Activate"
+		}
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, activationReason, activationMessage, now)
 		r.setReady(cur, metav1.ConditionFalse, "NativeInstallCorroborated", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
 }
@@ -1579,7 +1802,26 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 	var candidates []candidate
 	for i := range upgrades.Items {
 		item := &upgrades.Items[i]
-		if item.Spec.DeviceRef.Name != up.Spec.DeviceRef.Name || !item.DeletionTimestamp.IsZero() ||
+		if item.Spec.DeviceRef.Name != up.Spec.DeviceRef.Name {
+			continue
+		}
+		// Prepared is terminal for execution but not for ownership. Preserve this
+		// record in the per-device queue for both standalone and manager-created
+		// upgrades; otherwise a direct leaf could bypass the manager's retained
+		// receipt check. Malformed or partially migrated records fail closed.
+		if item.Status.Phase == opsv1alpha1.UpgradePhasePrepared || item.Status.PreparedReceipt != nil {
+			if item.Status.Phase != opsv1alpha1.UpgradePhasePrepared || item.Status.PreparedReceipt == nil {
+				return "", fmt.Errorf("prepared upgrade %s/%s has inconsistent phase or receipt", item.Namespace, item.Name)
+			}
+			if err := ValidatePreparedReceipt(item.Status.PreparedReceipt); err != nil {
+				return "", fmt.Errorf("prepared upgrade %s/%s has invalid retained receipt: %w", item.Namespace, item.Name, err)
+			}
+			candidates = append(candidates, candidate{
+				name: item.Name, started: true, at: item.Status.PreparedReceipt.PreparedAt.Time,
+			})
+			continue
+		}
+		if !item.DeletionTimestamp.IsZero() ||
 			terminalUpgradePhase(item.Status.Phase) || inertManagedCancellationTombstone(item) ||
 			settledManagedCancellationAuditRecord(item) {
 			continue
@@ -1980,6 +2222,7 @@ func upgradeStateRequiresQuarantine(up *opsv1alpha1.IOSXESoftwareUpgrade, now ti
 
 func terminalUpgradePhase(phase opsv1alpha1.UpgradePhase) bool {
 	return phase == opsv1alpha1.UpgradePhaseSucceeded ||
+		phase == opsv1alpha1.UpgradePhasePrepared ||
 		phase == opsv1alpha1.UpgradePhaseStagedForNextBoot ||
 		isTerminalFailurePhase(phase)
 }
@@ -2235,11 +2478,17 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			r.setReady(cur, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
 		}, reconcile.Result{RequeueAfter: time.Second})
 	}
+	nextPhase := opsv1alpha1.UpgradePhaseActivating
+	nextMessage := fmt.Sprintf("device validated %s, activating", validated.Version)
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		nextPhase = opsv1alpha1.UpgradePhaseValidating
+		nextMessage = fmt.Sprintf("device validated %s; validating durable preparation without activation", validated.Version)
+	}
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		if cur.Status.StartTime == nil {
 			cur.Status.StartTime = &metav1.Time{Time: now}
 		}
-		cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		cur.Status.Phase = nextPhase
 		cur.Status.ValidatedVersion = validated.Version
 		cur.Status.IndividualSupervisorInstall = requiresIndividualInstall
 		if standby {
@@ -2247,7 +2496,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		} else {
 			cur.Status.PrimarySupervisorInstalled = true
 		}
-		cur.Status.Message = fmt.Sprintf("device validated %s, activating", validated.Version)
+		cur.Status.Message = nextMessage
 		cur.Status.FailureReason = ""
 		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "InstallCompleted", cur.Status.Message, now)
 		markTransferComplete(cur)
@@ -2260,8 +2509,13 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, transferReason, transferMessage, now)
 		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "Validated",
 			fmt.Sprintf("device validated image version %s", validated.Version), now)
-		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationPending",
-			"waiting to submit gNOI OS.Activate", now)
+		activationReason := "ActivationPending"
+		activationMessage := "waiting to submit gNOI OS.Activate"
+		if cur.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+			activationReason = "ActivationNotAuthorized"
+			activationMessage = "PrepareOnly does not authorize OS.Activate"
+		}
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, activationReason, activationMessage, now)
 		r.setReady(cur, metav1.ConditionFalse, "Validated", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
 }
@@ -3542,6 +3796,7 @@ func retainMutationLeaseUntilExpiry(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 
 func successfulUpgradeOutcome(phase opsv1alpha1.UpgradePhase) bool {
 	return phase == opsv1alpha1.UpgradePhaseSucceeded ||
+		phase == opsv1alpha1.UpgradePhasePrepared ||
 		phase == opsv1alpha1.UpgradePhaseStagedForNextBoot ||
 		phase == opsv1alpha1.UpgradePhaseRolledBack
 }
@@ -3666,6 +3921,7 @@ func upgradeStatusCASMatches(expected, current *opsv1alpha1.IOSXESoftwareUpgrade
 	e, c := expected.Status, current.Status
 	return e.SourceDigest == c.SourceDigest &&
 		e.SourceSize == c.SourceSize &&
+		reflect.DeepEqual(e.PreparedReceipt, c.PreparedReceipt) &&
 		e.StagingOperationID == c.StagingOperationID &&
 		e.StagingRequested == c.StagingRequested &&
 		e.PreviousVersion == c.PreviousVersion &&
