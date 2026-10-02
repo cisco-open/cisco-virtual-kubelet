@@ -560,15 +560,40 @@ func (r *Reconciler) validateManagedActivationReceipt(
 	if err := r.apiReader().Get(ctx, client.ObjectKey{Namespace: up.Namespace, Name: name}, &prepared); err != nil {
 		return fmt.Errorf("read authorized prepared leaf %s/%s: %w", up.Namespace, name, err)
 	}
+	return validatePreparedActivationParent(up, &prepared)
+}
+
+// validatePreparedActivationParent proves that a preinstalled activation leaf
+// names this exact immutable Prepared object and receipt. The per-device queue
+// uses the same predicate as activation reconciliation so the retained receipt
+// can yield only to its own authorized activation, never to an unrelated leaf.
+func validatePreparedActivationParent(
+	up, prepared *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	if up == nil || prepared == nil {
+		return fmt.Errorf("activation or prepared leaf is absent")
+	}
+	annotations := up.Annotations
+	if annotations[managedprotocol.AnnotationManaged] != "true" || up.Spec.ImageSource.Preinstalled == nil ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationActivationApprovalHash]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPreparedReceiptHash]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPreparedSourceDigest]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPreparedTrustHash]) ||
+		!validManagedSHA256(annotations[managedprotocol.AnnotationPlanHash]) ||
+		strings.TrimSpace(annotations[managedprotocol.AnnotationCampaignUID]) == "" ||
+		strings.TrimSpace(annotations[managedprotocol.AnnotationDeviceUID]) == "" {
+		return fmt.Errorf("activation leaf authority binding is incomplete")
+	}
 	receipt := prepared.Status.PreparedReceipt
-	if string(prepared.UID) != up.Annotations[managedprotocol.AnnotationPreparedUpgradeUID] ||
+	if string(prepared.UID) != annotations[managedprotocol.AnnotationPreparedUpgradeUID] ||
+		prepared.Name != annotations[managedprotocol.AnnotationPreparedUpgradeName] ||
+		prepared.Namespace != up.Namespace ||
 		prepared.Status.Phase != opsv1alpha1.UpgradePhasePrepared || receipt == nil {
 		return fmt.Errorf("authorized prepared leaf identity or phase changed")
 	}
 	if err := ValidatePreparedReceipt(receipt); err != nil {
 		return fmt.Errorf("authorized prepared receipt is invalid: %w", err)
 	}
-	annotations := up.Annotations
 	if receipt.ReceiptHash != annotations[managedprotocol.AnnotationPreparedReceiptHash] ||
 		receipt.UpgradeUID != annotations[managedprotocol.AnnotationPreparedUpgradeUID] ||
 		receipt.DeviceUID != annotations[managedprotocol.AnnotationDeviceUID] ||

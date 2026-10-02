@@ -2472,18 +2472,31 @@ func TestManagedPreinstalledActivationRequiresExactReceiptAndTrustBinding(t *tes
 
 func TestManagedPreparedInventoryIsRevalidatedImmediatelyBeforeActivateClaim(t *testing.T) {
 	rig := newRig(t)
+	trust, err := PreparedTrustIdentityHash("credential-rv", "tls-rv", "provisioning-rv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	claimTime := metav1.NewTime(time.Unix(100, 0).UTC())
 	prepared := newUpgrade("prepared-inventory-owner", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 		up.UID = types.UID("prepared-inventory-owner-uid")
 	})
 	prepared.Status.Phase = opsv1alpha1.UpgradePhasePrepared
 	prepared.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
 		ProtocolVersion: preparedReceiptProtocolV1, UpgradeUID: string(prepared.UID), DeviceUID: "device-uid",
+		NodeUID: "node-uid", PhysicalIdentity: "serial-1", DeviceGeneration: 7,
+		CampaignUID: "campaign-uid", PlanHash: "sha256:" + strings.Repeat("f", 64),
+		ManagedProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+		PolicyUID:              "policy-uid", PolicyResourceVersion: "42", PolicyEpoch: 3,
+		WorkerRevision: "sha256:" + strings.Repeat("b", 64), TrustIdentityHash: trust,
 		SourceDigest: "sha256:" + strings.Repeat("c", 64), SourceIdentityHash: "sha256:" + strings.Repeat("d", 64),
 		ContentBinding: preparedContentBindingV1, TargetVersion: "17.15.01a", ValidatedVersion: "17.15.01a",
 		RunningVersion: "17.14.01a", PrimarySupervisorInstalled: true,
-		InstallStartedAt: metav1.NewTime(time.Unix(100, 0).UTC()), PreparedAt: metav1.NewTime(time.Unix(123, 0).UTC()),
+		InstallStartedAt: claimTime, PreparedAt: metav1.NewTime(time.Unix(123, 0).UTC()),
+		ManagedMutationClaims: []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+			Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: "reservation-1",
+			PolicyEpoch: 3, ControlRevision: 2, ClaimedAt: claimTime,
+		}},
 	}
-	var err error
 	prepared.Status.PreparedReceipt.ReceiptHash, err = PreparedReceiptHash(*prepared.Status.PreparedReceipt)
 	if err != nil {
 		t.Fatal(err)
@@ -2498,11 +2511,17 @@ func TestManagedPreparedInventoryIsRevalidatedImmediatelyBeforeActivateClaim(t *
 			managedprotocol.AnnotationPreparedUpgradeName:    prepared.Name,
 			managedprotocol.AnnotationPreparedUpgradeUID:     string(prepared.UID),
 			managedprotocol.AnnotationDeviceUID:              "device-uid",
+			managedprotocol.AnnotationCampaignUID:            prepared.Status.PreparedReceipt.CampaignUID,
+			managedprotocol.AnnotationPlanHash:               prepared.Status.PreparedReceipt.PlanHash,
+			managedprotocol.AnnotationPreparedTrustHash:      trust,
 		}
 		up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
 		up.Status.ValidatedVersion = up.Spec.TargetVersion
 	})
 	r := newReconciler(t, rig, up)
+	r.CredentialSecretRevision = "credential-rv"
+	r.GNOITLSSecretRevision = "tls-rv"
+	r.GNOIProvisioningRevision = "provisioning-rv"
 	if err := r.Client.Create(context.Background(), prepared); err != nil {
 		t.Fatal(err)
 	}
@@ -3368,6 +3387,78 @@ func TestPendingStandaloneUpgradeWaitsForRetainedPreparedReceipt(t *testing.T) {
 	if rig.os.verifyCalls != 0 || rig.os.installCalls != 0 || rig.os.activateCalls != 0 {
 		t.Fatalf("blocked upgrade touched device: Verify=%d Install=%d Activate=%d",
 			rig.os.verifyCalls, rig.os.installCalls, rig.os.activateCalls)
+	}
+}
+
+func TestAuthorizedActivationYieldsExactPreparedQueueOwner(t *testing.T) {
+	rig := newRig(t)
+	claimTime := metav1.NewTime(time.Unix(100, 0).UTC())
+	prepared := newUpgrade("prepared-owner", func(owner *opsv1alpha1.IOSXESoftwareUpgrade) {
+		owner.UID = types.UID("prepared-owner-uid")
+	})
+	prepared.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	prepared.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: preparedReceiptProtocolV1,
+		UpgradeUID:      string(prepared.UID), DeviceUID: "device-uid", NodeUID: "node-uid",
+		PhysicalIdentity: "serial-1", DeviceGeneration: 7,
+		CampaignUID: "campaign-uid", PlanHash: "sha256:" + strings.Repeat("a", 64),
+		ManagedProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+		PolicyUID:              "policy-uid", PolicyResourceVersion: "42", PolicyEpoch: 3,
+		WorkerRevision:     "sha256:" + strings.Repeat("b", 64),
+		SourceDigest:       "sha256:" + strings.Repeat("c", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("d", 64),
+		TrustIdentityHash:  "sha256:" + strings.Repeat("e", 64),
+		ContentBinding:     preparedContentBindingV1,
+		TargetVersion:      "17.15.01a", ValidatedVersion: "17.15.01a.123", RunningVersion: "17.14.01a",
+		PrimarySupervisorInstalled: true, InstallStartedAt: claimTime,
+		ManagedMutationClaims: []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+			Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: "reservation-1",
+			PolicyEpoch: 3, ControlRevision: 2, ClaimedAt: claimTime,
+		}},
+		PreparedAt: metav1.NewTime(time.Unix(123, 0).UTC()),
+	}
+	var err error
+	prepared.Status.PreparedReceipt.ReceiptHash, err = PreparedReceiptHash(*prepared.Status.PreparedReceipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	activation := newUpgrade("authorized-activation", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.UID = types.UID("activation-uid")
+		up.CreationTimestamp = metav1.NewTime(time.Unix(200, 0).UTC())
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}}
+		up.Annotations = map[string]string{
+			managedprotocol.AnnotationManaged:                "true",
+			managedprotocol.AnnotationActivationApprovalHash: "sha256:" + strings.Repeat("f", 64),
+			managedprotocol.AnnotationPreparedReceiptHash:    prepared.Status.PreparedReceipt.ReceiptHash,
+			managedprotocol.AnnotationPreparedSourceDigest:   prepared.Status.PreparedReceipt.SourceDigest,
+			managedprotocol.AnnotationPreparedTrustHash:      prepared.Status.PreparedReceipt.TrustIdentityHash,
+			managedprotocol.AnnotationPreparedUpgradeName:    prepared.Name,
+			managedprotocol.AnnotationPreparedUpgradeUID:     string(prepared.UID),
+			managedprotocol.AnnotationCampaignUID:            prepared.Status.PreparedReceipt.CampaignUID,
+			managedprotocol.AnnotationPlanHash:               prepared.Status.PreparedReceipt.PlanHash,
+			managedprotocol.AnnotationDeviceUID:              prepared.Status.PreparedReceipt.DeviceUID,
+		}
+	})
+	r := newReconciler(t, rig, activation)
+	if err := r.Client.Create(context.Background(), prepared); err != nil {
+		t.Fatal(err)
+	}
+
+	owner, err := r.deviceUpgradeOwner(context.Background(), activation, r.now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner != activation.Name {
+		t.Fatalf("queue owner=%q, want exact authorized activation %q", owner, activation.Name)
+	}
+
+	activation.Annotations[managedprotocol.AnnotationPreparedReceiptHash] = "sha256:" + strings.Repeat("0", 64)
+	owner, err = r.deviceUpgradeOwner(context.Background(), activation, r.now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner != prepared.Name {
+		t.Fatalf("tampered activation yielded prepared owner: owner=%q, want %q", owner, prepared.Name)
 	}
 }
 

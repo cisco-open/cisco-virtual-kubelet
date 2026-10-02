@@ -500,6 +500,15 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 				"PrepareOnly requires a URL, ConfigMap, or authenticated device-file source", now)
 		}
 	}
+	// A retained Prepared leaf intentionally continues to own the device queue.
+	// Before allowing its separately authorized activation child to yield that
+	// queue position, revalidate the exact receipt, leaf incarnation, and current
+	// device-trust revisions. Resolving and the activation claim boundary repeat
+	// these checks to close deletion, replacement, and inventory races.
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
+	}
 	owner, err := r.deviceUpgradeOwner(ctx, up, now)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -1860,6 +1869,12 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 			}
 			if err := ValidatePreparedReceipt(item.Status.PreparedReceipt); err != nil {
 				return "", fmt.Errorf("prepared upgrade %s/%s has invalid retained receipt: %w", item.Namespace, item.Name, err)
+			}
+			// The exact activation child is the sole operation to which a
+			// Prepared owner may yield. Every identity and content binding is
+			// checked here; runPending has already revalidated current trust.
+			if validatePreparedActivationParent(up, item) == nil {
+				continue
 			}
 			candidates = append(candidates, candidate{
 				name: item.Name, started: true, at: item.Status.PreparedReceipt.PreparedAt.Time,
