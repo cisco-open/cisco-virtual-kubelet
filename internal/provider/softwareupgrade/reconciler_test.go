@@ -2481,6 +2481,11 @@ func TestManagedPreparedInventoryIsRevalidatedImmediatelyBeforeActivateClaim(t *
 		up.UID = types.UID("prepared-inventory-owner-uid")
 	})
 	prepared.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	prepared.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
+	prepared.Status.Conditions = []metav1.Condition{{
+		Type: conditionTypeTransferred, Status: metav1.ConditionTrue,
+		Reason: "NativeInstallCorroborated", ObservedGeneration: prepared.Generation,
+	}}
 	prepared.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
 		ProtocolVersion: preparedReceiptProtocolV1, UpgradeUID: string(prepared.UID), DeviceUID: "device-uid",
 		NodeUID: "node-uid", PhysicalIdentity: "serial-1", DeviceGeneration: 7,
@@ -2531,6 +2536,15 @@ func TestManagedPreparedInventoryIsRevalidatedImmediatelyBeforeActivateClaim(t *
 	var current opsv1alpha1.IOSXESoftwareUpgrade
 	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &current); err != nil {
 		t.Fatal(err)
+	}
+	corroborated, err := r.corroboratedPreparedActivationInventory(context.Background(), &current,
+		softwarelifecycle.InventoryImage{
+			Version: prepared.Status.PreparedReceipt.ValidatedVersion,
+			State:   softwarelifecycle.InventoryStateInProgress,
+		})
+	if err != nil || !corroborated {
+		t.Fatalf("exact IOS XE in-progress inventory was not corroborated by the retained native proof: corroborated=%t err=%v",
+			corroborated, err)
 	}
 	if err := r.validateManagedActivationReceipt(context.Background(), &current); err != nil {
 		t.Fatalf("exact retained receipt was rejected: %v", err)

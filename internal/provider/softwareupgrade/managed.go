@@ -549,18 +549,29 @@ func (r *Reconciler) validateManagedActivationReceipt(
 	ctx context.Context,
 	up *opsv1alpha1.IOSXESoftwareUpgrade,
 ) error {
+	_, err := r.validatedPreparedActivationParent(ctx, up)
+	return err
+}
+
+func (r *Reconciler) validatedPreparedActivationParent(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+) (*opsv1alpha1.IOSXESoftwareUpgrade, error) {
 	if err := r.validateManagedActivationBinding(up); err != nil {
-		return err
+		return nil, err
 	}
 	if up == nil || up.Annotations[managedprotocol.AnnotationManaged] != "true" || up.Spec.ImageSource.Preinstalled == nil {
-		return nil
+		return nil, nil
 	}
 	var prepared opsv1alpha1.IOSXESoftwareUpgrade
 	name := up.Annotations[managedprotocol.AnnotationPreparedUpgradeName]
 	if err := r.apiReader().Get(ctx, client.ObjectKey{Namespace: up.Namespace, Name: name}, &prepared); err != nil {
-		return fmt.Errorf("read authorized prepared leaf %s/%s: %w", up.Namespace, name, err)
+		return nil, fmt.Errorf("read authorized prepared leaf %s/%s: %w", up.Namespace, name, err)
 	}
-	return validatePreparedActivationParent(up, &prepared)
+	if err := validatePreparedActivationParent(up, &prepared); err != nil {
+		return nil, err
+	}
+	return &prepared, nil
 }
 
 // validatePreparedActivationParent proves that a preinstalled activation leaf

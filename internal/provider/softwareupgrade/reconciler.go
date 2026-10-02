@@ -702,6 +702,18 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		(image.State.Activatable() || image.State == softwarelifecycle.InventoryStateInProgress) {
 		return r.rejectUncorrelatedDeviceFileInventory(ctx, up, image, now)
 	}
+	if image.State == softwarelifecycle.InventoryStateInProgress {
+		corroborated, err := r.corroboratedPreparedActivationInventory(ctx, up, image)
+		if err != nil {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed,
+				"ActivationReceiptBindingInvalid", err.Error(), now)
+		}
+		if corroborated {
+			image.State = softwarelifecycle.InventoryStateInstalled
+			return r.targetReadyForActivation(ctx, up, image, previousVersion, requiresIndividual, now,
+				"PreparedNativeInstallCorroborated")
+		}
+	}
 	if !image.State.Activatable() {
 		if image.State == softwarelifecycle.InventoryStateInProgress && !installTimedOut(up, now) {
 			return r.waitForInventory(ctx, up, "InstallInProgress",
@@ -1045,6 +1057,37 @@ func preparedNativeInstallCorroborated(
 	return condition != nil && condition.Status == metav1.ConditionTrue &&
 		condition.Reason == "NativeInstallCorroborated" &&
 		condition.ObservedGeneration == up.Generation
+}
+
+// corroboratedPreparedActivationInventory handles IOS XE 17.18's persistent
+// install-version-state-in-progress report for an inactive image. It is safe
+// only when the exact retained Prepared parent already recorded stronger native
+// evidence: a quiescent completed install-add operation, exact version, and an
+// installed state bound into the immutable receipt. A plain InProgress sample
+// or any receipt/leaf drift remains non-activatable.
+func (r *Reconciler) corroboratedPreparedActivationInventory(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	image softwarelifecycle.InventoryImage,
+) (bool, error) {
+	if image.State != softwarelifecycle.InventoryStateInProgress || up == nil ||
+		up.Annotations[managedprotocol.AnnotationManaged] != "true" || up.Spec.ImageSource.Preinstalled == nil {
+		return false, nil
+	}
+	prepared, err := r.validatedPreparedActivationParent(ctx, up)
+	if err != nil || prepared == nil {
+		return false, err
+	}
+	receipt := prepared.Status.PreparedReceipt
+	if receipt == nil || image.Version != receipt.ValidatedVersion ||
+		prepared.Status.InventoryState != opsv1alpha1.UpgradeInventoryStateInstalled ||
+		!receipt.PrimarySupervisorInstalled {
+		return false, nil
+	}
+	condition := apimeta.FindStatusCondition(prepared.Status.Conditions, conditionTypeTransferred)
+	return condition != nil && condition.Status == metav1.ConditionTrue &&
+		condition.Reason == "NativeInstallCorroborated" &&
+		condition.ObservedGeneration == prepared.Generation, nil
 }
 
 func (r *Reconciler) completePreparation(
@@ -2752,7 +2795,15 @@ func (r *Reconciler) submitActivation(
 					"waiting to revalidate prepared native inventory before activation: "+inspectErr.Error(), now)
 			}
 		}
-		if image.Version != up.Status.ValidatedVersion || !image.State.Activatable() {
+		inventoryReady := image.State.Activatable()
+		if image.State == softwarelifecycle.InventoryStateInProgress {
+			inventoryReady, err = r.corroboratedPreparedActivationInventory(ctx, up, image)
+			if err != nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+					"ActivationReceiptBindingInvalid", err.Error(), now)
+			}
+		}
+		if image.Version != up.Status.ValidatedVersion || !inventoryReady {
 			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
 				"PreparedInventoryChanged",
 				fmt.Sprintf("native inventory returned version %q in state %s immediately before activation; authorized prepared version is %q",
