@@ -924,6 +924,7 @@ type UpgradeDrainPDBStatus struct {
 //
 // +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Selected' ? self.phase in ['Selected', 'Protected', 'Complete'] : (oldSelf.phase == 'Protected' ? self.phase in ['Protected', 'EvictionRequested', 'TerminationObserved', 'Released'] : (oldSelf.phase == 'EvictionRequested' ? self.phase in ['EvictionRequested', 'TerminationObserved'] : (oldSelf.phase == 'TerminationObserved' ? self.phase in ['TerminationObserved', 'DeviceClean'] : (oldSelf.phase == 'DeviceClean' ? self.phase in ['DeviceClean', 'Released'] : (oldSelf.phase == 'Released' ? self.phase in ['Released', 'Complete'] : self.phase == 'Complete')))))",message="drain Pod phase cannot regress or skip accepted-teardown cleanup evidence"
 // +kubebuilder:validation:XValidation:rule="self.eligibilityHash == oldSelf.eligibilityHash",message="drain Pod eligibility snapshot is immutable"
+// +kubebuilder:validation:XValidation:rule="has(oldSelf.placementHash) == has(self.placementHash) && (!has(oldSelf.placementHash) || self.placementHash == oldSelf.placementHash)",message="drain Pod placement snapshot is immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.protectedAt) || (has(self.protectedAt) && self.protectedAt == oldSelf.protectedAt)",message="protectedAt is append-only and immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.evictionRequestedAt) || (has(self.evictionRequestedAt) && self.evictionRequestedAt == oldSelf.evictionRequestedAt)",message="evictionRequestedAt is append-only and immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.deletionObservedAt) || (has(self.deletionObservedAt) && self.deletionObservedAt == oldSelf.deletionObservedAt)",message="deletionObservedAt is append-only and immutable"
@@ -964,6 +965,17 @@ type UpgradeDrainPodStatus struct {
 	// +kubebuilder:validation:MaxLength=71
 	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
 	EligibilityHash string `json:"eligibilityHash"`
+
+	// PlacementHash binds the exact node selector, required node affinity, and
+	// topology-spread intent that the manager admitted. It is intentionally
+	// separate from the controller identity so a template edit that preserves
+	// the controller UID cannot relax replacement placement during recovery.
+	// Older settled drain records may omit this additive field; every newly
+	// admitted drain writes it and includes it in EligibilityHash.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=71
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	PlacementHash string `json:"placementHash,omitempty"`
 
 	// Controller is the Pod's exact controlling owner.
 	// +kubebuilder:validation:Required

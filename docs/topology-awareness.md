@@ -838,10 +838,20 @@ when the manager freezes drain evidence and again before eviction:
 - the bound Pod names the default scheduler, every controlling template leaves
   `nodeName` unset, and neither Pod nor template tolerates
   `cisco.vk/device-maintenance=gnoi:NoSchedule` or all `NoSchedule` taints;
-- it has no `nodeSelector`, required node/Pod affinity or anti-affinity, or
-  `DoNotSchedule` topology spread. Preferred affinity and `ScheduleAnyway`
-  spread are supported; hard placement remains supported only with
-  `BlockIfRunning` in this preview;
+- `nodeSelector`, required node affinity and `DoNotSchedule` topology spread
+  are preserved in an immutable placement digest. Before protection or
+  Eviction, CVK must observe another Ready, schedulable Node that satisfies
+  those constraints, relevant taints, allocatable Pod/resources and current
+  hard-spread skew. This is a conservative feasibility check, not a capacity
+  reservation; kube-scheduler remains authoritative and the replacement must
+  still become natively Ready. Required Pod affinity/anti-affinity remains
+  unsupported because its peer-set race has not been qualified. Preferred
+  affinity and `ScheduleAnyway` spread remain scheduler hints;
+- CVK performs an uncached unstructured read of the exact Pod UID and
+  resourceVersion. If the served Pod contains native
+  `spec.schedulingGroup`, drain fails closed. This prevents an older typed
+  client from silently dropping Kubernetes 1.37 TAS membership; group-aware
+  eviction remains disabled until the E08 physical lifecycle contract passes;
 - the Pod is controlled by an exact `apps/v1` ReplicaSet incarnation, either
   directly or through an exact Deployment incarnation; bare Pods, Jobs,
   CronJobs, DaemonSets, StatefulSets, and custom controllers are unsupported;

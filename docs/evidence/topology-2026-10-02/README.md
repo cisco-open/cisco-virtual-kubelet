@@ -18,6 +18,10 @@ published with the branch.
 | `ddc02b82` | Persist retained-receipt conflicts as `Blocked/PreparedOwnershipRetained` | Physical negative test passed without a retry loop |
 | `925b8ce2` | Delete the IOS XE `shutdown` presence leaf for explicit no-shutdown intent | Physical isolated-link restoration passed |
 | `740ffd0e` | Wait for exact manager-owned managed-config worker binding | Replacement workers converged without transient admission errors |
+| `25de1796`–`5e4cf1ae` | Define exact receipt-bound approval and execute activation in a separate leaf | E06 API and runtime contract established |
+| `af50c7af` | Yield the retained preparation queue only to its exact authorized activation | Physical activation acquired authority without weakening unrelated conflicts |
+| `2646e217` | Corroborate IOS XE 17.18 inactive inventory from exact retained install evidence | Physical activation passed without accepting generic `InProgress` |
+| `3899e327` | Keep activation completion terminal after a child exists | Upgrade and downgrade remained `Succeeded` across later reconciles |
 
 The exact `ddc02b82` Linux/amd64 image was built locally. Its image config
 digest was `sha256:59d9fd46bdb91f1334af41043dfafb9844906ecaebd664c058e9b406ef5a61cb`
@@ -97,6 +101,16 @@ advanced provenance, and native admission denied a live functional-worker
 attempt to alter manager-owned accepted evidence. These results close E10's
 defined read-only diagnostic acceptance matrix.
 
+### E06 separately approved activation
+
+[`e06-separate-activation.md`](e06-separate-activation.md) records the closed-
+window hold and reciprocal separately approved physical activations. `.101`
+activated its retained 17.18.03 preparation; `.103` activated its retained
+17.18.02 preparation. Both exact versions were verified after reload, secure
+gNXI/gNOI returned healthy, both Nodes returned Ready without taints, and the
+ledger settled empty. Three defects exposed by the physical flow were repaired
+and retested through exact candidate `3899e327`.
+
 ## Validation matrix
 
 - `go test -race ./...`: passed on `740ffd0e` before the focused E10 fixture
@@ -123,9 +137,7 @@ defined read-only diagnostic acceptance matrix.
 ## Qualification boundary
 
 This evidence closes physical install-only preparation, worker restart/no
-replay, and retained ownership conflict behavior for the two tested C9300
-directions. It does **not** claim separate activation authorization: E06 still
-requires an activation API bound to the exact receipt, a distinct approver
-permission, activation windows and atomic disruption reservation before either
-retained preparation can be activated. Until that exists, these receipts must
-remain retained and ordinary campaigns must stay blocked.
+replay, retained ownership conflict behavior, and separately approved
+activation in both directions for the tested C9300/IOS XE cohort. It does not
+qualify E07 application continuity, E08 physical native TAS, E11 another
+platform, or E12 fleet scale/ownership transfer.

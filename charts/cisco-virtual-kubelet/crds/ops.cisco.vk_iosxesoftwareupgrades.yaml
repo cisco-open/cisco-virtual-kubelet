@@ -1058,6 +1058,17 @@ spec:
                           - Released
                           - Complete
                           type: string
+                        placementHash:
+                          description: |-
+                            PlacementHash binds the exact node selector, required node affinity, and
+                            topology-spread intent that the manager admitted. It is intentionally
+                            separate from the controller identity so a template edit that preserves
+                            the controller UID cannot relax replacement placement during recovery.
+                            Older settled drain records may omit this additive field; every newly
+                            admitted drain writes it and includes it in EligibilityHash.
+                          maxLength: 71
+                          pattern: ^sha256:[a-f0-9]{64}$
+                          type: string
                         protectedAt:
                           description: |-
                             The following timestamps are append-only audit evidence for the bounded
@@ -1147,6 +1158,10 @@ spec:
                           ''Complete''] : self.phase == ''Complete'')))))'
                       - message: drain Pod eligibility snapshot is immutable
                         rule: self.eligibilityHash == oldSelf.eligibilityHash
+                      - message: drain Pod placement snapshot is immutable
+                        rule: has(oldSelf.placementHash) == has(self.placementHash)
+                          && (!has(oldSelf.placementHash) || self.placementHash ==
+                          oldSelf.placementHash)
                       - message: protectedAt is append-only and immutable
                         rule: '!has(oldSelf.protectedAt) || (has(self.protectedAt)
                           && self.protectedAt == oldSelf.protectedAt)'

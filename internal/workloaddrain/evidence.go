@@ -39,6 +39,7 @@ type eligibilityEvidence struct {
 	WorkloadController            *opsv1alpha1.UpgradeDrainObjectReference `json:"workloadController,omitempty"`
 	PDBs                          []opsv1alpha1.UpgradeDrainPDBStatus      `json:"pdbs"`
 	TerminationGracePeriodSeconds int64                                    `json:"terminationGracePeriodSeconds"`
+	PlacementHash                 string                                   `json:"placementHash,omitempty"`
 }
 
 // EligibilityHash returns the canonical digest of every immutable input that
@@ -61,7 +62,7 @@ func EligibilityHash(pod *opsv1alpha1.UpgradeDrainPodStatus) (string, error) {
 	evidence := eligibilityEvidence{
 		Domain: eligibilityDomain, Namespace: pod.Namespace, Name: pod.Name, UID: pod.UID,
 		Controller: pod.Controller, WorkloadController: pod.WorkloadController, PDBs: pdbs,
-		TerminationGracePeriodSeconds: pod.TerminationGracePeriodSeconds,
+		TerminationGracePeriodSeconds: pod.TerminationGracePeriodSeconds, PlacementHash: pod.PlacementHash,
 	}
 	encoded, err := json.Marshal(evidence)
 	if err != nil {

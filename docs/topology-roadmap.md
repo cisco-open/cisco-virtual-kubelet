@@ -1,17 +1,17 @@
 # Topology awareness: remaining implementation roadmap
 
 Status: **incomplete; implementation and physical evidence reviewed through
-`740ffd0e`**, 2 October 2026.
-Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-0346-utc),
+`3899e327`**, 2 October 2026.
+Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-0525-utc),
 the [current physical evidence](evidence/topology-2026-10-02/README.md), and
 the [November handoff](topology-november-handoff.md). The earlier
 [versioned evidence](evidence/topology-2026-10-01/README.md) remains historical.
 Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
 #190, #191, #192, #193, and #194 merged. Implementation and qualification
-gaps remain in T0–T10. Bounded manager-accepted observation and the physical
-install-only/retained-receipt boundary have advanced; the existing combined
-lifecycle still does not meet the independent activation completion criterion.
+gaps remain in T0–T10. Bounded manager-accepted observation, physical
+install-only/retained receipts and separately approved activation are now
+qualified for the tested C9300/IOS XE 17.18.02–17.18.03 cohort.
 
 The [execution plan](topology-roadmap-execution.md) is the actionable companion
 to this design: it identifies ordered work packages, code ownership, tests,
@@ -139,9 +139,9 @@ remains the completion ledger.
 | T1 | Manager-accepted Pod-bound evidence, restart-safe publisher, interval/schema safety, directional-rate provenance/recomputation, concurrency/lost-response tests and real bound-token admission suite passed; physical k3s schema compatibility corrected | C2 / E01–E02: controlled loaded-path accuracy with an independent source, redundant-hardware capability, reverse mixed-version/rollback and candidate CI. |
 | T2 | Network checks at plan freeze and manager admission; evidence-bound expiring grant and monotonic renewal; uncached exact-sample worker recheck before each new mutation claim; bounded administrator critical-service/singleton-path prohibitions; overlapping risk groups with exact physical membership and cross-campaign CAS accounting; administrator aggregate-rate policy with worker pacing; post-operation accepted-evidence recovery and continuous-soak enforcement; real-API negative coverage; physical 25 MB/s upgrade/downgrade pacing and secure-gNOI validation | C3 / E03: independent loaded/headroom measurement and redundant/singleton/critical/congested service-path tests. |
 | T3 | `PrepareOnly` now provides an unreachable-Activate install boundary, exact native-inventory and unchanged-running-version checks, immutable content-addressed receipts, supervisor evidence, and retained Device-UID ownership. Unit, race-targeted and real-API admission coverage pass. Physical C9300 preparation passed in both image directions, and the `.101` receipt survived a worker replacement without replay. A competing campaign is now durably `Blocked/PreparedOwnershipRetained` without a reconcile-error loop. | C4/C5 / E04–E05: the physical install-only and retained-ownership core is qualified in [`evidence/topology-2026-10-02/`](evidence/topology-2026-10-02/README.md). Native image removal/replacement and supported receipt invalidation remain open; do not clear retained receipts manually. |
-| T4 | E06 implementation is in progress: append-only native activation authorization, exact complete receipt-set hashing, distinct `activate` RBAC, bounded UTC claim windows, separate preinstalled activation leaves/reservations, worker trust revalidation and no-replay recovery reuse are implemented with unit/race/render coverage. | Complete native-API negative coverage and E06-B/D fault injection, then physically prove closed-window hold plus separately approved upgrade and downgrade before closing E06. |
-| T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
-| T6 | Synthetic co-location/conflict evidence exists; full scheduler and physical group lifecycle absent | E08: raw group-field recognition before expanding drain, remaining scheduler scenarios, native controller recreation, physical service and group-aware drain tests. |
+| T4 | E06 is complete for the tested C9300/IOS XE cohort: append-only exact-receipt approval, distinct `activate` RBAC, bounded UTC claim windows, separate activation leaves/reservations, claim-time trust/native-inventory revalidation and no-replay recovery passed the local fault matrix plus a closed-window physical upgrade and reciprocal downgrade. | Preserve the cohort boundary and [`e06-separate-activation.md`](evidence/topology-2026-10-02/e06-separate-activation.md). Another platform remains E11, not an E06 claim. |
+| T5 | `.101` historical drain evidence records ordered device-clean completion. The current increment preserves node selectors, required node affinity and hard topology spread in the eligibility digest and conservatively checks another Ready Node, taints, allocatable capacity and current skew before eviction. | E07: pass real-API placement races and physical portable-application/service tests in both directions, including no-spare-capacity and restart/cancel cases. This remains partial evidence, not full drain qualification. |
+| T6 | E08-B's pinned Kubernetes 1.37 lane passes co-location, partial-member replacement, maintenance block/recovery, capacity-shortage blocking and kube-scheduler process restart. Drain now uses an uncached unstructured Pod read and rejects any native `spec.schedulingGroup`, closing the old-client silent-bypass gap before eviction. | E08-C/D: qualify a native workload controller, physical service lifecycle and group-aware drain before grouped eviction can be enabled. |
 | T7 | Existing ephemeral cache only | E09: measure both transfer segments; implement durable prefetch/PVC cache only when its decision gate passes, then qualify failures. |
 | T8 | Complete for the defined read-only diagnostic scope. Bounded manager-accepted evidence, authenticated freshness, duplicate/conflict handling, remote-port identity, strict administrator mappings/declarations, protected policy provenance, protocol/VRF/LAG fixtures and truncated-input bounds fail closed. Candidate `740ffd0e` passed a controlled isolated-link change/restoration plus manager replacement and live functional-worker status-forgery denial across all three C9Ks. | E10 is closed. The graph deliberately remains diagnostic: it neither proves end-to-end path health nor grants disruption authority. |
 | T9 | Second-platform qualification absent | E11: probe a suitable platform, qualify its lifecycle and record the public-API decision. Unsupported hardware leaves this gate open. |
@@ -270,12 +270,12 @@ items in one release. Keep each change independently reviewable and usable.
 | T9 | Second-platform software lifecycle and public API decision | T3 + T4 contracts; platform-specific hardware evidence |
 | T10 | Scale qualification and controlled ownership handoff | Core contracts stable; active multi-cluster design needs a separate fencing proof |
 
-The initial T1 slice has landed on the branch. Next, complete E00 evidence
-and correct E01/E02 trust, identity and missing-rate handling. Qualify E04's
-independent device boundary alongside E03 policy implementation, then build
-E05/E06 durable staging and separate activation. Add the E08-A group guard
-before E07's broader drain eligibility. E10 helper repairs and E09 measurement
-can advance independently; physical TAS ownership transfer depends on E12.
+T1–T4 have advanced through accepted observations, claim-time policy,
+preparation/retained ownership and separately approved physical activation.
+The current T5/T6 increment preserves hard placement and fails closed on raw
+native scheduling-group membership. Next qualify its real-API races and E07
+portable service continuity while E09 measurement advances independently;
+physical TAS ownership transfer still depends on E12.
 The execution plan gives the ordered deliverables and exact tests. Keep cache
 selection conditional on measurement and the second-platform API decision
 dependent on successful hardware qualification.

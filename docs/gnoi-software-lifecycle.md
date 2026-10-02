@@ -753,6 +753,17 @@ window prevents a new claim but never abandons observation of a request already
 durably claimed. Receipt, source, trust, policy or device-identity drift fails
 closed.
 
+IOS XE 17.18 can continue reporting a completed inactive image as
+`InProgress` through its native RESTCONF install inventory even when
+`show install summary` marks the image inactive. CVK does not treat a generic
+`InProgress` entry as activatable. It accepts this platform-specific
+observation only for a separately approved activation whose exact retained
+receipt validates, whose target/running versions match, whose primary image is
+installed, and whose preparation recorded correlated completed native-install
+evidence. The worker repeats this proof immediately before the activation
+claim. Missing, mismatched, uncorrelated or ordinary in-progress activity still
+blocks without dispatching `OS.Activate`.
+
 When `OS.Verify` requires individual-supervisor handling, byte-stream sources
 install the active supervisor first and the standby second, using the same
 install deadline. The standby must return exactly the same validated version as

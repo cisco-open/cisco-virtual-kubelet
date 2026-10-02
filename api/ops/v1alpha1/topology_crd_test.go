@@ -198,6 +198,81 @@ func TestWorkerDrainCRDRequiresNewRevisionForInventoryChanges(t *testing.T) {
 	}
 }
 
+func TestDrainPodCRDKeepsPlacementSnapshotImmutable(t *testing.T) {
+	path := generatedOpsCRDPath("ops.cisco.vk_iosxesoftwareupgrades.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read upgrade CRD: %v", err)
+	}
+	var crd apiextensionsv1.CustomResourceDefinition
+	if err := yaml.Unmarshal(raw, &crd); err != nil {
+		t.Fatalf("parse upgrade CRD: %v", err)
+	}
+	podSchema := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.
+		Properties["status"].Properties["managerDrain"].Properties["pods"].Items.Schema
+	if podSchema == nil {
+		t.Fatal("managerDrain Pod schema is missing")
+	}
+	var schema apiextensions.JSONSchemaProps
+	if err := apiextensionsv1.Convert_v1_JSONSchemaProps_To_apiextensions_JSONSchemaProps(podSchema, &schema, nil); err != nil {
+		t.Fatalf("convert drain Pod schema: %v", err)
+	}
+	structural, err := structuralschema.NewStructural(&schema)
+	if err != nil {
+		t.Fatalf("build drain Pod structural schema: %v", err)
+	}
+	validator := cel.NewValidator(structural, false, 10_000_000)
+	if validator == nil {
+		t.Fatal("drain Pod CRD lacks transition validation")
+	}
+	ref := func(apiVersion, kind, name, uid string, generation int64) map[string]interface{} {
+		return map[string]interface{}{
+			"apiVersion": apiVersion, "kind": kind, "namespace": "apps", "name": name,
+			"uid": uid, "generation": generation,
+		}
+	}
+	pod := func(withPlacement bool) map[string]interface{} {
+		value := map[string]interface{}{
+			"namespace": "apps", "name": "edge", "uid": "pod-uid",
+			"eligibilityHash": "sha256:" + strings.Repeat("a", 64),
+			"controller":      ref("apps/v1", "ReplicaSet", "edge-rs", "rs-uid", 2),
+			"pdbs": []interface{}{map[string]interface{}{
+				"apiVersion": "policy/v1", "kind": "PodDisruptionBudget", "namespace": "apps",
+				"name": "edge", "uid": "pdb-uid", "generation": int64(3), "observedGeneration": int64(3),
+				"disruptionsAllowed": int64(1), "currentHealthy": int64(2), "desiredHealthy": int64(1), "expectedPods": int64(2),
+			}},
+			"terminationGracePeriodSeconds": int64(30), "phase": "Selected",
+		}
+		if withPlacement {
+			value["placementHash"] = "sha256:" + strings.Repeat("b", 64)
+		}
+		return value
+	}
+	for _, test := range []struct {
+		name    string
+		old     map[string]interface{}
+		current map[string]interface{}
+		allowed bool
+	}{
+		{name: "unchanged placement", old: pod(true), current: pod(true), allowed: true},
+		{name: "legacy omission remains omitted", old: pod(false), current: pod(false), allowed: true},
+		{name: "placement mutation", old: pod(true), current: func() map[string]interface{} {
+			value := pod(true)
+			value["placementHash"] = "sha256:" + strings.Repeat("c", 64)
+			return value
+		}()},
+		{name: "placement removal", old: pod(true), current: pod(false)},
+		{name: "legacy placement insertion", old: pod(false), current: pod(true)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			errs, _ := validator.Validate(context.Background(), field.NewPath("status", "managerDrain", "pods"), structural, test.current, test.old, 10_000_000)
+			if (len(errs) == 0) != test.allowed {
+				t.Fatalf("allowed=%v validation=%v", test.allowed, errs)
+			}
+		})
+	}
+}
+
 func generatedOpsCRDPath(name string) string {
 	if override := os.Getenv("CVK_TEST_CRD_DIR"); override != "" {
 		return filepath.Join(override, name)
