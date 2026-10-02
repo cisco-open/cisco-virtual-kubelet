@@ -748,6 +748,12 @@ type DeviceNetworkNeighborObservation struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxLength=128
 	Interface string `json:"interface,omitempty"`
+	// RemoteInterface is the peer-reported port identity when the discovery
+	// protocol supplies it. It is observational evidence, not an authenticated
+	// physical-device identity.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	RemoteInterface string `json:"remoteInterface,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxLength=64
 	RoutingDomain string `json:"routingDomain,omitempty"`

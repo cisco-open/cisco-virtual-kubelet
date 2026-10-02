@@ -383,7 +383,8 @@ func graphInputsFromDevices(devices []ciscov1.CiscoDevice) ([]topology.GraphObse
 			for _, neighbor := range accepted.Neighbors {
 				observation.Neighbors = append(observation.Neighbors, topology.GraphNeighbor{
 					Identity: neighbor.Identity, PeerID: neighbor.ID, Source: neighbor.Source,
-					Interface: neighbor.Interface, RoutingDomain: neighbor.RoutingDomain, State: neighbor.State,
+					Interface: neighbor.Interface, RemoteInterface: neighbor.RemoteInterface,
+					RoutingDomain: neighbor.RoutingDomain, State: neighbor.State,
 				})
 			}
 		}

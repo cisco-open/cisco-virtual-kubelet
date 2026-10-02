@@ -475,10 +475,14 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 			return nil, fmt.Errorf("source returned an unnamed CDP neighbor")
 		}
 		localInterface := strings.TrimSpace(value.LocalInterface)
+		remoteInterface := strings.TrimSpace(value.RemoteInterface)
 		if err := requireNetworkObservationFieldLength("neighbor ID", id, 128); err != nil {
 			return nil, err
 		}
 		if err := requireNetworkObservationFieldLength("neighbor interface", localInterface, 128); err != nil {
+			return nil, err
+		}
+		if err := requireNetworkObservationFieldLength("neighbor remote interface", remoteInterface, 128); err != nil {
 			return nil, err
 		}
 		identity := neighborIdentity("cdp", id, localInterface, "")
@@ -486,7 +490,8 @@ func normalizeNeighbors(cdp []common.CDPNeighbor, ospf []common.OSPFNeighbor) ([
 			return nil, fmt.Errorf("source returned duplicate CDP adjacency %q", identity)
 		}
 		byIdentity[identity] = ciskov1.DeviceNetworkNeighborObservation{
-			Identity: identity, ID: id, Interface: localInterface, State: "discovered", Source: "cdp",
+			Identity: identity, ID: id, Interface: localInterface, RemoteInterface: remoteInterface,
+			State: "discovered", Source: "cdp",
 		}
 	}
 	for _, value := range ospf {

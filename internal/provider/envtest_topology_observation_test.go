@@ -27,6 +27,10 @@ func TestEnvtest_NetworkObservationStatusRoundTrip(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	d, sample := topologyObservationFixture()
+	sample.Neighbors = []ciskov1.DeviceNetworkNeighborObservation{{
+		Identity: "cdp|peer-a|GigabitEthernet1/0/1|", ID: "peer-a", Source: "cdp",
+		Interface: "GigabitEthernet1/0/1", RemoteInterface: "GigabitEthernet1/0/24", State: "discovered",
+	}}
 	d.Namespace = "envtest-network-observation"
 	d.UID, d.ResourceVersion = "", ""
 	status := d.Status.DeepCopy()

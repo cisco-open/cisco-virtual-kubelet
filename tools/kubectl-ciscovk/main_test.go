@@ -83,7 +83,8 @@ func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
 						ObservedAt:          acceptedAt,
 						Complete:            true,
 						Neighbors: []ciscov1.DeviceNetworkNeighborObservation{{
-							Identity: "cdp-a-b", ID: "serial-b", Source: "cdp", Interface: "Gi1/0/1", State: "up",
+							Identity: "cdp-a-b", ID: "serial-b", Source: "cdp", Interface: "Gi1/0/1",
+							RemoteInterface: "Gi1/0/2", State: "up",
 						}},
 					},
 				},
@@ -104,7 +105,7 @@ func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("graphFromDevices() error = %v", err)
 	}
-	if len(graph.Nodes) != 2 || len(graph.Edges) != 1 || graph.Edges[0].Local != "serial-a" || graph.Edges[0].Peer != "serial-b" {
+	if len(graph.Nodes) != 2 || len(graph.Edges) != 1 || graph.Edges[0].Local != "serial-a" || graph.Edges[0].Peer != "serial-b" || graph.Edges[0].RemoteInterface != "Gi1/0/2" {
 		t.Fatalf("graph = %#v", graph)
 	}
 	for _, diagnostic := range graph.Diagnostics {

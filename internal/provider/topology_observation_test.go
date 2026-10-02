@@ -361,6 +361,23 @@ func TestNormalizeNeighborsKeepsDelimiterBearingAdjacenciesDistinct(t *testing.T
 	}
 }
 
+func TestNormalizeNeighborsPreservesBoundedCDPRemoteInterface(t *testing.T) {
+	neighbors, err := normalizeNeighbors([]common.CDPNeighbor{{
+		DeviceID: "peer-a", LocalInterface: "GigabitEthernet1/0/1", RemoteInterface: "GigabitEthernet1/0/24",
+	}}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(neighbors) != 1 || neighbors[0].RemoteInterface != "GigabitEthernet1/0/24" {
+		t.Fatalf("CDP remote interface = %#v", neighbors)
+	}
+	if _, err := normalizeNeighbors([]common.CDPNeighbor{{
+		DeviceID: "peer-a", LocalInterface: "Gi1", RemoteInterface: strings.Repeat("r", 129),
+	}}, nil); err == nil {
+		t.Fatal("oversized CDP remote interface was accepted")
+	}
+}
+
 func TestBuildNetworkObservationFailsClosedOnOversizedStatusFields(t *testing.T) {
 	observation, err := BuildNetworkObservation(context.Background(), observationTopologyProvider{
 		ospf: []common.OSPFNeighbor{{NeighborID: strings.Repeat("n", 129), State: "full"}},
