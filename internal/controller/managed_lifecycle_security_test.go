@@ -1527,6 +1527,12 @@ func TestManagedDeviceDeletionFencesEveryUnresolvedAuthority(t *testing.T) {
 			leaf.Status.Phase = opsv1alpha1.UpgradePhasePrepared
 			leaf.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{}
 		},
+		"retained next-boot state": func(_ *ciskov1.CiscoDevice, _ *coordv1.Lease, leaf *opsv1alpha1.IOSXESoftwareUpgrade, _ *topologyrollout.Ledger) {
+			leaf.Status.Phase = opsv1alpha1.UpgradePhaseStagedForNextBoot
+		},
+		"settled non-terminal leaf": func(_ *ciskov1.CiscoDevice, _ *coordv1.Lease, leaf *opsv1alpha1.IOSXESoftwareUpgrade, _ *topologyrollout.Ledger) {
+			leaf.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+		},
 		"ledger reservation": func(_ *ciskov1.CiscoDevice, _ *coordv1.Lease, _ *opsv1alpha1.IOSXESoftwareUpgrade, ledger *topologyrollout.Ledger) {
 			ledger.Reservations["reservation-1"] = validDeletionReservation()
 		},
@@ -1869,6 +1875,7 @@ func managedDeletionFixture(
 		},
 	}}
 	leaf.Spec.DeviceRef.Name = device.Name
+	leaf.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
 	leaf.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
 		State: opsv1alpha1.UpgradeManagerAdmissionSettled, DeviceUID: string(device.UID),
 	}

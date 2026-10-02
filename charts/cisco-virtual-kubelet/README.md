@@ -866,6 +866,8 @@ even after its manager admission settles. It blocks reverse handoff and device
 deletion. Complete the separately approved activation under the current owner
 or retain managed ownership; copying its receipt/approval or deleting the leaf
 is not a supported transfer or invalidation procedure.
+`StagedForNextBoot` and contradictory settled/non-terminal leaves also block
+handoff until their device-side outcome is conclusively resolved.
 
 Helm keep protection deliberately leaves the policy, ledger, admission
 policies/bindings, functional profile roles, and supplemental manager role/binding

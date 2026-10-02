@@ -2702,12 +2702,18 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 		if upgrade.Status.Phase == opsv1alpha1.UpgradePhasePrepared || upgrade.Status.PreparedReceipt != nil {
 			return fmt.Errorf("%s is blocked by retained prepared software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
+		if upgrade.Status.Phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
+			return fmt.Errorf("%s is blocked by retained next-boot software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
 		admission := upgrade.Status.ManagerAdmission
 		if admission == nil || admission.DeviceUID != string(device.UID) {
 			return fmt.Errorf("%s is blocked by incomplete software-upgrade admission %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 		if admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled {
 			return fmt.Errorf("%s is blocked by unsettled software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
+		if !terminalManagedLeaf(upgrade.Status.Phase) {
+			return fmt.Errorf("%s is blocked by non-terminal software upgrade %s/%s in phase %q", operation, upgrade.Namespace, upgrade.Name, upgrade.Status.Phase)
 		}
 	}
 

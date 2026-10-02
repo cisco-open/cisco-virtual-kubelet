@@ -1657,6 +1657,12 @@ not copy the receipt/approval to another owner or delete the leaf as an
 invalidation shortcut; a device-reconciled receipt invalidation contract is
 not yet supported.
 
+The same fail-closed rule applies to `StagedForNextBoot` and to every
+non-terminal leaf, even if a contradictory historical object says manager
+admission is `Settled`. Resolve and independently verify that device-side state
+before requesting handoff; settlement alone must not reinterpret an uncertain
+or future boot mutation as terminal.
+
 If workload drain was ever enabled, include each retained cleanup Role/Binding
 in the evidence export. After step 2, verify that its namespace has no reserved
 drain marker/finalizer, then remove the exact pair with the command above before
