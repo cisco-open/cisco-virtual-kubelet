@@ -226,9 +226,10 @@ jobs:
       - name: Generated family reference drift check
         run: make check-config-docs
 
-      - name: Released worker staged-lifecycle compatibility
+      - name: Released manager/worker and stored-schema compatibility inputs
         run: |
           git fetch --no-tags origin cf33e51c8ffc6d47acb313857665366d74eefe6c
+          git fetch --no-tags origin 44d02a4b1f17c832e79ea554e7f77795e4472fc4
           bash scripts/test-staged-protocol-compat.sh
 
       - name: Kubernetes generated artefact drift check
