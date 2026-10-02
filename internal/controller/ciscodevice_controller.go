@@ -2715,7 +2715,7 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 			return fmt.Errorf("%s is blocked by unsettled software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 		if !terminalManagedLeaf(upgrade.Status.Phase) &&
-			!softwareupgrade.SettledUnclaimedManagedCancellation(upgrade) {
+			!softwareupgrade.SettledUnclaimedManagedOperation(upgrade) {
 			return fmt.Errorf("%s is blocked by non-terminal software upgrade %s/%s in phase %q", operation, upgrade.Namespace, upgrade.Name, upgrade.Status.Phase)
 		}
 	}

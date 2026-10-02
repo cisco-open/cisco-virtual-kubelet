@@ -1025,8 +1025,18 @@ func TestLegacyHandoffAcceptsSettledUnclaimedCancellation(t *testing.T) {
 		Stage:         opsv1alpha1.UpgradeManagedMutationPrimaryInstall,
 		ReservationID: "reservation-id", PolicyEpoch: 1, ClaimedAt: now,
 	}}
-	if softwareupgrade.SettledUnclaimedManagedCancellation(leaf) {
+	if softwareupgrade.SettledUnclaimedManagedOperation(leaf) {
 		t.Fatal("mutation claim was accepted as an unclaimed cancellation")
+	}
+	policyFence := leaf.DeepCopy()
+	policyFence.Status.Phase = ""
+	policyFence.Status.ExecutionModel = ""
+	policyFence.Status.ManagedMutationClaims = nil
+	policyFence.Status.ManagerControl.Cancel = false
+	policyFence.Status.ManagerControl.Reason = "AdministratorPolicyChanged"
+	policyFence.Status.WorkerControl = nil
+	if !softwareupgrade.SettledUnclaimedManagedOperation(policyFence) {
+		t.Fatal("empty-phase settled policy fence was not accepted as unclaimed")
 	}
 }
 

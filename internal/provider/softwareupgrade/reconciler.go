@@ -1925,7 +1925,7 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 			continue
 		}
 		if !item.DeletionTimestamp.IsZero() ||
-			terminalUpgradePhase(item.Status.Phase) || inertManagedCancellationTombstone(item) ||
+			terminalUpgradePhase(item.Status.Phase) || inertManagedSettledTombstone(item) ||
 			settledManagedCancellationAuditRecord(item) {
 			continue
 		}
@@ -1964,30 +1964,29 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 	return candidates[0].name, nil
 }
 
-// inertManagedCancellationTombstone recognizes the one non-terminal API shape
-// that can no longer own the legacy per-device upgrade queue. Managed rollout
-// cancellation retains an empty-phase leaf as a delayed-Create tombstone, but
-// Settled admission proves that the manager released its reservation and will
-// never grant this leaf. Keep every other shape fail-closed: a started phase,
-// drain session, claim, mutation marker, protocol mismatch, or control mismatch
-// remains a queue contender until its physical outcome is unambiguous.
-func inertManagedCancellationTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+// inertManagedSettledTombstone recognizes the one empty-phase API shape that
+// can no longer own the legacy per-device upgrade queue. Cancellation and
+// pre-dispatch policy replan both retain audit leaves; immutable Settled
+// admission proves the manager released their reservation and can never grant
+// them. Every started phase, drain, claim, marker, or binding mismatch remains
+// fail-closed until its physical outcome is unambiguous.
+func inertManagedSettledTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if up == nil || up.UID == "" || up.Status.Phase != "" ||
 		up.Status.ManagerDrain != nil || up.Status.WorkerDrain != nil ||
 		len(up.Status.ManagedMutationClaims) != 0 ||
 		mutationguard.UpgradeMutationSubmitted(up) {
 		return false
 	}
-	return settledManagedCancellationBinding(up)
+	return settledManagedLeafBinding(up)
 }
 
-// SettledUnclaimedManagedCancellation reports whether a retained managed leaf
-// is durable audit evidence for a cancellation that cannot have reached the
-// device. This is the single cross-controller quiescence predicate: both the
-// per-device software queue and topology ownership handoff must interpret the
-// same immutable manager/worker acknowledgements and mutation markers.
-func SettledUnclaimedManagedCancellation(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
-	return inertManagedCancellationTombstone(up) || settledManagedCancellationAuditRecord(up)
+// SettledUnclaimedManagedOperation reports whether a retained managed leaf is
+// durable audit evidence for an operation that cannot have reached the device.
+// This is the single cross-controller quiescence predicate: both the software
+// queue and topology handoff interpret the same immutable acknowledgements and
+// mutation markers.
+func SettledUnclaimedManagedOperation(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return inertManagedSettledTombstone(up) || settledManagedCancellationAuditRecord(up)
 }
 
 // settledManagedCancellationAuditRecord recognizes a manager-settled retained
@@ -2073,6 +2072,10 @@ func settledManagedDrainAuditBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool 
 }
 
 func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return settledManagedLeafBinding(up) && up.Status.ManagerControl.Cancel && !up.Status.ManagerControl.Pause
+}
+
+func settledManagedLeafBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if up == nil || up.UID == "" || up.Annotations[managedprotocol.AnnotationManaged] != "true" {
 		return false
 	}
@@ -2089,8 +2092,8 @@ func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) boo
 		admission.NodeUID != "" && admission.NodeUID == up.Annotations[managedprotocol.AnnotationNodeUID] &&
 		admission.PolicyUID != "" && admission.PolicyResourceVersion != "" && admission.PolicyEpoch > 0 &&
 		admission.PhysicalIdentity != "" &&
-		admission.ControlRevision != nil && control != nil && control.Cancel &&
-		!control.Pause && control.Revision > 0 && control.Revision == *admission.ControlRevision
+		admission.ControlRevision != nil && control != nil &&
+		control.Revision >= 0 && control.Revision == *admission.ControlRevision
 }
 
 func (r *Reconciler) ensureMutationLease(

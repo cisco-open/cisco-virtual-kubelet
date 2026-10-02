@@ -1412,7 +1412,7 @@ func TestManagedPendingAdmissionAcknowledgesIdentityWithoutAdvancing(t *testing.
 	}
 }
 
-func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
+func TestInertManagedSettledTombstoneFailsClosed(t *testing.T) {
 	markTime := metav1.NewTime(managedTestTime)
 	tests := []struct {
 		name   string
@@ -1491,13 +1491,14 @@ func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
 		{name: "missing manager control", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl = nil
 		}},
-		{name: "control is not cancellation", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		{name: "settled policy fence is terminal", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl.Cancel = false
+			up.Status.ManagerControl.Reason = "AdministratorPolicyChanged"
 		}},
-		{name: "control also pauses", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		{name: "settled admission supersedes pause", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl.Pause = true
 		}},
-		{name: "neutral cancellation revision", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		{name: "zero revision remains exactly bound", want: true, mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			up.Status.ManagerControl.Revision = 0
 			*up.Status.ManagerAdmission.ControlRevision = 0
 		}},
@@ -1565,7 +1566,7 @@ func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
 		})
 	}
 
-	if inertManagedCancellationTombstone(nil) {
+	if inertManagedSettledTombstone(nil) {
 		t.Fatal("nil upgrade was treated as an inert cancellation tombstone")
 	}
 	for _, test := range tests {
@@ -1574,8 +1575,8 @@ func TestInertManagedCancellationTombstoneFailsClosed(t *testing.T) {
 			if test.mutate != nil {
 				test.mutate(up)
 			}
-			if got := inertManagedCancellationTombstone(up); got != test.want {
-				t.Fatalf("inertManagedCancellationTombstone() = %t, want %t; status=%+v", got, test.want, up.Status)
+			if got := inertManagedSettledTombstone(up); got != test.want {
+				t.Fatalf("inertManagedSettledTombstone() = %t, want %t; status=%+v", got, test.want, up.Status)
 			}
 		})
 	}
@@ -1887,6 +1888,10 @@ func TestDeviceUpgradeOwnerSkipsOnlyInertManagedCancellationTombstone(t *testing
 		wantNext  bool
 	}{
 		{name: "settled cancellation tombstone", wantNext: true},
+		{name: "settled pre-dispatch policy fence", wantNext: true, mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerControl.Cancel = false
+			up.Status.ManagerControl.Reason = "AdministratorPolicyChanged"
+		}},
 		{name: "ordinary empty-phase leaf", mutateOld: func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
 			delete(up.Annotations, managedprotocol.AnnotationManaged)
 		}},
