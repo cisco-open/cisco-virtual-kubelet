@@ -1342,9 +1342,14 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		}
 		if err := r.admitTarget(ctx, rollout, currentPolicy, effectivePolicy, target, now); err != nil {
 			if errors.Is(err, topologyrollout.ErrBudgetExceeded) || errors.Is(err, topologyrollout.ErrTargetUnavailable) ||
-				errors.Is(err, errWorkloadsRunning) || errors.Is(err, errDrainSafetyBlocked) {
+				errors.Is(err, errWorkloadsRunning) || errors.Is(err, errDrainSafetyBlocked) ||
+				errors.Is(err, errPreparedOwnershipRetained) {
 				summary := summaries[target.DeviceUID]
-				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, "AdmissionBlocked", err.Error(), now)
+				reason := "AdmissionBlocked"
+				if errors.Is(err, errPreparedOwnershipRetained) {
+					reason = "PreparedOwnershipRetained"
+				}
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, reason, err.Error(), now)
 				summaries[target.DeviceUID] = summary
 				continue
 			}

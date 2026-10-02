@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -325,6 +326,9 @@ func TestPreparedReceiptRetainsExclusiveDeviceOwnership(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "separate activation or explicit invalidation") {
 		t.Fatalf("conflicting preparation was not blocked: %v", err)
 	}
+	if !errors.Is(err, errPreparedOwnershipRetained) {
+		t.Fatalf("conflicting preparation error = %v, want retained-ownership classification", err)
+	}
 	if err := reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "another-device"); err != nil {
 		t.Fatalf("unrelated device was blocked: %v", err)
 	}
@@ -336,6 +340,9 @@ func TestPreparedReceiptRetainsExclusiveDeviceOwnership(t *testing.T) {
 	err = reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "device-uid")
 	if err == nil || !strings.Contains(err.Error(), "invalid and must be reconciled") {
 		t.Fatalf("invalid retained receipt did not fail closed: %v", err)
+	}
+	if !errors.Is(err, errPreparedOwnershipRetained) {
+		t.Fatalf("invalid retained receipt error = %v, want retained-ownership classification", err)
 	}
 }
 

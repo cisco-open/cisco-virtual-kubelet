@@ -48,7 +48,10 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
 
-var errWorkloadsRunning = errors.New("workloads are running on the target Node")
+var (
+	errWorkloadsRunning          = errors.New("workloads are running on the target Node")
+	errPreparedOwnershipRetained = errors.New("prepared device ownership is retained")
+)
 
 const (
 	rolloutTargetDeviceNameIndex = "status.frozenPlan.targets.deviceName"
@@ -906,15 +909,16 @@ func (r *IOSXESoftwareRolloutReconciler) ensureNoPreparedOwnershipConflict(
 			continue
 		}
 		if leaf.Status.Phase != opsv1alpha1.UpgradePhasePrepared {
-			return fmt.Errorf("retained prepared ownership %s/%s has inconsistent phase %q",
+			return fmt.Errorf("%w: retained prepared ownership %s/%s has inconsistent phase %q",
+				errPreparedOwnershipRetained,
 				leaf.Namespace, leaf.Name, leaf.Status.Phase)
 		}
 		if err := softwareupgrade.ValidatePreparedReceipt(receipt); err != nil {
-			return fmt.Errorf("retained prepared ownership %s/%s is invalid and must be reconciled: %w",
-				leaf.Namespace, leaf.Name, err)
+			return fmt.Errorf("%w: retained prepared ownership %s/%s is invalid and must be reconciled: %v",
+				errPreparedOwnershipRetained, leaf.Namespace, leaf.Name, err)
 		}
-		return fmt.Errorf("device UID %s is owned by retained preparation %s/%s (%s); separate activation or explicit invalidation is required",
-			deviceUID, leaf.Namespace, leaf.Name, receipt.ReceiptHash)
+		return fmt.Errorf("%w: device UID %s is owned by retained preparation %s/%s (%s); separate activation or explicit invalidation is required",
+			errPreparedOwnershipRetained, deviceUID, leaf.Namespace, leaf.Name, receipt.ReceiptHash)
 	}
 	return nil
 }
