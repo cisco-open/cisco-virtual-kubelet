@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 // RESTCONFConfig configures a RESTCONF Interface. HTTPClient is required;
@@ -107,6 +108,28 @@ func (r *restconfTransport) Fetch(ctx context.Context, path string) ([]byte, err
 	ctx, span := startTransportSpan(ctx, KindRESTCONF, "get", spanPath(path))
 	defer span.End()
 	return r.do(ctx, http.MethodGet, path, nil)
+}
+
+// FetchWithDeviceTime returns the authenticated device HTTP clock sampled by
+// the same successful RESTCONF GET as the response body. The local timestamp
+// is the request midpoint, which lets safety-sensitive readers translate a
+// local interval into the device clock domain without widening a global clock
+// allowance. A missing or malformed Date header is represented by zero times;
+// callers must then retain their conservative fallback.
+func (r *restconfTransport) FetchWithDeviceTime(ctx context.Context, path string) ([]byte, time.Time, time.Time, error) {
+	ctx, span := startTransportSpan(ctx, KindRESTCONF, "get", spanPath(path))
+	defer span.End()
+	started := time.Now()
+	body, header, err := r.doWithHeaders(ctx, http.MethodGet, path, nil)
+	observed := time.Now()
+	if err != nil {
+		return body, time.Time{}, time.Time{}, err
+	}
+	deviceTime, err := http.ParseTime(header.Get("Date"))
+	if err != nil {
+		return body, time.Time{}, time.Time{}, nil
+	}
+	return body, deviceTime.UTC(), started.Add(observed.Sub(started) / 2).UTC(), nil
 }
 
 func (r *restconfTransport) StartTransaction(context.Context) (TxHandle, error) {
@@ -413,6 +436,14 @@ func (r *restconfTransport) Close() error {
 // the response body fully before returning so the caller receives a
 // complete buffer without having to drain it on error paths.
 func (r *restconfTransport) do(ctx context.Context, method, path string, body []byte) ([]byte, error) {
+	responseBody, _, err := r.doWithHeaders(ctx, method, path, body)
+	return responseBody, err
+}
+
+// doWithHeaders is the metadata-preserving form of do. Response headers are
+// returned only for a successful HTTP response; error paths retain the same
+// body and diagnostics as do.
+func (r *restconfTransport) doWithHeaders(ctx context.Context, method, path string, body []byte) ([]byte, http.Header, error) {
 	if r.cfg.SessionLock != nil {
 		r.cfg.SessionLock.Lock()
 		defer r.cfg.SessionLock.Unlock()
@@ -425,7 +456,7 @@ func (r *restconfTransport) do(ctx context.Context, method, path string, body []
 	}
 	req, err := http.NewRequestWithContext(ctx, method, url, reader)
 	if err != nil {
-		return nil, fmt.Errorf("build request: %w", err)
+		return nil, nil, fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Accept", "application/yang-data+json")
 	if body != nil {
@@ -437,22 +468,22 @@ func (r *restconfTransport) do(ctx context.Context, method, path string, body []
 
 	resp, err := r.cfg.HTTPClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("transport: %w", err)
+		return nil, nil, fmt.Errorf("transport: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
+		return nil, nil, fmt.Errorf("read response: %w", err)
 	}
 	if resp.StatusCode >= 300 {
 		// Return the body as part of the error so callers don't need to
 		// re-request to see what the device complained about. Cap the
 		// snippet so a multi-kilobyte HTML 500 page doesn't flood logs.
-		return respBody, fmt.Errorf("RESTCONF %s %s: %s: %s",
+		return respBody, nil, fmt.Errorf("RESTCONF %s %s: %s: %s",
 			method, path, resp.Status, snippet(respBody, 512))
 	}
-	return respBody, nil
+	return respBody, resp.Header.Clone(), nil
 }
 
 func snippet(b []byte, max int) string {

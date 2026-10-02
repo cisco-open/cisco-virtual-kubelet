@@ -41,6 +41,14 @@ type rpcInvoker interface {
 	InvokeRPC(ctx context.Context, path string, payload []byte) ([]byte, error)
 }
 
+// deviceTimeFetcher is implemented by the IOS XE RESTCONF transport. Its
+// device and local timestamps describe the same authenticated response, so an
+// interrupted install can be correlated in the clock domain used by IOS XE's
+// native operation history when gNOI System.Time is unavailable.
+type deviceTimeFetcher interface {
+	FetchWithDeviceTime(ctx context.Context, path string) ([]byte, time.Time, time.Time, error)
+}
+
 // Adapter maps IOS XE install-oper and install-rpc YANG surfaces into the
 // neutral software lifecycle capability.
 type Adapter struct {
@@ -90,7 +98,19 @@ func (a *Adapter) ObserveInterruptedInstall(
 		request.ObservedAt.Before(request.NotBefore) {
 		return lifecycle.InterruptedInstallObservation{}, fmt.Errorf("interrupted install requires positive source size and a valid observation interval")
 	}
-	raw, err := a.transport.Fetch(ctx, installOperDataPath)
+	var raw []byte
+	var err error
+	if timed, ok := a.transport.(deviceTimeFetcher); ok {
+		var deviceObservedAt, localObservedAt time.Time
+		raw, deviceObservedAt, localObservedAt, err = timed.FetchWithDeviceTime(ctx, installOperDataPath)
+		if err == nil && request.DeviceNotBefore.IsZero() && request.DeviceObservedAt.IsZero() &&
+			!deviceObservedAt.IsZero() && !localObservedAt.IsZero() {
+			request.DeviceNotBefore = deviceObservedAt.Add(request.NotBefore.Sub(localObservedAt))
+			request.DeviceObservedAt = deviceObservedAt.Add(request.ObservedAt.Sub(localObservedAt))
+		}
+	} else {
+		raw, err = a.transport.Fetch(ctx, installOperDataPath)
+	}
 	if err != nil {
 		return lifecycle.InterruptedInstallObservation{}, fmt.Errorf("fetch IOS XE interrupted install evidence: %w", err)
 	}

@@ -67,6 +67,17 @@ type rpcTransport struct {
 	rpcErr     error
 }
 
+type timedTransport struct {
+	*fakeTransport
+	deviceObservedAt time.Time
+	localObservedAt  time.Time
+}
+
+func (f *timedTransport) FetchWithDeviceTime(_ context.Context, path string) ([]byte, time.Time, time.Time, error) {
+	body, err := f.Fetch(context.Background(), path)
+	return body, f.deviceObservedAt, f.localObservedAt, err
+}
+
 func (f *rpcTransport) InvokeRPC(_ context.Context, path string, payload []byte) ([]byte, error) {
 	f.rpcPath = path
 	f.rpcPayload = append([]byte(nil), payload...)
@@ -299,6 +310,43 @@ func TestObserveInterruptedInstallUsesDeviceClockInterval(t *testing.T) {
 	got, err := a.ObserveInterruptedInstall(context.Background(), request)
 	if err != nil {
 		t.Fatalf("ObserveInterruptedInstall with device clock: %v", err)
+	}
+	if got.Image.Version != "17.18.02.0.4112.1766116039" || !got.Image.State.Activatable() {
+		t.Fatalf("observation = %+v", got)
+	}
+}
+
+func TestObserveInterruptedInstallDerivesDeviceClockFromRESTCONFResponse(t *testing.T) {
+	localStarted := time.Date(2026, 10, 2, 2, 10, 53, 0, time.UTC)
+	localObserved := localStarted.Add(18 * time.Minute)
+	deviceOffset := -5*time.Minute - 32*time.Second
+	deviceStarted := localStarted.Add(deviceOffset)
+	raw := interruptedInstallResponse(
+		"install-no-activity",
+		"install-state-added",
+		"install-package-verify-ok",
+		"1247897709",
+		"install-op-succ",
+		"op-complete",
+		deviceStarted,
+	)
+	transport := &timedTransport{
+		fakeTransport:    &fakeTransport{kind: configtransport.KindRESTCONF, responses: map[string][]byte{installOperDataPath: raw}},
+		deviceObservedAt: localObserved.Add(deviceOffset),
+		localObservedAt:  localObserved,
+	}
+	a, err := New(transport)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	got, err := a.ObserveInterruptedInstall(context.Background(), lifecycle.InterruptedInstallRequest{
+		TargetVersion: "17.18.02",
+		SourceSize:    1247897709,
+		NotBefore:     localStarted,
+		ObservedAt:    localObserved,
+	})
+	if err != nil {
+		t.Fatalf("ObserveInterruptedInstall with RESTCONF clock: %v", err)
 	}
 	if got.Image.Version != "17.18.02.0.4112.1766116039" || !got.Image.State.Activatable() {
 		t.Fatalf("observation = %+v", got)
