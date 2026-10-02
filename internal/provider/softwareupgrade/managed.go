@@ -655,7 +655,7 @@ func PreparedReceiptConsumed(
 			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "Verified") ||
 			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "DeviceMutationSettled") ||
 			admission == nil || (admission.ProtocolVersion != receipt.ManagedProtocolVersion &&
-				admission.ProtocolVersion != opsv1alpha1.RequiredManagedUpgradeProtocol(consumer.Spec)) ||
+			admission.ProtocolVersion != opsv1alpha1.RequiredManagedUpgradeProtocol(consumer.Spec)) ||
 			admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
 			admission.LeafUID != string(consumer.UID) ||
 			admission.DeviceUID != receipt.DeviceUID || admission.NodeUID != receipt.NodeUID ||
