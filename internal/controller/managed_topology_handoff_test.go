@@ -1040,6 +1040,50 @@ func TestLegacyHandoffAcceptsSettledUnclaimedCancellation(t *testing.T) {
 	}
 }
 
+func TestSharedCompatibilityAccessReleasesExactHistoricalOwner(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	sharedSA := fixture.r.vkServiceAccountName()
+	legacy := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: sharedSA,
+		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(
+			device, ciskov1.GroupVersion.WithKind("CiscoDevice"),
+		)},
+	}}
+	if err := fixture.client.Create(ctx, legacy); err != nil {
+		t.Fatal(err)
+	}
+	device.Status.LegacyHandoff = &ciskov1.DeviceLegacyHandoffStatus{
+		Phase: ciskov1.DeviceLegacyHandoffSharedWriterPending,
+	}
+	if err := fixture.r.ensureVKAccess(ctx, device, sharedSA, false); err != nil {
+		t.Fatalf("migrate exact historical shared owner: %v", err)
+	}
+	var current corev1.ServiceAccount
+	if err := fixture.client.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: sharedSA}, &current); err != nil {
+		t.Fatal(err)
+	}
+	if len(current.OwnerReferences) != 0 {
+		t.Fatalf("shared ServiceAccount retained owner references: %#v", current.OwnerReferences)
+	}
+	if err := fixture.r.verifySharedLegacyAccess(ctx, device); err != nil {
+		t.Fatalf("migrated shared access did not verify: %v", err)
+	}
+
+	foreign := current.DeepCopy()
+	foreign.Name = sharedSA + "-foreign"
+	foreign.ResourceVersion = ""
+	foreign.UID = ""
+	foreign.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: ciskov1.GroupVersion.String(), Kind: "CiscoDevice", Name: "other", UID: "other-uid",
+		Controller: ptr.To(true),
+	}}
+	if err := releaseExactLegacySharedOwner(&foreign.ObjectMeta, device); err == nil {
+		t.Fatal("foreign historical owner was released")
+	}
+}
+
 type nodeDeleteRequiresRevokedLegacyAccessClient struct {
 	client.Client
 	namespace, serviceAccount string

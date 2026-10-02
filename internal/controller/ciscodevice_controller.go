@@ -1470,6 +1470,11 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 			sa.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] = r.WorkerServiceAccountPolicyEpoch
 			return controllerutil.SetControllerReference(device, sa, r.Scheme)
 		}
+		if sharedCompatibility {
+			if err := releaseExactLegacySharedOwner(&sa.ObjectMeta, device); err != nil {
+				return fmt.Errorf("migrate shared compatibility ServiceAccount ownership: %w", err)
+			}
+		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
@@ -1518,6 +1523,10 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 		if generated {
 			if err := applyGeneratedWorkerBindingMetadata(rb, device, managed, r.Scheme); err != nil {
 				return err
+			}
+		} else if sharedCompatibility {
+			if err := releaseExactLegacySharedOwner(&rb.ObjectMeta, device); err != nil {
+				return fmt.Errorf("migrate shared compatibility RoleBinding ownership: %w", err)
 			}
 		}
 		return nil
@@ -1568,6 +1577,24 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 			return err
 		}
 	}
+	return nil
+}
+
+// releaseExactLegacySharedOwner migrates the historical per-device owner from
+// an object whose name is now namespace-shared. It removes no ambiguous or
+// foreign ownership: only a sole controller reference to this exact
+// CiscoDevice incarnation is safe to release.
+func releaseExactLegacySharedOwner(objectMeta *metav1.ObjectMeta, device *ciskov1.CiscoDevice) error {
+	if objectMeta != nil && len(objectMeta.OwnerReferences) == 0 {
+		return nil
+	}
+	if objectMeta == nil || device == nil || device.UID == "" {
+		return fmt.Errorf("object metadata or CiscoDevice identity is incomplete")
+	}
+	if len(objectMeta.OwnerReferences) != 1 || !managedServiceAccountOwnedByDeviceMeta(objectMeta, device) {
+		return fmt.Errorf("object has non-canonical or foreign ownership")
+	}
+	objectMeta.OwnerReferences = nil
 	return nil
 }
 
