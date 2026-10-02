@@ -179,6 +179,10 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		Recorder:        recorder,
 		SubscribeNotify: notify,
 		RuntimeID:       os.Getenv("POD_UID"),
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodName:   opts.WorkerPodName,
+		WorkerPodUID:    opts.WorkerPodUID,
 	}
 	if notify != nil {
 		subscribeEvents = make(chan event.GenericEvent, 1)

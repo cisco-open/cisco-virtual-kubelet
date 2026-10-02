@@ -449,6 +449,10 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		Recorder:        recorder,
 		SubscribeNotify: notify,
 		RuntimeID:       runtimeID,
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodName:   opts.WorkerPodName,
+		WorkerPodUID:    runtimeID,
 	}
 	if opts.Maintenance != nil {
 		r.AcquireMutation = opts.Maintenance.AcquireWrite

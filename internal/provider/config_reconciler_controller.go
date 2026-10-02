@@ -59,6 +59,8 @@ const reconcileTracerName = "cisco-virtual-kubelet/config-reconciler"
 // successive tests serialised on stale leases.
 const iosxeConfigFinalizer = "config.cisco.vk/lease-cleanup"
 
+const managedConfigBindingPoll = 2 * time.Second
+
 func configTelemetryEntityID(cr *configv1alpha1.IOSXEConfig) string {
 	if cr == nil {
 		return ""
@@ -407,6 +409,13 @@ func (r *ConfigReconciler) Reconcile(ctx context.Context, req reconcile.Request)
 	// authorization before accepting any object-supplied trace carrier.
 	if !crTargetsDevice(&cr, r.DeviceName, r.DeviceNamespace) {
 		return reconcile.Result{}, nil
+	}
+	if r.ManagedTopology && !managedNetworkObjectBindingReady(&cr, r.DeviceNamespace,
+		r.DeviceName, r.DeviceUID, r.WorkerPodName, r.WorkerPodUID) {
+		// The manager watch normally requeues after it stamps the replacement
+		// Pod binding. This bounded poll covers a lost watch without attempting
+		// an expected-to-fail finalizer or status write in the interim.
+		return reconcile.Result{RequeueAfter: managedConfigBindingPoll}, nil
 	}
 
 	// Fetch and authorize first so a CI-supplied, bounded trace carrier can be
