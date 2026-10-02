@@ -85,6 +85,32 @@ func TestBuildGraphRejectsLimitsAndDuplicateDeviceIdentity(t *testing.T) {
 	}
 }
 
+func TestBuildGraphDiagnosesMissingObservationTime(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	graph, err := BuildGraph([]GraphObservation{{
+		PhysicalID:    "leaf-a",
+		Complete:      false,
+		UnknownReason: "manager has not accepted a network observation",
+	}}, GraphPolicy{Now: now, MaxObservationAge: 5 * time.Minute})
+	if err != nil {
+		t.Fatalf("BuildGraph() error = %v", err)
+	}
+	if graph.Complete {
+		t.Fatalf("graph with missing observation time was marked complete: %#v", graph)
+	}
+	want := map[string]bool{"ObservationTimeMissing": false, "IncompleteObservation": false}
+	for _, diagnostic := range graph.Diagnostics {
+		if _, ok := want[diagnostic.Code]; ok {
+			want[diagnostic.Code] = true
+		}
+	}
+	for code, found := range want {
+		if !found {
+			t.Fatalf("missing %s diagnostic: %#v", code, graph.Diagnostics)
+		}
+	}
+}
+
 func TestBuildGraphCanonicalizesConflictsAndFreshness(t *testing.T) {
 	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.UTC)
 	first := GraphObservation{
@@ -183,6 +209,34 @@ func TestBuildGraphConflictDiagnosticIsInputOrderIndependent(t *testing.T) {
 	}
 	if left.EvidenceHash != right.EvidenceHash || canonicalJSON(left.Diagnostics) != canonicalJSON(right.Diagnostics) {
 		t.Fatalf("conflict diagnostics depend on input order: left=%#v right=%#v", left, right)
+	}
+}
+
+func TestBuildGraphThreeWayConflictIsInputOrderIndependent(t *testing.T) {
+	observations := []GraphObservation{
+		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{Identity: "stable", PeerID: "peer-z", Source: "cdp", Interface: "Gi1"}}},
+		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{Identity: "stable", PeerID: "peer-a", Source: "cdp", Interface: "Gi1"}}},
+		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{Identity: "stable", PeerID: "peer-m", Source: "cdp", Interface: "Gi1"}}},
+	}
+	permutations := [][]int{{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}}
+	var wantHash, wantDiagnostics string
+	for _, order := range permutations {
+		input := []GraphObservation{observations[order[0]], observations[order[1]], observations[order[2]]}
+		graph, err := BuildGraph(input, GraphPolicy{})
+		if err != nil {
+			t.Fatalf("BuildGraph(%v) error = %v", order, err)
+		}
+		if graph.Complete || len(graph.Diagnostics) != 3 || graph.Diagnostics[0].Code != "DuplicateAdjacency" || graph.Diagnostics[1].Code != "DuplicateDeviceIdentity" || graph.Diagnostics[2].Code != "UnknownPeer" {
+			t.Fatalf("BuildGraph(%v) did not fail closed with bounded diagnostics: %#v", order, graph)
+		}
+		diagnostics := canonicalJSON(graph.Diagnostics)
+		if wantHash == "" {
+			wantHash, wantDiagnostics = graph.EvidenceHash, diagnostics
+			continue
+		}
+		if graph.EvidenceHash != wantHash || diagnostics != wantDiagnostics {
+			t.Fatalf("three-way conflict depends on input order %v: hash=%s diagnostics=%s; want hash=%s diagnostics=%s", order, graph.EvidenceHash, diagnostics, wantHash, wantDiagnostics)
+		}
 	}
 }
 

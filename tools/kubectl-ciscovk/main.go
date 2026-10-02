@@ -26,6 +26,13 @@
 // command list. The plugin terminates port-forward when the request
 // completes.
 //
+//	kubectl ciscovk topology graph [-n <ns>] [--max-age DURATION]
+//	    [-o table|json] [--require-complete]
+//
+// The topology graph is a read-only diagnostic built exclusively from the
+// manager-owned acceptedNetwork snapshots on CiscoDevice status. It cannot
+// change topology policy or authorize disruption.
+//
 // Future subcommands (diagnostics-RFC §13.6 + roadmap):
 //
 //	diff   — netascode-shape diff between desired + observed
@@ -38,6 +45,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -47,11 +55,16 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"syscall"
+	"text/tabwriter"
 	"time"
+
+	ciscov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
 
 // Version, GitCommit, and BuildTime are populated by release builds with
@@ -88,6 +101,25 @@ func runCLI(args []string, stdout, stderr io.Writer) int {
 			fmt.Fprintln(stderr, "error:", err)
 			return 1
 		}
+	case "topology":
+		if len(args) >= 3 && (args[2] == "-h" || args[2] == "--help" || args[2] == "help") {
+			usage(stderr, invocation)
+			return 0
+		}
+		if len(args) < 3 || args[2] != "graph" {
+			fmt.Fprintln(stderr, "error: topology requires the graph subcommand")
+			return 2
+		}
+		for _, arg := range args[3:] {
+			if arg == "-h" || arg == "--help" {
+				usage(stderr, invocation)
+				return 0
+			}
+		}
+		if err := runTopologyGraphWithIO(args[3:], stdout); err != nil {
+			fmt.Fprintln(stderr, "error:", err)
+			return 1
+		}
 	case "-h", "--help", "help":
 		usage(stderr, invocation)
 	case "version":
@@ -119,10 +151,18 @@ Subcommands:
     write erase) are NOT supported by this subcommand. See the
     device-operations RFC for those.
 
+  topology graph [-n <ns>] [flags]
+    Build a bounded read-only graph from manager-accepted CiscoDevice network
+    observations. The result is diagnostic only and never grants rollout
+    authority. All namespaces are read by default so duplicate physical
+    identities cannot be hidden by namespace boundaries.
+
 Examples:
   {{COMMAND}} exec cat9k-smoke -n cisco-vk-smoke -- show ip route
   {{COMMAND}} exec cat9k-smoke -- "show running-config | section interface"
   {{COMMAND}} exec cat9k-smoke --allow-secrets -- show running-config
+  {{COMMAND}} topology graph --max-age 5m
+  {{COMMAND}} topology graph -n cvk-live -o json --require-complete
 
 Flags for exec:
   -n, --namespace <ns>     namespace of the per-device kubelet pod
@@ -133,7 +173,290 @@ Flags for exec:
   --context NAME           kubeconfig context to use
   --kubeconfig PATH        path to the kubeconfig file
   --kubectl PATH           path to kubectl binary (default: from PATH)`
+	text += `
+
+Flags for topology graph:
+  -n, --namespace <ns>     limit the graph to one namespace (default: all)
+  --max-age DURATION       maximum accepted collection age (default 5m)
+  -o, --output FORMAT      table or json (default table)
+  --require-complete       return an error when the graph is incomplete
+  --context NAME           kubeconfig context to use
+  --kubeconfig PATH        path to the kubeconfig file
+  --kubectl PATH           path to kubectl binary (default: from PATH)`
 	fmt.Fprintln(w, strings.ReplaceAll(text, "{{COMMAND}}", invocation))
+}
+
+type topologyGraphFlags struct {
+	namespace       string
+	maxAge          time.Duration
+	output          string
+	requireComplete bool
+	kubectlBin      string
+	kubeContext     string
+	kubeconfig      string
+}
+
+func parseTopologyGraphArgs(argv []string) (*topologyGraphFlags, error) {
+	f := &topologyGraphFlags{maxAge: 5 * time.Minute, output: "table", kubectlBin: "kubectl"}
+	for i := 0; i < len(argv); i++ {
+		switch argv[i] {
+		case "-n", "--namespace":
+			i++
+			if i >= len(argv) || strings.TrimSpace(argv[i]) == "" {
+				return nil, errors.New("-n/--namespace requires a value")
+			}
+			f.namespace = argv[i]
+		case "--max-age":
+			i++
+			if i >= len(argv) {
+				return nil, errors.New("--max-age requires a value")
+			}
+			d, err := time.ParseDuration(argv[i])
+			if err != nil || d <= 0 {
+				return nil, fmt.Errorf("--max-age must be a positive duration: %q", argv[i])
+			}
+			f.maxAge = d
+		case "-o", "--output":
+			i++
+			if i >= len(argv) {
+				return nil, errors.New("-o/--output requires a value")
+			}
+			f.output = strings.ToLower(argv[i])
+			if f.output != "table" && f.output != "json" {
+				return nil, fmt.Errorf("unsupported topology graph output %q; use table or json", argv[i])
+			}
+		case "--require-complete":
+			f.requireComplete = true
+		case "--context":
+			i++
+			if i >= len(argv) {
+				return nil, errors.New("--context requires a name")
+			}
+			f.kubeContext = argv[i]
+		case "--kubeconfig":
+			i++
+			if i >= len(argv) {
+				return nil, errors.New("--kubeconfig requires a path")
+			}
+			f.kubeconfig = argv[i]
+		case "--kubectl":
+			i++
+			if i >= len(argv) {
+				return nil, errors.New("--kubectl requires a path")
+			}
+			f.kubectlBin = argv[i]
+		default:
+			return nil, fmt.Errorf("unknown topology graph flag %q", argv[i])
+		}
+	}
+	return f, nil
+}
+
+type topologyGraphDocument struct {
+	Complete       bool                       `json:"complete"`
+	EvidenceHash   string                     `json:"evidenceHash"`
+	ProvenanceHash string                     `json:"provenanceHash"`
+	Observations   []topologyGraphProvenance  `json:"observations"`
+	Nodes          []string                   `json:"nodes"`
+	Edges          []topology.GraphEdge       `json:"edges"`
+	Diagnostics    []topology.GraphDiagnostic `json:"diagnostics"`
+}
+
+type topologyGraphProvenance struct {
+	Device              string `json:"device"`
+	DeviceUID           string `json:"deviceUID,omitempty"`
+	PhysicalID          string `json:"physicalID"`
+	Accepted            bool   `json:"accepted"`
+	WorkerPodUID        string `json:"workerPodUID,omitempty"`
+	ProducerRevision    string `json:"producerRevision,omitempty"`
+	SampleSequence      uint64 `json:"sampleSequence,omitempty"`
+	CollectionStartedAt string `json:"collectionStartedAt,omitempty"`
+	CollectionEndedAt   string `json:"collectionEndedAt,omitempty"`
+	DeviceIdentityHash  string `json:"deviceIdentityHash,omitempty"`
+}
+
+func runTopologyGraphWithIO(argv []string, stdout io.Writer) error {
+	f, err := parseTopologyGraphArgs(argv)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	devices, err := readCiscoDevices(ctx, f)
+	if err != nil {
+		return err
+	}
+	observations, provenance := graphInputsFromDevices(devices)
+	graph, err := topology.BuildGraph(observations, topology.GraphPolicy{Now: time.Now().UTC(), MaxObservationAge: f.maxAge})
+	if err != nil {
+		return err
+	}
+	provenanceHash := hashTopologyGraphProvenance(provenance)
+	if f.output == "json" {
+		document := topologyGraphDocument{
+			Complete: graph.Complete, EvidenceHash: graph.EvidenceHash, ProvenanceHash: provenanceHash,
+			Observations: provenance, Nodes: graph.Nodes, Edges: graph.Edges, Diagnostics: graph.Diagnostics,
+		}
+		encoder := json.NewEncoder(stdout)
+		encoder.SetIndent("", "  ")
+		if err := encoder.Encode(document); err != nil {
+			return fmt.Errorf("write topology graph: %w", err)
+		}
+	} else {
+		writeTopologyGraphTable(stdout, graph, provenanceHash)
+	}
+	if f.requireComplete && !graph.Complete {
+		return errors.New("topology graph is incomplete; inspect diagnostics")
+	}
+	return nil
+}
+
+func readCiscoDevices(ctx context.Context, f *topologyGraphFlags) ([]ciscov1.CiscoDevice, error) {
+	kubectlPath, err := exec.LookPath(f.kubectlBin)
+	if err != nil {
+		return nil, fmt.Errorf("find kubectl: %w", err)
+	}
+	args := kubectlGlobalArgs(f.kubeconfig, f.kubeContext)
+	args = append(args, "get", "ciscodevices.cisco.vk")
+	if f.namespace == "" {
+		args = append(args, "--all-namespaces")
+	} else {
+		args = append(args, "-n", f.namespace)
+	}
+	args = append(args, "-o", "json")
+	cmd := commandContext(ctx, kubectlPath, args...)
+	var output, diagnostics bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &diagnostics
+	if err := cmd.Run(); err != nil {
+		return nil, commandError("read CiscoDevices", err, diagnostics.String())
+	}
+	var list ciscov1.CiscoDeviceList
+	if err := json.Unmarshal(output.Bytes(), &list); err != nil {
+		return nil, fmt.Errorf("decode CiscoDevices: %w", err)
+	}
+	if len(list.Items) == 0 {
+		return nil, errors.New("no CiscoDevices found in the selected scope")
+	}
+	return list.Items, nil
+}
+
+func graphFromDevices(devices []ciscov1.CiscoDevice, now time.Time, maxAge time.Duration) (topology.Graph, error) {
+	observations, _ := graphInputsFromDevices(devices)
+	return topology.BuildGraph(observations, topology.GraphPolicy{Now: now, MaxObservationAge: maxAge})
+}
+
+func graphInputsFromDevices(devices []ciscov1.CiscoDevice) ([]topology.GraphObservation, []topologyGraphProvenance) {
+	observations := make([]topology.GraphObservation, 0, len(devices))
+	provenance := make([]topologyGraphProvenance, 0, len(devices))
+	for i := range devices {
+		device := &devices[i]
+		physicalID, identityReason := graphDeviceIdentity(device)
+		proof := topologyGraphProvenance{
+			Device: device.Namespace + "/" + device.Name, DeviceUID: string(device.UID),
+			PhysicalID: physicalID,
+		}
+		observation := topology.GraphObservation{
+			PhysicalID:    physicalID,
+			Complete:      false,
+			UnknownReason: "manager has not accepted a network observation",
+		}
+		if identityReason != "" {
+			observation.UnknownReason = identityReason
+		}
+		if device.Status.HealthObservation != nil && device.Status.HealthObservation.AcceptedNetwork != nil {
+			accepted := device.Status.HealthObservation.AcceptedNetwork
+			proof.Accepted = true
+			proof.WorkerPodUID = accepted.WorkerPodUID
+			proof.ProducerRevision = accepted.ProducerRevision
+			proof.SampleSequence = accepted.SampleSequence
+			proof.CollectionStartedAt = timestampString(accepted.CollectionStartedAt.Time)
+			proof.CollectionEndedAt = timestampString(accepted.CollectionEndedAt.Time)
+			proof.DeviceIdentityHash = accepted.DeviceIdentityHash
+			observation.Complete = accepted.Complete
+			observation.UnknownReason = accepted.UnknownReason
+			observation.ObservedAt = accepted.CollectionStartedAt.Time
+			if observation.ObservedAt.IsZero() {
+				observation.ObservedAt = accepted.ObservedAt.Time
+			}
+			observation.Neighbors = make([]topology.GraphNeighbor, 0, len(accepted.Neighbors))
+			for _, neighbor := range accepted.Neighbors {
+				observation.Neighbors = append(observation.Neighbors, topology.GraphNeighbor{
+					Identity: neighbor.Identity, PeerID: neighbor.ID, Source: neighbor.Source,
+					Interface: neighbor.Interface, RoutingDomain: neighbor.RoutingDomain, State: neighbor.State,
+				})
+			}
+		}
+		observations = append(observations, observation)
+		provenance = append(provenance, proof)
+	}
+	sort.Slice(provenance, func(i, j int) bool {
+		if provenance[i].PhysicalID != provenance[j].PhysicalID {
+			return provenance[i].PhysicalID < provenance[j].PhysicalID
+		}
+		return provenance[i].Device < provenance[j].Device
+	})
+	return observations, provenance
+}
+
+func timestampString(value time.Time) string {
+	if value.IsZero() {
+		return ""
+	}
+	return value.UTC().Format(time.RFC3339Nano)
+}
+
+func hashTopologyGraphProvenance(provenance []topologyGraphProvenance) string {
+	encoded, _ := json.Marshal(provenance)
+	digest := sha256.Sum256(encoded)
+	return fmt.Sprintf("sha256:%x", digest)
+}
+
+func graphDeviceIdentity(device *ciscov1.CiscoDevice) (string, string) {
+	if device.Status.NodeIdentity != nil && strings.TrimSpace(device.Status.NodeIdentity.PhysicalIdentity) != "" {
+		physicalID, err := topology.CanonicalPhysicalIdentity(device.Status.NodeIdentity.PhysicalIdentity)
+		if err != nil {
+			return unboundGraphIdentity(device), "CiscoDevice manager-bound physical identity is invalid"
+		}
+		return physicalID, ""
+	}
+	if strings.TrimSpace(device.Spec.PhysicalIdentity) != "" {
+		physicalID, err := topology.CanonicalPhysicalIdentity(device.Spec.PhysicalIdentity)
+		if err != nil {
+			return unboundGraphIdentity(device), "CiscoDevice operator-declared physical identity is invalid"
+		}
+		return physicalID, ""
+	}
+	return unboundGraphIdentity(device), "CiscoDevice has no manager-bound physical identity"
+}
+
+func unboundGraphIdentity(device *ciscov1.CiscoDevice) string {
+	object := device.Namespace + "/" + device.Name
+	identity := "unbound:" + object
+	if len(identity) <= topology.MaxGraphFieldLength {
+		return identity
+	}
+	digest := sha256.Sum256([]byte(object))
+	return fmt.Sprintf("unbound:sha256:%x", digest)
+}
+
+func writeTopologyGraphTable(w io.Writer, graph topology.Graph, provenanceHash string) {
+	fmt.Fprintf(w, "Topology graph: complete=%t nodes=%d edges=%d diagnostics=%d evidence=%s provenance=%s\n",
+		graph.Complete, len(graph.Nodes), len(graph.Edges), len(graph.Diagnostics), graph.EvidenceHash, provenanceHash)
+	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	if len(graph.Edges) > 0 {
+		fmt.Fprintln(tw, "\nLOCAL\tPEER\tSOURCE\tINTERFACE\tDOMAIN\tSTATE")
+		for _, edge := range graph.Edges {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", edge.Local, edge.Peer, edge.Source, edge.Interface, edge.RoutingDomain, edge.State)
+		}
+	}
+	if len(graph.Diagnostics) > 0 {
+		fmt.Fprintln(tw, "\nSEVERITY\tCODE\tLOCAL\tPEER\tMESSAGE")
+		for _, diagnostic := range graph.Diagnostics {
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\n", diagnostic.Severity, diagnostic.Code, diagnostic.Local, diagnostic.Peer, diagnostic.Message)
+		}
+	}
+	_ = tw.Flush()
 }
 
 func printVersion(w io.Writer) {
@@ -529,14 +852,18 @@ func (d *deferredDiagnostics) String() string {
 }
 
 func kubectlArgs(f *execFlags, args ...string) []string {
-	global := make([]string, 0, 4+len(args))
-	if f.kubeconfig != "" {
-		global = append(global, "--kubeconfig", f.kubeconfig)
+	return append(kubectlGlobalArgs(f.kubeconfig, f.kubeContext), args...)
+}
+
+func kubectlGlobalArgs(kubeconfig, kubeContext string) []string {
+	global := make([]string, 0, 4)
+	if kubeconfig != "" {
+		global = append(global, "--kubeconfig", kubeconfig)
 	}
-	if f.kubeContext != "" {
-		global = append(global, "--context", f.kubeContext)
+	if kubeContext != "" {
+		global = append(global, "--context", kubeContext)
 	}
-	return append(global, args...)
+	return global
 }
 
 func commandError(action string, err error, stderr string) error {

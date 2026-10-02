@@ -128,6 +128,7 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 
 	graph := Graph{Complete: true}
 	nodes := make(map[string]struct{}, len(observations))
+	duplicateNodes := make(map[string]struct{})
 	for _, observation := range observations {
 		local := strings.TrimSpace(observation.PhysicalID)
 		if local == "" {
@@ -137,10 +138,16 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 			return Graph{}, fmt.Errorf("topology observation field exceeds %d bytes", MaxGraphFieldLength)
 		}
 		if policy.MaxObservationAge > 0 {
-			if policy.Now.IsZero() || observation.ObservedAt.IsZero() {
+			if policy.Now.IsZero() {
 				return Graph{}, fmt.Errorf("topology observation time is required for freshness policy")
 			}
-			if observation.ObservedAt.After(policy.Now.Add(30*time.Second)) || policy.Now.Sub(observation.ObservedAt) > policy.MaxObservationAge {
+			if observation.ObservedAt.IsZero() {
+				graph.Complete = false
+				graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+					Code: "ObservationTimeMissing", Severity: "Error", Local: local,
+					Message: "observation has no authenticated collection time",
+				})
+			} else if observation.ObservedAt.After(policy.Now.Add(30*time.Second)) || policy.Now.Sub(observation.ObservedAt) > policy.MaxObservationAge {
 				graph.Complete = false
 				graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
 					Code: "StaleObservation", Severity: "Error", Local: local,
@@ -149,10 +156,13 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 			}
 		}
 		if _, duplicate := nodes[local]; duplicate {
-			graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
-				Code: "DuplicateDeviceIdentity", Severity: "Error", Local: local,
-				Message: "more than one observation claims the same physical identity",
-			})
+			if _, alreadyReported := duplicateNodes[local]; !alreadyReported {
+				graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+					Code: "DuplicateDeviceIdentity", Severity: "Error", Local: local,
+					Message: "more than one observation claims the same physical identity",
+				})
+				duplicateNodes[local] = struct{}{}
+			}
 			graph.Complete = false
 			continue
 		}
@@ -168,7 +178,7 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 	}
 	sort.Strings(graph.Nodes)
 
-	seen := make(map[string]GraphEdge, maxEdges)
+	seen := make(map[string][]GraphEdge, maxEdges)
 	inputNeighbors := 0
 	for _, observation := range observations {
 		local := strings.TrimSpace(observation.PhysicalID)
@@ -192,30 +202,28 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 				Interface: strings.TrimSpace(neighbor.Interface), RemoteInterface: strings.TrimSpace(neighbor.RemoteInterface), RoutingDomain: strings.TrimSpace(neighbor.RoutingDomain),
 				State: strings.TrimSpace(neighbor.State),
 			}
-			if previous, duplicate := seen[key]; duplicate {
-				graph.Complete = false
-				message := "the same source-qualified adjacency was observed more than once"
-				diagnosticPeer := previous.Peer
-				if canonicalJSON(edge) != canonicalJSON(previous) {
-					message = "the same source-qualified adjacency was observed with conflicting fields"
-					if canonicalJSON(edge) < canonicalJSON(previous) {
-						seen[key] = edge
-						diagnosticPeer = edge.Peer
-					}
-				}
-				graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
-					Code: "DuplicateAdjacency", Severity: "Error", Local: local, Peer: diagnosticPeer, Message: message,
-				})
-				continue
-			}
-			seen[key] = edge
+			seen[key] = append(seen[key], edge)
 			if len(seen) > maxEdges {
 				return Graph{}, fmt.Errorf("topology graph has more than %d unique edges", maxEdges)
 			}
 		}
 	}
 	graph.Edges = make([]GraphEdge, 0, len(seen))
-	for _, edge := range seen {
+	for _, candidates := range seen {
+		sort.Slice(candidates, func(i, j int) bool {
+			return canonicalJSON(candidates[i]) < canonicalJSON(candidates[j])
+		})
+		edge := candidates[0]
+		if len(candidates) > 1 {
+			graph.Complete = false
+			message := "the same source-qualified adjacency was observed more than once"
+			if canonicalJSON(candidates[0]) != canonicalJSON(candidates[len(candidates)-1]) {
+				message = "the same source-qualified adjacency was observed with conflicting fields"
+			}
+			graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+				Code: "DuplicateAdjacency", Severity: "Error", Local: edge.Local, Peer: edge.Peer, Message: message,
+			})
+		}
 		graph.Edges = append(graph.Edges, edge)
 		if _, known := nodes[edge.Peer]; !known {
 			graph.Complete = false
@@ -353,8 +361,8 @@ func canonicalJSON(value any) string {
 func graphHash(graph Graph) string {
 	// The graph is already sorted and bounded. Hash structured JSON rather
 	// than delimiter-separated text: a peer containing a pipe or newline must
-	// not collide with a different graph. This is a drift/provenance token, not
-	// an authorization credential.
+	// not collide with a different graph. This is a topology-content hash, not
+	// sample provenance or an authorization credential.
 	payload := struct {
 		Complete    bool              `json:"complete"`
 		Nodes       []string          `json:"nodes"`

@@ -1,6 +1,7 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **implemented and reviewed through `2f27f302`; roadmap not complete**, 2 October 2026.
+Status: **implemented and reviewed through `6fab26f5` plus the read-only graph
+diagnostic increment; roadmap not complete**, 2 October 2026.
 Start with the current checkpoint and C0–C9 execution queue below. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
 and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
@@ -395,7 +396,7 @@ deliverables.
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | In progress: fresh combined rollouts used `Drain`, with final Running workloads; per-target eviction/replacement/service timelines, hard placement and independent-activation integration remain. |
 | E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | In progress: synthetic co-location/conflict evidence only; E08-A guard, remaining scheduler scenarios and physical native owner lifecycle remain. |
 | E09 | T7 | Transfer measurement and conditional durable prefetch/cache | Measurement: E00; cache: E06 plus measured need | Not started for roadmap measurement/decision: ephemeral cache exists; E09-A and explicit cache selection decision remain mandatory. |
-| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | In progress: unused pure helper exists; correctness/bounds/provenance, runtime integration and physical drift qualification remain. |
+| E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | In progress: bounded helper and read-only kubectl consumer use only manager-accepted evidence; missing/stale evidence, duplicate physical identities and three-way conflicts fail closed. Physical read-only rendering passed and exposed unresolved CDP-name-to-serial identity plus an unbound NX-OS object. Declared-policy input, trusted peer mapping, remaining bounds and controlled physical drift/restore remain. |
 | E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Blocked — prerequisite for positive qualification: no qualified second-platform image pair/service evidence; discovery and fixtures can proceed. |
 | E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | In progress: legacy handoff/convergence exists; measured scale envelope and full staged/uncertain-operation ownership transfer remain. |
 | E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Not started for final acceptance: no single candidate has passed the applicable F01–F13 matrix. |
@@ -444,8 +445,8 @@ lab findings remain qualified by their recorded image.
 | First: E02 absent rates | `InterfaceStats` now carries direction-specific presence/validity; IOS-XE marks missing leaves and Kbps conversion overflow invalid, while measured zero remains valid. `interfaceHeadroom` returns Unknown unless both directions are present and valid. | Add driver/API fixtures for every supported YANG representation and independently measure idle/load behavior (E02-A/B). Keep supervisor/stack health separate until it has a qualified source. |
 | Next: E03–E06 missing runtime contracts | `AdminPolicyConfig` now has protected disruption rules, overlapping groups and optional aggregate-rate ceilings; the campaign has a network gate and plan approval. The lifecycle backend exposes inventory and registration, but no durable separately approved staged-receipt workflow. | Complete E03 physical pacing/path qualification; qualify E04 before finalizing E05/E06 platform semantics. Existing `NoReboot`, claims and approval hashes cannot satisfy these new contracts by renaming states. |
 | Next: E07/E08 placement and group eligibility | `validateDrainPodSpec` explicitly rejects node selectors, required affinity and hard topology spread. The native TAS script uses fixture Nodes and installs no CVK runtime. | Add only qualified placement eligibility and fail-closed raw group recognition before expanding drain; pass E07-A–D and E08-A–D with portable applications and independent probes. |
-| Next: E10 graph correctness and integration | Structured hash, local/remote-port matching and two-input conflicting-peer correction are committed. The helper has no production caller or accepted-sample provenance. | Extend permutation coverage to three or more conflicting values and duplicate device observations; prove old-encoding collision regression and all bounds. Integrate manager/CLI diagnostics after E01/E03. Graph completeness must not imply path health. |
-| Evidence: E10 test claims | Tests now cover reordered conflicting input, matching declarations, stale input, known-peer asymmetry, state-sensitive hashing and input limits. Runtime publication, physical drift and manager/CLI integration remain untested. | Add missing/unexpected declared-link, diagnostic-boundary, field-encoding and runtime API tests before claiming E10-A–D coverage. |
+| Next: E10 graph correctness and integration | Structured hash, local/remote-port matching, duplicate identity handling and order-independent three-way conflicting-peer canonicalization are implemented. `kubectl ciscovk topology graph` reads only manager-owned `acceptedNetwork`, uses authenticated collection start for freshness and preserves unbound objects. | Add administrator-declared link input and a trusted manager-approved peer-name-to-physical-identity mapping with provenance; finish all diagnostic-boundary fixtures. Graph completeness must never imply path health. |
+| Evidence: E10 test claims | Tests cover reordered two- and three-way conflicts, matching declarations, stale/missing time, known-peer asymmetry, state-sensitive hashing, accepted-vs-raw provenance, unbound devices and kubectl transport. A physical read-only run produced a stable hash and correctly failed `--require-complete`. | Add missing/unexpected declared-link CLI cases, maximum diagnostic/declaration bounds, authenticated identity mapping, and controlled physical link change/restore before claiming E10-A–D coverage. |
 
 ### Next execution sequence and required tests
 
@@ -593,7 +594,7 @@ the existing rollout opt-in defaults:
 | --- | --- | --- |
 | Source-qualified neighbor identity | Implemented / unqualified for full E01 | CDP and OSPF retain source, local interface and OSPF area. Equal peer names are no longer merged solely by string equality; ambiguous required peers fail closed. Legacy observations fall back to peer ID. VRF/process context and explicit multi-adjacency selection remain pending. |
 | Collection provenance | Implemented / partially enforced | Start/end timestamps, process-local sequence and network-worker Pod UID are published. The planning gate compares expected revision/Pod when populated and checks sequence/interval presence. Empty-identity migration, authenticated write ownership, persistent ordering and claim-time use remain pending. |
-| Observed graph diagnostics | In progress | `internal/topology/graph.go` is a pure helper with no runtime caller. Tests cover matching declarations, reordered conflicting duplicates, state-sensitive hashing, stale/unknown/incomplete sources, known-peer asymmetry, node/input limits and duplicate device IDs. Runtime integration and physical drift remain open. |
+| Observed graph diagnostics | In progress | `internal/topology/graph.go` is consumed read-only by `kubectl ciscovk topology graph`. Tests cover matching declarations, reordered two-/three-way conflicting duplicates, state-sensitive hashing, stale/missing/unknown/incomplete sources, accepted-vs-raw provenance, known-peer asymmetry, unbound devices, kubectl transport, node/input limits and duplicate device IDs. Physical rendering is archived; declared-policy CLI input, trusted peer mapping and physical drift remain open. |
 | Compatibility | In progress | Added scalar fields are optional and the network gate remains opt-in. The neighbor list changes from map-by-ID to atomic, and required-peer ambiguity now blocks. Persisted objects, server-side-apply ownership and mixed-version publication/rollback need explicit E01-C/E13 tests. |
 | Physical observation publication | Passed for a read-only check of the latest IOS-XE deployment | Ubuntu16 Helm revision 98 ran `cvk-tas-extentions:0884666e`; all three app workers and three network workers converged, all three managed C9K Nodes/CiscoDevices were Ready, and all three published complete samples with collection start/end times, producer revisions, non-zero sequences, and Pod-UID equality with the manager's worker proof. Final logs reported no manager errors in the final three-minute window. This is publication/deployment evidence, not qualification of the network RO profile, full staging/activation, service reachability, controlled-load, or a new software upgrade/downgrade run. |
 | Repository gates at the prior implementation turn | Passed as recorded | Full race suite, strict MkDocs, Helm lint, topology render contract and `git diff --check` passed locally. The stale managed-device variable count assertion was corrected from 7 to 9; no chart template behavior changed. These local results do not establish passing CI or complete real-API coverage at this revision. |
@@ -1219,13 +1220,16 @@ not demonstrate persistence across Pod replacement or volume loss.
 Code: observation schema/normalization, pure comparison logic,
 manager read-only diagnostics, status/Events and `kubectl ciscovk` output.
 
-Current implementation is a pure helper in `internal/topology/graph.go` with
-partial fixture coverage and no production caller. E10-A is partial; E10-B/C and
-the runtime consumer are not qualified. `GraphObservation.ObservedAt` is checked
-only when `MaxObservationAge` is positive; accepted-worker/sample provenance
-is absent. Structured JSON hashing, state bounds, two-input conflicting-peer
-diagnostics and remote-port reverse matching are committed. Broader permutation,
-collision, bounds and integration coverage still require the tests below.
+Current implementation is a bounded helper in `internal/topology/graph.go`
+with a read-only kubectl-plugin caller over manager-accepted status. E10-A is
+partial; E10-B/C and full runtime qualification remain open.
+`GraphObservation.ObservedAt` is checked only when `MaxObservationAge` is
+positive. CLI JSON separates a topology-content hash from a deterministic
+provenance hash over manager-accepted device/worker/sequence/collection
+identity. Structured JSON hashing, state bounds, three-way conflicting-peer
+diagnostics and remote-port reverse matching are implemented. Broader
+protocol/VRF/LAG, declaration-bound and physical-drift coverage still require
+the tests below.
 
 ### Required updates
 

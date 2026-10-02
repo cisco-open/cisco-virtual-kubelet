@@ -1,6 +1,7 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete; implemented and reviewed through `2f27f302`**, 2 October 2026.
+Status: **incomplete; implemented and reviewed through `6fab26f5` plus the
+read-only graph diagnostic increment**, 2 October 2026.
 Start with the [November handoff](topology-november-handoff.md) and
 [versioned evidence](evidence/topology-2026-10-01/README.md). The checkpoint
 preserves runtime/harness changes after `665a7954`; it is not a release candidate.
@@ -131,7 +132,7 @@ final acceptance. The [execution plan](topology-roadmap-execution.md) records
 the evidence corrections, immediate repairs and test-by-test exit gates and
 remains the completion ledger.
 
-| Slice | Reviewed status through `2f27f302` (physical evidence retains its original revision) | Required execution |
+| Slice | Reviewed status through the current checkpoint (physical evidence retains its original revision) | Required execution |
 | --- | --- | --- |
 | T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired; clean `9e578131` candidate deployed to Ubuntu16 with all three physical target observations checked | E00: finish direct device CLI/secure OS.Verify, complete log-plane/service/path baselines and durable capability indexing. |
 | T1 | Manager-accepted Pod-bound evidence, restart-safe publisher, interval/schema safety, directional-rate provenance/recomputation, concurrency/lost-response tests and real bound-token admission suite passed; physical k3s schema compatibility corrected | C2 / E01–E02: controlled loaded-path accuracy with an independent source, redundant-hardware capability, reverse mixed-version/rollback and candidate CI. |
@@ -141,7 +142,7 @@ remains the completion ledger.
 | T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
 | T6 | Synthetic co-location/conflict evidence exists; full scheduler and physical group lifecycle absent | E08: raw group-field recognition before expanding drain, remaining scheduler scenarios, native controller recreation, physical service and group-aware drain tests. |
 | T7 | Existing ephemeral cache only | E09: measure both transfer segments; implement durable prefetch/PVC cache only when its decision gate passes, then qualify failures. |
-| T8 | Pure helper with remote-port matching and two-input conflict correction (`4711d3c7`); no runtime consumer | E10: three-way conflict/duplicate-device permutations, freshness, collision/bounds regressions, accepted provenance, manager/CLI integration and physical drift. |
+| T8 | Bounded helper plus a read-only `kubectl ciscovk topology graph` consumer; accepted manager evidence, authenticated collection freshness, duplicate identities and three-way conflicts fail closed. A physical read-only run rendered all four devices and returned incomplete because CDP names could not be authenticated as bound serial identities and the NX-OS device was unbound | E10: add administrator-declared link input and trusted peer-identity mapping/provenance, finish diagnostic-boundary fixtures, then qualify a controlled physical link change/restore. Do not infer path health or grant disruption authority from the graph. |
 | T9 | Second-platform qualification absent | E11: probe a suitable platform, qualify its lifecycle and record the public-API decision. Unsupported hardware leaves this gate open. |
 | T10 | Legacy handoff/convergence hardened; broader ownership and scale remain | E12: measure the supported envelope and test controlled single-cluster/offline handoff including staged/uncertain operations. Three switches do not prove fleet scale. |
 
@@ -604,12 +605,14 @@ confidence. Preserve unknown/unmanaged neighbors and asymmetric observations;
 CDP names alone are not authenticated chassis identity. Model interface/VRF
 context where needed rather than merging unrelated paths.
 
-The current pure helper has optional freshness checks, source-aware JSON keys,
-duplicate detection and input/output limits, but no manager caller. Uncommitted
-changes replace the complete hash with structured JSON and bound adjacency
-state. Require a regression that fails under the old delimiter encoding;
-conflicting-peer diagnostics, reverse-port matching and accepted sample
-provenance still need correction before the manager-owned status and CLI consumer.
+The bounded helper has freshness checks, source-aware structured JSON keys,
+duplicate detection, input/output limits, reverse-port matching and
+order-independent three-way conflict canonicalization. The read-only kubectl
+plugin consumes only the manager-owned accepted sample, retains unbound
+devices, and can fail CI/automation closed with `--require-complete`. It does
+not yet accept declared-link policy or a manager-approved mapping from protocol
+peer names to physical identities. The physical diagnostic therefore correctly
+reports the current CDP-name/serial mismatch as unresolved instead of guessing.
 
 Compare that graph with declared risk groups and expected adjacency sets. Show
 missing peers, changed uplinks, new single points of failure and stale data.

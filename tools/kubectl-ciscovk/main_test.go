@@ -26,11 +26,261 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	ciscov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
+
+func TestParseTopologyGraphArgs(t *testing.T) {
+	f, err := parseTopologyGraphArgs([]string{
+		"-n", "cvk-live", "--max-age", "90s", "-o", "json", "--require-complete",
+		"--context", "lab", "--kubeconfig", "/tmp/lab.conf", "--kubectl", "/usr/bin/kubectl",
+	})
+	if err != nil {
+		t.Fatalf("parseTopologyGraphArgs() error = %v", err)
+	}
+	if f.namespace != "cvk-live" || f.maxAge != 90*time.Second || f.output != "json" || !f.requireComplete ||
+		f.kubeContext != "lab" || f.kubeconfig != "/tmp/lab.conf" || f.kubectlBin != "/usr/bin/kubectl" {
+		t.Fatalf("flags = %#v", f)
+	}
+	for _, argv := range [][]string{{"--max-age", "0s"}, {"-o", "yaml"}, {"--unknown"}} {
+		if _, err := parseTopologyGraphArgs(argv); err == nil {
+			t.Fatalf("parseTopologyGraphArgs(%q) succeeded", argv)
+		}
+	}
+}
+
+func TestTopologyGraphHelp(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runCLI([]string{"kubectl-ciscovk", "topology", "graph", "--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("runCLI() code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "Flags for topology graph") || !strings.Contains(stderr.String(), "--require-complete") {
+		t.Fatalf("topology graph help = %q", stderr.String())
+	}
+}
+
+func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	acceptedAt := metav1.NewTime(now.Add(-time.Minute))
+	devices := []ciscov1.CiscoDevice{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+			Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "SERIAL-A"},
+			Status: ciscov1.DeviceStatus{
+				NodeIdentity: &ciscov1.DeviceNodeIdentityStatus{PhysicalIdentity: "serial-a"},
+				HealthObservation: &ciscov1.DeviceHealthObservationStatus{
+					Network: &ciscov1.DeviceNetworkObservationStatus{Complete: false, UnknownReason: "untrusted raw sample"},
+					AcceptedNetwork: &ciscov1.DeviceNetworkObservationStatus{
+						CollectionStartedAt: acceptedAt,
+						ObservedAt:          acceptedAt,
+						Complete:            true,
+						Neighbors: []ciscov1.DeviceNetworkNeighborObservation{{
+							Identity: "cdp-a-b", ID: "serial-b", Source: "cdp", Interface: "Gi1/0/1", State: "up",
+						}},
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "leaf-b", Namespace: "cvk-live"},
+			Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "SERIAL-B"},
+			Status: ciscov1.DeviceStatus{
+				NodeIdentity: &ciscov1.DeviceNodeIdentityStatus{PhysicalIdentity: "serial-b"},
+				HealthObservation: &ciscov1.DeviceHealthObservationStatus{AcceptedNetwork: &ciscov1.DeviceNetworkObservationStatus{
+					CollectionStartedAt: acceptedAt, ObservedAt: acceptedAt, Complete: true,
+				}},
+			},
+		},
+	}
+	graph, err := graphFromDevices(devices, now, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("graphFromDevices() error = %v", err)
+	}
+	if len(graph.Nodes) != 2 || len(graph.Edges) != 1 || graph.Edges[0].Local != "serial-a" || graph.Edges[0].Peer != "serial-b" {
+		t.Fatalf("graph = %#v", graph)
+	}
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Message == "untrusted raw sample" {
+			t.Fatalf("raw worker evidence entered graph diagnostics: %#v", graph.Diagnostics)
+		}
+	}
+}
+
+func TestGraphProvenanceIsDeterministicAndAcceptedOnly(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 123, time.UTC)
+	started := metav1.NewTime(now.Add(-time.Second))
+	ended := metav1.NewTime(now)
+	devices := []ciscov1.CiscoDevice{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "leaf-b", Namespace: "cvk-live", UID: "device-b", ResourceVersion: "12"},
+			Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "serial-b"},
+			Status: ciscov1.DeviceStatus{HealthObservation: &ciscov1.DeviceHealthObservationStatus{
+				Network: &ciscov1.DeviceNetworkObservationStatus{WorkerPodUID: "raw-must-not-appear", ProducerRevision: "raw"},
+				AcceptedNetwork: &ciscov1.DeviceNetworkObservationStatus{
+					WorkerPodUID: "accepted-pod", ProducerRevision: "sha256:accepted", SampleSequence: 7,
+					CollectionStartedAt: started, CollectionEndedAt: ended, DeviceIdentityHash: "sha256:device",
+				},
+			}},
+		},
+		{ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"}, Spec: ciscov1.DeviceSpec{PhysicalIdentity: "serial-a"}},
+	}
+	_, provenance := graphInputsFromDevices(devices)
+	if len(provenance) != 2 || provenance[0].PhysicalID != "serial-a" || provenance[1].WorkerPodUID != "accepted-pod" {
+		t.Fatalf("provenance = %#v", provenance)
+	}
+	if strings.Contains(string(mustJSON(t, provenance)), "raw-must-not-appear") {
+		t.Fatalf("raw worker sample entered provenance: %#v", provenance)
+	}
+	wantHash := hashTopologyGraphProvenance(provenance)
+	sort.Slice(devices, func(i, j int) bool { return devices[i].Name < devices[j].Name })
+	_, reordered := graphInputsFromDevices(devices)
+	if got := hashTopologyGraphProvenance(reordered); got != wantHash {
+		t.Fatalf("provenance hash changed after input reorder: got %s want %s", got, wantHash)
+	}
+}
+
+func mustJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
+}
+
+func TestGraphFromDevicesFailsClosedWithoutAcceptedEvidence(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	devices := []ciscov1.CiscoDevice{{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+		Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "serial-a"},
+		Status: ciscov1.DeviceStatus{HealthObservation: &ciscov1.DeviceHealthObservationStatus{
+			Network: &ciscov1.DeviceNetworkObservationStatus{Complete: true, ObservedAt: metav1.NewTime(now)},
+		}},
+	}}
+	graph, err := graphFromDevices(devices, now, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("graphFromDevices() error = %v", err)
+	}
+	if graph.Complete {
+		t.Fatalf("unaccepted worker sample produced complete graph: %#v", graph)
+	}
+	want := map[string]bool{"ObservationTimeMissing": false, "IncompleteObservation": false}
+	for _, diagnostic := range graph.Diagnostics {
+		if _, ok := want[diagnostic.Code]; ok {
+			want[diagnostic.Code] = true
+		}
+	}
+	for code, found := range want {
+		if !found {
+			t.Fatalf("missing %s diagnostic: %#v", code, graph.Diagnostics)
+		}
+	}
+}
+
+func TestGraphFromDevicesReportsUnboundDeviceWithoutHidingFleet(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	graph, err := graphFromDevices([]ciscov1.CiscoDevice{{
+		ObjectMeta: metav1.ObjectMeta{Name: "legacy", Namespace: "cvk-live"},
+	}}, now, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("graphFromDevices() error = %v", err)
+	}
+	if graph.Complete || len(graph.Nodes) != 1 || graph.Nodes[0] != "unbound:cvk-live/legacy" {
+		t.Fatalf("graph = %#v", graph)
+	}
+	found := false
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Code == "IncompleteObservation" && strings.Contains(diagnostic.Message, "no manager-bound physical identity") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("missing unbound-device diagnostic: %#v", graph.Diagnostics)
+	}
+}
+
+func TestGraphDeviceIdentityCanonicalizesAndFailsClosed(t *testing.T) {
+	device := &ciscov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+		Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "SERIAL-SPEC"},
+		Status: ciscov1.DeviceStatus{NodeIdentity: &ciscov1.DeviceNodeIdentityStatus{
+			PhysicalIdentity: "SERIAL-BOUND",
+		}},
+	}
+	if got, reason := graphDeviceIdentity(device); got != "serial-bound" || reason != "" {
+		t.Fatalf("graphDeviceIdentity() = %q, %q", got, reason)
+	}
+	device.Status.NodeIdentity.PhysicalIdentity = "invalid identity"
+	if got, reason := graphDeviceIdentity(device); !strings.HasPrefix(got, "unbound:") || !strings.Contains(reason, "manager-bound") {
+		t.Fatalf("invalid bound identity fell back to spec: %q, %q", got, reason)
+	}
+	device.Status.NodeIdentity = nil
+	if got, reason := graphDeviceIdentity(device); got != "serial-spec" || reason != "" {
+		t.Fatalf("canonical spec fallback = %q, %q", got, reason)
+	}
+}
+
+func TestUnboundGraphIdentityIsBounded(t *testing.T) {
+	device := &ciscov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{
+		Namespace: strings.Repeat("n", 63),
+		Name:      strings.Repeat("d", 253),
+	}}
+	got := unboundGraphIdentity(device)
+	if len(got) > topology.MaxGraphFieldLength || !strings.HasPrefix(got, "unbound:sha256:") {
+		t.Fatalf("unboundGraphIdentity() = %q (%d bytes)", got, len(got))
+	}
+}
+
+func TestReadCiscoDevicesUsesScopedKubectlJSON(t *testing.T) {
+	previous := commandContext
+	commandContext = func(ctx context.Context, _ string, args ...string) *exec.Cmd {
+		helperArgs := append([]string{"-test.run=^TestGraphKubectlHelperProcess$", "--"}, args...)
+		cmd := exec.CommandContext(ctx, os.Args[0], helperArgs...)
+		cmd.Env = append(os.Environ(), "GO_WANT_CVK_GRAPH_KUBECTL_HELPER=1")
+		return cmd
+	}
+	t.Cleanup(func() { commandContext = previous })
+
+	devices, err := readCiscoDevices(context.Background(), &topologyGraphFlags{
+		namespace: "cvk-live", kubectlBin: os.Args[0], kubeContext: "lab", kubeconfig: "/tmp/lab.conf",
+	})
+	if err != nil {
+		t.Fatalf("readCiscoDevices() error = %v", err)
+	}
+	if len(devices) != 1 || devices[0].Name != "leaf-a" {
+		t.Fatalf("devices = %#v", devices)
+	}
+}
+
+func TestGraphKubectlHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_CVK_GRAPH_KUBECTL_HELPER") != "1" {
+		return
+	}
+	separator := slices.Index(os.Args, "--")
+	if separator < 0 || separator == len(os.Args)-1 {
+		fmt.Fprintln(os.Stderr, "missing helper arguments")
+		os.Exit(2)
+	}
+	got := os.Args[separator+1:]
+	want := []string{
+		"--kubeconfig", "/tmp/lab.conf", "--context", "lab", "get", "ciscodevices.cisco.vk",
+		"-n", "cvk-live", "-o", "json",
+	}
+	if !slices.Equal(got, want) {
+		fmt.Fprintf(os.Stderr, "unexpected graph kubectl arguments: %q\n", got)
+		os.Exit(2)
+	}
+	fmt.Fprint(os.Stdout, `{"apiVersion":"cisco.vk/v1alpha1","kind":"CiscoDeviceList","items":[{"apiVersion":"cisco.vk/v1alpha1","kind":"CiscoDevice","metadata":{"name":"leaf-a","namespace":"cvk-live"},"spec":{"physicalIdentity":"serial-a","address":"192.0.2.10","driver":"XE"}}]}`)
+	os.Exit(0)
+}
 
 func TestParseExecArgs(t *testing.T) {
 	cases := []struct {

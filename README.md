@@ -135,9 +135,10 @@ the manager Deployment is restarted.
 ### Install the optional kubectl plugin
 
 The client-side `kubectl-ciscovk` plugin is not required to run the controller.
-It adds read-only, ad-hoc IOS-XE diagnostics for operators. The plugin is
-available from the public Krew index, so install and upgrade it without
-building from source:
+It adds read-only, ad-hoc IOS-XE commands and manager-accepted topology graph
+diagnostics for operators. The topology output is observational and cannot
+grant rollout authority. The plugin is available from the public Krew index,
+so install and upgrade it without building from source:
 
 ```bash
 kubectl krew update

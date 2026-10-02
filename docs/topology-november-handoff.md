@@ -6,7 +6,8 @@ November release work, **not a merge recommendation or completed roadmap**.
 No E00–E13 package has all its exit gates closed. Do not promote this branch
 on the strength of the physical software-transition results alone.
 
-Review update through `2f27f302`: the execution plan's
+Review update through `6fab26f5` plus the read-only graph diagnostic increment:
+the execution plan's
 [**C0–C9 queue**](topology-roadmap-execution.md#concrete-completion-queue-c0c9)
 is authoritative and supersedes the older N1–N5 queue and historical inventory
 below. Manager-accepted evidence, claim-time authority, administrator
@@ -56,7 +57,7 @@ git log -1 --format=fuller -- docs/topology-november-handoff.md
 | Retained worker history | Wrong-bound worker skips forbidden leaf status updates | Missing/new binding, read failures, unresolved predecessors and real-API zero-dispatch tests still required |
 | Observation work | Restart-safe allocation, bounded diagnostics and native Pod-UID checks, followed by manager-owned acceptance at `90bc690c`, native bound-token denial, three-device CLI comparison and manager-restart qualification | Loaded directional-rate accuracy, remaining concurrency/lost-response and mixed-version rollback cases, plus redundant-supervisor qualification remain C2. |
 | Clean candidate qualification | `9e578131` image and Helm revision 112 deployed on Ubuntu16; all three physical targets reported Ready, complete UID-bound observations and healthy topology/gNOI conditions; `.103` replacement worker advanced from sequence one to three | Read-only evidence only. Direct CLI/secure OS.Verify, complete log planes, claim-time enforcement and E04 preparation/activation remain open. See [`9e578131-observation-validation.md`](evidence/topology-2026-10-01/9e578131-observation-validation.md). |
-| Graph helper | Structured hash/field bounds, remote-port reverse identity and two-input conflict correction (`4711d3c7`) | Three-way permutations and duplicate-device cases still need qualification; no production consumer or physical drift acceptance. |
+| Graph diagnostics | Structured hash/field bounds, remote-port reverse identity, deterministic three-way conflict handling and a read-only `kubectl ciscovk topology graph` consumer over manager-accepted evidence. A physical run produced stable evidence and failed closed on unresolved CDP-name/serial identities plus an unbound NX-OS object | Declared-link CLI input, trusted peer-identity mapping/provenance, remaining bound fixtures and controlled physical link drift/restore still need qualification. The graph never grants disruption authority. |
 | Harness | Explicit source/target validation, direction-specific runs, binding observation, log-plane capture attempt, exact preceding cleanup-log correlation | Binding observation does not establish RPC order; offline marker correlation does not prove service health or complete drain safety |
 | Physical pacing / lost Install response | Candidate `2f27f302`, Helm revision 131, completed `.103` 17.18.03 → 17.18.02 → 17.18.03 with a frozen 25 MB/s ceiling, exact native Install corroboration, no replay, secure Verify, CLI health, network soak and empty final ledger | Worker/device acknowledgement measurement only; no independent forwarding load, service-continuity, alternate/singleton/critical/congested path qualification or independent staging |
 
