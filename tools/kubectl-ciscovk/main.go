@@ -63,10 +63,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
-	ciscov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
+	topology "github.com/cisco/virtual-kubelet-cisco/internal/topologygraph"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyidentity"
 )
 
 // Version, GitCommit, and BuildTime are populated by release builds with
@@ -306,6 +304,73 @@ type topologyGraphProvenance struct {
 	DeviceIdentityHash  string `json:"deviceIdentityHash,omitempty"`
 }
 
+// These deliberately small wire types keep this kubectl plugin independent of
+// Kubernetes client libraries. The command shells out to kubectl and decodes
+// only the manager-owned fields needed to render its read-only graph.
+type topologyObjectMeta struct {
+	Name            string            `json:"name"`
+	Namespace       string            `json:"namespace"`
+	UID             string            `json:"uid"`
+	ResourceVersion string            `json:"resourceVersion"`
+	Annotations     map[string]string `json:"annotations"`
+}
+
+type topologyConfigMap struct {
+	Metadata topologyObjectMeta `json:"metadata"`
+	Data     map[string]string  `json:"data"`
+}
+
+type topologyDeviceList struct {
+	Items []topologyDevice `json:"items"`
+}
+
+type topologyDevice struct {
+	Metadata topologyObjectMeta   `json:"metadata"`
+	Spec     topologyDeviceSpec   `json:"spec"`
+	Status   topologyDeviceStatus `json:"status"`
+}
+
+type topologyDeviceSpec struct {
+	PhysicalIdentity string `json:"physicalIdentity"`
+}
+
+type topologyDeviceStatus struct {
+	NodeIdentity      *topologyNodeIdentity      `json:"nodeIdentity"`
+	HealthObservation *topologyHealthObservation `json:"healthObservation"`
+}
+
+type topologyNodeIdentity struct {
+	PhysicalIdentity string `json:"physicalIdentity"`
+}
+
+type topologyHealthObservation struct {
+	Network         *topologyNetworkObservation `json:"network"`
+	AcceptedNetwork *topologyNetworkObservation `json:"acceptedNetwork"`
+}
+
+type topologyNetworkObservation struct {
+	WorkerPodUID        string                    `json:"workerPodUID"`
+	ProducerRevision    string                    `json:"producerRevision"`
+	SampleSequence      uint64                    `json:"sampleSequence"`
+	CollectionStartedAt time.Time                 `json:"collectionStartedAt"`
+	CollectionEndedAt   time.Time                 `json:"collectionEndedAt"`
+	ObservedAt          time.Time                 `json:"observedAt"`
+	DeviceIdentityHash  string                    `json:"deviceIdentityHash"`
+	Complete            bool                      `json:"complete"`
+	UnknownReason       string                    `json:"unknownReason"`
+	Neighbors           []topologyNetworkNeighbor `json:"neighbors"`
+}
+
+type topologyNetworkNeighbor struct {
+	Identity        string `json:"identity"`
+	ID              string `json:"id"`
+	Source          string `json:"source"`
+	Interface       string `json:"interface"`
+	RemoteInterface string `json:"remoteInterface"`
+	RoutingDomain   string `json:"routingDomain"`
+	State           string `json:"state"`
+}
+
 func runTopologyGraphWithIO(argv []string, stdout io.Writer) error {
 	f, err := parseTopologyGraphArgs(argv)
 	if err != nil {
@@ -372,14 +437,14 @@ func readTopologyGraphPolicy(ctx context.Context, f *topologyGraphFlags) (topolo
 	if err := cmd.Run(); err != nil {
 		return topology.GraphPolicyDocument{}, nil, commandError("read topology graph policy", err, diagnostics.String())
 	}
-	var configMap corev1.ConfigMap
+	var configMap topologyConfigMap
 	if err := json.Unmarshal(output.Bytes(), &configMap); err != nil {
 		return topology.GraphPolicyDocument{}, nil, fmt.Errorf("decode topology graph policy ConfigMap: %w", err)
 	}
-	if configMap.Annotations["topology.cisco.vk/managed-policy"] != "true" || configMap.Annotations["topology.cisco.vk/admission-contract-version"] != "v2" {
+	if configMap.Metadata.Annotations["topology.cisco.vk/managed-policy"] != "true" || configMap.Metadata.Annotations["topology.cisco.vk/admission-contract-version"] != "v2" {
 		return topology.GraphPolicyDocument{}, nil, errors.New("topology graph policy ConfigMap is not protected by the managed v2 admission contract")
 	}
-	if configMap.UID == "" || configMap.ResourceVersion == "" {
+	if configMap.Metadata.UID == "" || configMap.Metadata.ResourceVersion == "" {
 		return topology.GraphPolicyDocument{}, nil, errors.New("topology graph policy ConfigMap has no Kubernetes identity")
 	}
 	document, err := topology.ParseGraphPolicyDocument(configMap.Data[topology.GraphPolicyDataKey])
@@ -391,13 +456,13 @@ func readTopologyGraphPolicy(ctx context.Context, f *topologyGraphFlags) (topolo
 		return topology.GraphPolicyDocument{}, nil, fmt.Errorf("hash topology graph policy: %w", err)
 	}
 	proof := &topologyGraphPolicyProof{
-		ConfigMap: configMap.Namespace + "/" + configMap.Name, UID: string(configMap.UID),
-		ResourceVersion: configMap.ResourceVersion, ContentHash: contentHash,
+		ConfigMap: configMap.Metadata.Namespace + "/" + configMap.Metadata.Name, UID: configMap.Metadata.UID,
+		ResourceVersion: configMap.Metadata.ResourceVersion, ContentHash: contentHash,
 	}
 	return document, proof, nil
 }
 
-func readCiscoDevices(ctx context.Context, f *topologyGraphFlags) ([]ciscov1.CiscoDevice, error) {
+func readCiscoDevices(ctx context.Context, f *topologyGraphFlags) ([]topologyDevice, error) {
 	kubectlPath, err := exec.LookPath(f.kubectlBin)
 	if err != nil {
 		return nil, fmt.Errorf("find kubectl: %w", err)
@@ -420,7 +485,7 @@ func readCiscoDevices(ctx context.Context, f *topologyGraphFlags) ([]ciscov1.Cis
 	if err := cmd.Run(); err != nil {
 		return nil, commandError("read CiscoDevices", err, diagnostics.String())
 	}
-	var list ciscov1.CiscoDeviceList
+	var list topologyDeviceList
 	if err := json.Unmarshal(output.Bytes(), &list); err != nil {
 		return nil, fmt.Errorf("decode CiscoDevices: %w", err)
 	}
@@ -430,19 +495,19 @@ func readCiscoDevices(ctx context.Context, f *topologyGraphFlags) ([]ciscov1.Cis
 	return list.Items, nil
 }
 
-func graphFromDevices(devices []ciscov1.CiscoDevice, now time.Time, maxAge time.Duration) (topology.Graph, error) {
+func graphFromDevices(devices []topologyDevice, now time.Time, maxAge time.Duration) (topology.Graph, error) {
 	observations, _ := graphInputsFromDevices(devices)
 	return topology.BuildGraph(observations, topology.GraphPolicy{Now: now, MaxObservationAge: maxAge})
 }
 
-func graphInputsFromDevices(devices []ciscov1.CiscoDevice) ([]topology.GraphObservation, []topologyGraphProvenance) {
+func graphInputsFromDevices(devices []topologyDevice) ([]topology.GraphObservation, []topologyGraphProvenance) {
 	observations := make([]topology.GraphObservation, 0, len(devices))
 	provenance := make([]topologyGraphProvenance, 0, len(devices))
 	for i := range devices {
 		device := &devices[i]
 		physicalID, identityReason := graphDeviceIdentity(device)
 		proof := topologyGraphProvenance{
-			Device: device.Namespace + "/" + device.Name, DeviceUID: string(device.UID),
+			Device: device.Metadata.Namespace + "/" + device.Metadata.Name, DeviceUID: device.Metadata.UID,
 			PhysicalID: physicalID,
 		}
 		observation := topology.GraphObservation{
@@ -459,14 +524,14 @@ func graphInputsFromDevices(devices []ciscov1.CiscoDevice) ([]topology.GraphObse
 			proof.WorkerPodUID = accepted.WorkerPodUID
 			proof.ProducerRevision = accepted.ProducerRevision
 			proof.SampleSequence = accepted.SampleSequence
-			proof.CollectionStartedAt = timestampString(accepted.CollectionStartedAt.Time)
-			proof.CollectionEndedAt = timestampString(accepted.CollectionEndedAt.Time)
+			proof.CollectionStartedAt = timestampString(accepted.CollectionStartedAt)
+			proof.CollectionEndedAt = timestampString(accepted.CollectionEndedAt)
 			proof.DeviceIdentityHash = accepted.DeviceIdentityHash
 			observation.Complete = accepted.Complete
 			observation.UnknownReason = accepted.UnknownReason
-			observation.ObservedAt = accepted.CollectionStartedAt.Time
+			observation.ObservedAt = accepted.CollectionStartedAt
 			if observation.ObservedAt.IsZero() {
-				observation.ObservedAt = accepted.ObservedAt.Time
+				observation.ObservedAt = accepted.ObservedAt
 			}
 			observation.Neighbors = make([]topology.GraphNeighbor, 0, len(accepted.Neighbors))
 			for _, neighbor := range accepted.Neighbors {
@@ -509,16 +574,16 @@ func hashTopologyGraphProvenance(provenance []topologyGraphProvenance, policy ..
 	return fmt.Sprintf("sha256:%x", digest)
 }
 
-func graphDeviceIdentity(device *ciscov1.CiscoDevice) (string, string) {
+func graphDeviceIdentity(device *topologyDevice) (string, string) {
 	if device.Status.NodeIdentity != nil && strings.TrimSpace(device.Status.NodeIdentity.PhysicalIdentity) != "" {
-		physicalID, err := topology.CanonicalPhysicalIdentity(device.Status.NodeIdentity.PhysicalIdentity)
+		physicalID, err := topologyidentity.CanonicalPhysicalIdentity(device.Status.NodeIdentity.PhysicalIdentity)
 		if err != nil {
 			return unboundGraphIdentity(device), "CiscoDevice manager-bound physical identity is invalid"
 		}
 		return physicalID, ""
 	}
 	if strings.TrimSpace(device.Spec.PhysicalIdentity) != "" {
-		physicalID, err := topology.CanonicalPhysicalIdentity(device.Spec.PhysicalIdentity)
+		physicalID, err := topologyidentity.CanonicalPhysicalIdentity(device.Spec.PhysicalIdentity)
 		if err != nil {
 			return unboundGraphIdentity(device), "CiscoDevice operator-declared physical identity is invalid"
 		}
@@ -527,8 +592,8 @@ func graphDeviceIdentity(device *ciscov1.CiscoDevice) (string, string) {
 	return unboundGraphIdentity(device), "CiscoDevice has no manager-bound physical identity"
 }
 
-func unboundGraphIdentity(device *ciscov1.CiscoDevice) string {
-	object := device.Namespace + "/" + device.Name
+func unboundGraphIdentity(device *topologyDevice) string {
+	object := device.Metadata.Namespace + "/" + device.Metadata.Name
 	identity := "unbound:" + object
 	if len(identity) <= topology.MaxGraphFieldLength {
 		return identity

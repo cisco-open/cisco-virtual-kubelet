@@ -32,10 +32,7 @@ import (
 	"testing"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	ciscov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
-	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
+	topology "github.com/cisco/virtual-kubelet-cisco/internal/topologygraph"
 )
 
 func TestParseTopologyGraphArgs(t *testing.T) {
@@ -122,20 +119,20 @@ func TestGraphPolicyKubectlHelperProcess(t *testing.T) {
 
 func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
 	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
-	acceptedAt := metav1.NewTime(now.Add(-time.Minute))
-	devices := []ciscov1.CiscoDevice{
+	acceptedAt := now.Add(-time.Minute)
+	devices := []topologyDevice{
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
-			Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "SERIAL-A"},
-			Status: ciscov1.DeviceStatus{
-				NodeIdentity: &ciscov1.DeviceNodeIdentityStatus{PhysicalIdentity: "serial-a"},
-				HealthObservation: &ciscov1.DeviceHealthObservationStatus{
-					Network: &ciscov1.DeviceNetworkObservationStatus{Complete: false, UnknownReason: "untrusted raw sample"},
-					AcceptedNetwork: &ciscov1.DeviceNetworkObservationStatus{
+			Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+			Spec:     topologyDeviceSpec{PhysicalIdentity: "SERIAL-A"},
+			Status: topologyDeviceStatus{
+				NodeIdentity: &topologyNodeIdentity{PhysicalIdentity: "serial-a"},
+				HealthObservation: &topologyHealthObservation{
+					Network: &topologyNetworkObservation{Complete: false, UnknownReason: "untrusted raw sample"},
+					AcceptedNetwork: &topologyNetworkObservation{
 						CollectionStartedAt: acceptedAt,
 						ObservedAt:          acceptedAt,
 						Complete:            true,
-						Neighbors: []ciscov1.DeviceNetworkNeighborObservation{{
+						Neighbors: []topologyNetworkNeighbor{{
 							Identity: "cdp-a-b", ID: "serial-b", Source: "cdp", Interface: "Gi1/0/1",
 							RemoteInterface: "Gi1/0/2", State: "up",
 						}},
@@ -144,11 +141,11 @@ func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "leaf-b", Namespace: "cvk-live"},
-			Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "SERIAL-B"},
-			Status: ciscov1.DeviceStatus{
-				NodeIdentity: &ciscov1.DeviceNodeIdentityStatus{PhysicalIdentity: "serial-b"},
-				HealthObservation: &ciscov1.DeviceHealthObservationStatus{AcceptedNetwork: &ciscov1.DeviceNetworkObservationStatus{
+			Metadata: topologyObjectMeta{Name: "leaf-b", Namespace: "cvk-live"},
+			Spec:     topologyDeviceSpec{PhysicalIdentity: "SERIAL-B"},
+			Status: topologyDeviceStatus{
+				NodeIdentity: &topologyNodeIdentity{PhysicalIdentity: "serial-b"},
+				HealthObservation: &topologyHealthObservation{AcceptedNetwork: &topologyNetworkObservation{
 					CollectionStartedAt: acceptedAt, ObservedAt: acceptedAt, Complete: true,
 				}},
 			},
@@ -170,21 +167,21 @@ func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
 
 func TestGraphProvenanceIsDeterministicAndAcceptedOnly(t *testing.T) {
 	now := time.Date(2026, 10, 2, 12, 0, 0, 123, time.UTC)
-	started := metav1.NewTime(now.Add(-time.Second))
-	ended := metav1.NewTime(now)
-	devices := []ciscov1.CiscoDevice{
+	started := now.Add(-time.Second)
+	ended := now
+	devices := []topologyDevice{
 		{
-			ObjectMeta: metav1.ObjectMeta{Name: "leaf-b", Namespace: "cvk-live", UID: "device-b", ResourceVersion: "12"},
-			Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "serial-b"},
-			Status: ciscov1.DeviceStatus{HealthObservation: &ciscov1.DeviceHealthObservationStatus{
-				Network: &ciscov1.DeviceNetworkObservationStatus{WorkerPodUID: "raw-must-not-appear", ProducerRevision: "raw"},
-				AcceptedNetwork: &ciscov1.DeviceNetworkObservationStatus{
+			Metadata: topologyObjectMeta{Name: "leaf-b", Namespace: "cvk-live", UID: "device-b", ResourceVersion: "12"},
+			Spec:     topologyDeviceSpec{PhysicalIdentity: "serial-b"},
+			Status: topologyDeviceStatus{HealthObservation: &topologyHealthObservation{
+				Network: &topologyNetworkObservation{WorkerPodUID: "raw-must-not-appear", ProducerRevision: "raw"},
+				AcceptedNetwork: &topologyNetworkObservation{
 					WorkerPodUID: "accepted-pod", ProducerRevision: "sha256:accepted", SampleSequence: 7,
 					CollectionStartedAt: started, CollectionEndedAt: ended, DeviceIdentityHash: "sha256:device",
 				},
 			}},
 		},
-		{ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"}, Spec: ciscov1.DeviceSpec{PhysicalIdentity: "serial-a"}},
+		{Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"}, Spec: topologyDeviceSpec{PhysicalIdentity: "serial-a"}},
 	}
 	_, provenance := graphInputsFromDevices(devices)
 	if len(provenance) != 2 || provenance[0].PhysicalID != "serial-a" || provenance[1].WorkerPodUID != "accepted-pod" {
@@ -194,7 +191,7 @@ func TestGraphProvenanceIsDeterministicAndAcceptedOnly(t *testing.T) {
 		t.Fatalf("raw worker sample entered provenance: %#v", provenance)
 	}
 	wantHash := hashTopologyGraphProvenance(provenance)
-	sort.Slice(devices, func(i, j int) bool { return devices[i].Name < devices[j].Name })
+	sort.Slice(devices, func(i, j int) bool { return devices[i].Metadata.Name < devices[j].Metadata.Name })
 	_, reordered := graphInputsFromDevices(devices)
 	if got := hashTopologyGraphProvenance(reordered); got != wantHash {
 		t.Fatalf("provenance hash changed after input reorder: got %s want %s", got, wantHash)
@@ -217,11 +214,11 @@ func mustJSON(t *testing.T, value any) []byte {
 
 func TestGraphFromDevicesFailsClosedWithoutAcceptedEvidence(t *testing.T) {
 	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
-	devices := []ciscov1.CiscoDevice{{
-		ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
-		Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "serial-a"},
-		Status: ciscov1.DeviceStatus{HealthObservation: &ciscov1.DeviceHealthObservationStatus{
-			Network: &ciscov1.DeviceNetworkObservationStatus{Complete: true, ObservedAt: metav1.NewTime(now)},
+	devices := []topologyDevice{{
+		Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+		Spec:     topologyDeviceSpec{PhysicalIdentity: "serial-a"},
+		Status: topologyDeviceStatus{HealthObservation: &topologyHealthObservation{
+			Network: &topologyNetworkObservation{Complete: true, ObservedAt: now},
 		}},
 	}}
 	graph, err := graphFromDevices(devices, now, 5*time.Minute)
@@ -246,8 +243,8 @@ func TestGraphFromDevicesFailsClosedWithoutAcceptedEvidence(t *testing.T) {
 
 func TestGraphFromDevicesReportsUnboundDeviceWithoutHidingFleet(t *testing.T) {
 	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
-	graph, err := graphFromDevices([]ciscov1.CiscoDevice{{
-		ObjectMeta: metav1.ObjectMeta{Name: "legacy", Namespace: "cvk-live"},
+	graph, err := graphFromDevices([]topologyDevice{{
+		Metadata: topologyObjectMeta{Name: "legacy", Namespace: "cvk-live"},
 	}}, now, 5*time.Minute)
 	if err != nil {
 		t.Fatalf("graphFromDevices() error = %v", err)
@@ -267,10 +264,10 @@ func TestGraphFromDevicesReportsUnboundDeviceWithoutHidingFleet(t *testing.T) {
 }
 
 func TestGraphDeviceIdentityCanonicalizesAndFailsClosed(t *testing.T) {
-	device := &ciscov1.CiscoDevice{
-		ObjectMeta: metav1.ObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
-		Spec:       ciscov1.DeviceSpec{PhysicalIdentity: "SERIAL-SPEC"},
-		Status: ciscov1.DeviceStatus{NodeIdentity: &ciscov1.DeviceNodeIdentityStatus{
+	device := &topologyDevice{
+		Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+		Spec:     topologyDeviceSpec{PhysicalIdentity: "SERIAL-SPEC"},
+		Status: topologyDeviceStatus{NodeIdentity: &topologyNodeIdentity{
 			PhysicalIdentity: "SERIAL-BOUND",
 		}},
 	}
@@ -288,7 +285,7 @@ func TestGraphDeviceIdentityCanonicalizesAndFailsClosed(t *testing.T) {
 }
 
 func TestUnboundGraphIdentityIsBounded(t *testing.T) {
-	device := &ciscov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{
+	device := &topologyDevice{Metadata: topologyObjectMeta{
 		Namespace: strings.Repeat("n", 63),
 		Name:      strings.Repeat("d", 253),
 	}}
@@ -314,7 +311,7 @@ func TestReadCiscoDevicesUsesScopedKubectlJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("readCiscoDevices() error = %v", err)
 	}
-	if len(devices) != 1 || devices[0].Name != "leaf-a" {
+	if len(devices) != 1 || devices[0].Metadata.Name != "leaf-a" {
 		t.Fatalf("devices = %#v", devices)
 	}
 }

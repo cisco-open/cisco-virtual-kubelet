@@ -14,6 +14,7 @@ namespace="edge-workloads"
 node_a="cvk-native-tas-a"
 node_b="cvk-native-tas-b"
 expected_context="${CVK_NATIVE_TAS_TEST_CONTEXT:-kind-cvk-native-tas}"
+heartbeat_pid=""
 
 fail() {
   echo "native TAS conformance: $*" >&2
@@ -42,6 +43,12 @@ done
 
 cleanup() {
   local cleanup_status=0
+
+  if [[ -n "$heartbeat_pid" ]]; then
+    kill "$heartbeat_pid" >/dev/null 2>&1 || true
+    wait "$heartbeat_pid" >/dev/null 2>&1 || true
+    heartbeat_pid=""
+  fi
 
   kubectl delete pod --all \
     --namespace "$namespace" --force --grace-period=0 \
@@ -126,20 +133,36 @@ EOF
 create_scheduler_node "$node_a" a site-a
 create_scheduler_node "$node_b" b site-b
 
-heartbeat="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-for node in "$node_a" "$node_b"; do
-  kubectl patch node "$node" --subresource=status --type=merge -p "{
-    \"status\":{
-      \"capacity\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
-      \"allocatable\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
-      \"conditions\":[{
-        \"type\":\"Ready\",\"status\":\"True\",\"reason\":\"ConformanceFixture\",
-        \"message\":\"synthetic native TAS scheduler fixture\",
-        \"lastHeartbeatTime\":\"${heartbeat}\",\"lastTransitionTime\":\"${heartbeat}\"
-      }]
-    }
-  }" >/dev/null
-done
+refresh_scheduler_nodes() {
+  local heartbeat node
+  heartbeat="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  for node in "$node_a" "$node_b"; do
+    kubectl patch node "$node" --subresource=status --type=merge -p "{
+      \"status\":{
+        \"capacity\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
+        \"allocatable\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
+        \"conditions\":[{
+          \"type\":\"Ready\",\"status\":\"True\",\"reason\":\"ConformanceFixture\",
+          \"message\":\"synthetic native TAS scheduler fixture\",
+          \"lastHeartbeatTime\":\"${heartbeat}\",\"lastTransitionTime\":\"${heartbeat}\"
+        }]
+      }
+    }" >/dev/null
+  done
+}
+
+# Synthetic Nodes have no kubelet to renew their status. Keep their heartbeat
+# current while uncached CI compiles the live integration guard; otherwise the
+# node lifecycle controller correctly marks them NotReady and adds a taint,
+# turning a scheduler assertion into a runner-speed race.
+refresh_scheduler_nodes
+(
+  while true; do
+    sleep 10
+    refresh_scheduler_nodes >/dev/null 2>&1 || true
+  done
+) &
+heartbeat_pid=$!
 kubectl wait --for=condition=Ready node/"$node_a" node/"$node_b" \
   --timeout=15s >/dev/null
 

@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 
-package topology
+package topologygraph
 
 import (
 	"bytes"
@@ -14,6 +14,8 @@ import (
 	"io"
 	"sort"
 	"strings"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyidentity"
 )
 
 const (
@@ -66,7 +68,7 @@ func ParseGraphPolicyDocument(raw string) (GraphPolicyDocument, error) {
 		document.PeerMappings[i].Source = strings.TrimSpace(document.PeerMappings[i].Source)
 		document.PeerMappings[i].ObservedPeer = strings.TrimSpace(document.PeerMappings[i].ObservedPeer)
 		document.PeerMappings[i].RoutingDomain = strings.TrimSpace(document.PeerMappings[i].RoutingDomain)
-		document.PeerMappings[i].PhysicalID, _ = CanonicalPhysicalIdentity(document.PeerMappings[i].PhysicalID)
+		document.PeerMappings[i].PhysicalID, _ = topologyidentity.CanonicalPhysicalIdentity(document.PeerMappings[i].PhysicalID)
 	}
 	sort.Slice(document.PeerMappings, func(i, j int) bool {
 		return canonicalJSON(document.PeerMappings[i]) < canonicalJSON(document.PeerMappings[j])
@@ -118,11 +120,11 @@ func validatedDeclaredLinks(links []DeclaredLink, limit int) ([]DeclaredLink, er
 	normalized := make([]DeclaredLink, 0, len(links))
 	seen := make(map[string]struct{}, len(links))
 	for i, link := range links {
-		local, err := CanonicalPhysicalIdentity(strings.TrimSpace(link.Local))
+		local, err := topologyidentity.CanonicalPhysicalIdentity(strings.TrimSpace(link.Local))
 		if err != nil {
 			return nil, fmt.Errorf("topology declared link %d local: %w", i, err)
 		}
-		peer, err := CanonicalPhysicalIdentity(strings.TrimSpace(link.Peer))
+		peer, err := topologyidentity.CanonicalPhysicalIdentity(strings.TrimSpace(link.Peer))
 		if err != nil {
 			return nil, fmt.Errorf("topology declared link %d peer: %w", i, err)
 		}

@@ -3,7 +3,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 
-package topology
+package topologygraph
 
 import (
 	"crypto/sha256"
@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyidentity"
 )
 
 const (
@@ -348,7 +350,7 @@ func validatedPeerMappings(mappings []PeerIdentityMapping, limit int) (map[strin
 		if len(source) > MaxGraphFieldLength || len(observedPeer) > MaxGraphFieldLength || len(routingDomain) > MaxGraphFieldLength {
 			return nil, fmt.Errorf("topology peer mapping field exceeds %d bytes", MaxGraphFieldLength)
 		}
-		physicalID, err := CanonicalPhysicalIdentity(mapping.PhysicalID)
+		physicalID, err := topologyidentity.CanonicalPhysicalIdentity(mapping.PhysicalID)
 		if err != nil {
 			return nil, fmt.Errorf("topology peer mapping %d physicalID: %w", i, err)
 		}
