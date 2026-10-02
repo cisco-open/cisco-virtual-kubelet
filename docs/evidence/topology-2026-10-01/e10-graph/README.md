@@ -1,8 +1,70 @@
 # E10 read-only physical topology graph diagnostic
 
 Status: **partial PASS**, 2 October 2026. This record qualifies the read-only
-runtime consumer and its fail-closed behavior. It does not qualify declared
-topology drift, path health, disruption authority, or E10 as a whole.
+runtime consumer, trusted physical peer mappings, declared-link comparison and
+its fail-closed behavior. It does not qualify a physical link change, path
+health, disruption authority, or E10 as a whole.
+
+## Exact-candidate declared graph qualification
+
+Candidate `34050731` was built for Linux/amd64, imported on Ubuntu16 and
+deployed as Helm revision `133`; policy-only mismatch and restoration were
+revisions `134` and `135`. The OCI index digest was
+`sha256:6054289bea0d49ab2399d4dfc45561415aca55d496b22cd4351053ba61d7fef9`,
+the runtime image config digest was
+`sha256:11659ad436dc5e95410e4e9f92ed9186e6f7e1a61a76f5070094c67a8f22d208`,
+the packaged chart SHA-256 was
+`9118dfff408df59d93aa6953b09510dd637ac87bc42b8a9bb8d9b8105cbcc7a0`,
+and the Linux plugin SHA-256 was
+`d30daafa5c6c8cc5432e4d7d9febfb05acc5b87d7d8afbfb6e911cc9924213dc`.
+
+The graph declaration was added as `graph.json` to the existing protected
+policy ConfigMap. Its Kubernetes UID remained
+`525ff87f-b74a-44c4-b54e-408e63a3a2e7`. The byte hash of `policy.json` was
+`a5e4d349b65a3a190ea846c6c472771671bc612cb79fa569f0e6b5dda41a5603`
+before deployment, after the graph was added, and after the negative test was
+restored. This proves the diagnostic input did not change rollout policy or
+approval authority. The graph ConfigMap proof is separately carried in CLI
+output.
+
+The manager and all six physical-C9K app/network workers converged to the exact
+image config digest above. The first strict CLI attempts correctly failed
+closed while replacement network Pods had not yet published manager-accepted
+samples. After all three new Pod identities were accepted, the unchanged
+command passed:
+
+```console
+sudo /tmp/kubectl-ciscovk-34050731 topology graph \
+  -n cvk-live \
+  -l topology.cisco.vk/managed=true \
+  --policy-configmap \
+    cisco-vk-system/cisco-vk-cisco-virtual-kubelet-topology-policy \
+  --kubeconfig /etc/rancher/k3s/k3s.yaml \
+  --kubectl /usr/local/bin/kubectl \
+  --max-age 10m -o json --require-complete
+```
+
+The result contained five physical/external identities, nine CDP edges and no
+diagnostics. Every managed peer was keyed by manager-bound chassis serial,
+each protocol hostname was retained separately as `ObservedPeer`, and every
+edge retained its local and remote port. The initial successful evidence hash
+was `sha256:90d659d68a01259fdc6c1bbaf2cb56ce675a910449fb09a8a74f0d8a646dec30`;
+the graph-policy content hash was
+`sha256:90aaacdb5b2a39f93741aeefe17d5c0f1c28b15bf922dd6c60706a0fb9e63996`.
+
+A non-disruptive declaration-only fault changed the expected local side of
+the `foc2520l6e8` to `foc2520l6h1` link from `GigabitEthernet1/0/1` to the
+nonexistent `GigabitEthernet1/0/99`. `--require-complete` returned status `1`
+and exactly two diagnostics: `DeclaredLinkMissing` (Error) and
+`UnexpectedObservedLink` (Warning). Restoring the original declaration
+returned `complete=true`, nine edges, zero diagnostics, and the original graph
+policy content hash. No device configuration, port, topology label, rollout,
+approval, credential, Lease or ledger was changed.
+
+The final state was Helm revision `135`; all three physical Nodes were Ready
+and untainted, every physical app/network worker was Ready on the exact image
+config digest, no active maintenance/topology Lease was present, and admission
+type checking reported no expression warnings.
 
 ## Exact-candidate remote-interface qualification
 
@@ -107,6 +169,10 @@ error: topology graph is incomplete; inspect diagnostics
 - [`graph-remote-interface.json`](graph-remote-interface.json) is the exact
   `e5660db4` structured output after all physical workers converged, SHA-256
   `ab2bec2f0bcaf97ec54671fde410055564e26a6d832331ab187400949e790539`.
+- [`graph-declared-mismatch.json`](graph-declared-mismatch.json) is the exact
+  fail-closed declaration-fault output from `34050731`.
+- [`graph-declared-restored.json`](graph-declared-restored.json) is the exact
+  successful output after restoring the declared port.
 - `evidenceHash` covers normalized graph content. `provenanceHash` separately
   covers the four manager-accepted device/sample identities and collection
   intervals recorded in `observations`; neither is disruption authority.
@@ -116,16 +182,17 @@ error: topology graph is incomplete; inspect diagnostics
 
 ## Qualification boundary and next tests
 
-This run proves that the CLI reaches real manager-accepted physical evidence,
-retains incomplete/unbound inventory, produces deterministic bounded output,
-and can fail automation closed. It also exposes the next required design work:
+These runs prove that the CLI reaches real manager-accepted physical evidence,
+retains incomplete/unbound inventory, maps protocol peer names only through
+administrator-owned identity evidence, compares exact declared ports, produces
+deterministic bounded output, and can fail automation closed. Remaining work:
 
-1. add a manager-approved, provenance-carrying mapping from protocol peer
-   identities to bound physical identities; never trust CDP names alone;
-2. accept bounded administrator-declared links for drift comparison without
-   allowing discovery to rewrite policy;
-3. complete maximum diagnostic/declaration and declared-link CLI fixtures;
-4. disable and restore an isolated lab link, collect fresh accepted samples,
+1. finish broader protocol/VRF/LAG and maximum-bound real-API fixtures;
+2. test stale-input expiry and manager restart with the declared graph;
+3. deny unauthorized accepted-diagnostic writes through the live API;
+4. disable and restore an explicitly isolated lab link, collect fresh samples,
    and prove the drift appears and clears without changing authorization.
 
-Until those steps pass, E10-B–D and complete E10 acceptance remain open.
+The declaration-only fault is not a substitute for E10-B's physical isolated
+link change. Until the remaining steps pass, complete E10 acceptance remains
+open.

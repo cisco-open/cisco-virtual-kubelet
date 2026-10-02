@@ -1,7 +1,7 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete; implemented and reviewed through `6fab26f5` plus the
-read-only graph diagnostic increment**, 2 October 2026.
+Status: **incomplete; implemented and reviewed through `34050731`**, 2 October
+2026.
 Start with the [November handoff](topology-november-handoff.md) and
 [versioned evidence](evidence/topology-2026-10-01/README.md). The checkpoint
 preserves runtime/harness changes after `665a7954`; it is not a release candidate.
@@ -142,7 +142,7 @@ remains the completion ledger.
 | T5 | `.101` leaf records ordered device-clean completion and settled maintenance; replacement Pods ready; delayed API cleanup markers correlated offline | E07: close missing log-plane evidence, prove service/traffic continuity, hard-placement blocking, restart/cancel recovery and broader workload eligibility; this is partial evidence, not full drain qualification. |
 | T6 | Synthetic co-location/conflict evidence exists; full scheduler and physical group lifecycle absent | E08: raw group-field recognition before expanding drain, remaining scheduler scenarios, native controller recreation, physical service and group-aware drain tests. |
 | T7 | Existing ephemeral cache only | E09: measure both transfer segments; implement durable prefetch/PVC cache only when its decision gate passes, then qualify failures. |
-| T8 | Bounded helper plus a read-only `kubectl ciscovk topology graph` consumer; accepted manager evidence, authenticated collection freshness, duplicate identities and three-way conflicts fail closed. Candidate `e5660db4` physically proved that all nine accepted CDP edges retain remote-port identity. The next increment adds strict administrator-declared peer mappings/links as a separate `graph.json` key in the admission-protected topology-policy ConfigMap, explicit managed-fleet selection, ConfigMap provenance and least-privilege graph-viewer RBAC without changing rollout hashes. | E10: physically qualify the trusted mappings/declarations, finish remaining diagnostic-boundary fixtures, then perform a controlled isolated link change/restore. Do not infer path health or grant disruption authority from the graph. |
+| T8 | Bounded helper plus a read-only `kubectl ciscovk topology graph` consumer; accepted manager evidence, authenticated collection freshness, duplicate identities and three-way conflicts fail closed. Candidate `e5660db4` physically proved remote-port retention. Candidate `34050731` physically proved strict administrator mappings/declarations, protected ConfigMap provenance, managed-fleet selection, unchanged rollout-policy hash and fail-closed declaration drift/restoration across all three C9Ks. | E10: finish broader protocol/VRF/LAG and real-API boundary fixtures, then perform a controlled isolated physical link change/restore. Do not infer path health or grant disruption authority from the graph. |
 | T9 | Second-platform qualification absent | E11: probe a suitable platform, qualify its lifecycle and record the public-API decision. Unsupported hardware leaves this gate open. |
 | T10 | Legacy handoff/convergence hardened; broader ownership and scale remain | E12: measure the supported envelope and test controlled single-cluster/offline handoff including staged/uncertain operations. Three switches do not prove fleet scale. |
 
