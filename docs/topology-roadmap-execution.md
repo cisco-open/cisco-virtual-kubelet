@@ -26,7 +26,26 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
-### Latest checkpoint (2 October 2026, reviewed after final CI)
+### Latest merge-gap follow-up (2 October 2026)
+
+`80ff447f` fences staged lifecycle intent from the actual October worker;
+`e7bc6013` fixes its formatting gate; `97509903` adds the immutable managed
+network-evidence requirement and its worker protocol. The full race suite,
+42 pinned real-API tests, released-worker probe, generation, strict docs and
+native shared-account admission tests passed locally. All six remote checks
+also passed on `97509903` in run `37018395965`; later heads require their own
+checks. The physical acceptance matrix remains a separate gate. The lab runtime is still
+`6f3686e9`; do not attribute its physical results to these newer binaries.
+
+R1 is only partially closed: new grants fail closed across the tested worker
+boundary, but stored-list migration, reverse-manager deployment and rollback
+qualification remain. R3 still lacks explicit receipt invalidation/recovery.
+R2/R4/R9 need independent path/service evidence and the complete separately
+approved physical lifecycle matrix. The wider roadmap remains as enumerated
+below. See the [detailed follow-up](evidence/topology-2026-10-02/merge-readiness-followup.md)
+for test provenance, the failed app fixture and its cleanup disposition.
+
+### Earlier checkpoint (2 October 2026, reviewed after final CI)
 
 This checkpoint supersedes older “current” snapshots below while retaining
 their historical evidence and the complete E00–E13 acceptance definitions.
@@ -89,7 +108,9 @@ Execution follow-up: [staged-protocol safety and app preflight](evidence/topolog
 An actual released-worker compatibility hole was repaired and tested, but R1
 is not wholly closed. Fresh `.101` inventory shows USB-backed IOx, correcting
 the older absent-storage assumption. A second-replica activation then timed
-out and retained its lease; normal cleanup and diagnosis precede further
+out and retained its lease. Normal cleanup completed after expiry, with native
+app absence, an empty-holder Lease and the baseline workload restored. The
+activation diagnosis and fixture qualification still precede further
 disruption. Do not call this an expected unsigned/no-storage failure.
 
 **Deliverable:** a new run directory under `docs/evidence/` containing a

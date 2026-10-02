@@ -81,6 +81,7 @@ The pinned released-worker test covers both Reload and PrepareOnly.
 | Topology Helm render contract | PASS |
 | Strict MkDocs and actionlint v1.7.12 | PASS |
 | Native shared-worker admission on isolated pinned Kubernetes 1.35 | PASS on `80ff447f`; retained Lease bootstrap, rotation, cross-plane denial and reserved-resource deletion |
+| Native shared-worker admission repeated on `97509903` | PASS on the network-protocol candidate in a separate disposable cluster |
 
 The subsequent network-protocol change also passed the full race suite and
 all 42 top-level real-API tests. The real-API protocol test now includes
@@ -88,7 +89,14 @@ missing network authority, both legacy protocols, and a complete compatible
 positive grant. The released-worker probe covers both strategies and both new
 protocol markers. The first pushed CI run failed only its gofmt gate; the
 one-line formatting correction was pushed as `e7bc6013`. A later candidate's
-remote checks must still pass before merging.
+remote checks must still pass before merging. All six checks subsequently
+passed on runtime commit `97509903` in
+[run 37018395965](https://github.com/cisco-open/cisco-virtual-kubelet/actions/runs/37018395965):
+build-and-smoke, native TAS conformance, Helm 4 compatibility, govulncheck,
+Terraform provider and YANG generation. This includes both controller image
+architectures and the fixed HIGH/CRITICAL image vulnerability gates. Any
+subsequent documentation-only commit is a separate head/check run; green CI
+does not close the outstanding physical or recovery-design gates below.
 
 Candidate remote CI and deployment/physical lifecycle tests are separate
 gates; earlier `c024e040` green checks must not be relabelled as this fix's CI.
@@ -129,7 +137,8 @@ lease for its full safety duration; subsequent retries correctly did not
 acquire it. The device's exact app detail also reported `DEPLOYED`, with no
 attached network interfaces. The filtered device log confirmed installation
 but did not establish why activation failed. This is **not** established as a
-signature failure, successful deployment or settled device outcome.
+signature failure or successful deployment; settlement was established only
+by the later cleanup below.
 
 A further `show app-hosting resource` returned 25% available CPU, 2048 MB
 available memory and 55331 MB available storage, with no other app listed.
@@ -138,12 +147,22 @@ This does not support simple aggregate resource exhaustion as the diagnosis;
 it also does not prove the network configuration or every activation
 prerequisite is valid.
 
-The Deployment's original zero-replica intent was restored. Cleanup must pass
-through normal CVK reconciliation and the retained lease, not force deletion
-or fence removal. Until native app absence and lease settlement are recorded,
-`.101` must not receive further disruptive work. Preserve the failed Pod UID
-and correlated app ID in the local raw record for diagnosis. No new OS
-upgrade/downgrade was submitted in this follow-up.
+The Deployment's original zero-replica intent was restored. The retained lease
+expired at 14:22:16 UTC; the worker's normal exponential-backoff retry submitted
+uninstall at 14:32:42 UTC and acknowledged complete cleanup at 14:32:47 UTC.
+Final native inventory returned **No App found** on
+`.101`, and the mutation Lease retained its identity but had no holder or
+renewal/duration fields. No Lease, finalizer, package archive or receipt was
+force-deleted. Only the temporary failed test app was uninstalled; the original
+package remains available for diagnosis/redeployment.
+
+The final three-device read-only operations all succeeded: all three still run
+17.18.03 with running IOx services and Ready virtual Nodes. The original app
+on `.100` remains Running and its externally checked HTTP endpoint returns
+200. The second Deployment is back at zero replicas. This closes cleanup,
+**not** the failed activation or E07 service-continuity gate. Preserve the
+failed Pod UID and correlated app ID in the local raw record for diagnosis.
+No new OS upgrade/downgrade was submitted in this follow-up.
 
 ## Evidence locations
 
@@ -160,6 +179,12 @@ Secret-free test outputs and raw lab captures are retained locally:
 | `/tmp/cvk-merge-network-envtest.log` | `f603364b562d87185a8a721e77846efa0c414aca4a1a5c3e07f2f6241ba287d7` |
 | `/tmp/cvk-merge-network-compat.log` | `bc8ada063f727b1b4575f4f64bbfc1c617d304b8bf5db8397c3b1a10f482abf7` |
 | `/tmp/cvk-merge-shared-worker.log` | `53ef2cbe6e721a36f1b918a0e58a87eac3c3da0dc31f88f32606c26cad89e1a4` |
+| `/tmp/cvk-merge-network-shared-worker.log` | `c874eaa60bb92b023858365dafb54496277b2e70513b6b8e5c119df92d78f0e4` |
+| `/tmp/cvk-merge-network-protocol-envtest-final.log` | `5f7f4dc18797001c429327176dcb6c64b29c36b0997086678f3a40ceb8fd0a1f` |
+| `/tmp/cvk-merge-final-health-results.json` | `0f6e11d59369b410c8418eae9e3007c66682e238a6260015a1e34dad65e671db` |
+| `/tmp/cvk-merge-final-cluster-health.txt` | `4f70b235a51d099f206f355760e7caf59f6f1ee08b901449f6603db44725cdf0` |
+| `/tmp/cvk-merge-app-final-cleanup.log` | `1acd65dde07d92d4b9dd74aa69ad541a14059713d11e72eb8dc455f384b9a7f6` |
+| `/tmp/cvk-merge-app-final-cleanup-complete.log` | `fd5faee7e15af5b674c85a8cb5871f21c7968d65f18e1f7e056717c4849369da` |
 
 Additional live diagnosis is in `/tmp/cvk-merge-app-startup.txt`,
 `/tmp/cvk-merge-app-diagnosis.json` and `/tmp/cvk-merge-active-leases.json`.
@@ -168,8 +193,8 @@ not suitable for publication without review/redaction.
 
 ## Next merge blockers, in order
 
-1. Reconcile `.101` app activation and normal cleanup; preserve the fence until
-   safe. Qualify a portable HTTP fixture and spare eligible capacity.
+1. Diagnose `.101` app activation; normal cleanup is now verified. Qualify a
+   portable HTTP fixture and spare eligible capacity before new disruptions.
 2. Complete R1 stored-object/reverse-manager migration and rollback tests.
 3. Complete R3 safe native image invalidation/recovery, not a force-clear path.
 4. Qualify the independent traffic/redundancy/congestion fixture, then actual
