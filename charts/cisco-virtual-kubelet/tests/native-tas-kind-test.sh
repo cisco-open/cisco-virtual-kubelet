@@ -2,7 +2,8 @@
 
 # Exercise the optional Kubernetes 1.37 Workload/PodGroup topology-aware
 # scheduler against the exact checked-in CVK example. The caller owns the
-# disposable kind cluster; this script never installs a CVK runtime component.
+# disposable kind cluster. The script also executes CVK's drain guard against
+# a served scheduling-group Pod; it does not install a CVK runtime component.
 
 set -euo pipefail
 
@@ -206,6 +207,14 @@ site="$(kubectl get node "$first_node" \
   -o jsonpath='{.metadata.labels.topology\.cisco\.vk/site}')"
 [[ -n "$site" ]] || fail "selected Node has no topology.cisco.vk/site label"
 wait_for_group_condition edge-workers-0 True Scheduled
+
+# Exercise the production CVK guard through a real Kubernetes 1.37 API read.
+# This must happen before replacement tests mutate the group fixture.
+CVK_NATIVE_TAS_TEST_CONTEXT="$expected_context" \
+CVK_NATIVE_TAS_GUARD_NAMESPACE="$namespace" \
+CVK_NATIVE_TAS_GUARD_POD="edge-worker-0" \
+  go test -tags native_tas_integration -count=1 \
+    ./internal/controller -run '^TestNativeTASServedSchedulingGroupGuard$'
 
 # Recreate one member after the group initially schedules. The replacement
 # must retain the group's selected topology rather than silently scheduling in

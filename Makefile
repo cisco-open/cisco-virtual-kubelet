@@ -124,7 +124,9 @@ test-envtest: ## Run envtest real-apiserver smoke tests (requires setup-envtest 
 		exit 1; \
 	}
 	@KUBEBUILDER_ASSETS="$$(setup-envtest use 1.35.0 -p path)" \
-		$(GO_BIN) test -tags envtest -count=1 -v ./internal/provider/ ./internal/controller/ -run TestEnvtest_
+		$(GO_BIN) test -tags envtest -count=1 -v \
+			./internal/provider/ ./internal/controller/ ./internal/topologyrollout/ \
+			-run TestEnvtest_
 
 lint: ## Run linter
 	@if command -v golangci-lint >/dev/null 2>&1; then \
