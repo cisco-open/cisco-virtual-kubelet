@@ -1,16 +1,17 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete; implemented and reviewed through `34050731`**, 2 October
-2026.
-Start with the [November handoff](topology-november-handoff.md) and
-[versioned evidence](evidence/topology-2026-10-01/README.md). The checkpoint
-preserves runtime/harness changes after `665a7954`; it is not a release candidate.
+Status: **incomplete; implementation reviewed through `ddc02b82`, evidence
+through `a5b4a702`**, 2 October 2026.
+Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-0249-utc),
+the [current physical evidence](evidence/topology-2026-10-02/README.md), and
+the [November handoff](topology-november-handoff.md). The earlier
+[versioned evidence](evidence/topology-2026-10-01/README.md) remains historical.
 Working branch:
 `pr/johalley/tas-extentions`. Baseline: `15c14d7d`, after PRs
 #190, #191, #192, #193, and #194 merged. Implementation and qualification
-gaps remain in T0–T10, including correctness issues in the bounded observation
-slice. The existing combined lifecycle does not meet the independent
-preparation/activation completion criterion.
+gaps remain in T0–T10. Bounded manager-accepted observation and the physical
+install-only/retained-receipt boundary have advanced; the existing combined
+lifecycle still does not meet the independent activation completion criterion.
 
 The [execution plan](topology-roadmap-execution.md) is the actionable companion
 to this design: it identifies ordered work packages, code ownership, tests,
