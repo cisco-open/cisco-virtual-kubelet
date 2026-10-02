@@ -49,7 +49,8 @@ signed checksum authority, and installs the plugin:
 set -euo pipefail
 
 # Set this to an asset-bearing release shown on the Releases page.
-VERSION=v2026.9.2
+# October must be published first; otherwise select the published v2026.9.2.
+VERSION=v2026.10.0
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 case "$OS" in
   darwin|linux) ;;
@@ -293,7 +294,7 @@ cisco-vk --version
 Both print the same release provenance:
 
 ```text
-cisco-vk v2026.9.2 (commit=<full-git-commit>, built=<RFC3339-time>)
+cisco-vk v2026.10.0 (commit=<full-git-commit>, built=<RFC3339-time>)
 ```
 
 A direct development build reports `devel` and may report `unknown` metadata.

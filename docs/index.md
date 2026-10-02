@@ -21,7 +21,7 @@ Four ideas you'll see referenced throughout the docs:
   on the device alongside normal network functions.
 - **Network as Code CRDs** - Kubernetes resources such as `IOSXEConfig`,
   `NXOSConfig`, `IOSXEConfigBundle`, `IOSXETelemetry`, `DeviceOperation`, and
-  `IOSXESoftwareUpgrade` that express device configuration, telemetry,
+  `IOSXESoftwareUpgrade` and `IOSXESoftwareRollout` that express device configuration, telemetry,
   diagnostics, and operations as Kubernetes API objects. The generic
   `NetworkController` and `NetworkControllerConfig` scaffold extends the same
   approach to controller-centric models, but requires a matching registered
@@ -70,7 +70,7 @@ Kubernetes API
   NX-OS starts with per-device `NXOSConfig` over NX-API REST/DME.
 - **Controller extension scaffold (Alpha)** - generic `NetworkController`
   endpoint and `NetworkControllerConfig` intent APIs with an isolated-worker
-  registry. The September image registers zero product adapters and the
+  registry. The current scaffold registers zero product adapters and the
   boundary is report-only; it cannot apply, prune, or remotely delete state.
 - **Operations and upgrades** - read-only diagnostics, gNOI probes,
   write-class operational actions, and multi-phase IOS-XE software upgrades
@@ -79,6 +79,18 @@ Kubernetes API
   identity and protected topology labels for the default scheduler, plus
   bounded IOS-XE campaigns across independent failure domains. This path uses
   native Kubernetes admission/RBAC and no third-party scheduler or operator.
+- **Topology-aware image selection** - freeze each target's source URL,
+  digest and Secret identity in an approved `IOSXESoftwareRollout`; canaries,
+  domain budgets and recovery bound the combined upgrade/downgrade workflow.
+- **Secure IOS-XE gNOI** - isolated verified TLS, secure-password metadata and
+  opt-in CSR-based OS-service certificate provisioning. Read-only OS.Verify
+  never installs certificates; app-hosting and gNMI trust are not bypassed.
+- **PDB-aware drain (development preview)** - optional Kubernetes Eviction for
+  explicitly eligible workloads, with device-clean and recovery evidence;
+  disabled by default and not a zero-downtime or general evacuation promise.
+- **Two functional managed identities** - shared app-hosting and
+  network-management ServiceAccounts with read-only/read-write role options;
+  native admission and exact worker binding complement RBAC.
 - **Observability built in** - Prometheus metrics for device CPU, memory,
   storage, and interfaces; OpenTelemetry topology traces with CDP, OSPF, and
   hosted-app context; node annotations carrying router ID, hostname, and
@@ -92,6 +104,26 @@ Kubernetes API
 For the topology ownership model, scheduler examples, rollout workflow,
 security boundary, and deferred roadmap, see
 [Managed topology and topology-aware IOS-XE rollouts](topology-awareness.md).
+
+## What is new for October
+
+The [October release notes](releases/v2026.10.0.md) describe changes since
+published `v2026.9.2`; `main` remains a candidate until publication. The
+[readiness ledger](releases/v2026.10.0-readiness.md) tracks unresolved release gates.
+
+Native Kubernetes scheduling and CVK rollout admission are separate decisions:
+
+| Scenario | Native Kubernetes / CVK behavior | What is not inferred |
+| --- | --- | --- |
+| Place applications in sites/racks | Scheduler affinity and spread use protected, declared Node topology | Whether redundant network paths are currently healthy |
+| Upgrade a declared failure domain | CVK freezes targets, approval, canaries and domain/concurrency budgets | Link oversubscription, automatic maintenance windows for critical services or zero outage |
+| Choose a nearby image server | CVK matches topology-specific image sources and freezes URL/digest/Secret identity | A durable shared image cache or measured cheapest network path |
+| Relocate eligible applications before reload | Preview PDB-aware Eviction plus device inventory/recovery checks | Universal workload portability, arbitrary hard placement or endpoint continuity |
+
+Managed topology needs Kubernetes 1.35+. Native 1.37 TAS remains an optional
+experimental scheduler lane, not a mandatory component. Independent durable
+staging/activation, discovered-graph admission, utilization/critical-service
+gates and broader platform/group lifecycle are future work, not October claims.
 
 ## Status
 
@@ -109,7 +141,7 @@ This project is under active development and is published as open source under
   app-hosting and an NX-API REST/DME `NXOSConfig` runtime slice; `FAKE` is for
   testing; `XR` and `OPENCONFIG` are reserved driver names in the API surface.
 - **Controller adapters** - the generic Alpha controller CRDs and
-  isolated-worker scaffold are installed, but the September image contains no
+  isolated-worker scaffold are installed, but the current scaffold contains no
   product adapter. It does not integrate Catalyst Center or another external
   controller.
 - **Images and chart** - signed monthly images are published at
@@ -134,10 +166,13 @@ summarises the current release state.
 |---|---|---|
 | Pod lifecycle (App-Hosting create / update / delete) | **Stable** | Supported on Catalyst 8000V 17.15+, Catalyst 9000 17.18+, IR1100 Series 17.12+, and IE3500 Series 17.18+. |
 | `CiscoDevice` and VK deployment lifecycle | **Stable** | Controller-managed per-device VK pods. |
-| **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. Zero adapters ship in September; the boundary is report-only and does not integrate an external controller. |
+| **Network controller scaffold** (`NetworkController`, `NetworkControllerConfig`) | **Alpha** | Generic endpoint, controller-centric Network as Code intent, registry, and isolated-worker contracts. Zero adapters ship; the boundary is report-only and does not integrate an external controller. |
 | **Network as Code config driver** (`IOSXEConfig`, `NXOSConfig`) | **Beta** | Declarative IOS-XE and NX-OS config CRDs with drift detection and verification. IOS-XE also provides revision/apply-log history and broader family coverage; NX-OS starts with `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` over NX-API REST/DME, without revision rollback. Schema is `v1alpha1`; family coverage and wire-format behaviour are still expanding. |
 | **Operations** (`DeviceOperation`, `IOSXEOperationalAction`) | **Beta** | Read-only diagnostics and gNOI probes are stable in intent; write-class actions require an explicit runtime gate and carry additional operational risk. |
 | **Software Lifecycle** (`IOSXESoftwareUpgrade`) | **Beta** | Content-addressed gNOI install/activate/verify with optional IOS-XE RESTCONF device-file registration. Disabled by default; unsupported or ambiguous native lifecycle state fails closed. |
+| **Managed topology / campaigns** (`IOSXESoftwareRollout`) | **Alpha / opt-in** | Protected Node identity, native scheduling and separately coordinated combined IOS-XE rollouts with frozen sources. Kubernetes 1.35+; no generic NX-OS/IOS-XR rollout API. |
+| **PDB-aware drain** | **Development preview** | Disabled by default; limited workload eligibility and outstanding physical/service qualification. Not a production continuity guarantee. |
+| **Native TAS** | **Experimental** | Separate Kubernetes 1.37 scheduler-conformance lane; not full physical CVK group-lifecycle qualification. |
 | **Telemetry** (`IOSXETelemetry`) | **Beta** | MDT-over-gNMI subscriptions converted to OpenTelemetry signals. Pipeline architecture is stable; subscription schema is `v1alpha1`. |
 | Observability (Prometheus metrics, OTEL topology traces) | **Beta** | Metrics catalog and trace shapes may change between releases. |
 
@@ -150,7 +185,7 @@ summarises the current release state.
 
 !!! warning "Alpha scaffold"
     These APIs are not a usable product integration by themselves. The
-    September image has no adapter and no remote-mutation runtime. Treat the
+    current scaffold has no adapter and no remote-mutation runtime. Treat the
     exact endpoint string within one namespace as the duplicate-fencing key;
     the namespace remains the Kubernetes trust and RBAC boundary.
 
@@ -158,6 +193,7 @@ summarises the current release state.
 
 - [Getting Started](getting-started.md) - first deployment path
 - [Architecture](ARCHITECTURE.md) - how the pieces fit together
+- [Managed Topology and Rollouts](topology-awareness.md) - native Pod placement, campaign approval, image sources, budgets, identity migration and preview drain
 - [Network Controller Extensions](controller-extension-guide.md) - add controller-centric Network as Code adapters safely
 - [CLI & Plugin Reference](cisco-vk-cli.md) - install and use the optional
   `kubectl-ciscovk` operator plugin

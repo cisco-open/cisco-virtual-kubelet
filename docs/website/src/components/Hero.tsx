@@ -51,7 +51,7 @@ export default function Hero() {
             transition={{ duration: 0.7, delay: 0.3 }}
             className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-tight"
           >
-            Deploy Containers to
+            Bring Kubernetes to
             <br />
             <span className="gradient-text">Cisco Network Devices</span>
           </motion.h1>
@@ -67,9 +67,10 @@ export default function Hero() {
             <span className="text-foreground font-medium">
               Virtual Kubelet provider
             </span>{" "}
-            that enables Kubernetes to schedule container workloads on Cisco
-            Catalyst series switches and IOS-XE devices — with Beta support for
-            Cisco Nexus (NX-OS) switches — that offer App-Hosting capabilities.
+            for app-hosted workloads, declarative configuration and opt-in
+            topology-aware IOS-XE software upgrades. Use native Kubernetes
+            placement and secure gNOI workflows; NX-OS app-hosting and
+            configuration remain Beta.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -108,7 +109,7 @@ export default function Hero() {
               <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-surface-light/50">
                 <Terminal className="w-4 h-4 text-text-muted" />
                 <span className="text-xs text-text-muted font-mono">
-                  Quick Install
+                  October Install — after publication (use 2026.9.2 until then)
                 </span>
               </div>
               <pre className="text-left">
@@ -124,7 +125,7 @@ export default function Hero() {
                   <span className="text-accent-light"> \</span>
                   {"\n  "}
                   <span className="text-accent-light">--version</span>{" "}
-                  <span className="text-foreground">2026.9.2</span>{" "}
+                  <span className="text-foreground">2026.10.0</span>{" "}
                   <span className="text-accent-light">\</span>
                   {"\n  "}
                   <span className="text-accent-light">--namespace</span>{" "}

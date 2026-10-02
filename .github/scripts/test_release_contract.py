@@ -251,7 +251,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("render_github_release_notes.py", runbook)
         self.assertIn('--rawfile body "$release_notes"', runbook)
         self.assertIn(
-            "I approve Cisco Virtual Kubelet v2026.9.2 for release from commit",
+            "I approve Cisco Virtual Kubelet v2026.10.0 for release from commit",
             runbook,
         )
         self.assertIn("approved release-signing identity", runbook)
@@ -262,6 +262,39 @@ class ReleaseContractTests(unittest.TestCase):
                 tag="v2026.9.2",
                 repository="cisco-open/cisco-virtual-kubelet",
             )
+
+    def test_october_release_metadata_and_upgrade_scope(self) -> None:
+        chart = (ROOT / "charts/cisco-virtual-kubelet/Chart.yaml").read_text()
+        runbook = (ROOT / "RELEASE.md").read_text()
+        self.assertIn('appVersion: "v2026.10.0"', chart)
+        self.assertIn("version: 0.1.0", chart)  # release packaging stamps CalVer
+        self.assertIn("release_version=v2026.10.0", runbook)
+        self.assertIn("v2026.9.2..HEAD", runbook)
+        self.assertIn("docs/releases/v2026.10.0.md", runbook)
+        self.assertIn("2026.10.1", runbook)  # immutable-tag recovery version
+        for name in ("ciscodevices.cisco.vk", "iosxesoftwareupgrades.ops.cisco.vk",
+                     "iosxeoperationalactions.ops.cisco.vk", "iosxesoftwarerollouts.ops.cisco.vk"):
+            self.assertIn("crd/" + name, runbook)
+        relative = pathlib.PurePosixPath("docs/releases/v2026.10.0.md")
+        source = (ROOT / relative).read_text()
+        rendered = render_release_notes(source, source_relative=relative,
+                                        tag="v2026.10.0", repository="cisco-open/cisco-virtual-kubelet")
+        self.assertNotIn("](../", rendered)
+        self.assertIn("blob/v2026.10.0/docs/topology-awareness.md", rendered)
+        self.assertIn("unpublished release candidate", rendered)
+
+    def test_october_features_are_visible_on_all_overview_surfaces(self) -> None:
+        # Keep the end-user overviews aligned with the shipped October scope,
+        # including maturity/continuity limits rather than roadmap promises.
+        paths = ("README.md", "docs/index.md", "docs/website/src/components/Features.tsx")
+        for path in paths:
+            with self.subTest(path=path):
+                text = (ROOT / path).read_text()
+                for concept in ("IOSXESoftwareRollout", "gNOI", "PDB", "Secret", "1.35"):
+                    self.assertIn(concept, text)
+                self.assertIn("disabled by default", text.lower())
+                self.assertIn("zero-downtime", text)
+                self.assertIn("ServiceAccount", text)
 
     def test_workflow_runtimes_are_current_and_do_not_use_mutable_binfmt(
         self,

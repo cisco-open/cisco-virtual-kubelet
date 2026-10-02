@@ -74,13 +74,16 @@ The controller watches `CiscoDevice` custom resources and creates a Virtual Kube
 **Published chart (recommended)** — the chart and image are released to GHCR,
 so step 1's custom build is optional and you can install directly:
 
+The examples target October `v2026.10.0` after publication. Until it is on
+the public Releases page, use the published `v2026.9.2` chart instead.
+
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 \
+  --version 2026.10.0 \
   --namespace cvk-system --create-namespace
 ```
 
-This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.2` → `2026.9.2`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
+This pulls the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.10.0` → `2026.10.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current one.
 
 **From source with a custom image** — to run the build from step 1 instead:
 
@@ -112,13 +115,13 @@ If the controller pod is not `Running`, see [Troubleshooting → CiscoDevice stu
 ### Upgrading an existing release
 
 Helm installs CRDs during the first install but does not upgrade them. Before
-upgrading to `2026.9.2`, pull the chart, back up the live definitions, inspect
+upgrading to `2026.10.0`, pull the chart, back up the live definitions, inspect
 the server-side diff, and apply the reviewed schemas with an explicit Helm
 field-ownership handoff:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 --untar
+  --version 2026.10.0 --untar
 kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
   > cvk-crds-before-upgrade.yaml
 kubectl diff --server-side --force-conflicts \
@@ -126,11 +129,13 @@ kubectl diff --server-side --force-conflicts \
 kubectl apply --server-side --force-conflicts \
   --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
-  crd/networkcontrollers.cisco.vk \
-  crd/networkcontrollerconfigs.config.cisco.vk
+  crd/ciscodevices.cisco.vk \
+  crd/iosxesoftwareupgrades.ops.cisco.vk \
+  crd/iosxeoperationalactions.ops.cisco.vk \
+  crd/iosxesoftwarerollouts.ops.cisco.vk
 
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 \
+  --version 2026.10.0 \
   --namespace cvk-system
 kubectl rollout status deployment/cvk-cisco-virtual-kubelet-controller \
   --namespace cvk-system

@@ -61,12 +61,21 @@ export default function Architecture() {
             How It <span className="gradient-text">Works</span>
           </h2>
           <p className="text-lg text-text-muted max-w-2xl mx-auto">
-            The provider bridges Kubernetes and Cisco network devices through
-            RESTCONF on IOS-XE and NX-API CLI on NX-OS.
+            Native scheduling places app-hosted Pods. CVK separately coordinates
+            approved IOS-XE software campaigns over gNOI, using declared
+            topology domains and bounded disruption budgets.
           </p>
         </motion.div>
 
-        {/* Architecture diagram */}
+        <p className="text-sm text-text-muted max-w-4xl mx-auto mb-8 text-center">
+          App-hosting transport is shown below. In opt-in managed mode, the CVK
+          manager owns protected Node identity and labels; separate app-hosting
+          and network-management workers use two shared functional ServiceAccounts.
+          Approved rollouts select image sources and dispatch secure gNOI through
+          the network worker, rather than treating a device upgrade as a scheduled Pod.
+        </p>
+
+        {/* App-hosting architecture diagram; the software campaign is a separate path. */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -227,6 +236,8 @@ export default function Architecture() {
                 Prometheus metrics, OpenTelemetry topology traces, and
                 cisco.io/* node annotations surface device health, CDP/OSPF
                 neighbors, and hosted apps.
+                These signals are observability, not automatic forwarding-health
+                admission or a guarantee that a redundant path can carry traffic.
               </p>
             </div>
           </div>

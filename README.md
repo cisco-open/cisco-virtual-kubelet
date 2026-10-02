@@ -15,12 +15,14 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 - **Driver-Based Architecture** — extensible driver pattern supporting IOS-XE devices, with Beta support for NX-OS
 - **Full App-Hosting Lifecycle** — create, monitor, and delete containers via RESTCONF (IOS-XE) or NX-API CLI (NX-OS)
 - **Network as Code** — declare device configuration in Kubernetes (`IOSXEConfig`, plus the `NXOSConfig` CRD *(Beta)*) with continuous drift detection and transactional apply
-- **Network Controller Extension API** *(Alpha scaffold)* — generic `NetworkController` and `NetworkControllerConfig` contracts for future controller adapters; the September image ships with zero product adapters and is report-only by design
+- **Network Controller Extension API** *(Alpha scaffold)* — generic `NetworkController` and `NetworkControllerConfig` contracts for future controller adapters; the current scaffold ships with zero product adapters and is report-only by design
 - **NX-OS Support** *(Beta)* — app-hosting lifecycle over NX-API CLI and declarative `NXOSConfig` over NX-API REST/DME; an initial runtime slice covering the `system`, `feature`, `feature_set`, `vlan`, and `interface_ethernet` families
 - **Software Lifecycle** *(Beta)* — stream verified images with gNOI or register IOS-XE device files through RESTCONF, then activate and verify through the `IOSXESoftwareUpgrade` CRD
 - **Device Operations** *(Beta)* — run auditable `show` commands and read-only gNOI probes from Kubernetes via `DeviceOperation` CRD
 - **Secure IOS-XE gNOI** *(Beta)* — use verified TLS, IOS-XE secure-password metadata, and opt-in CSR-based OS-service certificate provisioning
 - **Managed Topology and Fleet Rollouts** *(opt-in)* — project protected inventory labels for native kube-scheduler affinity/spread and admit bounded IOS-XE campaigns across failure domains, without a third-party scheduler or operator
+- **Topology-Aware Image Distribution** *(preview)* — freeze each target's image URL, digest and Secret identity from topology-scoped sources in an approved `IOSXESoftwareRollout` plan
+- **PDB-Aware Workload Drain** *(development preview, disabled by default)* — use Kubernetes Eviction for the documented eligible workload subset before a device upgrade; not general-purpose evacuation or a zero-downtime guarantee
 - **IOS-XE Telemetry** *(Beta)* — declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces
 - **Topology Observability** *(Beta)* — emit CDP/OSPF topology and hosted-app traces to any OTLP-compatible backend
 - **Health Monitoring** — continuous node health checks, kubelet metrics (`/stats/summary`, `/metrics/resource`), and device annotations
@@ -38,6 +40,34 @@ See [Managed Topology and Rollouts](docs/topology-awareness.md) before enabling
 the Kubernetes 1.35+ manager-owned Node and IOS-XE campaign trust boundary.
 See the [October 2026 release candidate notes](docs/releases/v2026.10.0.md)
 for the release scope, gates, compatibility boundary, and deferred roadmap.
+
+### October: one Kubernetes workflow, two different decisions
+
+Compared with the published September release, October adds secure gNOI
+OS-service provisioning and topology-aware software campaigns alongside
+native workload placement:
+
+| Operator task | October capability | Boundary |
+| --- | --- | --- |
+| Place app-hosted Pods | Protected Node labels with Kubernetes affinity and topology spread | The native scheduler places Pods; it does not assess network forwarding safety |
+| Upgrade or downgrade IOS-XE devices | Approved `IOSXESoftwareRollout` plans, canaries, domain budgets, pause/cancel and recovery | Combined transfer/activation/verification; no independently approved durable staging |
+| Select an image endpoint | Topology-scoped source selection frozen per target | Endpoint selection, not a persistent distributed cache |
+| Prepare secure gNOI | Verified TLS, secure-password metadata and opt-in CSR-based certificate provisioning | Isolated gNOI trust; read-only Verify does not install certificates |
+| Relocate eligible workloads | Opt-in PDB-aware Eviction and device-clean evidence | Development preview with outstanding qualification; unsupported placement/packages block |
+| Separate permissions | Shared app-hosting and network-management ServiceAccounts with RO/RW role options | Managed mode only; native admission and exact worker binding remain required |
+
+For example, an operator can declare sites and failure domains, place apps
+using native scheduling constraints, and limit a software campaign's disruption
+per declared domain while selecting a site-specific image server. CVK does not
+infer redundant paths, available link headroom or critical-service availability
+from those labels. Validate those conditions operationally. Kubernetes 1.35+
+is the managed-mode floor; optional 1.37 TAS conformance is experimental, not
+a requirement or proof of the complete physical group lifecycle.
+
+Read the [topology guide](docs/topology-awareness.md) and
+[gNOI upgrade/downgrade runbook](docs/gnoi-iosxe-upgrade-runbook.md) before opting
+in. The [October readiness ledger](docs/releases/v2026.10.0-readiness.md)
+separates implemented features from the remaining publication gates.
 
 ## Architecture
 
@@ -83,20 +113,24 @@ The controller watches `CiscoDevice` CRs and automatically creates a VK pod per 
 
 ### Install the published chart (recommended)
 
+The examples target October `v2026.10.0`. Until it appears on the public
+[Releases page](https://github.com/cisco-open/cisco-virtual-kubelet/releases),
+use the published `v2026.9.2` chart instead; October artifacts are not yet available.
+
 The chart and its container image are published to GitHub Container Registry with every release — no clone or custom build required:
 
 ```bash
 helm install cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 \
+  --version 2026.10.0 \
   --namespace cvk-system --create-namespace
 ```
 
-This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.9.2` → `2026.9.2`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
+This deploys the signed `ghcr.io/cisco-open/cisco-virtual-kubelet` image by default — no `--set image.*` needed. The chart `--version` matches the release's SemVer-compatible CalVer without the leading `v` (for example, `v2026.10.0` → `2026.10.0`); see [Releases](https://github.com/cisco-open/cisco-virtual-kubelet/releases) for the current version.
 
 Optionally verify the chart signature before installing:
 
 ```bash
-cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.9.2 \
+cosign verify ghcr.io/cisco-open/charts/cisco-virtual-kubelet:2026.10.0 \
   --certificate-identity-regexp "https://github.com/cisco-open/cisco-virtual-kubelet/.github/workflows/release.yml@refs/tags/v.*" \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
@@ -109,7 +143,7 @@ server-side diff before the explicit ownership handoff from Helm:
 
 ```bash
 helm pull oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 --untar
+  --version 2026.10.0 --untar
 kubectl get customresourcedefinitions.apiextensions.k8s.io -o yaml \
   > cvk-crds-before-upgrade.yaml
 kubectl diff --server-side --force-conflicts \
@@ -117,10 +151,12 @@ kubectl diff --server-side --force-conflicts \
 kubectl apply --server-side --force-conflicts \
   --field-manager=cvk-crd-upgrade -f cisco-virtual-kubelet/crds/
 kubectl wait --for=condition=Established --timeout=60s \
-  crd/networkcontrollers.cisco.vk \
-  crd/networkcontrollerconfigs.config.cisco.vk
+  crd/ciscodevices.cisco.vk \
+  crd/iosxesoftwareupgrades.ops.cisco.vk \
+  crd/iosxeoperationalactions.ops.cisco.vk \
+  crd/iosxesoftwarerollouts.ops.cisco.vk
 helm upgrade cvk oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet \
-  --version 2026.9.2 --namespace cvk-system
+  --version 2026.10.0 --namespace cvk-system
 ```
 
 `kubectl diff` returns status 1 when differences exist. The force flag applies
