@@ -99,6 +99,7 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced,shortName=xeupgrade
 // +kubebuilder:subresource:status
+// +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !(self.spec.strategy == 'PrepareOnly' || has(self.spec.imageSource.preinstalled)) || self.status.managerAdmission.protocolVersion == 'rollout-staged-activation-v1'",message="managed preparation and preinstalled activation require the staged lifecycle protocol before granting work"
 // +kubebuilder:printcolumn:name="Device",type=string,JSONPath=`.spec.deviceRef.name`
 // +kubebuilder:printcolumn:name="Target",type=string,JSONPath=`.spec.targetVersion`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
@@ -510,12 +511,13 @@ type UpgradeWindow struct {
 // ManagedUpgradeProtocolVersion identifies the manager/worker handshake that
 // gates every new device mutation for a campaign-created leaf.
 //
-// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1
+// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1;rollout-staged-activation-v1
 type ManagedUpgradeProtocolVersion string
 
 const (
 	ManagedUpgradeProtocolRolloutV1           ManagedUpgradeProtocolVersion = "rollout-v1"
 	ManagedUpgradeProtocolRolloutBytePacingV1 ManagedUpgradeProtocolVersion = "rollout-byte-pacing-v1"
+	ManagedUpgradeProtocolStagedActivationV1  ManagedUpgradeProtocolVersion = "rollout-staged-activation-v1"
 )
 
 // ExpectedManagedUpgradeProtocol selects the narrowest manager/worker
@@ -526,6 +528,36 @@ func ExpectedManagedUpgradeProtocol(maxTransferBytesPerSecond int64) ManagedUpgr
 		return ManagedUpgradeProtocolRolloutBytePacingV1
 	}
 	return ManagedUpgradeProtocolRolloutV1
+}
+
+// RequiredManagedUpgradeProtocol fences staged lifecycle intent from workers
+// predating PrepareOnly and receipt-bound activation. The staged protocol also
+// requires byte pacing when specified; an unpaced install must not fall back
+// to rollout-v1, whose workers can interpret an unknown strategy as Reload.
+func RequiredManagedUpgradeProtocol(spec IOSXESoftwareUpgradeSpec) ManagedUpgradeProtocolVersion {
+	if spec.Strategy == UpgradeStrategyPrepareOnly || spec.ImageSource.Preinstalled != nil {
+		return ManagedUpgradeProtocolStagedActivationV1
+	}
+	return ExpectedManagedUpgradeProtocol(spec.MaxTransferBytesPerSecond)
+}
+
+// ManagedUpgradeProtocolMatches preserves already-settled staged audit records
+// written before the staged protocol was introduced. This exception cannot
+// authorize work: both sides must have settled and the phase must be terminal.
+// Unsettled old-protocol staging must be resolved before upgrading controllers.
+func ManagedUpgradeProtocolMatches(up *IOSXESoftwareUpgrade) bool {
+	if up == nil || up.Status.ManagerAdmission == nil {
+		return false
+	}
+	admission := up.Status.ManagerAdmission
+	if admission.ProtocolVersion == RequiredManagedUpgradeProtocol(up.Spec) {
+		return true
+	}
+	return RequiredManagedUpgradeProtocol(up.Spec) == ManagedUpgradeProtocolStagedActivationV1 &&
+		admission.ProtocolVersion == ExpectedManagedUpgradeProtocol(up.Spec.MaxTransferBytesPerSecond) &&
+		admission.State == UpgradeManagerAdmissionSettled &&
+		up.Status.WorkerControl != nil && up.Status.WorkerControl.EffectiveState == UpgradeWorkerControlSettled &&
+		(up.Status.Phase == UpgradePhasePrepared || up.Status.Phase == UpgradePhaseSucceeded)
 }
 
 // UpgradeManagerAdmissionState is the manager-owned mutation grant state.

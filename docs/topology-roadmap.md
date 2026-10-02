@@ -3,7 +3,7 @@
 Status: **incomplete only where explicitly listed below; physical runtime
 evidence reviewed through `6f3686e9` and test-boundary fixes through
 `c1680a7b`**, 2 October 2026.
-Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-1115-utc),
+Start with the [remaining completion plan](topology-roadmap-execution.md#remaining-completion-plan),
 the [current physical evidence](evidence/topology-2026-10-02/README.md), and
 the [November handoff](topology-november-handoff.md). The earlier
 [versioned evidence](evidence/topology-2026-10-01/README.md) remains historical.
@@ -28,15 +28,26 @@ disruption-protection, continuous recovery/soak, overlapping-risk-group and
 worker byte-pacing increments are now implemented. Physical upgrade and
 downgrade on `.103` exercised the 25 MB/s policy and exact native recovery of
 lost IOS XE Install responses without replay. The remaining E03 checkpoint is
-the independent forwarding/service-path matrix, while preparation must be
-qualified independently before a separately approved activation step on a
-capable platform. Operators should be able to prepare
+the independent forwarding/service-path matrix. Independent preparation and
+separate activation are qualified for the stated cohort; service disruption
+measurement, external staged-image invalidation and the full per-target
+matrix remain open. Operators should be able to prepare
 an image in advance, understand which devices are safe to interrupt, and activate only
 within an approved window while validating recovery. Broader workload
 relocation, cache optimization, and additional platforms follow their own
 qualification gates.
 
-Start with the execution plan's [**C0–C9 queue**](topology-roadmap-execution.md#concrete-completion-queue-c0c9).
+Execute the plan's [**R0–R9 remaining-work sequence**](topology-roadmap-execution.md#remaining-completion-plan).
+It covers compatibility/rollback, measured path protection, staged-image
+invalidation, signed-app drain, native group lifecycle, distribution
+measurement, second-platform qualification, scale/offline transfer and final
+candidate acceptance. The E00–E13/F01–F13 IDs remain the completion criteria.
+All six CI checks passed on `c024e040`; this does not close the physical or
+implementation gaps. The next deliverables are the fixture/evidence inventory
+and reverse-version/rollback tests, not a repeat of the existing reload run.
+
+The following paragraphs preserve the historical implementation sequence;
+their former next-step instructions are superseded by R0–R9.
 Restart-safe sequence allocation, bounded diagnostics, collection-interval
 validation, manager-owned acceptance, rate provenance and a genuine
 bound-token admission suite have advanced. Do not reimplement those fixes.
@@ -44,9 +55,9 @@ Controlled loaded-path and reverse mixed-version qualification remain open.
 The evidence-bound worker claim and continuous recovery/soak checks are
 complete; broader execution-time policy and physical service-path acceptance
 remain open.
-First preserve and reconcile `.103`'s uncertain NoReboot activation, fix new
-operation binding ordering and add full-path planning regressions. The
-existing nil-status test checks only a helper, not the failing freeze path.
+The first review required reconciliation of `.103`'s uncertain NoReboot
+activation, operation-binding ordering repairs and full-path planning tests.
+Those gaps were closed by `3212f777`; do not repeat that recovery as new work.
 Envtest CRD passes remain distinct from Helm admission-policy tests.
 
 At the 1 October 17:36 UTC read-only lab check, the manager ran `11ae6704`,

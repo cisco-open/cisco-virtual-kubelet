@@ -421,6 +421,17 @@ func TestSettledActivationConsumesPreparedOwnership(t *testing.T) {
 	if !softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
 		t.Fatal("exact successful activation did not consume retained prepared ownership")
 	}
+	// A new-protocol activation may consume an exact older immutable receipt.
+	// Do not rewrite its hash or strand retained ownership during migration.
+	consumer.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.ManagedUpgradeProtocolStagedActivationV1
+	if !softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("new staged protocol could not consume an exact legacy receipt")
+	}
+	consumer.Status.ManagerAdmission.ProtocolVersion = "future"
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("unknown consumer protocol released retained ownership")
+	}
+	consumer.Status.ManagerAdmission.ProtocolVersion = receipt.ManagedProtocolVersion
 
 	scheme := runtime.NewScheme()
 	if err := opsv1alpha1.AddToScheme(scheme); err != nil {

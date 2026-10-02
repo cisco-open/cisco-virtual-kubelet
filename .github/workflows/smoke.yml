@@ -226,6 +226,11 @@ jobs:
       - name: Generated family reference drift check
         run: make check-config-docs
 
+      - name: Released worker staged-lifecycle compatibility
+        run: |
+          git fetch --no-tags origin cf33e51c8ffc6d47acb313857665366d74eefe6c
+          bash scripts/test-staged-protocol-compat.sh
+
       - name: Kubernetes generated artefact drift check
         # Regenerate CRDs, DeepCopy, RBAC, and Helm CRDs, then assert no
         # drift. The ygot-validate job owns YANG schema regeneration because

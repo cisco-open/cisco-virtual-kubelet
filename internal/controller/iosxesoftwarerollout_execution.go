@@ -1154,7 +1154,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureChildAdmission(
 		}
 		revision := rollout.Spec.Control.Revision
 		current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-			ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
+			ProtocolVersion: opsv1alpha1.RequiredManagedUpgradeProtocol(expectedLeafSpec(rollout, target)),
 			State:           opsv1alpha1.UpgradeManagerAdmissionPending,
 			CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 			PolicyUID:             policySnapshot.UID,
@@ -1185,7 +1185,8 @@ func validateManagerAdmission(
 		return err
 	}
 	admission := leaf.Status.ManagerAdmission
-	if admission == nil || admission.ProtocolVersion != opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond) ||
+	if admission == nil || !opsv1alpha1.ManagedUpgradeProtocolMatches(leaf) ||
+		opsv1alpha1.RequiredManagedUpgradeProtocol(leaf.Spec) != opsv1alpha1.RequiredManagedUpgradeProtocol(expectedLeafSpec(rollout, target)) ||
 		admission.CampaignUID != string(rollout.UID) || admission.PlanHash != rollout.Status.FrozenPlan.Hash ||
 		admission.PolicyUID != rollout.Status.FrozenPlan.Policy.UID ||
 		strings.TrimSpace(admission.PolicyResourceVersion) == "" || admission.PolicyEpoch < 1 || admission.PolicyEpoch > policyEpoch ||
@@ -2521,7 +2522,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensurePolicyEpochFenceForTarget(
 		if current.Status.ManagerAdmission == nil {
 			revision := rollout.Spec.Control.Revision
 			current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-				ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
+				ProtocolVersion: opsv1alpha1.RequiredManagedUpgradeProtocol(expectedLeafSpec(rollout, target)),
 				State:           opsv1alpha1.UpgradeManagerAdmissionRevoked,
 				CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 				PolicyUID: effective.Policy.UID, PolicyResourceVersion: effective.Policy.ResourceVersion,
@@ -2672,7 +2673,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureFailureFences(
 			if current.Status.ManagerAdmission == nil {
 				revision := rollout.Spec.Control.Revision
 				current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-					ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
+					ProtocolVersion: opsv1alpha1.RequiredManagedUpgradeProtocol(expectedLeafSpec(rollout, target)),
 					State:           opsv1alpha1.UpgradeManagerAdmissionRevoked,
 					CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 					PolicyUID: policySnapshot.UID, PolicyResourceVersion: policySnapshot.ResourceVersion,
@@ -2853,7 +2854,7 @@ func (r *IOSXESoftwareRolloutReconciler) ensureRetainedFenceForTarget(
 		if current.Status.ManagerAdmission == nil {
 			controlRevision := revision
 			current.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
-				ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(target.MaxTransferBytesPerSecond),
+				ProtocolVersion: opsv1alpha1.RequiredManagedUpgradeProtocol(expectedLeafSpec(rollout, target)),
 				State:           opsv1alpha1.UpgradeManagerAdmissionRevoked,
 				CampaignUID:     string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
 				PolicyUID:             policySnapshot.UID,

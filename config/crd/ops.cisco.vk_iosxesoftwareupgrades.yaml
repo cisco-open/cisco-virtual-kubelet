@@ -651,6 +651,7 @@ spec:
                     enum:
                     - rollout-v1
                     - rollout-byte-pacing-v1
+                    - rollout-staged-activation-v1
                     type: string
                   reservationID:
                     description: ReservationID identifies the atomic device and domain
@@ -1452,6 +1453,7 @@ spec:
                     enum:
                     - rollout-v1
                     - rollout-byte-pacing-v1
+                    - rollout-staged-activation-v1
                     type: string
                   nodeUID:
                     description: |-
@@ -1910,6 +1912,12 @@ spec:
                 || (has(self.managerDrain) && has(self.managerDrain.pods) && self.workerDrain.remainingAuthorizedPodUIDs.all(uid,
                 self.managerDrain.pods.exists(p, p.uid == uid)))'
         type: object
+        x-kubernetes-validations:
+        - message: managed preparation and preinstalled activation require the staged
+            lifecycle protocol before granting work
+          rule: '!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state
+            != ''Granted'' || !(self.spec.strategy == ''PrepareOnly'' || has(self.spec.imageSource.preinstalled))
+            || self.status.managerAdmission.protocolVersion == ''rollout-staged-activation-v1'''
     served: true
     storage: true
     subresources:

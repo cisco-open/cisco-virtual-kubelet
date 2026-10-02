@@ -4,11 +4,11 @@ Checkpoint date: **2 October 2026**. Continue on
 **`pr/johalley/tas-extentions`**. This is a saved development checkpoint for
 November release work, **not a merge recommendation or completed roadmap**.
 Some packages are closed for an explicitly bounded scope, but the complete
-E00–E13 roadmap still has the external gates listed below. Do not promote this
+E00–E13 roadmap still has implementation and qualification gates. Do not promote this
 branch as a gap-free multi-platform/service-continuity solution on the strength
 of the physical software-transition results alone.
 
-Latest review through `25da0918`: exact runtime `6f3686e9` completed a
+Latest review through `c024e040`: exact runtime `6f3686e9` completed a
 topology-budgeted three-device 17.18.03 to 17.18.02 downgrade and return to
 17.18.03. All six leaves settled, exact secure Verify and post-mutation health
 passed, all Nodes returned Ready and the ledger emptied. `c1680a7b` restores
@@ -16,12 +16,25 @@ the standard-library-only `kubectl-ciscovk` release boundary and removes the
 uncached-runner heartbeat race from Kubernetes 1.37 native TAS conformance.
 The exact physical record is the
 [E13 matrix](evidence/topology-2026-10-02/e13-final-candidate-physical-matrix.md).
-Remote CI/review of the final published head remains mandatory.
+All six remote checks passed on `c024e040`; PR #197 still requires review.
+New candidates need their own checks. CI does not close missing physical gates.
+
+The authoritative next actions are now the execution plan's
+[**R0–R9 remaining completion plan**](topology-roadmap-execution.md#remaining-completion-plan),
+not the historical queues below. Begin with the lab fixture/evidence inventory
+and reverse mixed-version/rollback matrix. Then close measured traffic safety,
+staged-image invalidation, signed-app continuity, physical native group drain,
+distribution measurements, second-platform lifecycle, scale and offline
+cross-cluster fencing. Finish with separately approved upgrade and downgrade
+on all three switches using one frozen candidate and independent probes.
+Do not interpret the remaining work as external prerequisites alone: safe
+invalidation and supported group-drain contracts still need implementation;
+cross-cluster transfer needs an executable, qualified fencing procedure.
 
 Historical review update through `34050731`:
 the execution plan's
 [**C0–C9 queue**](topology-roadmap-execution.md#concrete-completion-queue-c0c9)
-is authoritative and supersedes the older N1–N5 queue and historical inventory
+was authoritative at that checkpoint and superseded the older N1–N5 queue and historical inventory
 below. Manager-accepted evidence, claim-time authority, administrator
 protections, continuous post-operation soak, overlapping risk groups and
 worker byte pacing are implemented. Helm revision 131 ran exact candidate

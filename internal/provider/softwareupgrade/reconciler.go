@@ -486,9 +486,14 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 	if err := softwarelifecycle.ValidateTargetVersion(up.Spec.TargetVersion); err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "InvalidTargetVersion", err.Error(), now)
 	}
-	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyISSU {
+	switch up.Spec.Strategy {
+	case "", opsv1alpha1.UpgradeStrategyReload, opsv1alpha1.UpgradeStrategyNoReboot, opsv1alpha1.UpgradeStrategyPrepareOnly:
+	case opsv1alpha1.UpgradeStrategyISSU:
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "ISSUVerificationUnsupported",
 			"strategy ISSU is not available until the platform lifecycle backend can verify that IOS XE selected the ISSU activation path", now)
+	default:
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "UnsupportedUpgradeStrategy",
+			fmt.Sprintf("unsupported upgrade strategy %q; refusing implicit reload", up.Spec.Strategy), now)
 	}
 	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
 		if r.Lifecycle == nil {
@@ -2087,7 +2092,7 @@ func settledManagedLeafBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	}
 	admission := up.Status.ManagerAdmission
 	control := up.Status.ManagerControl
-	return admission != nil && admission.ProtocolVersion == opsv1alpha1.ExpectedManagedUpgradeProtocol(up.Spec.MaxTransferBytesPerSecond) &&
+	return admission != nil && opsv1alpha1.ManagedUpgradeProtocolMatches(up) &&
 		admission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
 		admission.RevocationReason == "" && admission.LeafUID == string(up.UID) &&
 		admission.CampaignUID != "" && admission.CampaignUID == up.Annotations[managedprotocol.AnnotationCampaignUID] &&

@@ -9,6 +9,12 @@ published with the branch.
 
 ## Candidate history
 
+The later [merge-readiness follow-up](merge-readiness-followup.md) records an
+actual October-worker compatibility defect and its staged-protocol fix,
+real-API validation, corrected physical app/storage inventory, and an E07
+activation failure requiring normal lease-respecting cleanup. It does not
+supersede the earlier runtime's image-transition evidence with a new pass.
+
 | Commit | Purpose | Result |
 | --- | --- | --- |
 | `4dee7ef5` | Add `PrepareOnly`, immutable prepared receipts and retained device ownership | Unit and API contract established |

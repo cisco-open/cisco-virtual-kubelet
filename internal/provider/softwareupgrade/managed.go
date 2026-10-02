@@ -415,8 +415,8 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 	if admission == nil {
 		return fmt.Errorf("status.managerAdmission is absent")
 	}
-	expectedProtocol := opsv1alpha1.ExpectedManagedUpgradeProtocol(up.Spec.MaxTransferBytesPerSecond)
-	if admission.ProtocolVersion != expectedProtocol {
+	expectedProtocol := opsv1alpha1.RequiredManagedUpgradeProtocol(up.Spec)
+	if !opsv1alpha1.ManagedUpgradeProtocolMatches(up) {
 		return fmt.Errorf("manager protocol %q does not match required leaf protocol %q", admission.ProtocolVersion, expectedProtocol)
 	}
 	if up.UID == "" || admission.LeafUID != string(up.UID) {
@@ -654,7 +654,8 @@ func PreparedReceiptConsumed(
 				!strings.HasPrefix(consumer.Status.RunningVersion, receipt.TargetVersion+".")) ||
 			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "Verified") ||
 			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "DeviceMutationSettled") ||
-			admission == nil || admission.ProtocolVersion != receipt.ManagedProtocolVersion ||
+			admission == nil || (admission.ProtocolVersion != receipt.ManagedProtocolVersion &&
+				admission.ProtocolVersion != opsv1alpha1.RequiredManagedUpgradeProtocol(consumer.Spec)) ||
 			admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
 			admission.LeafUID != string(consumer.UID) ||
 			admission.DeviceUID != receipt.DeviceUID || admission.NodeUID != receipt.NodeUID ||

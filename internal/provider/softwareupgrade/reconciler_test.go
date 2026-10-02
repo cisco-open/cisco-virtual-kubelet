@@ -2372,6 +2372,21 @@ func TestInvalidImageSourceFailsPreflight(t *testing.T) {
 	}
 }
 
+func TestUnknownUpgradeStrategyFailsBeforeDeviceDispatch(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("future-strategy", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.Strategy = "FuturePrepare"
+	})
+	r := newReconciler(t, rig, up)
+	got := runReconcile(t, r, up, 5)
+	if got.Status.Phase != opsv1alpha1.UpgradePhasePreflightFailed || got.Status.FailureReason != "UnsupportedUpgradeStrategy" {
+		t.Fatalf("unknown strategy did not fail closed: %+v", got.Status)
+	}
+	if rig.os.activateCalls != 0 || rig.os.verifyCalls != 0 || rig.os.installCalls != 0 {
+		t.Fatal("unknown strategy dispatched a device RPC before rejection")
+	}
+}
+
 func TestURLSecretIsLimitedToCredentialBearingSchemes(t *testing.T) {
 	err := validateImageSource(opsv1alpha1.UpgradeImageSource{
 		URL:          "https://images.example.test/cat9k.bin",
