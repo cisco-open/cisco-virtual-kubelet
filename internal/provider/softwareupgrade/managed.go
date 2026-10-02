@@ -631,6 +631,8 @@ func ValidatePreparedActivationParent(
 // exact, conclusively settled activation successor. The Prepared object remains
 // append-only audit evidence; only a terminal, verified successor with the same
 // frozen manager and content bindings releases its per-device queue ownership.
+// Policy resourceVersion is deliberately not an equality fence: metadata-only
+// policy churn advances it within the same policy UID and safety epoch.
 func PreparedReceiptConsumed(
 	prepared *opsv1alpha1.IOSXESoftwareUpgrade,
 	candidates []opsv1alpha1.IOSXESoftwareUpgrade,
@@ -660,7 +662,6 @@ func PreparedReceiptConsumed(
 			admission.PhysicalIdentity != receipt.PhysicalIdentity ||
 			admission.CampaignUID != receipt.CampaignUID || admission.PlanHash != receipt.PlanHash ||
 			admission.PolicyUID != receipt.PolicyUID ||
-			admission.PolicyResourceVersion != receipt.PolicyResourceVersion ||
 			admission.PolicyEpoch != receipt.PolicyEpoch {
 			continue
 		}

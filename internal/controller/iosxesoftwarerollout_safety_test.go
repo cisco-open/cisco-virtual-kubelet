@@ -432,6 +432,24 @@ func TestSettledActivationConsumesPreparedOwnership(t *testing.T) {
 		t.Fatalf("consumed preparation still blocked a later plan: %v", err)
 	}
 
+	// A metadata-only administrator policy update advances resourceVersion but
+	// deliberately remains in the same safety epoch. The exact activation is
+	// still the receipt consumer: policy UID and epoch are the authority fence.
+	consumer.Status.ManagerAdmission.PolicyResourceVersion = "2"
+	if !softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("metadata-only policy resourceVersion churn retained consumed prepared ownership")
+	}
+	consumer.Status.ManagerAdmission.PolicyEpoch++
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("activation from a different policy epoch consumed prepared ownership")
+	}
+	consumer.Status.ManagerAdmission.PolicyEpoch--
+	consumer.Status.ManagerAdmission.PolicyUID = "another-policy-uid"
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("activation from a different policy UID consumed prepared ownership")
+	}
+	consumer.Status.ManagerAdmission.PolicyUID = receipt.PolicyUID
+
 	consumer.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
 	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
 		t.Fatal("non-terminal activation consumed prepared ownership")

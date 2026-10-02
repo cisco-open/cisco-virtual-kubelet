@@ -3593,6 +3593,13 @@ func TestSettledActivationReleasesPreparedQueueOwnerForLaterCampaign(t *testing.
 			t.Fatalf("incomplete or mismatched activation consumed prepared ownership: %#v", candidate.Status)
 		}
 	}
+
+	// Metadata-only policy churn does not establish a new safety epoch and must
+	// not strand an otherwise exact, settled activation receipt.
+	activation.Status.ManagerAdmission.PolicyResourceVersion = "2"
+	if !PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*activation}) {
+		t.Fatal("same-epoch policy resourceVersion churn retained consumed prepared ownership")
+	}
 }
 
 func TestImageResolveErrorTerminalFails(t *testing.T) {
