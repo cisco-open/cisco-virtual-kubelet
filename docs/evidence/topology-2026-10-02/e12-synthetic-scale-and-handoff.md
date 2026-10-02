@@ -53,7 +53,7 @@ go test ./internal/topologyrollout -run '^$' \
 The same command was then executed in the exact pinned Linux/arm64 Go 1.26.7
 builder image from the repository Dockerfile. Median Linux results were:
 
-| Targets | Reserve + encode + decode | Allocated bytes/op | Ledger bytes | Uncached-style API read fixture | API-read bytes/op |
+| Targets | Reserve + encode + decode | Allocated bytes/op | Ledger bytes | In-process fake-client read | Read bytes/op |
 | ---: | ---: | ---: | ---: | ---: | ---: |
 | 1 | 333.734 µs | 632,512 | 544 | 13.897 µs | 9,565 |
 | 10 | 3.360 ms | 6,388,115 | 4,972 | 91.932 µs | 57,772 |
@@ -68,6 +68,32 @@ or one-byte-over serialized ledger fails closed.
 The benchmark allocation total is cumulative transient allocation for building
 100 reservations against a repeatedly canonicalized 1,000-member snapshot; it
 is not resident memory.
+
+The fake-client column is an encoding/client-cost baseline only. It is not an
+API-server latency measurement.
+
+## Real API-server contention and latency
+
+Candidate `12b513b7` adds `TestEnvtest_E12LedgerAPIContentionAndLatency` to the
+pinned Kubernetes 1.35 envtest gate. The test uses uncached REST reads against
+a real API server and the same versioned 1/10/50/100-target profile. Twenty
+reads at each size produced this local run:
+
+| Targets | Ledger bytes | p50 | p95 | p99 |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 570 | 0.328 ms | 0.650 ms | 1.021 ms |
+| 10 | 4,998 | 0.367 ms | 0.427 ms | 0.465 ms |
+| 50 | 24,678 | 0.705 ms | 1.194 ms | 1.607 ms |
+| 100 | 49,278 | 1.092 ms | 1.674 ms | 1.900 ms |
+
+The same test forces two independent `Store.Mutate` calls to read one
+ConfigMap resourceVersion before either patch can proceed. One real patch then
+receives a Kubernetes conflict; the store reruns the complete mutation against
+the fresh ledger and both distinct reservations remain persisted. This proves
+the production conflict/revalidation path rather than merely calling it
+through a fake client. The p99 check is bounded by the predeclared five-second
+reconcile budget. These local envtest timings are regression evidence, not a
+managed-control-plane throughput SLO.
 
 ## Production-manager sample
 
@@ -118,10 +144,21 @@ identity/history were preserved. E12-D remains open because no second cluster
 and independently fenced destination credential set were available. Active/
 active ownership is still explicitly unsupported.
 
-## Result boundary
+## Restart, partition and result boundary
 
-E12-A's versioned synthetic core benchmark, bounded observability and small-
-runtime sample are complete. E12-B's fail-closed software/operation fences and
-E12-C's physical single-cluster handoff are complete for the tested path.
-Cross-cluster E12-D and a production throughput claim beyond the versioned
-synthetic envelope remain open prerequisites rather than inferred passes.
+The handoff fault suite covers status-before-marker recovery, exact partial-
+access revocation, rejection of additive or drifted access, forged recovery
+state, rollback after authorization, worker-generation quiescence, unresolved
+software/Lease/operation fences and deletion ordering. The physical `.100`
+run then proved old-writer denial and same-UID reverse/forward convergence
+inside one cluster. A network partition between two independent Kubernetes
+clusters remains intentionally unqualified: Kubernetes Leases cannot provide
+a shared fence across that boundary, so no test may imply safe active/active
+ownership.
+
+E12-A now has the versioned synthetic core benchmark, real API-server read and
+conflict behavior, bounded observability and a small-runtime sample. E12-B's
+fail-closed software/operation fences and E12-C's physical single-cluster
+handoff are complete for the tested path. Cross-cluster E12-D and a production
+throughput claim beyond the versioned synthetic envelope remain open
+prerequisites rather than inferred passes.

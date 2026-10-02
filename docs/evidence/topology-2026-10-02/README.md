@@ -26,6 +26,7 @@ published with the branch.
 | `5fb1738f`–`050ab07a` | Harden replanning, exact legacy-account migration and UID-bound re-enrollment | Physical `.100` reverse/forward handoff passed without changing its Node UID |
 | `9e6cdfcc` | Count a successful content-bearing gNOI stream by its verified size | Corrected IOS XE's incomplete terminal progress accounting |
 | `1556238a` | Share exact consumed-Prepared ownership semantics between manager and provider | A later physical `.103` campaign advanced while the immutable audit record remained |
+| `12b513b7` | Exercise CVK's native TAS guard and rollout-ledger contention through real API servers | Kubernetes 1.37 served-field/race and Kubernetes 1.35 conflict/read gates passed |
 
 The exact `ddc02b82` Linux/amd64 image was built locally. Its image config
 digest was `sha256:59d9fd46bdb91f1334af41043dfafb9844906ecaebd664c058e9b406ef5a61cb`
@@ -123,20 +124,32 @@ results, production-manager latency/RSS sampling, retained-preparation fence,
 and the physical `.100` reverse/forward handoff. E12-D cross-cluster transfer
 and large-fleet production throughput remain open.
 
+### E08 native TAS served-object guard
+
+[`e08-native-tas-served-guard.md`](e08-native-tas-served-guard.md) records the
+production CVK drain guard reading an actual Kubernetes 1.37 Pod with
+`spec.schedulingGroup`, rejecting a stale resourceVersion after a live update,
+and failing closed again for the current grouped Pod. This closes the
+fake-reader gap without claiming physical grouped-workload qualification.
+
 ### E09 transfer measurement and cache decision
 
 [`e09-transfer-measurement-and-cache-decision.md`](e09-transfer-measurement-and-cache-decision.md)
 records separate origin-to-worker and worker-to-device bytes/times on `.100`
 and `.103`, the IOS XE terminal-progress accounting defect and exact physical
-retest. The evidence-backed decision is to retain the verified ephemeral cache
-and defer a shared PVC cache for this measured local path.
+retest. The bounded decision is to retain the verified ephemeral cache and
+defer a shared PVC cache for this measured local path. Broader source/path and
+resource-cost measurements remain required before generalizing that decision.
 
 ## Validation matrix
 
-- `go test -race ./...`: passed on `740ffd0e` before the focused E10 fixture
-  addition; the focused topology packages pass with the new fixtures.
+- `go test -race ./...`: passed on `12b513b7`, including the complete
+  controller and topology rollout fault suites.
 - `make test-envtest` with the repository-pinned Kubernetes 1.35 binaries:
-  passed, including prepared-receipt required/immutable admission.
+  passed, including prepared-receipt required/immutable admission and the
+  real API-server E12 ledger contention/read matrix.
+- The pinned Kubernetes 1.37 native TAS lane passed with the production CVK
+  served-object guard included.
 - `make deepcopy-gen manifests`: produced no tracked diff.
 - strict topology Helm lint and render: passed (`74` relevant native objects).
 - generated config-family and parity checks: passed.

@@ -30,9 +30,9 @@ soak before releasing the ledger reservation.
 
 | Physical run | Segment/cache | Bytes | Duration | Result |
 | --- | --- | ---: | ---: | --- |
-| `.100`, candidate `9e6cdfcc` | origin → worker, cold SFTP fetch | 1,249,368,115 | 39.361 s | digest and size verified |
-| `.100`, candidate `9e6cdfcc` | origin → worker, same-Pod cache validation | 0 origin bytes | 8.721 s | verified cache hit |
-| `.100`, candidate `9e6cdfcc` | worker → device | 1,247,805,440 reported | 144.122 s | IOS XE emitted `Validated`, but its last progress event stopped 1,562,675 bytes short |
+| `.100`, candidate `050ab07a` | origin → worker, cold SFTP fetch | 1,249,368,115 | 39.361 s | digest and size verified |
+| `.100`, candidate `050ab07a` | origin → worker, same-Pod cache validation | 0 origin bytes | 8.721 s | verified cache hit |
+| `.100`, candidate `050ab07a` | worker → device | 1,247,805,440 reported | 144.122 s | IOS XE emitted `Validated`, but its last progress event stopped 1,562,675 bytes short |
 | `.103`, candidate `1556238a` | origin → worker, cold SFTP fetch | 1,249,368,115 | 51.225 s | digest and size verified |
 | `.103`, candidate `1556238a` | origin → worker, same-Pod cache validation | 0 origin bytes | 7.854 s | verified cache hit |
 | `.103`, candidate `1556238a` | worker → device | **1,249,368,115** | 159.111 s | complete successful stream, native install corroborated |
@@ -42,6 +42,8 @@ were local to that host; the physical switch received the second segment over
 the management network. These measurements therefore qualify this lab path,
 not a WAN throughput claim.
 
+The `.100` run began after `050ab07a` was deployed and before `9e6cdfcc` was
+created; the earlier table incorrectly attributed that run to the later fix.
 IOS XE's `TransferProgress` stream is not a byte-complete accounting source:
 on both physical switches the final progress event was 1,247,805,440 bytes
 (99%) even though `OS.Install` then returned `Validated` and native inventory
@@ -84,13 +86,15 @@ cross-Pod ownership to save only the source-materialization portion on this
 measured local path. The evidence does not justify that security and
 operational surface.
 
-This decision closes the mandatory E09 measurement/design gate for the tested
-path; it does not claim durable cache qualification. E09-B/C and the
-volume-loss portion of E09-D are not applicable while durable caching is not
-selected. Reconsider the decision only with a predeclared WAN/cross-site
-target showing material repeated-fetch cost. Any future cache must retain the
-roadmap's digest, source/trust/Secret identity, current authorization, atomic
-publication, active-reader and bounded-GC requirements.
+This is a bounded decision for the measured local SFTP path, not a general E09
+performance qualification. It does not include a second origin type or WAN
+path, a cold fetch after Pod replacement, storage high-water measurement, or
+CPU-cost comparison. Those measurements are required before changing the
+decision or claiming a broader supported envelope. E09-B/C and the volume-loss
+portion of E09-D are not applicable while durable caching is not selected.
+Any future cache must retain the roadmap's digest, source/trust/Secret
+identity, current authorization, atomic publication, active-reader and
+bounded-GC requirements.
 
 ## Verification
 
