@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
@@ -344,6 +345,96 @@ func TestPreparedReceiptRetainsExclusiveDeviceOwnership(t *testing.T) {
 	}
 	if !errors.Is(err, errPreparedOwnershipRetained) {
 		t.Fatalf("invalid retained receipt error = %v, want retained-ownership classification", err)
+	}
+}
+
+func TestSettledActivationConsumesPreparedOwnership(t *testing.T) {
+	now := time.Date(2026, 10, 2, 8, 0, 0, 0, time.UTC)
+	receipt := &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: "prepare-v1", UpgradeUID: "prepared-leaf-uid", DeviceUID: "device-uid",
+		NodeUID: "node-uid", PhysicalIdentity: "serial-1", CampaignUID: "campaign-uid",
+		DeviceGeneration: 1, PlanHash: "sha256:" + strings.Repeat("a", 64),
+		ManagedProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+		PolicyUID:              "policy-uid", PolicyResourceVersion: "1", PolicyEpoch: 1,
+		WorkerRevision:     "sha256:" + strings.Repeat("f", 64),
+		SourceDigest:       "sha256:" + strings.Repeat("b", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("c", 64),
+		TrustIdentityHash:  "sha256:" + strings.Repeat("d", 64),
+		ContentBinding:     "source-digest-install-claim-v1",
+		TargetVersion:      "17.18.03", ValidatedVersion: "17.18.03.0.123", RunningVersion: "17.18.02",
+		PrimarySupervisorInstalled: true,
+		InstallStartedAt:           metav1.NewTime(now.Add(-time.Hour)), PreparedAt: metav1.NewTime(now.Add(-30 * time.Minute)),
+		ManagedMutationClaims: []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+			Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: "reservation-1",
+			PolicyEpoch: 1, ClaimedAt: metav1.NewTime(now.Add(-time.Hour)),
+		}},
+	}
+	var err error
+	receipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared := &opsv1alpha1.IOSXESoftwareUpgrade{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "retained-preparation", UID: "prepared-leaf-uid"},
+		Spec:       opsv1alpha1.IOSXESoftwareUpgradeSpec{DeviceRef: configv1alpha1.DeviceRef{Name: "edge-a"}},
+		Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+			Phase: opsv1alpha1.UpgradePhasePrepared, PreparedReceipt: receipt,
+		},
+	}
+	completed := metav1.NewTime(now)
+	consumer := &opsv1alpha1.IOSXESoftwareUpgrade{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "retained-preparation-activate", UID: "activation-leaf-uid", Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:                "true",
+			managedprotocol.AnnotationDeviceUID:              receipt.DeviceUID,
+			managedprotocol.AnnotationCampaignUID:            receipt.CampaignUID,
+			managedprotocol.AnnotationPlanHash:               receipt.PlanHash,
+			managedprotocol.AnnotationActivationApprovalHash: "sha256:" + strings.Repeat("e", 64),
+			managedprotocol.AnnotationPreparedUpgradeUID:     string(prepared.UID),
+			managedprotocol.AnnotationPreparedUpgradeName:    prepared.Name,
+			managedprotocol.AnnotationPreparedReceiptHash:    receipt.ReceiptHash,
+			managedprotocol.AnnotationPreparedSourceDigest:   receipt.SourceDigest,
+			managedprotocol.AnnotationPreparedTrustHash:      receipt.TrustIdentityHash,
+		}},
+		Spec: opsv1alpha1.IOSXESoftwareUpgradeSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-a"}, TargetVersion: receipt.TargetVersion,
+			ImageSource: opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}},
+		},
+		Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+			Phase: opsv1alpha1.UpgradePhaseSucceeded, CompletionTime: &completed,
+			RunningVersion: receipt.ValidatedVersion,
+			Conditions: []metav1.Condition{
+				{Type: "Verified", Status: metav1.ConditionTrue},
+				{Type: "DeviceMutationSettled", Status: metav1.ConditionTrue},
+			},
+			ManagerAdmission: &opsv1alpha1.UpgradeManagerAdmissionStatus{
+				ProtocolVersion: receipt.ManagedProtocolVersion,
+				State:           opsv1alpha1.UpgradeManagerAdmissionSettled,
+				LeafUID:         "activation-leaf-uid", DeviceUID: receipt.DeviceUID,
+				DeviceGeneration: receipt.DeviceGeneration,
+				NodeUID:          receipt.NodeUID, PhysicalIdentity: receipt.PhysicalIdentity,
+				CampaignUID: receipt.CampaignUID, PlanHash: receipt.PlanHash,
+				PolicyUID: receipt.PolicyUID, PolicyResourceVersion: receipt.PolicyResourceVersion,
+				PolicyEpoch: receipt.PolicyEpoch,
+			},
+		},
+	}
+	if !preparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("exact successful activation did not consume retained prepared ownership")
+	}
+
+	scheme := runtime.NewScheme()
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(prepared, consumer).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{Client: kubeClient, APIReader: kubeClient}
+	if err := reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", receipt.DeviceUID); err != nil {
+		t.Fatalf("consumed preparation still blocked a later plan: %v", err)
+	}
+
+	consumer.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
+	if preparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("non-terminal activation consumed prepared ownership")
 	}
 }
 

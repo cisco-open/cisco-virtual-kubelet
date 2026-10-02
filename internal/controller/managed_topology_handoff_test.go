@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
 
@@ -961,6 +962,72 @@ func TestLegacyHandoffBlocksSettledNonTerminalLeaf(t *testing.T) {
 		t.Fatalf("blocked handoff created state %#v", current.Status.LegacyHandoff)
 	}
 	assertWorkerAccessAbsent(t, fixture.client, current, topologyLegacyWorkerServiceAccountName(current))
+}
+
+func TestLegacyHandoffAcceptsSettledUnclaimedCancellation(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	now := metav1.NewTime(fixture.clock.Now())
+	controlRevision := int64(7)
+	planHash := "sha256:" + strings.Repeat("a", 64)
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "cancelled-before-dispatch", UID: "cancelled-leaf-uid",
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:       "true",
+			managedprotocol.AnnotationDeviceUID:     string(device.UID),
+			managedprotocol.AnnotationNodeUID:       device.Status.NodeIdentity.NodeUID,
+			managedprotocol.AnnotationCampaignUID:   "campaign-uid",
+			managedprotocol.AnnotationPlanHash:      planHash,
+			managedprotocol.AnnotationLedgerUID:     "ledger-uid",
+			managedprotocol.AnnotationReservationID: "reservation-id",
+		},
+	}}
+	leaf.Spec.DeviceRef.Name = device.Name
+	leaf.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	leaf.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+	leaf.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(leaf.Spec.MaxTransferBytesPerSecond),
+		State:           opsv1alpha1.UpgradeManagerAdmissionSettled, CampaignUID: "campaign-uid",
+		PlanHash: planHash, PolicyUID: "policy-uid", PolicyResourceVersion: "1", PolicyEpoch: 1,
+		LedgerUID: "ledger-uid", ReservationID: "reservation-id", LeafUID: string(leaf.UID),
+		DeviceUID: string(device.UID), DeviceGeneration: device.Generation,
+		PhysicalIdentity: device.Spec.PhysicalIdentity, NodeUID: device.Status.NodeIdentity.NodeUID,
+		ControlRevision: &controlRevision, UpdatedAt: now,
+	}
+	leaf.Status.ManagerControl = &opsv1alpha1.UpgradeManagerControlStatus{
+		Revision: controlRevision, Cancel: true, UpdatedAt: now,
+	}
+	leaf.Status.WorkerControl = &opsv1alpha1.UpgradeWorkerControlStatus{
+		ObservedAdmissionState: opsv1alpha1.UpgradeManagerAdmissionSettled,
+		ObservedPolicyEpoch:    1, ObservedControlRevision: controlRevision,
+		ObservedWorkerConfigRevision: "sha256:" + strings.Repeat("b", 64),
+		EffectiveState:               opsv1alpha1.UpgradeWorkerControlSettled, UpdatedAt: now,
+	}
+	if err := fixture.client.Create(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.client.Update(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := fixture.r.reconcileManagedTopology(ctx, fixture.device(t))
+	if err != nil {
+		t.Fatalf("settled unclaimed cancellation blocked handoff: %v", err)
+	}
+	current := fixture.device(t)
+	if !result.LegacyWorker || current.Status.LegacyHandoff == nil ||
+		current.Status.LegacyHandoff.Phase != ciskov1.DeviceLegacyHandoffPreparing {
+		t.Fatalf("handoff did not start: result=%+v status=%#v", result, current.Status.LegacyHandoff)
+	}
+
+	leaf.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+		Stage:         opsv1alpha1.UpgradeManagedMutationPrimaryInstall,
+		ReservationID: "reservation-id", PolicyEpoch: 1, ClaimedAt: now,
+	}}
+	if softwareupgrade.SettledUnclaimedManagedCancellation(leaf) {
+		t.Fatal("mutation claim was accepted as an unclaimed cancellation")
+	}
 }
 
 type nodeDeleteRequiresRevokedLegacyAccessClient struct {

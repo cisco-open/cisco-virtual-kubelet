@@ -59,6 +59,10 @@ type ResolvedImage struct {
 	Size    int64
 	Digest  string
 	Cleanup func() error
+	// CacheHit is true only when URL content was served from the resolver's
+	// already verified process-local cache. It is measurement metadata, never
+	// authorization to reuse bytes without the current source checks.
+	CacheHit bool
 }
 
 // ImageResolver materialises an UpgradeImageSource. Injected so tests can
@@ -179,7 +183,27 @@ func (r *DefaultImageResolver) Resolve(ctx context.Context, namespace string, sr
 
 // ResolveWithOptions enforces source-to-worker transfer pacing before bytes
 // are committed to the verified local cache.
-func (r *DefaultImageResolver) ResolveWithOptions(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource, opts ImageResolveOptions) (*ResolvedImage, error) {
+func (r *DefaultImageResolver) ResolveWithOptions(ctx context.Context, namespace string, src opsv1alpha1.UpgradeImageSource, opts ImageResolveOptions) (resolved *ResolvedImage, retErr error) {
+	started := time.Now()
+	sourceKind := imageSourceMetricKind(src)
+	defer func() {
+		cacheResult := "not_applicable"
+		transferredBytes := int64(0)
+		result := transferMetricResult(retErr)
+		if src.URL != "" {
+			cacheResult = "unknown"
+			if retErr == nil && resolved != nil {
+				cacheResult = "miss"
+				if resolved.CacheHit {
+					cacheResult = "hit"
+				}
+			}
+		}
+		if retErr == nil && resolved != nil && !resolved.CacheHit {
+			transferredBytes = resolved.Size
+		}
+		recordImageTransfer("origin_to_worker", sourceKind, cacheResult, result, transferredBytes, time.Since(started))
+	}()
 	if opts.MaxTransferBytesPerSecond < 0 || opts.MaxTransferBytesPerSecond > 1<<40 {
 		return nil, fmt.Errorf("image resolver transfer rate must be between 1 and %d when set", int64(1<<40))
 	}
@@ -227,6 +251,25 @@ func (r *DefaultImageResolver) ResolveWithOptions(ctx context.Context, namespace
 	}
 }
 
+func imageSourceMetricKind(src opsv1alpha1.UpgradeImageSource) string {
+	if src.ConfigMapRef != nil {
+		return "configmap"
+	}
+	if src.URL == "" {
+		return "other"
+	}
+	u, err := url.Parse(src.URL)
+	if err != nil {
+		return "other"
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "https", "sftp", "http", "ftp", "scp", "tftp":
+		return strings.ToLower(u.Scheme)
+	default:
+		return "other"
+	}
+}
+
 func (r *DefaultImageResolver) imageSizeLimit() (int64, error) {
 	limit := r.MaxImageBytes
 	if limit == 0 {
@@ -263,6 +306,7 @@ func (r *DefaultImageResolver) resolveCachedURL(ctx context.Context, namespace s
 	}
 	cachePath := filepath.Join(cacheDir, src.SHA256+".bin")
 	if cached, err := openCachedImage(cachePath, src.SHA256, maxImageBytes); err == nil {
+		cached.CacheHit = true
 		return cached, nil
 	} else if errors.Is(err, errUnsafeCacheFile) || errors.Is(err, errImageTooLarge) {
 		return nil, fmt.Errorf("image source cache: %w", err)

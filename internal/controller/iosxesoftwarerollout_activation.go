@@ -18,6 +18,7 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
+	apiMeta "k8s.io/apimachinery/pkg/api/meta"
 )
 
 const activationApprovalProtocolV1 = "activation-approval-v1"
@@ -32,6 +33,45 @@ type validatedActivationApproval struct {
 	Receipts      map[string]opsv1alpha1.IOSXESoftwareRolloutActivationReceipt
 	Prepared      map[string]opsv1alpha1.UpgradePreparedReceiptStatus
 	PreparedNames map[string]string
+}
+
+// preparedReceiptConsumed reports whether an immutable preparation has one
+// exact, conclusively settled activation successor. The prepared leaf remains
+// append-only audit evidence; consumption is derived only from the manager-
+// bound successor's immutable references and verified terminal outcome.
+func preparedReceiptConsumed(prepared *opsv1alpha1.IOSXESoftwareUpgrade, leaves []opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	if prepared == nil || prepared.Status.Phase != opsv1alpha1.UpgradePhasePrepared ||
+		prepared.Status.PreparedReceipt == nil ||
+		softwareupgrade.ValidatePreparedReceipt(prepared.Status.PreparedReceipt) != nil {
+		return false
+	}
+	receipt := prepared.Status.PreparedReceipt
+	for i := range leaves {
+		consumer := &leaves[i]
+		admission := consumer.Status.ManagerAdmission
+		if consumer.UID == prepared.UID ||
+			softwareupgrade.ValidatePreparedActivationParent(consumer, prepared) != nil ||
+			consumer.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded ||
+			consumer.Status.CompletionTime == nil ||
+			(consumer.Status.RunningVersion != receipt.TargetVersion &&
+				!strings.HasPrefix(consumer.Status.RunningVersion, receipt.TargetVersion+".")) ||
+			!apiMeta.IsStatusConditionTrue(consumer.Status.Conditions, "Verified") ||
+			!apiMeta.IsStatusConditionTrue(consumer.Status.Conditions, "DeviceMutationSettled") ||
+			admission == nil || admission.ProtocolVersion != receipt.ManagedProtocolVersion ||
+			admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
+			admission.LeafUID != string(consumer.UID) ||
+			admission.DeviceUID != receipt.DeviceUID || admission.NodeUID != receipt.NodeUID ||
+			admission.DeviceGeneration != receipt.DeviceGeneration ||
+			admission.PhysicalIdentity != receipt.PhysicalIdentity ||
+			admission.CampaignUID != receipt.CampaignUID || admission.PlanHash != receipt.PlanHash ||
+			admission.PolicyUID != receipt.PolicyUID ||
+			admission.PolicyResourceVersion != receipt.PolicyResourceVersion ||
+			admission.PolicyEpoch != receipt.PolicyEpoch {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 func applyActivationLeafAnnotations(

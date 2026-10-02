@@ -618,6 +618,15 @@ func validatePreparedActivationParent(
 	return nil
 }
 
+// ValidatePreparedActivationParent verifies that an activation leaf is bound
+// to one exact immutable Prepared object and receipt. Manager-side ownership
+// settlement uses the same predicate as worker-side activation dispatch.
+func ValidatePreparedActivationParent(
+	activation, prepared *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	return validatePreparedActivationParent(activation, prepared)
+}
+
 func validManagedSHA256(value string) bool {
 	if len(value) != len("sha256:")+64 || !strings.HasPrefix(value, "sha256:") || strings.ToLower(value) != value {
 		return false

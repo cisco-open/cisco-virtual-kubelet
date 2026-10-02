@@ -65,6 +65,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/platforms"
 	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
@@ -2699,7 +2700,8 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 		// delete the device or transfer it to another writer. Keep the handoff
 		// fenced until a separate audited receipt-invalidation contract exists;
 		// never copy the receipt or its approval into a new owner implicitly.
-		if upgrade.Status.Phase == opsv1alpha1.UpgradePhasePrepared || upgrade.Status.PreparedReceipt != nil {
+		if (upgrade.Status.Phase == opsv1alpha1.UpgradePhasePrepared || upgrade.Status.PreparedReceipt != nil) &&
+			!preparedReceiptConsumed(upgrade, upgrades.Items) {
 			return fmt.Errorf("%s is blocked by retained prepared software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 		if upgrade.Status.Phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
@@ -2712,7 +2714,8 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 		if admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled {
 			return fmt.Errorf("%s is blocked by unsettled software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
-		if !terminalManagedLeaf(upgrade.Status.Phase) {
+		if !terminalManagedLeaf(upgrade.Status.Phase) &&
+			!softwareupgrade.SettledUnclaimedManagedCancellation(upgrade) {
 			return fmt.Errorf("%s is blocked by non-terminal software upgrade %s/%s in phase %q", operation, upgrade.Namespace, upgrade.Name, upgrade.Status.Phase)
 		}
 	}

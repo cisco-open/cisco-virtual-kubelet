@@ -1981,6 +1981,15 @@ func inertManagedCancellationTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) boo
 	return settledManagedCancellationBinding(up)
 }
 
+// SettledUnclaimedManagedCancellation reports whether a retained managed leaf
+// is durable audit evidence for a cancellation that cannot have reached the
+// device. This is the single cross-controller quiescence predicate: both the
+// per-device software queue and topology ownership handoff must interpret the
+// same immutable manager/worker acknowledgements and mutation markers.
+func SettledUnclaimedManagedCancellation(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return inertManagedCancellationTombstone(up) || settledManagedCancellationAuditRecord(up)
+}
+
 // settledManagedCancellationAuditRecord recognizes a manager-settled retained
 // leaf whose current at-most-once state proves that it never submitted a device
 // mutation. A non-empty phase alone is not dispatch evidence under AtMostOnceV1:
@@ -2501,6 +2510,25 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		Warn("dispatching gNOI OS.Install")
 	installCtx, cancel := context.WithTimeout(ctx, remainingInstallTime(up, now))
 	defer cancel()
+	deviceTransferStarted := time.Now()
+	deviceTransferredBytes := int64(0)
+	deviceTransferRecorded := false
+	recordDeviceTransfer := func(result string) {
+		if deviceTransferRecorded {
+			return
+		}
+		deviceTransferRecorded = true
+		cacheResult := "not_applicable"
+		if up.Spec.ImageSource.URL != "" {
+			cacheResult = "miss"
+			if resolved.CacheHit {
+				cacheResult = "hit"
+			}
+		}
+		recordImageTransfer("worker_to_device", imageSourceMetricKind(up.Spec.ImageSource), cacheResult,
+			result, deviceTransferredBytes, time.Since(deviceTransferStarted))
+	}
+	defer func() { recordDeviceTransfer("error") }()
 	installReader := resolved.Reader
 	if up.Spec.MaxTransferBytesPerSecond > 0 {
 		installReader, err = NewPacedReader(installCtx, installReader, up.Spec.MaxTransferBytesPerSecond)
@@ -2517,6 +2545,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		StandbySupervisor: standby,
 	})
 	if err != nil {
+		recordDeviceTransfer(transferMetricResult(err))
 		now = r.now()
 		r.resetGNOIClientIfTransient(ctx, err)
 		return r.handleInstallErr(ctx, up, err, now)
@@ -2527,6 +2556,7 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 	for ev := range progress {
 		switch {
 		case ev.Err != nil:
+			recordDeviceTransfer(transferMetricResult(ev.Err))
 			now = r.now()
 			r.resetGNOIClientIfTransient(ctx, ev.Err)
 			return r.handleInstallErr(ctx, up, ev.Err, now)
@@ -2535,6 +2565,13 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			contentProven = true
 		case ev.TransferProgress != nil:
 			transferred = true
+			received := resolved.Size
+			if ev.TransferProgress.BytesReceived <= uint64(resolved.Size) {
+				received = int64(ev.TransferProgress.BytesReceived)
+			}
+			if received > deviceTransferredBytes {
+				deviceTransferredBytes = received
+			}
 			r.updateTransferProgress(ctx, up, ev.TransferProgress.BytesReceived, resolved.Size, now)
 		case ev.SyncProgress != nil:
 			transferred = true
@@ -2550,25 +2587,34 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 	// validation, conditions, and the subsequent activation transition.
 	now = r.now()
 	if validated == nil {
+		recordDeviceTransfer("error")
 		return r.handleInstallErr(ctx, up, errors.New("gnoi Install: stream ended without Validated"), now)
 	}
 	if !contentProven {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "ImageContentNotTransferred",
 			"device validated a version without consuming the pinned image content; refusing to activate unproven same-version bytes", now)
 	}
 	if strings.TrimSpace(validated.Version) == "" {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "EmptyValidatedVersion",
 			"device returned an empty version from gNOI OS.Install", now)
 	}
 	if !versionMatches(validated.Version, up.Spec.TargetVersion) {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "VersionMismatch",
 			fmt.Sprintf("device validated version %q but spec targets %q", validated.Version, up.Spec.TargetVersion), now)
 	}
 	if standby && up.Status.ValidatedVersion != "" && validated.Version != up.Status.ValidatedVersion {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "SupervisorValidatedVersionMismatch",
 			fmt.Sprintf("standby supervisor validated exact version %q, but the primary supervisor validated %q",
 				validated.Version, up.Status.ValidatedVersion), now)
 	}
+	if transferred && deviceTransferredBytes == 0 {
+		deviceTransferredBytes = resolved.Size
+	}
+	recordDeviceTransfer("success")
 	if requiresIndividualInstall && !standby {
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			cur.Status.IndividualSupervisorInstall = true

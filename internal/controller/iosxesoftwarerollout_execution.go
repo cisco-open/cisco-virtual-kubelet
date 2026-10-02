@@ -957,6 +957,9 @@ func (r *IOSXESoftwareRolloutReconciler) ensureNoPreparedOwnershipConflict(
 			return fmt.Errorf("%w: retained prepared ownership %s/%s is invalid and must be reconciled: %v",
 				errPreparedOwnershipRetained, leaf.Namespace, leaf.Name, err)
 		}
+		if preparedReceiptConsumed(leaf, leaves.Items) {
+			continue
+		}
 		return fmt.Errorf("%w: device UID %s is owned by retained preparation %s/%s (%s); separate activation or explicit invalidation is required",
 			errPreparedOwnershipRetained, deviceUID, leaf.Namespace, leaf.Name, receipt.ReceiptHash)
 	}
