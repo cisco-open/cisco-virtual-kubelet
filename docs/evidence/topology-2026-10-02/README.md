@@ -92,6 +92,16 @@ revision 1 so no active test campaign remained.
 - locked MkDocs third-party license check: passed from `.venv`.
 - All three physical virtual Nodes reported `Ready=True/KubeletReady` after
   deployment.
+- A live server-side dry-run that removed `.status.preparedReceipt` was denied
+  by both append-only immutability and the `Prepared`-phase receipt invariant.
+- Strict shared-account RBAC denied the app-hosting account all upgrade-leaf
+  mutation, denied the network-management account leaf creation, and allowed
+  only its managed status path. All 27 installed validating policies reported
+  no type-check warnings.
+- Final topology-ledger reservation count was empty, all three disruptive
+  maintenance Leases had no holder, both retained leaves were
+  `Prepared/Settled`, and the manager emitted zero reconcile errors during the
+  final ten-minute check.
 
 ## Qualification boundary
 
