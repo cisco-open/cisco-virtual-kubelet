@@ -16,6 +16,8 @@ published with the branch.
 | `eaf3b96d` | Correlate install evidence in the device clock domain | Kept skew handling fail closed |
 | `c001f8f0` | Use the authenticated RESTCONF response `Date` when gNOI device time is unavailable | Physical preparation passed in both directions |
 | `ddc02b82` | Persist retained-receipt conflicts as `Blocked/PreparedOwnershipRetained` | Physical negative test passed without a retry loop |
+| `925b8ce2` | Delete the IOS XE `shutdown` presence leaf for explicit no-shutdown intent | Physical isolated-link restoration passed |
+| `740ffd0e` | Wait for exact manager-owned managed-config worker binding | Replacement workers converged without transient admission errors |
 
 The exact `ddc02b82` Linux/amd64 image was built locally. Its image config
 digest was `sha256:59d9fd46bdb91f1334af41043dfafb9844906ecaebd664c058e9b406ef5a61cb`
@@ -81,9 +83,20 @@ count was zero, and the owner remained `Prepared` with the same receipt after
 the test. The bounded negative-test campaign was then cancelled using control
 revision 1 so no active test campaign remained.
 
+### E10 isolated physical link
+
+[`e10-isolated-link-change.md`](e10-isolated-link-change.md) records a
+controlled physical link shutdown and restoration. The read-only graph moved
+from complete (five nodes, nine edges, zero diagnostics) to incomplete (five,
+seven, three), then returned to complete from fresh accepted evidence. The
+test exposed and repaired IOS XE no-shutdown convergence and managed-worker
+binding-order defects. Recovery respected the retained disruption lease; no
+fence was manually bypassed.
+
 ## Validation matrix
 
-- `go test -race ./...`: passed on `ddc02b82`.
+- `go test -race ./...`: passed on `740ffd0e` before the focused E10 fixture
+  addition; the focused topology packages pass with the new fixtures.
 - `make test-envtest` with the repository-pinned Kubernetes 1.35 binaries:
   passed, including prepared-receipt required/immutable admission.
 - `make deepcopy-gen manifests`: produced no tracked diff.

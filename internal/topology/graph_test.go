@@ -248,3 +248,96 @@ func TestBuildGraphRejectsOverlongState(t *testing.T) {
 		t.Fatal("overlong adjacency state was accepted")
 	}
 }
+
+func TestBuildGraphKeepsProtocolVRFAndLAGContextsDistinct(t *testing.T) {
+	observations := []GraphObservation{
+		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{
+			{PeerID: "leaf-b", Source: "cdp", Interface: "Port-channel10", RemoteInterface: "Port-channel20", State: "discovered"},
+			{PeerID: "leaf-b", Source: "ospf", Interface: "Port-channel10", RemoteInterface: "Port-channel20", RoutingDomain: "blue/process-100/area-0", State: "FULL"},
+		}},
+		{PhysicalID: "leaf-b", Complete: true, Neighbors: []GraphNeighbor{
+			{PeerID: "leaf-a", Source: "cdp", Interface: "Port-channel20", RemoteInterface: "Port-channel10", State: "discovered"},
+			{PeerID: "leaf-a", Source: "ospf", Interface: "Port-channel20", RemoteInterface: "Port-channel10", RoutingDomain: "blue/process-100/area-0", State: "FULL"},
+		}},
+	}
+	graph, err := BuildGraph(observations, GraphPolicy{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !graph.Complete || len(graph.Edges) != 4 {
+		t.Fatalf("protocol/VRF/LAG graph = %#v", graph)
+	}
+	identities := make(map[string]struct{}, len(graph.Edges))
+	for _, edge := range graph.Edges {
+		identities[edge.Identity] = struct{}{}
+		if edge.Interface != "Port-channel10" && edge.Interface != "Port-channel20" {
+			t.Fatalf("LAG identity was not retained: %#v", edge)
+		}
+	}
+	if len(identities) != 4 {
+		t.Fatalf("source-qualified adjacency identities collided: %#v", graph.Edges)
+	}
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Code == "AsymmetricLink" || diagnostic.Code == "DuplicateAdjacency" {
+			t.Fatalf("valid parallel protocol adjacencies were conflated: %#v", graph.Diagnostics)
+		}
+	}
+}
+
+func TestBuildGraphFailsClosedForProtocolOrVRFMismatch(t *testing.T) {
+	tests := []struct {
+		name    string
+		reverse GraphNeighbor
+	}{
+		{
+			name:    "protocol",
+			reverse: GraphNeighbor{PeerID: "leaf-a", Source: "cdp", Interface: "Port-channel20", RemoteInterface: "Port-channel10", RoutingDomain: "blue", State: "FULL"},
+		},
+		{
+			name:    "routing domain",
+			reverse: GraphNeighbor{PeerID: "leaf-a", Source: "ospf", Interface: "Port-channel20", RemoteInterface: "Port-channel10", RoutingDomain: "red", State: "FULL"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			graph, err := BuildGraph([]GraphObservation{
+				{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{PeerID: "leaf-b", Source: "ospf", Interface: "Port-channel10", RemoteInterface: "Port-channel20", RoutingDomain: "blue", State: "FULL"}}},
+				{PhysicalID: "leaf-b", Complete: true, Neighbors: []GraphNeighbor{test.reverse}},
+			}, GraphPolicy{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			asymmetric := 0
+			for _, diagnostic := range graph.Diagnostics {
+				if diagnostic.Code == "AsymmetricLink" {
+					asymmetric++
+				}
+			}
+			if asymmetric != 2 {
+				t.Fatalf("mismatched %s did not remain two unproven directional adjacencies: %#v", test.name, graph)
+			}
+		})
+	}
+}
+
+func TestBuildGraphExactBoundsAndTruncatedCoverage(t *testing.T) {
+	graph, err := BuildGraph([]GraphObservation{{
+		PhysicalID: "leaf-a", Complete: false, UnknownReason: "neighbor collection truncated at the configured bound",
+		Neighbors: []GraphNeighbor{{PeerID: "outside", Source: "cdp", Interface: "Gi1", RemoteInterface: "Gi2"}},
+	}}, GraphPolicy{MaxNodes: 1, MaxEdges: 1, MaxInputNeighbors: 1, MaxDiagnostics: 3})
+	if err != nil {
+		t.Fatalf("exact configured bounds were rejected: %v", err)
+	}
+	if graph.Complete {
+		t.Fatalf("truncated coverage was marked complete: %#v", graph)
+	}
+	foundIncomplete := false
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Code == "IncompleteObservation" {
+			foundIncomplete = true
+		}
+	}
+	if !foundIncomplete {
+		t.Fatalf("truncated coverage reason was not retained: %#v", graph.Diagnostics)
+	}
+}

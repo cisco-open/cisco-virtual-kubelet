@@ -1,7 +1,7 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **implementation reviewed through `ddc02b82`, evidence through
-`a5b4a702`; roadmap not complete**, 2 October 2026.
+Status: **implementation and physical evidence reviewed through `740ffd0e`;
+roadmap not complete**, 2 October 2026.
 Start with the current checkpoint and C0–C9 execution queue below. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
 and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
@@ -24,20 +24,21 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
-### Latest checkpoint (2 October 2026, 02:49 UTC)
+### Latest checkpoint (2 October 2026, 03:42 UTC)
 
 This checkpoint supersedes older “current” snapshots below while retaining
 their historical evidence and the complete E00–E13 acceptance definitions.
 
 | Area | Result on the current candidate | Remaining gate |
 | --- | --- | --- |
-| Source | Runtime fixes are pushed through `ddc02b82`; sanitized evidence/accounting is pushed through `a5b4a702`. The branch and remote-tracking ref match and the worktree is clean. | No PR or branch-specific GitHub workflow run exists yet. Candidate review/CI remains E13 work. |
+| Source | Runtime fixes are pushed through `740ffd0e`; focused E10 fixture and evidence updates are in the current worktree. | Commit/push this evidence increment, then run candidate review/CI when a PR exists. |
 | Automated validation | `go test -race ./...`, pinned Kubernetes 1.35 envtest, `go vet`, 26 lab-harness safety tests, generator no-drift, strict topology Helm lint/render, strict MkDocs build/license audit and CI-pinned `govulncheck` all pass. Symbol-aware scan reports zero called vulnerabilities. | Run candidate CI once a PR exists; optional/version-specific lanes remain governed by their prerequisites. |
-| Deployed candidate | Helm revision 141 runs exact tag `ddc02b82` on the manager and all six app/network workers for the three physical C9Ks. All three virtual Nodes are `Ready=True/KubeletReady`. | The older Nexus worker is outside this C9K candidate and is not qualified by this result. |
+| Deployed candidate | Helm revision 143 runs exact tag `740ffd0e` on the manager and all six app/network workers for the three physical C9Ks. All three virtual Nodes are `Ready=True/KubeletReady`. | The older Nexus worker is outside this C9K candidate and is not qualified by this result. |
 | E04 preparation | Physical `.103` downgrade-direction and `.101` upgrade-direction `PrepareOnly` both reached `Prepared`, retained the original running version and issued no activation. `.101` survived worker replacement; native operation count stayed unchanged and read-only CLI/gNXI/platform/app checks passed. | Native image removal/replacement and a safe explicit invalidation contract remain open. |
 | E05 ownership | Both receipts remain immutable and `Settled`. A competing exact-plan-approved campaign created no child and durably reported `Blocked/PreparedOwnershipRetained`; `ddc02b82` removed the reconcile-error loop. Live server dry-run denied receipt removal. | Later activation must revalidate receipt, native inventory, trust, source and topology; that belongs to E06. |
 | Authorization/settlement | Strict two-account RBAC and all 27 native validating policies passed live checks with no type warnings. The topology ledger has no reservations; disruptive Leases have no holder; the manager logged zero reconcile errors in the final interval. | Dedicated activation-approver authority does not yet exist. |
-| E06 and wider roadmap | Retained preparation is deliberately not activated. The combined Reload path is unchanged and remains only a regression capability. | E06 independent activation is the next code-critical package. E02/E03 traffic-path proof, E07/E08 portable workload/TAS hardware, E10 isolated link change, E11 second-platform image pair and E12 scale inputs remain explicit prerequisites, not implied passes. |
+| E10 physical drift | A deliberate isolated `.101` link shutdown changed the accepted graph from 5/9/0 to 5/7/3 and `--require-complete` failed. Exact-path no-shutdown recovery on `740ffd0e` respected the full retained lease, returned the config to `InSync`, restored device/CDP state and produced a fresh 5/9/0 graph without changing protected policy provenance. | Complete the remaining live stale-worker/unauthorized-status/restart matrix; graph output remains read-only diagnostics, not rollout authority. |
+| E06 and wider roadmap | Retained preparation is deliberately not activated. The combined Reload path is unchanged and remains only a regression capability. | E06 independent activation is the next code-critical package. E02/E03 traffic-path proof, E07/E08 portable workload/TAS hardware, E11 second-platform image pair and E12 scale inputs remain explicit prerequisites, not implied passes. |
 
 The current physical/sanitized record is indexed at
 [`evidence/topology-2026-10-02/`](evidence/topology-2026-10-02/README.md). Raw
