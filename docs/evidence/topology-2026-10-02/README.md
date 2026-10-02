@@ -27,6 +27,8 @@ published with the branch.
 | `9e6cdfcc` | Count a successful content-bearing gNOI stream by its verified size | Corrected IOS XE's incomplete terminal progress accounting |
 | `1556238a` | Share exact consumed-Prepared ownership semantics between manager and provider | A later physical `.103` campaign advanced while the immutable audit record remained |
 | `12b513b7` | Exercise CVK's native TAS guard and rollout-ledger contention through real API servers | Kubernetes 1.37 served-field/race and Kubernetes 1.35 conflict/read gates passed |
+| `6f3686e9` | Retire an exact consumed receipt across metadata-only policy resourceVersion churn in the same UID/epoch | Three-device downgrade and return upgrade completed with exact versions, health gates and empty ledger |
+| `c1680a7b` | Restore the release CLI's standard-library-only boundary and keep synthetic TAS Nodes alive during uncached CI compilation | Full race, Linux license/dependency and pinned Kubernetes 1.37 native TAS gates passed locally |
 
 The exact `ddc02b82` Linux/amd64 image was built locally. Its image config
 digest was `sha256:59d9fd46bdb91f1334af41043dfafb9844906ecaebd664c058e9b406ef5a61cb`
@@ -36,6 +38,14 @@ Helm revision 141 deployed that tag to the manager and all six physical-C9K
 app/network workers.
 
 ## Physical results
+
+### E13 coherent final-candidate matrix
+
+[`e13-final-candidate-physical-matrix.md`](e13-final-candidate-physical-matrix.md)
+records the exact `6f3686e9` image, three-device 17.18.03 to 17.18.02
+downgrade, three-device return to 17.18.03, serial topology-budget behavior,
+claim/recovery semantics, final Node/ledger health and the expected unsigned
+app-hosting limitation on hardware without `sdd-120` storage.
 
 ### `.103`: downgrade-direction preparation
 
@@ -143,13 +153,19 @@ resource-cost measurements remain required before generalizing that decision.
 
 ## Validation matrix
 
-- `go test -race ./...`: passed on `12b513b7`, including the complete
+- `go test -race ./...`: passed through `c1680a7b`, including the complete
   controller and topology rollout fault suites.
 - `make test-envtest` with the repository-pinned Kubernetes 1.35 binaries:
   passed, including prepared-receipt required/immutable admission and the
   real API-server E12 ledger contention/read matrix.
 - The pinned Kubernetes 1.37 native TAS lane passed with the production CVK
-  served-object guard included.
+  served-object guard included. Its synthetic Nodes now renew their heartbeat,
+  removing an uncached-runner `NotReady` race without weakening scheduling
+  assertions.
+- The Linux release packaging gate confirms `kubectl-ciscovk` remains linked
+  only to the main module and Go standard library; topology graph code is
+  shared through dependency-free internal packages rather than importing the
+  controller/Kubernetes dependency graph.
 - `make deepcopy-gen manifests`: produced no tracked diff.
 - strict topology Helm lint and render: passed (`74` relevant native objects).
 - generated config-family and parity checks: passed.
@@ -171,7 +187,8 @@ resource-cost measurements remain required before generalizing that decision.
 
 This evidence closes physical install-only preparation, worker restart/no
 replay, retained ownership conflict behavior, separately approved activation
-in both directions, the E09 measured cache decision, and E12-C single-cluster
-handoff for the tested C9300/IOS XE cohort. It does not qualify E07 application
-continuity, E08 physical native TAS, E11 another platform, E12-D cross-cluster
-transfer or large-fleet production throughput.
+in both directions, the E09 measured cache decision, E12-C single-cluster
+handoff and the coherent E13 upgrade/downgrade matrix for the tested
+C9300/IOS XE cohort. It does not qualify E02/E03 independent forwarding-path
+acceptance, E07 application continuity, E08 physical native TAS, E11 another
+platform, E12-D cross-cluster transfer or large-fleet production throughput.

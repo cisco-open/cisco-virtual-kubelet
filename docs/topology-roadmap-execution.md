@@ -1,8 +1,8 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **runtime evidence reviewed through `1556238a` and real-API test gaps
-closed in `12b513b7`; remaining gates are listed explicitly below**, 2 October
-2026.
+Status: **physical runtime evidence reviewed through `6f3686e9`; release and
+native-TAS test-boundary fixes validated through `c1680a7b`; remaining gates
+are listed explicitly below**, 2 October 2026.
 Start with the current checkpoint and C0–C9 execution queue below. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
 and release boundaries. Reviewed branch: `pr/johalley/tas-extentions`.
@@ -25,27 +25,29 @@ implemented evidence from required work. Items under "Required updates" and
 the acceptance matrices are requirements until an explicit result closes
 them; proposed API concepts are not apply-ready YAML.
 
-### Latest checkpoint (2 October 2026, 08:20 UTC)
+### Latest checkpoint (2 October 2026, 11:15 UTC)
 
 This checkpoint supersedes older “current” snapshots below while retaining
 their historical evidence and the complete E00–E13 acceptance definitions.
 
 | Area | Result on the current candidate | Remaining gate |
 | --- | --- | --- |
-| Source | Runtime hardening remains deployed through `1556238a`; test candidate `12b513b7` adds real Kubernetes 1.37 served-group recognition and Kubernetes 1.35 ledger API contention/latency. | Publish candidate CI and deploy the final exact head before final E13 acceptance. Do not infer closure of hardware/service gates that lack lab inputs. |
-| Automated validation | On `12b513b7`, the full race suite, pinned Kubernetes 1.35 envtest including the new live ledger matrix, and the full pinned Kubernetes 1.37 native TAS lane including the production CVK drain guard pass locally. Earlier vet, render, generation and documentation gates retain their recorded candidate scope and must rerun on final head. | Run exact-candidate remote CI once a PR exists. |
-| Deployed candidate | Helm revision 155 runs exact tag `1556238a` on the manager and all six app/network workers for the three physical C9Ks. All three virtual Nodes are `Ready=True/KubeletReady`. | The older Nexus worker is outside this C9K candidate and is not qualified by this result. |
+| Source | Exact physical runtime `6f3686e9` is followed by `c1680a7b`, which restores the standard-library-only release CLI boundary and removes the uncached-runner heartbeat race from native TAS conformance. `25da0918` merges current `origin/main` without changing the tested controller runtime. | Obtain green remote CI and review on the published head. Do not infer closure of hardware/service gates that lack lab inputs. |
+| Automated validation | The full race suite and pinned Kubernetes 1.35 envtest pass on the merged head. The release CLI is standard-library-only in the pinned Linux Go 1.26 builder; four-target packaging is byte-reproducible across two builds. Generation has no drift, release/workflow contracts, Helm lint/render and strict MkDocs pass. The full pinned Kubernetes 1.37 native TAS lane passes on a fresh kind v0.33.0 cluster, including production served-group guard and scheduler restart. | Run the complete published-head remote matrix; local host parity does not replace protected CI. |
+| Deployed candidate | Helm revision 157 ran exact tag `6f3686e9` on the manager and all six app/network workers for the three physical C9Ks. Its Linux/amd64 image config is `sha256:8b1ded747f105cab4d3eaf613bae98f6ad26005a4c7fbcb18c3c338157a623e7`. All three virtual Nodes finished `Ready=True/KubeletReady`. | The older Nexus worker is outside this C9K candidate and is not qualified by this result. |
 | E04 preparation | Physical `.103` downgrade-direction and `.101` upgrade-direction `PrepareOnly` both reached `Prepared`, retained the original running version and issued no activation. `.101` survived worker replacement; native operation count stayed unchanged and read-only CLI/gNXI/platform/app checks passed. | Native image removal/replacement and a safe explicit invalidation contract remain open. |
 | E05 ownership | Both receipts remain immutable and `Settled`. A competing exact-plan-approved campaign created no child and durably reported `Blocked/PreparedOwnershipRetained`; `ddc02b82` removed the reconcile-error loop. Live server dry-run denied receipt removal. | Later activation must revalidate receipt, native inventory, trust, source and topology; that belongs to E06. |
 | Authorization/settlement | Strict two-account RBAC and all 27 native validating policies passed live checks with no type warnings. Dedicated activation-approver authority is distinct and physically qualified. The topology ledger has no reservations after the `.103` run; both manager and worker settled. | Preserve least-privilege role separation; do not bind activation approval to either functional worker account. |
 | E09 distribution | Two physical PrepareOnly campaigns now separate verified origin→worker and worker→device bytes/time. Candidate `9e6cdfcc` repaired IOS XE terminal-progress undercount; `.103` on `1556238a` reported the exact 1,249,368,115-byte stream, remained on its original running version and settled healthy. | Shared PVC cache is deferred for this local path. Broader qualification needs resource high-water, cold Pod-replacement/repeated-campaign and alternative-origin or WAN comparison against predeclared targets. |
 | E10 graph diagnostics | Complete for the defined read-only scope. A deliberate isolated `.101` link shutdown changed the accepted graph from 5/9/0 to 5/7/3 and `--require-complete` failed. Exact-path no-shutdown recovery on `740ffd0e` respected the full retained lease, returned the config to `InSync`, restored device/CDP state and produced a fresh 5/9/0 graph without changing protected policy provenance. Manager replacement preserved graph content under fresh provenance; live native admission denied a functional worker's accepted-status write. | No E10 implementation gate remains. Graph output is diagnostic, not independent path-health proof or rollout authority. |
-| E06 and wider roadmap | E06 is complete for the tested C9300/IOS XE cohort. A closed-window hold followed by a separately approved `.101` upgrade and reciprocal `.103` downgrade produced one activation claim each, exact post-reload Verify, healthy secure gNXI, Ready Nodes and an empty ledger. E08-A now passes against a real Kubernetes 1.37-served grouped Pod; E08-B passes all disposable scheduler cases. E12 adds real API-server read/conflict behavior to its synthetic scale, small-runtime and physical handoff evidence. | E02/E03 traffic-path proof, E07 physical service continuity, E08-C/D physical native TAS lifecycle/group drain, E11 second-platform images and E12-D cross-cluster inputs remain explicit prerequisites, not implied passes. |
+| E06 and wider roadmap | E06 remains complete for the tested C9300/IOS XE cohort. The coherent E13 matrix then downgraded all three targets to exact 17.18.02 and returned all three to exact 17.18.03 under canary and serial topology budgets; every leaf settled, health gates passed, Nodes returned Ready and the ledger emptied. E08-A/B and E12-A/C retain their recorded real-API/scheduler/handoff evidence. | E02/E03 traffic-path proof, E07 physical service continuity, E08-C/D physical native TAS lifecycle/group drain, E11 second-platform images and E12-D cross-cluster inputs remain explicit prerequisites, not implied passes. |
 
 The current physical/sanitized record is indexed at
 [`evidence/topology-2026-10-02/`](evidence/topology-2026-10-02/README.md). Raw
 captures containing live lab addresses, Secret references and session tokens
 are retained locally and are intentionally excluded from the branch.
+The coherent final-candidate run is documented separately in the
+[E13 physical matrix](evidence/topology-2026-10-02/e13-final-candidate-physical-matrix.md).
 
 ### Current checkpoint (1 October 2026, lab read at 17:36 UTC)
 
@@ -423,7 +425,7 @@ deliverables.
 | E10 | T8 | Observed graph diagnostics and declared-policy drift | E01, E03 | Complete for the defined read-only diagnostic scope. Bounded manager-accepted evidence, mapping/declaration drift, remote-port identity, protocol/VRF/LAG fixtures, stale/conflicting/truncated inputs, controlled physical link loss/restoration, manager restart and live status-ownership denial pass. Graph completeness remains explicitly non-authoritative for path health or mutation admission. |
 | E11 | T9 | Second-platform lifecycle and generic API decision | E05–E06; capability discovery may start earlier | Blocked — prerequisite for positive qualification: no qualified second-platform image pair/service evidence; discovery and fixtures can proceed. |
 | E12 | T10 | Scale envelope and controlled ownership transfer | Stable E03–E06 contracts | E12-A now includes real API-server read latency at 1/10/50/100 records and a forced resourceVersion conflict/revalidation, in addition to the synthetic envelope and small-runtime sample. E12-B fail-closed unresolved ownership and E12-C physical same-UID `.100` reverse/forward handoff pass. E12-D cross-cluster transfer and large-fleet production throughput remain. |
-| E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Partial acceptance: `1556238a` has exact three-device runtime health/ledger settlement; `12b513b7` closes real-API test gaps but is not a new device behavior. Final-head CI/deployment and one coherent final matrix remain before candidate closure. F01–F13 items depending on traffic/service fixtures, a portable app, physical native TAS, second platform or second cluster remain blocked by those explicit inputs. |
+| E13 | All | Integrated acceptance, migration, documentation and evidence closure | Completed dependencies for claimed scope | Cohort acceptance: exact runtime `6f3686e9` completed a coherent topology-budgeted three-device downgrade and return upgrade with terminal leaves, exact Verify, post-mutation health, Ready Nodes and empty ledger. `c1680a7b` closes the release-CLI dependency and native-TAS CI races. Remote merged-head CI/review remains a release gate. F01–F13 items depending on traffic/service fixtures, a portable signed app, physical native TAS, second platform or second cluster remain blocked by those explicit inputs. |
 
 **Completion accounting:** E06 is closed for the explicitly tested C9300/IOS
 XE cohort, E09's cache-selection decision is bounded to the tested local path,

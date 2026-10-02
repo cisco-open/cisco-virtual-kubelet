@@ -1,8 +1,9 @@
 # Topology awareness: remaining implementation roadmap
 
-Status: **incomplete only where explicitly listed below; implementation and
-physical evidence reviewed through `1556238a`**, 2 October 2026.
-Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-0820-utc),
+Status: **incomplete only where explicitly listed below; physical runtime
+evidence reviewed through `6f3686e9` and test-boundary fixes through
+`c1680a7b`**, 2 October 2026.
+Start with the [execution checkpoint](topology-roadmap-execution.md#latest-checkpoint-2-october-2026-1115-utc),
 the [current physical evidence](evidence/topology-2026-10-02/README.md), and
 the [November handoff](topology-november-handoff.md). The earlier
 [versioned evidence](evidence/topology-2026-10-01/README.md) remains historical.
@@ -12,6 +13,9 @@ Working branch:
 gaps remain in T0–T10. Bounded manager-accepted observation, physical
 install-only/retained receipts and separately approved activation are now
 qualified for the tested C9300/IOS XE 17.18.02–17.18.03 cohort.
+The same cohort also passed a coherent three-device downgrade and return
+upgrade on `6f3686e9`; see the
+[E13 physical matrix](evidence/topology-2026-10-02/e13-final-candidate-physical-matrix.md).
 
 The [execution plan](topology-roadmap-execution.md) is the actionable companion
 to this design: it identifies ordered work packages, code ownership, tests,
@@ -136,7 +140,7 @@ remains the completion ledger.
 
 | Slice | Reviewed status through the current checkpoint (physical evidence retains its original revision) | Required execution |
 | --- | --- | --- |
-| T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired. The later C0 incident was reconciled from direct CLI and secure Verify without replay, and clean candidates were deployed with all three physical target worker identities and observations checked. | E00 continuing gate: repeat immutable image, CLI/Verify, log-plane and applicable service/path baselines for each final candidate. Missing service/path fixtures remain an E13 input, not unfinished incident recovery. |
+| T0 | Six-campaign regression plus settled `.101` follow-up; exact evidence archived and harness correlation repaired. The later C0 incident was reconciled from direct CLI and secure Verify without replay. Exact `6f3686e9` then completed the coherent three-device downgrade/return-upgrade matrix with all C9K worker identities, health and settlement checked. | E00 continuing gate: repeat immutable image, CLI/Verify, log-plane and applicable service/path baselines for each future candidate. Missing service/path fixtures remain an E13 input, not unfinished incident recovery. |
 | T1 | Manager-accepted Pod-bound evidence, restart-safe publisher, interval/schema safety, directional-rate provenance/recomputation, concurrency/lost-response tests and real bound-token admission suite passed; physical k3s schema compatibility corrected | C2 / E01–E02: controlled loaded-path accuracy with an independent source, redundant-hardware capability, reverse mixed-version/rollback and candidate CI. |
 | T2 | Network checks at plan freeze and manager admission; evidence-bound expiring grant and monotonic renewal; uncached exact-sample worker recheck before each new mutation claim; bounded administrator critical-service/singleton-path prohibitions; overlapping risk groups with exact physical membership and cross-campaign CAS accounting; administrator aggregate-rate policy with worker pacing; post-operation accepted-evidence recovery and continuous-soak enforcement; real-API negative coverage; physical 25 MB/s upgrade/downgrade pacing and secure-gNOI validation | C3 / E03: independent loaded/headroom measurement and redundant/singleton/critical/congested service-path tests. |
 | T3 | `PrepareOnly` now provides an unreachable-Activate install boundary, exact native-inventory and unchanged-running-version checks, immutable content-addressed receipts, supervisor evidence, and retained Device-UID ownership. Unit, race-targeted and real-API admission coverage pass. Physical C9300 preparation passed in both image directions, and the `.101` receipt survived a worker replacement without replay. A competing campaign is now durably `Blocked/PreparedOwnershipRetained` without a reconcile-error loop. | C4/C5 / E04–E05: the physical install-only and retained-ownership core is qualified in [`evidence/topology-2026-10-02/`](evidence/topology-2026-10-02/README.md). Native image removal/replacement and supported receipt invalidation remain open; do not clear retained receipts manually. |
