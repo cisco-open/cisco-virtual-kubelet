@@ -994,6 +994,17 @@ func (r *Reconciler) validatePreparedInstall(
 		}
 	}
 	if image.Version != up.Status.ValidatedVersion || !image.State.Activatable() {
+		if preparedNativeInstallCorroborated(up, image) {
+			// IOS XE 17.18 can continue to expose an inactive, successfully
+			// added image as install-version-state-in-progress. Preserve the
+			// stronger, durable proof already obtained from the full native
+			// install-oper-data response: quiescent installer, verified pinned
+			// package, exact per-location version and one completed install-add
+			// operation. A plain InProgress observation never reaches here.
+			image.State = softwarelifecycle.InventoryStateInstalled
+			return r.completePreparation(ctx, up, image, up.Status.PreviousVersion,
+				up.Status.IndividualSupervisorInstall, now)
+		}
 		if image.State == softwarelifecycle.InventoryStateInProgress {
 			return r.waitForValidation(ctx, up, "PreparedInventoryPending",
 				fmt.Sprintf("native inventory still reports %s in state %s", image.Version, image.State), now)
@@ -1005,6 +1016,22 @@ func (r *Reconciler) validatePreparedInstall(
 	}
 	return r.completePreparation(ctx, up, image, up.Status.PreviousVersion,
 		up.Status.IndividualSupervisorInstall, now)
+}
+
+func preparedNativeInstallCorroborated(
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	image softwarelifecycle.InventoryImage,
+) bool {
+	if up == nil || image.State != softwarelifecycle.InventoryStateInProgress ||
+		image.Version != up.Status.ValidatedVersion ||
+		up.Status.InventoryState != opsv1alpha1.UpgradeInventoryStateInstalled ||
+		!up.Status.PrimarySupervisorInstalled {
+		return false
+	}
+	condition := apimeta.FindStatusCondition(up.Status.Conditions, conditionTypeMutationSettled)
+	return condition != nil && condition.Status == metav1.ConditionTrue &&
+		condition.Reason == "NativeInstallCorroborated" &&
+		condition.ObservedGeneration == up.Generation
 }
 
 func (r *Reconciler) completePreparation(

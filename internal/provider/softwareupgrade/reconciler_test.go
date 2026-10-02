@@ -1079,6 +1079,89 @@ func TestPrepareOnlyInstallsAndIssuesImmutableReceiptWithoutActivate(t *testing.
 	}
 }
 
+func TestPrepareOnlyAcceptsIOSXEInactiveInventoryOnlyAfterNativeCorroboration(t *testing.T) {
+	rig := newRig(t)
+	rig.os.verifyVersion = "17.14.01a"
+	started := metav1.NewTime(time.Unix(1_700_000_000, 0).UTC())
+	up := newUpgrade("upgrade-prepare-native-corroborated", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.UID = types.UID("upgrade-prepare-native-corroborated-uid")
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+			URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+		}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseValidating
+		up.Status.SourceDigest = "sha256:" + strings.Repeat("a", 64)
+		up.Status.SourceSize = 1_247_897_709
+		up.Status.PreviousVersion = "17.14.01a"
+		up.Status.ValidatedVersion = "17.15.01a"
+		up.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
+		up.Status.InstallStartTime = &started
+		up.Status.PrimarySupervisorInstallRequested = true
+		up.Status.PrimarySupervisorInstalled = true
+		up.Status.Conditions = []metav1.Condition{{
+			Type:               conditionTypeMutationSettled,
+			Status:             metav1.ConditionTrue,
+			Reason:             "NativeInstallCorroborated",
+			ObservedGeneration: up.Generation,
+			LastTransitionTime: started,
+		}}
+	})
+	r := newReconciler(t, rig, up)
+	r.DeviceUID = "device-uid"
+	r.Lifecycle = &fakeLifecycle{inspectImage: softwarelifecycle.InventoryImage{
+		Version: "17.15.01a", State: softwarelifecycle.InventoryStateInProgress,
+	}}
+
+	got := runReconcile(t, r, up, 2)
+	if got.Status.Phase != opsv1alpha1.UpgradePhasePrepared {
+		t.Fatalf("phase=%q reason=%q msg=%q", got.Status.Phase, got.Status.FailureReason, got.Status.Message)
+	}
+	if got.Status.InventoryState != opsv1alpha1.UpgradeInventoryStateInstalled || got.Status.PreparedReceipt == nil {
+		t.Fatalf("inventory=%q receipt=%+v", got.Status.InventoryState, got.Status.PreparedReceipt)
+	}
+	if rig.os.installCalls != 0 || rig.os.activateCalls != 0 || rig.os.verifyCalls != 1 {
+		t.Fatalf("RPC calls Install=%d Activate=%d Verify=%d, want 0/0/1",
+			rig.os.installCalls, rig.os.activateCalls, rig.os.verifyCalls)
+	}
+}
+
+func TestPrepareOnlyDoesNotTrustUncorroboratedInactiveInventory(t *testing.T) {
+	rig := newRig(t)
+	started := metav1.NewTime(time.Unix(1_700_000_000, 0).UTC())
+	up := newUpgrade("upgrade-prepare-native-uncorroborated", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.Strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
+		up.Status.Phase = opsv1alpha1.UpgradePhaseValidating
+		up.Status.PreviousVersion = "17.14.01a"
+		up.Status.ValidatedVersion = "17.15.01a"
+		up.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
+		up.Status.InstallStartTime = &started
+		up.Status.PrimarySupervisorInstalled = true
+		up.Status.Conditions = []metav1.Condition{{
+			Type:               conditionTypeMutationSettled,
+			Status:             metav1.ConditionTrue,
+			Reason:             "InstallCompleted",
+			ObservedGeneration: up.Generation,
+			LastTransitionTime: started,
+		}}
+	})
+	r := newReconciler(t, rig, up)
+	r.Lifecycle = &fakeLifecycle{inspectImage: softwarelifecycle.InventoryImage{
+		Version: "17.15.01a", State: softwarelifecycle.InventoryStateInProgress,
+	}}
+
+	got := runReconcile(t, r, up, 2)
+	if got.Status.Phase != opsv1alpha1.UpgradePhaseValidating || got.Status.PreparedReceipt != nil {
+		t.Fatalf("phase=%q receipt=%+v msg=%q", got.Status.Phase, got.Status.PreparedReceipt, got.Status.Message)
+	}
+	if reason := conditionReason(got.Status.Conditions, conditionTypeValidated); reason != "PreparedInventoryPending" {
+		t.Fatalf("Validated reason=%q, want PreparedInventoryPending", reason)
+	}
+	if rig.os.verifyCalls != 0 || rig.os.activateCalls != 0 {
+		t.Fatalf("uncorroborated inventory reached gNOI: Verify=%d Activate=%d",
+			rig.os.verifyCalls, rig.os.activateCalls)
+	}
+}
+
 func TestPrepareOnlyFailsClosedWhenRunningVersionChanges(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyVersions = []string{"17.14.01a", "17.14.01a", "17.15.01a"}
