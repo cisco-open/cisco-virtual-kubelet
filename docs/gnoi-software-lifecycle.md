@@ -716,7 +716,7 @@ The normal lifecycle is:
 | `AwaitingReachability` | Device may be rebooting after activation. |
 | `Verifying` | Running version and activation result are verified. |
 | `RollingBack` | Previous version is being re-activated after a verify mismatch. |
-| `Prepared` | `PrepareOnly` proved the exact target is installed and activatable while `OS.Verify` still reports the captured previous version. The immutable receipt retains device ownership; this release has no separate activation API, so do not delete the leaf as a substitute for authorization. |
+| `Prepared` | `PrepareOnly` proved the exact target is installed and activatable while `OS.Verify` still reports the captured previous version. The immutable receipt retains device ownership. Only an append-only `spec.activationApproval` on the completed rollout can authorize a separate activation leaf; deleting the prepared leaf is never authorization. |
 | `Succeeded` | Final `OS.Verify` proves the requested version is running (including the unusual case where a `NoReboot` request already resulted in the target). |
 | `StagedForNextBoot` | `NoReboot` was accepted, `OS.Verify` still reports the captured previous version, and a separately authorized reboot is required. |
 
@@ -737,8 +737,21 @@ digest, so the receipt accurately records a `source-digest-install-claim-v1`
 binding rather than claiming a later device-side digest measurement. The
 receipt is append-only and immutable at API admission. A retained valid receipt
 blocks direct upgrade leaves for the same device and another managed campaign
-for the same Device UID until a future, separately authorized activation or
-explicit invalidation protocol consumes it.
+for the same Device UID. A completed PrepareOnly rollout can later receive one
+append-only `spec.activationApproval` that names the frozen plan, every exact
+prepared leaf UID and receipt hash, an authenticated approver, and an explicit
+UTC claim window. Native admission requires the distinct `activate` permission.
+
+The manager revalidates the retained receipts, original source Secret identity,
+current policy/topology/health and budgets before creating one distinct
+preinstalled activation leaf per target. The activation leaf has its own
+reservation, drain/health lifecycle and at-most-once mutation claims; it never
+rewrites or reuses the preparation leaf. The worker rechecks native install
+inventory and the exact credential, gNOI TLS and provisioning Secret revisions
+recorded by the receipt before each new Activate claim. Closing the activation
+window prevents a new claim but never abandons observation of a request already
+durably claimed. Receipt, source, trust, policy or device-identity drift fails
+closed.
 
 When `OS.Verify` requires individual-supervisor handling, byte-stream sources
 install the active supervisor first and the standby second, using the same
@@ -795,7 +808,7 @@ Important defaults:
 
 | Field | Default | Notes |
 |---|---:|---|
-| `strategy` | `Reload` | `NoReboot` requests activation without an immediate reload. `PrepareOnly` performs install and validation but has no activation path in this release. |
+| `strategy` | `Reload` | `NoReboot` requests activation without an immediate reload. `PrepareOnly` performs install and validation; a later rollout `activationApproval` creates a distinct preinstalled `Reload` leaf within its own UTC window. |
 | `rollbackOnFailure` | `true` | Attempts to restore the previously observed version after verify mismatch when a safe rollback sequence can be proven. |
 | `installTimeoutSeconds` | `3600` | Bounds two consecutive windows: pre-install gNOI readiness, source resolution, and device-file `File.Get`; then, starting at the first `OS.Install` or native-registration claim, all per-supervisor installs/registration and inventory convergence share a fresh window. Repeated work within either window receives only its remaining time. |
 | `rebootTimeoutSeconds` | `1800` | Separately bounds initial activation-control readiness (`activationControlStartTime`), then activation/reachability/final verification from the first actual activation claim. Rollback receives an independent timer when `RollingBack` begins, including pre-dispatch reachability. Each RPC uses only the remaining sequence time. |
@@ -824,7 +837,9 @@ For the complete upgrade and planned-downgrade manifests, the certificate
 prerequisites, and commands that correlate CR status with worker logs, follow
 the [IOS-XE upgrade and downgrade runbook](gnoi-iosxe-upgrade-runbook.md).
 For a managed topology-aware install-only campaign, start from the
-[`PrepareOnly` rollout example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/iosxe-software-prepare.yaml).
+[`PrepareOnly` rollout example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/iosxe-software-prepare.yaml),
+then construct the append-only authorization from the live objects using the
+[`activationApproval` patch example](https://github.com/cisco-open/cisco-virtual-kubelet/blob/main/examples/topology/iosxe-software-activate-patch.yaml).
 
 Each CR is immutable and starts one upgrade after preflight. `notBefore` delays
 initial work; `notAfter` is rechecked before every not-yet-claimed device

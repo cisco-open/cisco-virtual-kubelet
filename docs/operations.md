@@ -377,9 +377,14 @@ authorized reboot. `PrepareOnly` is the true install-only boundary: it accepts
 URL, ConfigMap, or `deviceFile` sources, never calls `OS.Activate`, verifies that
 the old version remains running, and terminates as `Prepared` with an immutable
 content-addressed receipt. The retained receipt blocks both direct upgrades for
-the same device and a competing managed campaign for the same Device UID. A
-separate activation API is not yet present, so preserve the prepared leaf;
-deleting it is not an authorization workflow.
+the same device and a competing managed campaign for the same Device UID.
+Activation requires an append-only `spec.activationApproval` on that completed
+rollout, the exact frozen plan and receipt set, a bounded UTC window, and the
+distinct `activate` permission. CVK creates a second preinstalled activation
+leaf with a new topology reservation and revalidates inventory, trust, source,
+policy, identity, health and workload safety before the Activate claim. The
+prepared leaf remains the immutable audit record; deleting it is never an
+authorization workflow.
 `ISSU` is currently rejected during preflight until CVK can
 verify that IOS-XE selected the ISSU path. If `OS.Verify` requires individual
 supervisor handling, CVK installs active then standby, activates standby then

@@ -133,9 +133,19 @@ const (
 	AnnotationLedgerUID                = "topology.cisco.vk/ledger-uid"
 	AnnotationReservationID            = "topology.cisco.vk/reservation-id"
 	AnnotationSourceSecretUID          = "topology.cisco.vk/source-secret-uid"
-	AnnotationProjectionHash           = "topology.cisco.vk/projection-hash"
-	AnnotationProjectedKeys            = "topology.cisco.vk/projected-keys"
-	AnnotationManagedTaints            = "topology.cisco.vk/managed-taints"
+	// Activation annotations bind a distinct preinstalled activation leaf to
+	// the append-only authorization and exact retained preparation receipt
+	// that caused the manager to create it. They are deliberately separate
+	// from the original plan approval and source transport identity.
+	AnnotationActivationApprovalHash = "topology.cisco.vk/activation-approval-hash"
+	AnnotationPreparedReceiptHash    = "topology.cisco.vk/prepared-receipt-hash"
+	AnnotationPreparedUpgradeName    = "topology.cisco.vk/prepared-upgrade-name"
+	AnnotationPreparedUpgradeUID     = "topology.cisco.vk/prepared-upgrade-uid"
+	AnnotationPreparedTrustHash      = "topology.cisco.vk/prepared-trust-hash"
+	AnnotationPreparedSourceDigest   = "topology.cisco.vk/prepared-source-digest"
+	AnnotationProjectionHash         = "topology.cisco.vk/projection-hash"
+	AnnotationProjectedKeys          = "topology.cisco.vk/projected-keys"
+	AnnotationManagedTaints          = "topology.cisco.vk/managed-taints"
 	// AnnotationAppHostingCordonDeviceUID records that the manager, rather
 	// than an operator, set spec.unschedulable while app-hosting write access
 	// was being removed. Its device UID value prevents a replacement object

@@ -145,7 +145,10 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 	// their immutable audit result across later policy or source changes, while
 	// replaying the narrow exact-Pod cleanup needed to repair a stale Preparing
 	// writer. Deletion still runs through the finalizer path above.
-	if rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded ||
+	activationRequested := rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded &&
+		rollout.Spec.Plan.Strategy == opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly &&
+		rollout.Spec.ActivationApproval != nil
+	if (rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded && !activationRequested) ||
 		rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled {
 		if err := r.reconcileTerminalDrainProtection(ctx, &rollout); err != nil {
 			return ctrl.Result{}, err
@@ -1105,6 +1108,60 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		return ctrl.Result{}, err
 	}
 	summaries := indexTargetSummaries(rollout.Status.Targets)
+	executionTargets := rollout.Status.FrozenPlan.Targets
+	var activation *validatedActivationApproval
+	activationWindowOpen := true
+	if rollout.Spec.ActivationApproval != nil {
+		activation, err = validateActivationApproval(rollout, children)
+		if err != nil {
+			return r.failRollout(ctx, rollout, "ActivationAuthorizationInvalid", err.Error(), false)
+		}
+		executionTargets = make([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget, 0, len(rollout.Status.FrozenPlan.Targets))
+		activationChildren := make(map[string]opsv1alpha1.IOSXESoftwareUpgrade, len(rollout.Status.FrozenPlan.Targets))
+		for _, preparedTarget := range rollout.Status.FrozenPlan.Targets {
+			target := activationTarget(preparedTarget)
+			executionTargets = append(executionTargets, target)
+			if leaf, ok := children[target.ChildName]; ok {
+				activationChildren[target.ChildName] = leaf
+			}
+		}
+		children = activationChildren
+		approval := rollout.Spec.ActivationApproval
+		if now.Before(approval.NotBefore.Time) {
+			for _, target := range executionTargets {
+				summary := summaries[target.DeviceUID]
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+					"ActivationWindowNotOpen", fmt.Sprintf("activation is authorized but cannot begin before %s", approval.NotBefore.UTC().Format(time.RFC3339)), now)
+				summaries[target.DeviceUID] = summary
+			}
+			if _, patchErr := r.patchExecutionStatus(ctx, rollout, summaries, opsv1alpha1.IOSXESoftwareRolloutPhasePaused,
+				"prepared receipts are retained until the authorized activation window opens", now); patchErr != nil {
+				return ctrl.Result{}, patchErr
+			}
+			return ctrl.Result{RequeueAfter: boundedActivationRequeue(now, approval.NotBefore.Time)}, nil
+		}
+		activationWindowOpen = now.Before(approval.NotAfter.Time)
+		if rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded {
+			for _, target := range executionTargets {
+				summary := summaries[target.DeviceUID]
+				reason := "ActivationAuthorized"
+				message := "exact prepared receipt is authorized for a separate activation reservation"
+				if !activationWindowOpen {
+					reason = "ActivationWindowClosed"
+					message = "activation window closed before a separate activation leaf was admitted"
+				}
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked, reason, message, now)
+				summaries[target.DeviceUID] = summary
+			}
+			phase := opsv1alpha1.IOSXESoftwareRolloutPhaseExecuting
+			message := "activation authorization accepted; preparing distinct activation reservations"
+			if !activationWindowOpen {
+				phase = opsv1alpha1.IOSXESoftwareRolloutPhasePaused
+				message = "activation authorization is retained but its claim window has closed"
+			}
+			return r.patchExecutionStatus(ctx, rollout, summaries, phase, message, now)
+		}
+	}
 	terminalFailurePresent := false
 	for _, leaf := range children {
 		if terminalLeafFailure(leaf.Status.Phase) {
@@ -1127,7 +1184,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		}
 	}
 	if terminalFailurePresent && rollout.Status.Phase != opsv1alpha1.IOSXESoftwareRolloutPhaseFailed {
-		for _, target := range rollout.Status.FrozenPlan.Targets {
+		for _, target := range executionTargets {
 			if leaf, ok := children[target.ChildName]; ok && terminalLeafFailure(leaf.Status.Phase) {
 				summary := summaries[target.DeviceUID]
 				summary.LeafUID, summary.LeafName = string(leaf.UID), leaf.Name
@@ -1147,7 +1204,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 	progressionBlocked := false
 	rearmedPolicyLeaf := false
 
-	for _, target := range rollout.Status.FrozenPlan.Targets {
+	for _, target := range executionTargets {
 		leaf, exists := children[target.ChildName]
 		if !exists {
 			allTargetsSettled = false
@@ -1158,6 +1215,11 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		}
 		if err := validateManagedLeafBinding(rollout, target, &leaf); err != nil {
 			return r.failRollout(ctx, rollout, "ChildIdentityConflict", err.Error(), false)
+		}
+		if activation != nil {
+			if err := validateActivationLeafAnnotations(&leaf, activation, target.DeviceUID); err != nil {
+				return r.failRollout(ctx, rollout, "ActivationChildIdentityConflict", err.Error(), false)
+			}
 		}
 		if leaf.Status.ManagerAdmission == nil {
 			if err := r.ensureChildAdmission(ctx, rollout, target, &leaf, now); err != nil {
@@ -1256,7 +1318,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 			if target.CanaryCohort != "" {
 				allCanariesSettled = false
 			}
-			if leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionPending && !terminalFailurePresent {
+			if leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionPending && !terminalFailurePresent && activationWindowOpen {
 				granted, grantErr := r.tryGrantLeaf(ctx, rollout, currentPolicy, effectivePolicy, target, &leaf, now)
 				if grantErr != nil {
 					if !errors.Is(grantErr, errDrainSafetyBlocked) {
@@ -1291,6 +1353,11 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 						string(leaf.Status.Phase), leaf.Status.Message, now)
 					hasRunning = true
 				}
+			} else if !activationWindowOpen && leaf.Status.ManagerAdmission != nil &&
+				leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionPending {
+				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+					"ActivationWindowClosed", "activation window closed before the manager granted a device mutation", now)
+				progressionBlocked = true
 			} else {
 				transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetRunning, string(leaf.Status.Phase), leaf.Status.Message, now)
 				hasRunning = true
@@ -1330,7 +1397,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 	}
 
 	admitted := false
-	for _, target := range rollout.Status.FrozenPlan.Targets {
+	for _, target := range executionTargets {
 		if progressionBlocked {
 			break
 		}
@@ -1340,7 +1407,14 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileExecution(
 		if !allCanariesSettled && target.Wave > 0 {
 			continue
 		}
-		if err := r.admitTarget(ctx, rollout, currentPolicy, effectivePolicy, target, now); err != nil {
+		if !activationWindowOpen {
+			summary := summaries[target.DeviceUID]
+			transitionTarget(&summary, opsv1alpha1.IOSXESoftwareRolloutTargetBlocked,
+				"ActivationWindowClosed", "activation window closed before this target acquired a reservation", now)
+			summaries[target.DeviceUID] = summary
+			continue
+		}
+		if err := r.admitTarget(ctx, rollout, currentPolicy, effectivePolicy, target, activation, now); err != nil {
 			if errors.Is(err, topologyrollout.ErrBudgetExceeded) || errors.Is(err, topologyrollout.ErrTargetUnavailable) ||
 				errors.Is(err, errWorkloadsRunning) || errors.Is(err, errDrainSafetyBlocked) ||
 				errors.Is(err, errPreparedOwnershipRetained) {

@@ -526,6 +526,10 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 }
 
 func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
+	}
 	if r.GNOI == nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "NoGNOIProvider",
 			"gNOI provider is required for IOS XE software lifecycle operations", now)
@@ -2674,6 +2678,14 @@ func (r *Reconciler) submitActivation(
 	noReboot bool,
 	now time.Time,
 ) (reconcile.Result, error) {
+	// Revalidate the receipt/trust binding at the last pre-claim boundary. A
+	// Secret revision can change after inventory resolution; that must prevent
+	// a new Activate claim while never interrupting observation of an Activate
+	// request already recorded above this call site.
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
+	}
 	if maintenanceWindowExpired(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "MaintenanceWindowExpired",
 			"maintenance window closed before gNOI OS.Activate could be submitted", now)
@@ -2706,6 +2718,31 @@ func (r *Reconciler) submitActivation(
 	if upgradeWaitStart(up) != nil && upgradeTimedOut(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationControlTimeout",
 			fmt.Sprintf("activation sequence did not complete within %s; refusing to submit another activation", rebootTimeout(up)), now)
+	}
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
+	}
+	if up.Annotations[managedprotocol.AnnotationManaged] == "true" && up.Spec.ImageSource.Preinstalled != nil {
+		image, inspectErr := r.inspectTarget(ctx, up.Spec.TargetVersion)
+		if inspectErr != nil {
+			switch {
+			case errors.Is(inspectErr, softwarelifecycle.ErrTargetNotFound),
+				errors.Is(inspectErr, softwarelifecycle.ErrAmbiguousTarget),
+				errors.Is(inspectErr, softwarelifecycle.ErrUnsupported):
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+					"PreparedInventoryChanged", inspectErr.Error(), now)
+			default:
+				return r.waitForActivationControl(ctx, up,
+					"waiting to revalidate prepared native inventory before activation: "+inspectErr.Error(), now)
+			}
+		}
+		if image.Version != up.Status.ValidatedVersion || !image.State.Activatable() {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedInventoryChanged",
+				fmt.Sprintf("native inventory returned version %q in state %s immediately before activation; authorized prepared version is %q",
+					image.Version, image.State, up.Status.ValidatedVersion), now)
+		}
 	}
 	activateVersion := up.Status.ValidatedVersion
 	if strings.TrimSpace(activateVersion) == "" {

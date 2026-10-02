@@ -1,7 +1,8 @@
 # Prepare an IOS-XE image without activating or rebooting the device. Replace
 # every placeholder and submit as the exact identity in requestedBy. This
-# example intentionally terminates at phase Prepared with an immutable receipt;
-# the current release does not provide the separate activation API.
+# example intentionally terminates at phase Prepared with an immutable receipt.
+# Activation is a later, append-only update to this same rollout; see
+# iosxe-software-activate-patch.yaml. Applying this file never authorizes it.
 apiVersion: ops.cisco.vk/v1alpha1
 kind: IOSXESoftwareRollout
 metadata:

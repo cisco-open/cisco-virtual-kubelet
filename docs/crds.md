@@ -560,8 +560,11 @@ completed upgrade. `PrepareOnly` never calls `OS.Activate`; after exact native
 inventory and unchanged-running-version verification it terminates as
 `Prepared` with an immutable `status.preparedReceipt`. The provider queue
 blocks direct upgrades for the same device, while the rollout manager also
-blocks competing campaigns for the same Device UID. This release does not yet
-expose the separate activation API that will consume the receipt. IOS-XE individual-supervisor upgrades install active then
+blocks competing campaigns for the same Device UID. A completed PrepareOnly
+rollout may receive one append-only `spec.activationApproval` naming the exact
+plan, every target receipt, approver and UTC claim window. The manager then
+creates separate preinstalled activation leaves under fresh reservations; the
+prepared leaves remain immutable. IOS-XE individual-supervisor upgrades install active then
 standby and activate standby then active, with durable milestones and no
 automatic rollback when a safe per-supervisor rollback sequence cannot be
 proven.

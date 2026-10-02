@@ -597,12 +597,19 @@ func (r *IOSXESoftwareRolloutReconciler) rolloutChildren(
 	); err != nil {
 		return nil, fmt.Errorf("list rollout leaves: %w", err)
 	}
-	if len(list.Items) > len(rollout.Status.FrozenPlan.Targets) {
-		return nil, fmt.Errorf("campaign has %d leaves for %d frozen targets", len(list.Items), len(rollout.Status.FrozenPlan.Targets))
+	maxLeaves := len(rollout.Status.FrozenPlan.Targets)
+	if rollout.Spec.ActivationApproval != nil {
+		maxLeaves *= 2
 	}
-	expectedNames := make(map[string]struct{}, len(rollout.Status.FrozenPlan.Targets))
+	if len(list.Items) > maxLeaves {
+		return nil, fmt.Errorf("campaign has %d leaves; at most %d preparation and activation leaves are expected", len(list.Items), maxLeaves)
+	}
+	expectedNames := make(map[string]struct{}, maxLeaves)
 	for _, target := range rollout.Status.FrozenPlan.Targets {
 		expectedNames[target.ChildName] = struct{}{}
+		if rollout.Spec.ActivationApproval != nil {
+			expectedNames[activationChildName(target.ChildName)] = struct{}{}
+		}
 	}
 	children := make(map[string]opsv1alpha1.IOSXESoftwareUpgrade, len(list.Items))
 	for i := range list.Items {
@@ -641,7 +648,7 @@ func expectedLeafAnnotations(
 		managedprotocol.AnnotationNetworkWorkerUsername: workerUsername,
 		managedprotocol.AnnotationWorkerProtocol:        managedprotocol.Version,
 	}
-	if target.Source.SecretUID != "" {
+	if target.Source.SecretUID != "" && !isActivationTarget(rollout, target) {
 		annotations[managedprotocol.AnnotationSourceSecretUID] = target.Source.SecretUID
 	}
 	return annotations
@@ -701,6 +708,15 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 	case opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly:
 		strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
 	}
+	maintenanceWindow := rollout.Spec.Plan.MaintenanceWindow.DeepCopy()
+	if isActivationTarget(rollout, target) {
+		imageSource = opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}}
+		strategy = opsv1alpha1.UpgradeStrategyReload
+		maintenanceWindow = &opsv1alpha1.UpgradeWindow{
+			NotBefore: rollout.Spec.ActivationApproval.NotBefore.DeepCopy(),
+			NotAfter:  rollout.Spec.ActivationApproval.NotAfter.DeepCopy(),
+		}
+	}
 	return opsv1alpha1.IOSXESoftwareUpgradeSpec{
 		DeviceRef:                 configv1alpha1.DeviceRef{Name: target.DeviceName},
 		ImageSource:               imageSource,
@@ -708,7 +724,7 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 		MaxTransferBytesPerSecond: target.MaxTransferBytesPerSecond,
 		Strategy:                  strategy,
 		RollbackOnFailure:         &rollback,
-		MaintenanceWindow:         rollout.Spec.Plan.MaintenanceWindow.DeepCopy(),
+		MaintenanceWindow:         maintenanceWindow,
 		ResumePolicy:              "Retry",
 		MaxRetries:                3,
 		InstallTimeoutSeconds:     defaultInt32(rollout.Spec.Plan.InstallTimeoutSeconds, 3600),
@@ -775,10 +791,17 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 	currentPolicy *topologyrollout.ParsedAdminPolicy,
 	effectivePolicy topologyrollout.Policy,
 	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	activation *validatedActivationApproval,
 	now time.Time,
 ) error {
-	if err := r.ensureNoPreparedOwnershipConflict(ctx, rollout.Namespace, target.DeviceUID); err != nil {
-		return err
+	if isActivationTarget(rollout, target) {
+		if err := r.revalidateActivationAuthorization(ctx, rollout, activation); err != nil {
+			return fmt.Errorf("revalidate prepared receipt before activation reservation: %w", err)
+		}
+	} else {
+		if err := r.ensureNoPreparedOwnershipConflict(ctx, rollout.Namespace, target.DeviceUID); err != nil {
+			return err
+		}
 	}
 	_, workerUsername, err := r.revalidateAdmission(ctx, rollout, currentPolicy, effectivePolicy, target)
 	if err != nil {
@@ -825,6 +848,11 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 		if err := r.revalidateCampaignExecution(ctx, rollout); err != nil {
 			return err
 		}
+		if isActivationTarget(rollout, target) {
+			if err := r.revalidateActivationAuthorization(ctx, rollout, activation); err != nil {
+				return err
+			}
+		}
 		if err := r.revalidateDeviceTopologyLock(ctx, rollout, target, effectivePolicy.Epoch, lockID); err != nil {
 			return err
 		}
@@ -846,11 +874,18 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 		return errors.Join(err, releaseErr)
 	}
 
+	annotations := rolloutLeafAnnotations(rollout, target, workerUsername, now)
+	if isActivationTarget(rollout, target) {
+		if err := applyActivationLeafAnnotations(annotations, activation, target.DeviceUID); err != nil {
+			return errors.Join(err, r.releaseUnclaimedReservationAtEpoch(ctx, rollout, target, "",
+				uint64(rollout.Spec.Control.Revision), effectivePolicy.Epoch, lockID))
+		}
+	}
 	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: rollout.Namespace, Name: target.ChildName,
 			Labels:      map[string]string{managedprotocol.AnnotationCampaignUID: string(rollout.UID)},
-			Annotations: rolloutLeafAnnotations(rollout, target, workerUsername, now),
+			Annotations: annotations,
 		},
 		Spec: expectedLeafSpec(rollout, target),
 	}
@@ -864,6 +899,11 @@ func (r *IOSXESoftwareRolloutReconciler) admitTarget(
 	}
 	if err := validateManagedLeafBinding(rollout, target, leaf); err != nil {
 		return err
+	}
+	if isActivationTarget(rollout, target) {
+		if err := validateActivationLeafAnnotations(leaf, activation, target.DeviceUID); err != nil {
+			return err
+		}
 	}
 	if leaf.Annotations[managedprotocol.AnnotationWorkerUsername] != workerUsername {
 		return fmt.Errorf("existing leaf %s/%s is bound to a different worker username", leaf.Namespace, leaf.Name)

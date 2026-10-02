@@ -6,14 +6,17 @@
 package controller
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 )
 
@@ -25,8 +28,77 @@ const activationApprovalProtocolV1 = "activation-approval-v1"
 // live inventory or grant a mutation; those checks belong to admission at the
 // start of the activation window.
 type validatedActivationApproval struct {
-	Hash     string
-	Receipts map[string]opsv1alpha1.IOSXESoftwareRolloutActivationReceipt
+	Hash          string
+	Receipts      map[string]opsv1alpha1.IOSXESoftwareRolloutActivationReceipt
+	Prepared      map[string]opsv1alpha1.UpgradePreparedReceiptStatus
+	PreparedNames map[string]string
+}
+
+func applyActivationLeafAnnotations(
+	annotations map[string]string,
+	authorization *validatedActivationApproval,
+	deviceUID string,
+) error {
+	if authorization == nil {
+		return fmt.Errorf("activation authorization is absent")
+	}
+	reference, ok := authorization.Receipts[deviceUID]
+	if !ok {
+		return fmt.Errorf("activation authorization omits device UID %q", deviceUID)
+	}
+	receipt, ok := authorization.Prepared[deviceUID]
+	if !ok {
+		return fmt.Errorf("prepared receipt for device UID %q is absent", deviceUID)
+	}
+	annotations[managedprotocol.AnnotationActivationApprovalHash] = authorization.Hash
+	annotations[managedprotocol.AnnotationPreparedReceiptHash] = reference.ReceiptHash
+	annotations[managedprotocol.AnnotationPreparedUpgradeName] = authorization.PreparedNames[deviceUID]
+	annotations[managedprotocol.AnnotationPreparedUpgradeUID] = reference.UpgradeUID
+	annotations[managedprotocol.AnnotationPreparedTrustHash] = receipt.TrustIdentityHash
+	annotations[managedprotocol.AnnotationPreparedSourceDigest] = receipt.SourceDigest
+	return nil
+}
+
+func validateActivationLeafAnnotations(
+	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+	authorization *validatedActivationApproval,
+	deviceUID string,
+) error {
+	if leaf == nil {
+		return fmt.Errorf("activation leaf is absent")
+	}
+	expected := map[string]string{}
+	if err := applyActivationLeafAnnotations(expected, authorization, deviceUID); err != nil {
+		return err
+	}
+	for key, value := range expected {
+		if leaf.Annotations[key] != value {
+			return fmt.Errorf("activation leaf %s/%s annotation %q does not match the authorized prepared receipt", leaf.Namespace, leaf.Name, key)
+		}
+	}
+	return nil
+}
+
+func (r *IOSXESoftwareRolloutReconciler) revalidateActivationAuthorization(
+	ctx context.Context,
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	expected *validatedActivationApproval,
+) error {
+	if expected == nil {
+		return fmt.Errorf("activation authorization is absent")
+	}
+	children, err := r.rolloutChildren(ctx, rollout)
+	if err != nil {
+		return err
+	}
+	current, err := validateActivationApproval(rollout, children)
+	if err != nil {
+		return err
+	}
+	if current.Hash != expected.Hash {
+		return fmt.Errorf("activation authorization changed during admission")
+	}
+	return nil
 }
 
 func validateActivationApproval(
@@ -55,6 +127,8 @@ func validateActivationApproval(
 	}
 
 	receipts := make(map[string]opsv1alpha1.IOSXESoftwareRolloutActivationReceipt, len(approval.Receipts))
+	prepared := make(map[string]opsv1alpha1.UpgradePreparedReceiptStatus, len(approval.Receipts))
+	preparedNames := make(map[string]string, len(approval.Receipts))
 	for _, reference := range approval.Receipts {
 		if strings.TrimSpace(reference.DeviceUID) == "" || strings.TrimSpace(reference.UpgradeUID) == "" ||
 			!validSHA256Identity(reference.ReceiptHash) {
@@ -97,6 +171,8 @@ func validateActivationApproval(
 		if err != nil || sourceHash != receipt.SourceIdentityHash {
 			return nil, fmt.Errorf("prepared leaf %q source identity no longer matches its receipt", target.ChildName)
 		}
+		prepared[target.DeviceUID] = *receipt.DeepCopy()
+		preparedNames[target.DeviceUID] = target.ChildName
 	}
 
 	canonicalReceipts := append([]opsv1alpha1.IOSXESoftwareRolloutActivationReceipt(nil), approval.Receipts...)
@@ -126,8 +202,53 @@ func validateActivationApproval(
 	}
 	digest := sha256.Sum256(encoded)
 	return &validatedActivationApproval{
-		Hash: "sha256:" + hex.EncodeToString(digest[:]), Receipts: receipts,
+		Hash: "sha256:" + hex.EncodeToString(digest[:]), Receipts: receipts, Prepared: prepared, PreparedNames: preparedNames,
 	}, nil
+}
+
+// activationChildName keeps preparation and activation as distinct immutable
+// audit records. The suffix hash prevents collisions if a maximal Kubernetes
+// name must be truncated.
+func activationChildName(preparedName string) string {
+	digest := sha256.Sum256([]byte(preparedName))
+	suffix := "-activate-" + hex.EncodeToString(digest[:4])
+	maxBase := 253 - len(suffix)
+	base := strings.TrimRight(preparedName, "-.")
+	if len(base) > maxBase {
+		base = strings.TrimRight(base[:maxBase], "-.")
+	}
+	return base + suffix
+}
+
+func boundedActivationRequeue(now, boundary time.Time) time.Duration {
+	remaining := boundary.Sub(now)
+	if remaining <= 0 {
+		return time.Second
+	}
+	if remaining > time.Minute {
+		return time.Minute
+	}
+	return remaining
+}
+
+func activationTarget(target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget) opsv1alpha1.IOSXESoftwareRolloutPlannedTarget {
+	target.ChildName = activationChildName(target.ChildName)
+	return target
+}
+
+func isActivationTarget(
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+) bool {
+	if rollout == nil || rollout.Status.FrozenPlan == nil || rollout.Spec.ActivationApproval == nil {
+		return false
+	}
+	for _, frozen := range rollout.Status.FrozenPlan.Targets {
+		if frozen.DeviceUID == target.DeviceUID {
+			return target.ChildName == activationChildName(frozen.ChildName)
+		}
+	}
+	return false
 }
 
 func validSHA256Identity(value string) bool {

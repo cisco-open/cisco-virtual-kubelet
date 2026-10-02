@@ -499,6 +499,97 @@ func (r *Reconciler) validateManagedLeafBinding(ctx context.Context, up *opsv1al
 	return validateManagedClaimCoverage(up, up.Status.ManagerControl.Revision)
 }
 
+// validateManagedActivationBinding makes a manager-created preinstalled leaf
+// unusable unless it names the exact independently approved preparation
+// receipt and the worker is still using the same device trust inputs. Native
+// inventory is checked separately immediately before entering Activating.
+func (r *Reconciler) validateManagedActivationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) error {
+	if up == nil || up.Annotations[managedprotocol.AnnotationManaged] != "true" {
+		return nil
+	}
+	if up.Spec.ImageSource.Preinstalled == nil {
+		if up.Annotations[managedprotocol.AnnotationActivationApprovalHash] != "" {
+			return fmt.Errorf("activation authorization is present on a non-preinstalled image source")
+		}
+		return nil
+	}
+	annotations := up.Annotations
+	for _, key := range []string{
+		managedprotocol.AnnotationActivationApprovalHash,
+		managedprotocol.AnnotationPreparedReceiptHash,
+		managedprotocol.AnnotationPreparedSourceDigest,
+	} {
+		if !validManagedSHA256(annotations[key]) {
+			return fmt.Errorf("annotation %s is missing or is not a canonical sha256 identity", key)
+		}
+	}
+	if strings.TrimSpace(annotations[managedprotocol.AnnotationPreparedUpgradeUID]) == "" {
+		return fmt.Errorf("annotation %s is missing", managedprotocol.AnnotationPreparedUpgradeUID)
+	}
+	if strings.TrimSpace(annotations[managedprotocol.AnnotationPreparedUpgradeName]) == "" {
+		return fmt.Errorf("annotation %s is missing", managedprotocol.AnnotationPreparedUpgradeName)
+	}
+	expectedTrust := annotations[managedprotocol.AnnotationPreparedTrustHash]
+	currentTrust := ""
+	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" {
+		var err error
+		currentTrust, err = PreparedTrustIdentityHash(
+			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision)
+		if err != nil {
+			return err
+		}
+	}
+	if currentTrust != expectedTrust {
+		return fmt.Errorf("current device trust identity does not match the prepared receipt")
+	}
+	return nil
+}
+
+func (r *Reconciler) validateManagedActivationReceipt(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	if err := r.validateManagedActivationBinding(up); err != nil {
+		return err
+	}
+	if up == nil || up.Annotations[managedprotocol.AnnotationManaged] != "true" || up.Spec.ImageSource.Preinstalled == nil {
+		return nil
+	}
+	var prepared opsv1alpha1.IOSXESoftwareUpgrade
+	name := up.Annotations[managedprotocol.AnnotationPreparedUpgradeName]
+	if err := r.apiReader().Get(ctx, client.ObjectKey{Namespace: up.Namespace, Name: name}, &prepared); err != nil {
+		return fmt.Errorf("read authorized prepared leaf %s/%s: %w", up.Namespace, name, err)
+	}
+	receipt := prepared.Status.PreparedReceipt
+	if string(prepared.UID) != up.Annotations[managedprotocol.AnnotationPreparedUpgradeUID] ||
+		prepared.Status.Phase != opsv1alpha1.UpgradePhasePrepared || receipt == nil {
+		return fmt.Errorf("authorized prepared leaf identity or phase changed")
+	}
+	if err := ValidatePreparedReceipt(receipt); err != nil {
+		return fmt.Errorf("authorized prepared receipt is invalid: %w", err)
+	}
+	annotations := up.Annotations
+	if receipt.ReceiptHash != annotations[managedprotocol.AnnotationPreparedReceiptHash] ||
+		receipt.UpgradeUID != annotations[managedprotocol.AnnotationPreparedUpgradeUID] ||
+		receipt.DeviceUID != annotations[managedprotocol.AnnotationDeviceUID] ||
+		receipt.CampaignUID != annotations[managedprotocol.AnnotationCampaignUID] ||
+		receipt.PlanHash != annotations[managedprotocol.AnnotationPlanHash] ||
+		receipt.TargetVersion != up.Spec.TargetVersion ||
+		receipt.SourceDigest != annotations[managedprotocol.AnnotationPreparedSourceDigest] ||
+		receipt.TrustIdentityHash != annotations[managedprotocol.AnnotationPreparedTrustHash] {
+		return fmt.Errorf("authorized prepared receipt no longer matches the activation leaf binding")
+	}
+	return nil
+}
+
+func validManagedSHA256(value string) bool {
+	if len(value) != len("sha256:")+64 || !strings.HasPrefix(value, "sha256:") || strings.ToLower(value) != value {
+		return false
+	}
+	_, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return err == nil
+}
+
 // managedUpgradeWorkerReady verifies the worker which owns the software
 // upgrade control plane. In managed topology that is the dedicated
 // network-management worker, whose proof is recorded separately from the

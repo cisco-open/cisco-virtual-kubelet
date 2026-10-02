@@ -405,8 +405,99 @@ func TestActivationApprovalBindsCompleteExactPreparedReceiptSet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("validateActivationApproval() error = %v", err)
 	}
-	if !validSHA256Identity(validated.Hash) || len(validated.Receipts) != 2 {
+	if !validSHA256Identity(validated.Hash) || len(validated.Receipts) != 2 || len(validated.Prepared) != 2 {
 		t.Fatalf("validated activation = %#v", validated)
+	}
+	activationTarget := activationTarget(targets[0])
+	if activationTarget.ChildName == targets[0].ChildName || len(activationTarget.ChildName) > 253 {
+		t.Fatalf("activation child name %q is not distinct and bounded", activationTarget.ChildName)
+	}
+	activationSpec := expectedLeafSpec(rollout, activationTarget)
+	if activationSpec.ImageSource.Preinstalled == nil || activationSpec.Strategy != opsv1alpha1.UpgradeStrategyReload ||
+		activationSpec.MaintenanceWindow == nil || activationSpec.MaintenanceWindow.NotBefore == nil ||
+		!activationSpec.MaintenanceWindow.NotBefore.Equal(&rollout.Spec.ActivationApproval.NotBefore) ||
+		activationSpec.MaintenanceWindow.NotAfter == nil ||
+		!activationSpec.MaintenanceWindow.NotAfter.Equal(&rollout.Spec.ActivationApproval.NotAfter) {
+		t.Fatalf("activation leaf spec does not bind preinstalled Reload to approval window: %#v", activationSpec)
+	}
+	activationAnnotations := map[string]string{}
+	if err := applyActivationLeafAnnotations(activationAnnotations, validated, targets[0].DeviceUID); err != nil {
+		t.Fatal(err)
+	}
+	activationLeaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: rollout.Namespace, Name: activationTarget.ChildName, Annotations: activationAnnotations,
+	}}
+	if err := validateActivationLeafAnnotations(activationLeaf, validated, targets[0].DeviceUID); err != nil {
+		t.Fatalf("activation leaf annotations rejected: %v", err)
+	}
+	activationLeaf.Annotations[managedprotocol.AnnotationPreparedReceiptHash] = "sha256:" + strings.Repeat("0", 64)
+	if err := validateActivationLeafAnnotations(activationLeaf, validated, targets[0].DeviceUID); err == nil {
+		t.Fatal("receipt-substituted activation leaf annotations were accepted")
+	}
+
+	// A future authorization changes the completed preparation campaign into a
+	// bounded waiting state, but creates no activation leaf or reservation.
+	waiting := rollout.DeepCopy()
+	_, parsedPolicy := rolloutPolicyFixture()
+	policySnapshot, err := freezePolicy(parsedPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	waiting.Status.FrozenPlan.Policy = policySnapshot
+	waiting.Status.EffectivePolicy = &opsv1alpha1.IOSXESoftwareRolloutEffectivePolicyStatus{
+		Epoch: 1, Policy: policySnapshot, UpdatedAt: metav1.NewTime(now),
+	}
+	waiting.Status.Targets = make([]opsv1alpha1.IOSXESoftwareRolloutTargetStatus, 0, len(targets))
+	objects := []client.Object{waiting}
+	for _, target := range targets {
+		waiting.Status.Targets = append(waiting.Status.Targets, opsv1alpha1.IOSXESoftwareRolloutTargetStatus{
+			DeviceName: target.DeviceName, DeviceUID: target.DeviceUID, LeafName: target.ChildName,
+			Phase: opsv1alpha1.IOSXESoftwareRolloutTargetSucceeded, LastTransitionTime: metav1.NewTime(now),
+		})
+		preparedLeaf := leaves[target.ChildName]
+		leaf := preparedLeaf.DeepCopy()
+		leaf.Status.PreparedReceipt.PolicyUID = policySnapshot.UID
+		leaf.Status.PreparedReceipt.PolicyResourceVersion = policySnapshot.ResourceVersion
+		leaf.Status.PreparedReceipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*leaf.Status.PreparedReceipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := range waiting.Spec.ActivationApproval.Receipts {
+			if waiting.Spec.ActivationApproval.Receipts[i].DeviceUID == target.DeviceUID {
+				waiting.Spec.ActivationApproval.Receipts[i].ReceiptHash = leaf.Status.PreparedReceipt.ReceiptHash
+			}
+		}
+		objects = append(objects, leaf)
+	}
+	waitingScheme := newTestScheme(t)
+	if err := opsv1alpha1.AddToScheme(waitingScheme); err != nil {
+		t.Fatal(err)
+	}
+	waitingClient := fake.NewClientBuilder().WithScheme(waitingScheme).
+		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareRollout{}, &opsv1alpha1.IOSXESoftwareUpgrade{}).
+		WithObjects(objects...).Build()
+	waitingReconciler := &IOSXESoftwareRolloutReconciler{Client: waitingClient, APIReader: waitingClient}
+	result, err := waitingReconciler.reconcileExecution(context.Background(), waiting, parsedPolicy, now)
+	if err != nil {
+		t.Fatalf("future activation window reconciliation failed: %v", err)
+	}
+	if result.RequeueAfter <= 0 {
+		t.Fatalf("future activation window did not schedule a bounded recheck: %#v", result)
+	}
+	var waitingCurrent opsv1alpha1.IOSXESoftwareRollout
+	if err := waitingClient.Get(context.Background(), client.ObjectKeyFromObject(waiting), &waitingCurrent); err != nil {
+		t.Fatal(err)
+	}
+	if waitingCurrent.Status.Phase != opsv1alpha1.IOSXESoftwareRolloutPhasePaused ||
+		waitingCurrent.Status.Message != "prepared receipts are retained until the authorized activation window opens" {
+		t.Fatalf("future activation state = %q %q", waitingCurrent.Status.Phase, waitingCurrent.Status.Message)
+	}
+	var waitingLeaves opsv1alpha1.IOSXESoftwareUpgradeList
+	if err := waitingClient.List(context.Background(), &waitingLeaves, client.InNamespace(waiting.Namespace)); err != nil {
+		t.Fatal(err)
+	}
+	if len(waitingLeaves.Items) != len(targets) {
+		t.Fatalf("future window created an activation leaf: got %d leaves, want %d", len(waitingLeaves.Items), len(targets))
 	}
 
 	reordered := rollout.DeepCopy()

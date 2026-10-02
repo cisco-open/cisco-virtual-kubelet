@@ -62,6 +62,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
 )
 
@@ -2426,6 +2427,117 @@ func TestPreinstalledTargetMustExistInActivatableInventory(t *testing.T) {
 	}
 	if rig.os.activateCalls != 0 {
 		t.Fatalf("Activate calls=%d, want 0", rig.os.activateCalls)
+	}
+}
+
+func TestManagedPreinstalledActivationRequiresExactReceiptAndTrustBinding(t *testing.T) {
+	up := newUpgrade("managed-preinstalled-activation", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Annotations = map[string]string{managedprotocol.AnnotationManaged: "true"}
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}}
+	})
+	r := &Reconciler{
+		CredentialSecretRevision: "credential-rv-7",
+		GNOITLSSecretRevision:    "tls-rv-9",
+		GNOIProvisioningRevision: "provisioning-rv-11",
+	}
+	if err := r.validateManagedActivationBinding(up); err == nil {
+		t.Fatal("managed preinstalled leaf without receipt authorization was accepted")
+	}
+	trust, err := PreparedTrustIdentityHash(
+		r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	up.Annotations[managedprotocol.AnnotationActivationApprovalHash] = "sha256:" + strings.Repeat("a", 64)
+	up.Annotations[managedprotocol.AnnotationPreparedReceiptHash] = "sha256:" + strings.Repeat("b", 64)
+	up.Annotations[managedprotocol.AnnotationPreparedSourceDigest] = "sha256:" + strings.Repeat("c", 64)
+	up.Annotations[managedprotocol.AnnotationPreparedUpgradeName] = "prepared-upgrade"
+	up.Annotations[managedprotocol.AnnotationPreparedUpgradeUID] = "prepared-upgrade-uid"
+	up.Annotations[managedprotocol.AnnotationPreparedTrustHash] = trust
+	if err := r.validateManagedActivationBinding(up); err != nil {
+		t.Fatalf("exact activation receipt binding rejected: %v", err)
+	}
+	r.GNOITLSSecretRevision = "tls-rv-10"
+	if err := r.validateManagedActivationBinding(up); err == nil || !strings.Contains(err.Error(), "trust identity") {
+		t.Fatalf("trust drift was not rejected: %v", err)
+	}
+
+	up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+		URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("d", 64),
+	}
+	if err := r.validateManagedActivationBinding(up); err == nil {
+		t.Fatal("activation authorization on a streaming source was accepted")
+	}
+}
+
+func TestManagedPreparedInventoryIsRevalidatedImmediatelyBeforeActivateClaim(t *testing.T) {
+	rig := newRig(t)
+	prepared := newUpgrade("prepared-inventory-owner", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.UID = types.UID("prepared-inventory-owner-uid")
+	})
+	prepared.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	prepared.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: preparedReceiptProtocolV1, UpgradeUID: string(prepared.UID), DeviceUID: "device-uid",
+		SourceDigest: "sha256:" + strings.Repeat("c", 64), SourceIdentityHash: "sha256:" + strings.Repeat("d", 64),
+		ContentBinding: preparedContentBindingV1, TargetVersion: "17.15.01a", ValidatedVersion: "17.15.01a",
+		RunningVersion: "17.14.01a", PrimarySupervisorInstalled: true,
+		InstallStartedAt: metav1.NewTime(time.Unix(100, 0).UTC()), PreparedAt: metav1.NewTime(time.Unix(123, 0).UTC()),
+	}
+	var err error
+	prepared.Status.PreparedReceipt.ReceiptHash, err = PreparedReceiptHash(*prepared.Status.PreparedReceipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	up := newUpgrade("managed-preinstalled-inventory-drift", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}}
+		up.Annotations = map[string]string{
+			managedprotocol.AnnotationManaged:                "true",
+			managedprotocol.AnnotationActivationApprovalHash: "sha256:" + strings.Repeat("a", 64),
+			managedprotocol.AnnotationPreparedReceiptHash:    prepared.Status.PreparedReceipt.ReceiptHash,
+			managedprotocol.AnnotationPreparedSourceDigest:   "sha256:" + strings.Repeat("c", 64),
+			managedprotocol.AnnotationPreparedUpgradeName:    prepared.Name,
+			managedprotocol.AnnotationPreparedUpgradeUID:     string(prepared.UID),
+			managedprotocol.AnnotationDeviceUID:              "device-uid",
+		}
+		up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		up.Status.ValidatedVersion = up.Spec.TargetVersion
+	})
+	r := newReconciler(t, rig, up)
+	if err := r.Client.Create(context.Background(), prepared); err != nil {
+		t.Fatal(err)
+	}
+	r.Lifecycle = &fakeLifecycle{inspectImage: softwarelifecycle.InventoryImage{
+		Version: "17.16.01", State: softwarelifecycle.InventoryStateInstalled,
+	}}
+	var current opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &current); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.validateManagedActivationReceipt(context.Background(), &current); err != nil {
+		t.Fatalf("exact retained receipt was rejected: %v", err)
+	}
+	if err := r.Client.Delete(context.Background(), prepared); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.validateManagedActivationReceipt(context.Background(), &current); err == nil {
+		t.Fatal("activation receipt validation survived deletion of the authorized prepared leaf")
+	}
+	prepared.ResourceVersion = ""
+	if err := r.Client.Create(context.Background(), prepared); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.submitActivation(context.Background(), &current, false, false, r.now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(up), &current); err != nil {
+		t.Fatal(err)
+	}
+	if current.Status.Phase != opsv1alpha1.UpgradePhaseValidationFailed ||
+		current.Status.FailureReason != "PreparedInventoryChanged" {
+		t.Fatalf("phase=%q reason=%q message=%q", current.Status.Phase, current.Status.FailureReason, current.Status.Message)
+	}
+	if rig.os.activateCalls != 0 {
+		t.Fatalf("inventory drift dispatched %d Activate RPC(s)", rig.os.activateCalls)
 	}
 }
 
