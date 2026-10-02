@@ -480,6 +480,10 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 	// Admission normally enforces these invariants. Keep runtime validation
 	// for objects created before the CRD was upgraded and for unit-test/fake
 	// clients that do not execute CEL.
+	if up.Spec.RequireNetworkEvidence && up.Annotations[managedprotocol.AnnotationManaged] != "true" {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "ManagedNetworkEvidenceRequired",
+			"network evidence requires a manager-created identity-bound upgrade", now)
+	}
 	if err := validateImageSource(up.Spec.ImageSource); err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "InvalidImageSource", err.Error(), now)
 	}

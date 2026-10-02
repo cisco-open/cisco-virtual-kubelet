@@ -221,6 +221,8 @@ func TestRefreshNetworkGrantEvidenceAdvancesCompleteAuthorityAtomically(t *testi
 	}
 	oldSequence := oldSample.SampleSequence
 	leaf.Status.ManagerAdmission.NetworkEvidenceHash = oldHash
+	leaf.Spec.RequireNetworkEvidence = true
+	leaf.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.RequiredManagedUpgradeProtocol(leaf.Spec)
 	leaf.Status.ManagerAdmission.NetworkEvidenceProducerRevision = oldSample.ProducerRevision
 	leaf.Status.ManagerAdmission.NetworkEvidenceWorkerPodUID = oldSample.WorkerPodUID
 	leaf.Status.ManagerAdmission.NetworkEvidenceSampleSequence = &oldSequence

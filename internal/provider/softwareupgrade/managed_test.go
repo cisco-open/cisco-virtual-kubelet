@@ -2129,6 +2129,16 @@ func TestManagedNetworkGrantIsRevalidatedAtMutationClaim(t *testing.T) {
 		wantReason string
 	}{
 		{name: "exact evidence permits claim", wantClaim: true},
+		{name: "omitted required authority blocks claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *ciskov1.CiscoDevice) {
+			up.Status.ManagerAdmission.NetworkEvidenceHash = ""
+			up.Status.ManagerAdmission.NetworkEvidenceProducerRevision = ""
+			up.Status.ManagerAdmission.NetworkEvidenceWorkerPodUID = ""
+			up.Status.ManagerAdmission.NetworkEvidenceSampleSequence = nil
+			up.Status.ManagerAdmission.NetworkEvidenceNotAfter = nil
+		}, wantReason: "NetworkEvidenceAuthorityInvalid"},
+		{name: "legacy protocol blocks claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *ciskov1.CiscoDevice) {
+			up.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.ManagedUpgradeProtocolRolloutV1
+		}, wantReason: "ManagedAdmissionDenied"},
 		{name: "expired authority blocks claim", mutate: func(up *opsv1alpha1.IOSXESoftwareUpgrade, _ *ciskov1.CiscoDevice) {
 			up.Status.ManagerAdmission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(managedTestTime))
 		}, wantReason: "NetworkEvidenceAuthorityInvalid"},
@@ -2142,6 +2152,8 @@ func TestManagedNetworkGrantIsRevalidatedAtMutationClaim(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			up := managedTestLeaf("network-grant-" + strings.ReplaceAll(tt.name, " ", "-"))
+			up.Spec.RequireNetworkEvidence = true
+			up.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.RequiredManagedUpgradeProtocol(up.Spec)
 			up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
 			node := managedTestNode()
 			node.Annotations[managedprotocol.AnnotationNetworkWorkerUsername] = managedTestWorkerUsername

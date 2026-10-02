@@ -73,10 +73,11 @@ or replace the campaign's exact CLI and secure `OS.Verify` evidence.
 
 The previously qualified app-hosting fixture on the canary was restored and
 reached `Running`. A second historical fixture on `.101` used the unsigned
-`flash:/nginx.tar` package. That switch has no `sdd-120` USB storage and IOS XE
-therefore left the Kubernetes Pod in `ContainerCreating`, which is the
-documented platform boundary for unsigned packages. The fixture was scaled
-back to zero after capture.
+`flash:/nginx.tar` package and remained in `ContainerCreating`. The fixture
+was scaled back to zero after capture. **Correction:** fresh device inventory
+shows USB-backed IOx on `.101`; the earlier attribution to absent storage was
+incorrect. Neither signature rejection nor the activation failure's root cause
+was established. See the [follow-up diagnosis](merge-readiness-followup.md).
 
 This is not E07 service-continuity evidence: there was no portable signed
 package and independent endpoint probe spanning the complete disruption.

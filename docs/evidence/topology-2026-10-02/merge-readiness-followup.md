@@ -37,11 +37,23 @@ trust checks; this does not rewrite the receipt or inherit an approval.
 Unknown consumer protocols do not release ownership. Legacy active staged
 operations are not granted new claims by the new worker.
 
+The same compatibility review found that the released worker silently drops
+the additive network gate fields. New network-enabled campaigns therefore
+freeze `spec.requireNetworkEvidence: true` into each leaf. Non-staged leaves
+use `rollout-network-evidence-v1`; staged leaves use the staged protocol with
+the same evidence requirement. Native admission rejects incompatible or
+evidence-free grants; the worker independently denies missing, stale or changed
+authority at each mutation claim. Ordinary non-network campaigns retain their
+existing protocol. Standalone requests cannot silently opt into a managed gate.
+The pinned released-worker test covers both Reload and PrepareOnly.
+
 ### Deployment / rollback boundary
 
 1. Pause new campaigns and inspect manager/worker settlement and device
    claims. Resolve all active old-protocol preparation/activation **using the
-   existing compatible runtime** before installing this candidate. Preserve
+   existing compatible runtime** before installing this candidate. Also settle
+   existing network-enabled campaigns: their immutable leaves predate the new
+   network requirement and cannot be upgraded in place. Preserve
    uncertain claims and leases; do not edit their protocol to bypass a block.
 2. Retain schema/object exports and immutable receipt/approval history. Apply
    updated CRDs first, then the matching manager and workers, with execution
@@ -68,6 +80,15 @@ operations are not granted new claims by the new worker.
 | Pinned CRD/DeepCopy/Helm generation, repeated | PASS |
 | Topology Helm render contract | PASS |
 | Strict MkDocs and actionlint v1.7.12 | PASS |
+| Native shared-worker admission on isolated pinned Kubernetes 1.35 | PASS on `80ff447f`; retained Lease bootstrap, rotation, cross-plane denial and reserved-resource deletion |
+
+The subsequent network-protocol change also passed the full race suite and
+all 42 top-level real-API tests. The real-API protocol test now includes
+missing network authority, both legacy protocols, and a complete compatible
+positive grant. The released-worker probe covers both strategies and both new
+protocol markers. The first pushed CI run failed only its gofmt gate; the
+one-line formatting correction was pushed as `e7bc6013`. A later candidate's
+remote checks must still pass before merging.
 
 Candidate remote CI and deployment/physical lifecycle tests are separate
 gates; earlier `c024e040` green checks must not be relabelled as this fix's CI.
@@ -110,6 +131,13 @@ attached network interfaces. The filtered device log confirmed installation
 but did not establish why activation failed. This is **not** established as a
 signature failure, successful deployment or settled device outcome.
 
+A further `show app-hosting resource` returned 25% available CPU, 2048 MB
+available memory and 55331 MB available storage, with no other app listed.
+The failed app's profile requests 20% CPU, 409 MB memory and 10 MB disk.
+This does not support simple aggregate resource exhaustion as the diagnosis;
+it also does not prove the network configuration or every activation
+prerequisite is valid.
+
 The Deployment's original zero-replica intent was restored. Cleanup must pass
 through normal CVK reconciliation and the retained lease, not force deletion
 or fence removal. Until native app absence and lease settlement are recorded,
@@ -128,6 +156,10 @@ Secret-free test outputs and raw lab captures are retained locally:
 | `/tmp/cvk-merge-envtest.log` | `d0e04b9069bee02e70be07e7d1b78404804c7e961dd65f9c82865fe790c55ae1` |
 | `/tmp/cvk-merge-readonly-results.json` | `19df640b0f0c571ead0389215e80167e673480a875f72b48fba1ada093b56e1f` |
 | `/tmp/cvk-merge-app-infra-results.json` | `521a8ca312f8e21b81567eff38a03bbdd3f6fc0de30b54c38763230906156185` |
+| `/tmp/cvk-merge-network-final-race.log` | `aad894c49cae389df963a27832f684db9759c1548b087d1cee59416f1445977a` |
+| `/tmp/cvk-merge-network-envtest.log` | `f603364b562d87185a8a721e77846efa0c414aca4a1a5c3e07f2f6241ba287d7` |
+| `/tmp/cvk-merge-network-compat.log` | `bc8ada063f727b1b4575f4f64bbfc1c617d304b8bf5db8397c3b1a10f482abf7` |
+| `/tmp/cvk-merge-shared-worker.log` | `53ef2cbe6e721a36f1b918a0e58a87eac3c3da0dc31f88f32606c26cad89e1a4` |
 
 Additional live diagnosis is in `/tmp/cvk-merge-app-startup.txt`,
 `/tmp/cvk-merge-app-diagnosis.json` and `/tmp/cvk-merge-active-leases.json`.

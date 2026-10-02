@@ -799,11 +799,17 @@ func (r *Reconciler) prepareManagedMutationClaim(
 		return true, nil
 	}
 	if decision.allowClaim {
-		if err := r.validateManagedNetworkGrant(ctx, current.Status.ManagerAdmission, now); err != nil {
+		var evidenceErr error
+		if current.Spec.RequireNetworkEvidence && current.Status.ManagerAdmission.NetworkEvidenceHash == "" {
+			evidenceErr = fmt.Errorf("leaf requires network evidence but manager grant omits it")
+		} else {
+			evidenceErr = r.validateManagedNetworkGrant(ctx, current.Status.ManagerAdmission, now)
+		}
+		if evidenceErr != nil {
 			decision.allowClaim = false
 			decision.effectiveState = opsv1alpha1.UpgradeWorkerControlDenied
 			decision.reason = "NetworkEvidenceAuthorityInvalid"
-			decision.message = boundedWorkerMessage(err.Error())
+			decision.message = boundedWorkerMessage(evidenceErr.Error())
 		}
 	}
 	if decision.allowClaim {

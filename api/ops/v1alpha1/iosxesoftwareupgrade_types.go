@@ -99,6 +99,7 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced,shortName=xeupgrade
 // +kubebuilder:subresource:status
+// +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !has(self.spec.requireNetworkEvidence) || !self.spec.requireNetworkEvidence || (has(self.status.managerAdmission.networkEvidenceHash) && self.status.managerAdmission.protocolVersion in ['rollout-network-evidence-v1', 'rollout-staged-activation-v1'])",message="network-gated grants require network evidence and a compatible worker protocol"
 // +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !(self.spec.strategy == 'PrepareOnly' || has(self.spec.imageSource.preinstalled)) || self.status.managerAdmission.protocolVersion == 'rollout-staged-activation-v1'",message="managed preparation and preinstalled activation require the staged lifecycle protocol before granting work"
 // +kubebuilder:printcolumn:name="Device",type=string,JSONPath=`.spec.deviceRef.name`
 // +kubebuilder:printcolumn:name="Target",type=string,JSONPath=`.spec.targetVersion`
@@ -158,6 +159,12 @@ type IOSXESoftwareUpgradeSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=1099511627776
 	MaxTransferBytesPerSecond int64 `json:"maxTransferBytesPerSecond,omitempty"`
+
+	// RequireNetworkEvidence freezes the managed campaign's network gate into
+	// leaf intent. It requires fresh manager-accepted evidence at each mutation
+	// claim and a protocol that older workers reject rather than ignore.
+	// +optional
+	RequireNetworkEvidence bool `json:"requireNetworkEvidence,omitempty"`
 
 	// Strategy controls whether Activate performs the reload itself (default
 	// Reload), requests the currently unsupported ISSU strategy, stages through
@@ -511,13 +518,14 @@ type UpgradeWindow struct {
 // ManagedUpgradeProtocolVersion identifies the manager/worker handshake that
 // gates every new device mutation for a campaign-created leaf.
 //
-// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1;rollout-staged-activation-v1
+// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1;rollout-staged-activation-v1;rollout-network-evidence-v1
 type ManagedUpgradeProtocolVersion string
 
 const (
 	ManagedUpgradeProtocolRolloutV1           ManagedUpgradeProtocolVersion = "rollout-v1"
 	ManagedUpgradeProtocolRolloutBytePacingV1 ManagedUpgradeProtocolVersion = "rollout-byte-pacing-v1"
 	ManagedUpgradeProtocolStagedActivationV1  ManagedUpgradeProtocolVersion = "rollout-staged-activation-v1"
+	ManagedUpgradeProtocolNetworkEvidenceV1   ManagedUpgradeProtocolVersion = "rollout-network-evidence-v1"
 )
 
 // ExpectedManagedUpgradeProtocol selects the narrowest manager/worker
@@ -532,11 +540,16 @@ func ExpectedManagedUpgradeProtocol(maxTransferBytesPerSecond int64) ManagedUpgr
 
 // RequiredManagedUpgradeProtocol fences staged lifecycle intent from workers
 // predating PrepareOnly and receipt-bound activation. The staged protocol also
-// requires byte pacing when specified; an unpaced install must not fall back
-// to rollout-v1, whose workers can interpret an unknown strategy as Reload.
+// requires byte pacing and network evidence when specified; an unpaced install
+// must not fall back to rollout-v1, whose workers can interpret an unknown
+// strategy as Reload. Non-staged network gates have their own protocol so an
+// older worker cannot silently omit claim-time evidence validation.
 func RequiredManagedUpgradeProtocol(spec IOSXESoftwareUpgradeSpec) ManagedUpgradeProtocolVersion {
 	if spec.Strategy == UpgradeStrategyPrepareOnly || spec.ImageSource.Preinstalled != nil {
 		return ManagedUpgradeProtocolStagedActivationV1
+	}
+	if spec.RequireNetworkEvidence {
+		return ManagedUpgradeProtocolNetworkEvidenceV1
 	}
 	return ExpectedManagedUpgradeProtocol(spec.MaxTransferBytesPerSecond)
 }

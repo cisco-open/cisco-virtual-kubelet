@@ -722,6 +722,7 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 		ImageSource:               imageSource,
 		TargetVersion:             rollout.Spec.Plan.TargetVersion,
 		MaxTransferBytesPerSecond: target.MaxTransferBytesPerSecond,
+		RequireNetworkEvidence:    rollout.Spec.Plan.Health.Network != nil && rollout.Spec.Plan.Health.Network.Enabled,
 		Strategy:                  strategy,
 		RollbackOnFailure:         &rollback,
 		MaintenanceWindow:         maintenanceWindow,

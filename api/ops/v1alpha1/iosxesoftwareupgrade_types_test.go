@@ -75,6 +75,19 @@ func TestLegacyStagedProtocolIsSettledAuditOnly(t *testing.T) {
 	}
 }
 
+func TestRequiredNetworkProtocol(t *testing.T) {
+	for _, rate := range []int64{0, 1} {
+		spec := IOSXESoftwareUpgradeSpec{Strategy: UpgradeStrategyReload, RequireNetworkEvidence: true, MaxTransferBytesPerSecond: rate}
+		if got := RequiredManagedUpgradeProtocol(spec); got != ManagedUpgradeProtocolNetworkEvidenceV1 {
+			t.Fatalf("network rate=%d: got %s", rate, got)
+		}
+		spec.Strategy = UpgradeStrategyPrepareOnly
+		if got := RequiredManagedUpgradeProtocol(spec); got != ManagedUpgradeProtocolStagedActivationV1 {
+			t.Fatalf("staged network rate=%d: got %s", rate, got)
+		}
+	}
+}
+
 func TestUpgradeImageSourceIntentJSON(t *testing.T) {
 	validSHA := strings.Repeat("a", 64)
 	tests := []struct {

@@ -1079,9 +1079,11 @@ kubectl delete role,rolebinding \
 PDBs govern voluntary Kubernetes eviction; they do not prove network
 redundancy, forwarding health, storage portability, or that a switch outage is
 safe. Qualify the application's behavior and every target IOS-XE
-release/platform combination independently. This phase continues to use the
-existing combined IOS-XE install/activate leaf. A separately durable
-stage/approve/activate protocol is not implemented or implied.
+release/platform combination independently. The original drain qualification
+used the combined IOS-XE install/activate leaf. This branch also implements
+separate PrepareOnly receipts and approved activation; that does not extend
+the earlier drain test's physical coverage. See the
+[separate-activation evidence and boundaries](evidence/topology-2026-10-02/e06-separate-activation.md).
 
 The manager-side Eviction/PDB, identity, reservation, and recovery mechanics
 are deliberately above the IOS-XE driver. A future NX-OS or IOS XR adapter can
@@ -1218,13 +1220,28 @@ that value independently while materializing remote image bytes and while
 streaming the verified image through gNOI OS.Install. Cache hits skip the
 source-network segment but never the device segment. A resolver that cannot
 enforce an opted-in source limit is rejected before install; an omitted limit
-preserves existing behavior. A paced leaf requires the
+preserves existing behavior. An ordinary paced leaf requires the
 `rollout-byte-pacing-v1` manager/worker admission protocol, which makes a
 rolling deployment fail closed when an older worker does not understand the
 new rate field. The ceiling applies only to CVK-owned traffic and does not
 replace measured headroom or service-path validation. Ensure the install
 timeout and maintenance window accommodate the paced image size plus device
 validation and activation.
+
+Managed preparation and receipt-bound activation use
+`rollout-staged-activation-v1`, which also enforces pacing when configured.
+Network-enabled campaigns freeze `requireNetworkEvidence: true` in their
+immutable leaves. Non-staged network leaves use `rollout-network-evidence-v1`;
+staged network leaves use the staged protocol. Both require the exact fresh
+network evidence at each mutation claim; missing evidence cannot silently
+disable that gate. Older workers reject these new protocols.
+
+Before replacing controllers, settle active older staging **and** network-gated
+campaigns using their compatible runtime. Do not edit immutable leaves or
+protocols, erase claims, or assume an arbitrary Helm rollback is safe. Apply
+new CRDs before the matching manager/workers, with new campaigns paused.
+The full stored-object and reverse-manager rollback matrix remains a merge
+gate; see the [compatibility record](evidence/topology-2026-10-02/merge-readiness-followup.md).
 
 ### Admission and execution behavior
 
@@ -1884,10 +1901,14 @@ test work. The current code includes a partial T1/T2 evidence gate, a bounded
 ReplicaSet/Deployment drain path with partial physical evidence, ephemeral
 digest-addressed worker-local image caching, an optional Kubernetes 1.37
 native-TAS conformance lane, and a NoReboot strategy mapping. Independent
-stage/approval/activate semantics remain unimplemented. Read-only graph
-comparison is implemented, while controlled link-change/restore qualification
-and manager-owned persisted diagnostics remain open. The roadmap is not
-complete.
+prepare/approval/activate semantics are implemented with physical evidence for
+the tested IOS-XE cohort; image invalidation/recovery and the complete combined
+service-continuity matrix remain open. Read-only graph comparison and
+manager-owned persisted diagnostics passed the recorded controlled
+link-change/restore qualification. Graphs do not establish independent
+forwarding-path safety. The wider roadmap is not complete; use the
+[current evidence index](evidence/topology-2026-10-02/README.md) rather than
+inferring untested acceptance from feature availability.
 
 To opt into the network gate, require complete evidence and name the exact
 interfaces and adjacencies that must be healthy:

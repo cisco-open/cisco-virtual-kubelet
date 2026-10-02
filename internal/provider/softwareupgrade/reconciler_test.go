@@ -2387,6 +2387,20 @@ func TestUnknownUpgradeStrategyFailsBeforeDeviceDispatch(t *testing.T) {
 	}
 }
 
+func TestStandaloneNetworkRequirementFailsBeforeDeviceDispatch(t *testing.T) {
+	rig := newRig(t)
+	up := newUpgrade("standalone-network", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.Spec.RequireNetworkEvidence = true
+	})
+	got := runReconcile(t, newReconciler(t, rig, up), up, 5)
+	if got.Status.Phase != opsv1alpha1.UpgradePhasePreflightFailed || got.Status.FailureReason != "ManagedNetworkEvidenceRequired" {
+		t.Fatalf("standalone network requirement did not fail closed: %+v", got.Status)
+	}
+	if rig.os.activateCalls != 0 || rig.os.verifyCalls != 0 || rig.os.installCalls != 0 {
+		t.Fatal("standalone network requirement dispatched a device RPC before rejection")
+	}
+}
+
 func TestURLSecretIsLimitedToCredentialBearingSchemes(t *testing.T) {
 	err := validateImageSource(opsv1alpha1.UpgradeImageSource{
 		URL:          "https://images.example.test/cat9k.bin",

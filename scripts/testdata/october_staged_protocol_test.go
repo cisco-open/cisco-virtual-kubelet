@@ -6,27 +6,37 @@ package softwareupgrade
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 )
 
 func TestOctoberWorkerStagedProtocolFence(t *testing.T) {
-	for _, protocol := range []string{"rollout-v1", "rollout-staged-activation-v1"} {
-		t.Run(protocol, func(t *testing.T) {
-			up := managedTestLeaf("compat-prepare")
-			// The October type accepts this string from a newer served schema,
-			// although its execution code does not implement PrepareOnly.
-			up.Spec.Strategy = ops.UpgradeStrategy("PrepareOnly")
-			up.Status.ManagerAdmission.ProtocolVersion = ops.ManagedUpgradeProtocolVersion(protocol)
-			r := newManagedTestReconciler(t, up, nil)
-			decision := r.evaluateManagedLeaf(context.Background(), up)
-			if protocol == "rollout-v1" {
-				if !decision.allowProgress || !decision.allowClaim {
-					t.Fatalf("positive control did not reproduce legacy acceptance: %+v", decision)
-				}
-			} else if decision.allowProgress || decision.allowClaim {
-				t.Fatalf("released worker accepted new staged protocol: %+v", decision)
+	for _, strategy := range []ops.UpgradeStrategy{"PrepareOnly", "Reload"} {
+		t.Run(string(strategy), func(t *testing.T) {
+			for _, protocol := range []string{"rollout-v1", "rollout-staged-activation-v1", "rollout-network-evidence-v1"} {
+				t.Run(protocol, func(t *testing.T) {
+					up := managedTestLeaf("compat-prepare")
+					// The October type accepts this string from a newer served schema,
+					// although its execution code does not implement PrepareOnly.
+					up.Spec.Strategy = strategy
+					// Additive fields are ignored by the released worker. The protocol,
+					// not the presence of newer JSON fields, must fence its claims.
+					if err := json.Unmarshal([]byte(`{"requireNetworkEvidence":true}`), &up.Spec); err != nil {
+						t.Fatal(err)
+					}
+					up.Status.ManagerAdmission.ProtocolVersion = ops.ManagedUpgradeProtocolVersion(protocol)
+					r := newManagedTestReconciler(t, up, nil)
+					decision := r.evaluateManagedLeaf(context.Background(), up)
+					if protocol == "rollout-v1" {
+						if !decision.allowProgress || !decision.allowClaim {
+							t.Fatalf("positive control did not reproduce legacy acceptance: %+v", decision)
+						}
+					} else if decision.allowProgress || decision.allowClaim {
+						t.Fatalf("released worker accepted new staged protocol: %+v", decision)
+					}
+				})
 			}
 		})
 	}

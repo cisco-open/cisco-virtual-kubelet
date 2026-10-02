@@ -280,6 +280,12 @@ spec:
                 maximum: 86400
                 minimum: 60
                 type: integer
+              requireNetworkEvidence:
+                description: |-
+                  RequireNetworkEvidence freezes the managed campaign's network gate into
+                  leaf intent. It requires fresh manager-accepted evidence at each mutation
+                  claim and a protocol that older workers reject rather than ignore.
+                type: boolean
               resumePolicy:
                 default: Retry
                 description: |-
@@ -652,6 +658,7 @@ spec:
                     - rollout-v1
                     - rollout-byte-pacing-v1
                     - rollout-staged-activation-v1
+                    - rollout-network-evidence-v1
                     type: string
                   reservationID:
                     description: ReservationID identifies the atomic device and domain
@@ -1454,6 +1461,7 @@ spec:
                     - rollout-v1
                     - rollout-byte-pacing-v1
                     - rollout-staged-activation-v1
+                    - rollout-network-evidence-v1
                     type: string
                   nodeUID:
                     description: |-
@@ -1913,6 +1921,12 @@ spec:
                 self.managerDrain.pods.exists(p, p.uid == uid)))'
         type: object
         x-kubernetes-validations:
+        - message: network-gated grants require network evidence and a compatible
+            worker protocol
+          rule: '!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state
+            != ''Granted'' || !has(self.spec.requireNetworkEvidence) || !self.spec.requireNetworkEvidence
+            || (has(self.status.managerAdmission.networkEvidenceHash) && self.status.managerAdmission.protocolVersion
+            in [''rollout-network-evidence-v1'', ''rollout-staged-activation-v1''])'
         - message: managed preparation and preinstalled activation require the staged
             lifecycle protocol before granting work
           rule: '!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state
