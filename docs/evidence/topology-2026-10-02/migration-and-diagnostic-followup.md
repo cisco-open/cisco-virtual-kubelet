@@ -128,6 +128,26 @@ Raw lab outputs remain local. Reproducibility references:
 
 ## Outstanding merge gates
 
+### Documentation dependency security follow-up
+
+GitHub's three open default-branch alerts also affected this branch's
+`urllib3==2.7.0` documentation dependency. The lock now selects `2.8.0` with
+generated hashes and an explicit security floor; its redistributed license
+notice was regenerated. Upstream identifies this release as the fix for
+[HTTPS proxy TLS handling](https://github.com/urllib3/urllib3/security/advisories/GHSA-8988-9cw3-xx77),
+[unbounded chunk headers](https://github.com/urllib3/urllib3/security/advisories/GHSA-vxq7-64xx-v4gw),
+and [deflate streaming loops](https://github.com/urllib3/urllib3/security/advisories/GHSA-gh4c-6fx4-qh6g).
+
+The entire hashed Python dependency closure passes `pip-audit==2.10.1` with
+`--strict --disable-pip --require-hashes`; there are no ignored advisories.
+Smoke and documentation deployment now run the same audit in an isolated
+tool environment, without adding auditor dependencies to the shipped site.
+Strict MkDocs and license consistency checks pass after the update. This
+affects documentation tooling, not device authentication or controller runtime.
+Default-branch alerts remain open until the fix is merged and rescanned.
+
+### Remaining acceptance work
+
 1. Finish R1's interrupted-deployment and rollback matrix. The two newly
    passing subtests must not be reported as complete migration qualification.
 2. Implement and test R3's authorized, append-only receipt invalidation and
