@@ -9,6 +9,12 @@ published with the branch.
 
 ## Candidate history
 
+The [migration and diagnostic follow-up](migration-and-diagnostic-followup.md)
+adds exact released-manager and stored-neighbor migration tests, fixes a
+physical CLI false-success defect, and records a read-only regression on all
+three C9Ks. Recovery, service continuity and the final staged lifecycle matrix
+remain open; these results are not a new upgrade/downgrade qualification.
+
 The later [merge-readiness follow-up](merge-readiness-followup.md) records an
 actual October-worker compatibility defect and its staged-protocol fix,
 real-API validation, corrected physical app/storage inventory, and an E07

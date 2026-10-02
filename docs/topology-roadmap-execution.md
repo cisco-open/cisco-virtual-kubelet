@@ -37,9 +37,15 @@ also passed on `97509903` in run `37018395965`; later heads require their own
 checks. The physical acceptance matrix remains a separate gate. The lab runtime is still
 `6f3686e9`; do not attribute its physical results to these newer binaries.
 
-R1 is only partially closed: new grants fail closed across the tested worker
-boundary, but stored-list migration, reverse-manager deployment and rollback
-qualification remain. R3 still lacks explicit receipt invalidation/recovery.
+Follow-up `bfb826f0` passes the actual October manager's new-protocol rejection
+and a stored map-to-atomic neighbor migration with an old-schema negative
+control. `3135a205` fixes CLI parser errors falsely reported as successful
+diagnostics; its read-only probe passed on all three physical switches. The
+full race suite and all 43 real-API tests pass. See the
+[migration and diagnostic record](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
+
+R1 is still partial: interrupted deployment, reverse-manager operation and
+rollback qualification remain. R3 still lacks explicit receipt invalidation/recovery.
 R2/R4/R9 need independent path/service evidence and the complete separately
 approved physical lifecycle matrix. The wider roadmap remains as enumerated
 below. See the [detailed follow-up](evidence/topology-2026-10-02/merge-readiness-followup.md)
@@ -149,6 +155,13 @@ rewritten as evidence for the new candidate. R0 closes E00's remaining
 fixture/evidence prerequisites, not the later behavior tests.
 
 #### R1 — qualify compatibility and rollback before more API work
+
+Completed subtests in `bfb826f0`: exact released-manager rejection of newer
+protocols (Granted and Settled) and real-API stored neighbor migration from
+the exact pre-atomic schema. Retain these tests; next exercise interrupted
+deployment and rollback rather than repeating these as new work. The actual
+old-manager deployment/restart matrix is not covered by its validation-function
+probe. [Results and limits](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
 
 **Scope:** E01-C/E05-A and E13 migration; manager/worker protocol, generated
 CRDs, `charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh`.
