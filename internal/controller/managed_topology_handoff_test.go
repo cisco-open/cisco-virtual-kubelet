@@ -888,6 +888,44 @@ func TestLegacyHandoffSafetyBlocksActiveControlState(t *testing.T) {
 	}
 }
 
+func TestLegacyHandoffBlocksRetainedPreparedReceipt(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "retained-preparation", UID: "prepared-leaf-uid",
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:   "true",
+			managedprotocol.AnnotationDeviceUID: string(device.UID),
+		},
+	}}
+	leaf.Spec.DeviceRef.Name = device.Name
+	if err := fixture.client.Create(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+	leaf.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	leaf.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{}
+	leaf.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		State: opsv1alpha1.UpgradeManagerAdmissionSettled, DeviceUID: string(device.UID),
+	}
+	if err := fixture.client.Update(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := fixture.r.reconcileManagedTopology(ctx, fixture.device(t))
+	if err == nil || !strings.Contains(err.Error(), "retained prepared software upgrade") {
+		t.Fatalf("retained receipt handoff error = %v", err)
+	}
+	if !result.Managed {
+		t.Fatalf("blocked handoff result = %+v, want managed ownership retained", result)
+	}
+	current := fixture.device(t)
+	if current.Status.LegacyHandoff != nil {
+		t.Fatalf("blocked handoff created state %#v", current.Status.LegacyHandoff)
+	}
+	assertWorkerAccessAbsent(t, fixture.client, current, topologyLegacyWorkerServiceAccountName(current))
+}
+
 type nodeDeleteRequiresRevokedLegacyAccessClient struct {
 	client.Client
 	namespace, serviceAccount string

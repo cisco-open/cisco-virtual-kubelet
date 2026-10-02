@@ -111,6 +111,15 @@ gNXI/gNOI returned healthy, both Nodes returned Ready without taints, and the
 ledger settled empty. Three defects exposed by the physical flow were repaired
 and retested through exact candidate `3899e327`.
 
+### E12 synthetic scale and ownership fencing
+
+[`e12-synthetic-scale-and-handoff.md`](e12-synthetic-scale-and-handoff.md)
+records the versioned 1/10/50/100-target benchmark profile and pinned Linux
+results. It also records the retained-preparation fence added to managed device
+deletion and reverse writer handoff. This is synthetic E12-A and unit/API E12-B
+evidence only; manager runtime percentiles and physical E12-C/D handoff remain
+open.
+
 ## Validation matrix
 
 - `go test -race ./...`: passed on `740ffd0e` before the focused E10 fixture

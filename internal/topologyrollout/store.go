@@ -101,6 +101,7 @@ func (s Store) Mutate(ctx context.Context, mutate func(*Ledger) error) error {
 		cm.Data[LedgerDataKey] = string(encoded)
 		if err := s.Client.Patch(ctx, cm, client.MergeFromWithOptions(before, client.MergeFromWithOptimisticLock{})); err != nil {
 			if apierrors.IsConflict(err) {
+				RecordLedgerConflictRetry()
 				return err
 			}
 			return fmt.Errorf("update rollout ledger: %w", err)

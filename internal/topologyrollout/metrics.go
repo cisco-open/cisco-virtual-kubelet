@@ -17,6 +17,7 @@ package topologyrollout
 import (
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -24,11 +25,13 @@ import (
 var (
 	metricsOnce sync.Once
 
-	reconciliationsTotal *prometheus.CounterVec
-	targetTransitions    *prometheus.CounterVec
-	admissionWaits       *prometheus.CounterVec
-	ledgerActive         prometheus.Gauge
-	ledgerBytes          prometheus.Gauge
+	reconciliationsTotal  *prometheus.CounterVec
+	targetTransitions     *prometheus.CounterVec
+	admissionWaits        *prometheus.CounterVec
+	reconcileDuration     *prometheus.HistogramVec
+	ledgerActive          prometheus.Gauge
+	ledgerBytes           prometheus.Gauge
+	ledgerConflictRetries prometheus.Counter
 )
 
 // RegisterMetrics registers topology-rollout metrics. Every label is selected
@@ -51,6 +54,11 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			Name: "cisco_vk_topology_rollout_admission_waits_total",
 			Help: "Topology rollout admission waits by bounded reason class.",
 		}, []string{"reason"})
+		reconcileDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "cisco_vk_topology_rollout_reconcile_duration_seconds",
+			Help:    "Topology rollout reconciliation latency by bounded result and reason class.",
+			Buckets: prometheus.ExponentialBuckets(0.005, 2, 12),
+		}, []string{"result", "reason"})
 		ledgerActive = prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "cisco_vk_topology_rollout_ledger_active_reservations",
 			Help: "Active or unresolved reservations in the authoritative topology rollout ledger.",
@@ -59,7 +67,12 @@ func RegisterMetrics(reg prometheus.Registerer) {
 			Name: "cisco_vk_topology_rollout_ledger_serialized_bytes",
 			Help: "Serialized byte size of the authoritative topology rollout ledger.",
 		})
-		reg.MustRegister(reconciliationsTotal, targetTransitions, admissionWaits, ledgerActive, ledgerBytes)
+		ledgerConflictRetries = prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "cisco_vk_topology_rollout_ledger_conflict_retries_total",
+			Help: "Kubernetes resourceVersion conflicts retried while mutating the topology rollout ledger.",
+		})
+		reg.MustRegister(reconciliationsTotal, targetTransitions, admissionWaits, reconcileDuration,
+			ledgerActive, ledgerBytes, ledgerConflictRetries)
 	})
 }
 
@@ -69,10 +82,37 @@ func RecordReconcile(result string, err error) {
 	if reconciliationsTotal == nil {
 		return
 	}
+	result, reason := boundedReconcileLabels(result, err)
+	reconciliationsTotal.WithLabelValues(result, reason).Inc()
+}
+
+// RecordReconcileDuration records controller latency using the same bounded
+// vocabulary as RecordReconcile. Raw object identities and error strings are
+// deliberately excluded from labels.
+func RecordReconcileDuration(result string, err error, duration time.Duration) {
+	if reconcileDuration == nil {
+		return
+	}
+	result, reason := boundedReconcileLabels(result, err)
+	if duration < 0 {
+		duration = 0
+	}
+	reconcileDuration.WithLabelValues(result, reason).Observe(duration.Seconds())
+}
+
+// RecordLedgerConflictRetry increments a label-free contention signal. It is
+// called only when the API server returns an optimistic-lock conflict.
+func RecordLedgerConflictRetry() {
+	if ledgerConflictRetries != nil {
+		ledgerConflictRetries.Inc()
+	}
+}
+
+func boundedReconcileLabels(result string, err error) (string, string) {
 	if result != "complete" && result != "requeue" && result != "error" {
 		result = "other"
 	}
-	reconciliationsTotal.WithLabelValues(result, reconcileReason(err)).Inc()
+	return result, reconcileReason(err)
 }
 
 // RecordTargetTransition records a persisted target-summary transition.

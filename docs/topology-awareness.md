@@ -1421,8 +1421,11 @@ domain, image, or policy values as labels:
 - `cisco_vk_topology_projection_reconciliations_total{result}` with the bounded
   `projected`, `skipped`, `error`, or `other` result;
 - `cisco_vk_topology_rollout_reconciliations_total`;
+- `cisco_vk_topology_rollout_reconcile_duration_seconds` for bounded
+  p50/p95/p99 latency queries;
 - `cisco_vk_topology_rollout_target_transitions_total`;
 - `cisco_vk_topology_rollout_admission_waits_total`;
+- `cisco_vk_topology_rollout_ledger_conflict_retries_total`;
 - `cisco_vk_topology_rollout_ledger_active_reservations`; and
 - `cisco_vk_topology_rollout_ledger_serialized_bytes`.
 
@@ -1644,6 +1647,16 @@ already hashed and checked by the topology-enabled manager preflight.
    removed. The controller has already restored the configured legacy account
    for topology-disabled compatibility; it is not a managed-topology identity.
 
+A retained `Prepared` leaf is intentionally not idle ownership even when its
+manager admission is `Settled`: its receipt reserves that exact device and
+installed image for a later separately authorized activation. Reverse handoff
+and managed device deletion therefore remain blocked while any exact managed
+leaf is `Prepared` or carries a preparation receipt. Complete its approved
+activation while the managed owner is intact, or retain managed ownership. Do
+not copy the receipt/approval to another owner or delete the leaf as an
+invalidation shortcut; a device-reconciled receipt invalidation contract is
+not yet supported.
+
 If workload drain was ever enabled, include each retained cleanup Role/Binding
 in the evidence export. After step 2, verify that its namespace has no reserved
 drain marker/finalizer, then remove the exact pair with the command above before
@@ -1697,6 +1710,35 @@ forward enrollment until the shared readiness proof and credential retirement
 finish. The request annotation can be removed by a topology-author
 after topology is disabled; the Complete status and Node audit marker remain
 identity state.
+
+### Offline transfer to another cluster
+
+Cross-cluster transfer is an offline ownership move, not active/active
+failover. A Lease in one cluster cannot fence a writer in another cluster.
+Before the destination receives device credentials or creates a CiscoDevice:
+
+1. pause source-cluster campaigns and prove there is no topology lock, ledger
+   reservation, unsettled maintenance session, claimed operation, or retained
+   `Prepared` receipt for the device;
+2. complete the UID-bound reverse handoff above, then delete the source
+   CiscoDevice through its normal finalizer and verify its worker Deployments,
+   Pods, per-device Leases, generated bindings and Node are absent;
+3. remove the source credential Secret or rotate/revoke the device credential
+   and trust material so a retained source-cluster copy cannot authenticate;
+4. retain the exported device UID, Node UID, handoff status, ledger and
+   operation history as audit evidence, but do not import approvals, claims,
+   receipts, Leases or Kubernetes UIDs into the destination; and
+5. only after source revocation is independently verified, create a fresh
+   destination Secret/CiscoDevice and require new read-only discovery, exact
+   physical identity, topology projection and worker-binding health before any
+   mutation is approved.
+
+Exercise a negative old-writer request after revocation and a positive
+destination observation before declaring the move complete. If the source
+cluster is unreachable and the device credential cannot be rotated or revoked,
+the transfer is blocked. Cross-cluster Lease expiry, copied Kubernetes state,
+or merely scaling the source controller to zero is not sufficient fencing.
+Automated multi-cluster failover remains out of scope.
 
 An interrupted upgrade from the earlier per-device model has one additional
 recovery state: exact generated legacy RBAC can exist before its UID marker.

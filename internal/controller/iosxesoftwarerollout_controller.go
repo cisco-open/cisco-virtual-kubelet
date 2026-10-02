@@ -85,6 +85,7 @@ func (r *IOSXESoftwareRolloutReconciler) reader() client.Reader {
 }
 
 func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, retErr error) {
+	started := time.Now()
 	defer func() {
 		metricResult := "complete"
 		if retErr != nil {
@@ -93,6 +94,7 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 			metricResult = "requeue"
 		}
 		topologyrollout.RecordReconcile(metricResult, retErr)
+		topologyrollout.RecordReconcileDuration(metricResult, retErr, time.Since(started))
 	}()
 	var rollout opsv1alpha1.IOSXESoftwareRollout
 	if err := r.reader().Get(ctx, req.NamespacedName, &rollout); err != nil {

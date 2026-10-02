@@ -1523,6 +1523,10 @@ func TestManagedDeviceDeletionFencesEveryUnresolvedAuthority(t *testing.T) {
 		"unsettled leaf": func(_ *ciskov1.CiscoDevice, _ *coordv1.Lease, leaf *opsv1alpha1.IOSXESoftwareUpgrade, _ *topologyrollout.Ledger) {
 			leaf.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
 		},
+		"retained prepared receipt": func(_ *ciskov1.CiscoDevice, _ *coordv1.Lease, leaf *opsv1alpha1.IOSXESoftwareUpgrade, _ *topologyrollout.Ledger) {
+			leaf.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+			leaf.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{}
+		},
 		"ledger reservation": func(_ *ciskov1.CiscoDevice, _ *coordv1.Lease, _ *opsv1alpha1.IOSXESoftwareUpgrade, ledger *topologyrollout.Ledger) {
 			ledger.Reservations["reservation-1"] = validDeletionReservation()
 		},

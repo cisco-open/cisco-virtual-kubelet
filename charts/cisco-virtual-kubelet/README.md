@@ -861,6 +861,12 @@ resolve or quarantine every claimed mutation, wait for reservations and
 sessions to settle, export campaign/leaf/ledger evidence, and complete the
 controller's reverse writer handoff for every managed device.
 
+A retained `Prepared` software leaf continues to own its exact device/image
+even after its manager admission settles. It blocks reverse handoff and device
+deletion. Complete the separately approved activation under the current owner
+or retain managed ownership; copying its receipt/approval or deleting the leaf
+is not a supported transfer or invalidation procedure.
+
 Helm keep protection deliberately leaves the policy, ledger, admission
 policies/bindings, functional profile roles, and supplemental manager role/binding
 behind. Workload-drain cleanup Role/RoleBindings remain until all drains settle and protected Pod markers are gone. Complete the UID-bound reverse handoff documented in

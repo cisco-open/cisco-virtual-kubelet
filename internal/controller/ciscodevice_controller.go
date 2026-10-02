@@ -2692,6 +2692,16 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 		if !managedBinding {
 			continue
 		}
+		// A successful PrepareOnly leaf deliberately remains terminal Prepared
+		// with a durable receipt even after its disruption reservation settles.
+		// That receipt retains exclusive device/software ownership for a later
+		// exact activation, so generic "settled" admission is not permission to
+		// delete the device or transfer it to another writer. Keep the handoff
+		// fenced until a separate audited receipt-invalidation contract exists;
+		// never copy the receipt or its approval into a new owner implicitly.
+		if upgrade.Status.Phase == opsv1alpha1.UpgradePhasePrepared || upgrade.Status.PreparedReceipt != nil {
+			return fmt.Errorf("%s is blocked by retained prepared software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
 		admission := upgrade.Status.ManagerAdmission
 		if admission == nil || admission.DeviceUID != string(device.UID) {
 			return fmt.Errorf("%s is blocked by incomplete software-upgrade admission %s/%s", operation, upgrade.Namespace, upgrade.Name)
