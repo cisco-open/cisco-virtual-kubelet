@@ -627,6 +627,48 @@ func ValidatePreparedActivationParent(
 	return validatePreparedActivationParent(activation, prepared)
 }
 
+// PreparedReceiptConsumed reports whether an immutable preparation has one
+// exact, conclusively settled activation successor. The Prepared object remains
+// append-only audit evidence; only a terminal, verified successor with the same
+// frozen manager and content bindings releases its per-device queue ownership.
+func PreparedReceiptConsumed(
+	prepared *opsv1alpha1.IOSXESoftwareUpgrade,
+	candidates []opsv1alpha1.IOSXESoftwareUpgrade,
+) bool {
+	if prepared == nil || prepared.Status.Phase != opsv1alpha1.UpgradePhasePrepared ||
+		prepared.Status.PreparedReceipt == nil ||
+		ValidatePreparedReceipt(prepared.Status.PreparedReceipt) != nil {
+		return false
+	}
+	receipt := prepared.Status.PreparedReceipt
+	for i := range candidates {
+		consumer := &candidates[i]
+		admission := consumer.Status.ManagerAdmission
+		if consumer.UID == prepared.UID ||
+			validatePreparedActivationParent(consumer, prepared) != nil ||
+			consumer.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded ||
+			consumer.Status.CompletionTime == nil ||
+			(consumer.Status.RunningVersion != receipt.TargetVersion &&
+				!strings.HasPrefix(consumer.Status.RunningVersion, receipt.TargetVersion+".")) ||
+			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "Verified") ||
+			!meta.IsStatusConditionTrue(consumer.Status.Conditions, "DeviceMutationSettled") ||
+			admission == nil || admission.ProtocolVersion != receipt.ManagedProtocolVersion ||
+			admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled ||
+			admission.LeafUID != string(consumer.UID) ||
+			admission.DeviceUID != receipt.DeviceUID || admission.NodeUID != receipt.NodeUID ||
+			admission.DeviceGeneration != receipt.DeviceGeneration ||
+			admission.PhysicalIdentity != receipt.PhysicalIdentity ||
+			admission.CampaignUID != receipt.CampaignUID || admission.PlanHash != receipt.PlanHash ||
+			admission.PolicyUID != receipt.PolicyUID ||
+			admission.PolicyResourceVersion != receipt.PolicyResourceVersion ||
+			admission.PolicyEpoch != receipt.PolicyEpoch {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 func validManagedSHA256(value string) bool {
 	if len(value) != len("sha256:")+64 || !strings.HasPrefix(value, "sha256:") || strings.ToLower(value) != value {
 		return false

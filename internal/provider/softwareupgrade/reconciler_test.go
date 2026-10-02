@@ -3489,6 +3489,112 @@ func TestAuthorizedActivationYieldsExactPreparedQueueOwner(t *testing.T) {
 	}
 }
 
+func TestSettledActivationReleasesPreparedQueueOwnerForLaterCampaign(t *testing.T) {
+	rig := newRig(t)
+	now := metav1.NewTime(time.Unix(300, 0).UTC())
+	prepared := newUpgrade("prepared-owner", func(owner *opsv1alpha1.IOSXESoftwareUpgrade) {
+		owner.UID = types.UID("prepared-owner-uid")
+	})
+	prepared.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	prepared.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: preparedReceiptProtocolV1,
+		UpgradeUID:      string(prepared.UID), DeviceUID: "device-uid", NodeUID: "node-uid",
+		PhysicalIdentity: "serial-1", DeviceGeneration: 7,
+		CampaignUID: "campaign-uid", PlanHash: "sha256:" + strings.Repeat("a", 64),
+		ManagedProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+		PolicyUID:              "policy-uid", PolicyResourceVersion: "42", PolicyEpoch: 3,
+		WorkerRevision:     "sha256:" + strings.Repeat("b", 64),
+		SourceDigest:       "sha256:" + strings.Repeat("c", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("d", 64),
+		TrustIdentityHash:  "sha256:" + strings.Repeat("e", 64),
+		ContentBinding:     preparedContentBindingV1,
+		TargetVersion:      "17.15.01a", ValidatedVersion: "17.15.01a.123", RunningVersion: "17.14.01a",
+		PrimarySupervisorInstalled: true, InstallStartedAt: metav1.NewTime(time.Unix(100, 0).UTC()),
+		ManagedMutationClaims: []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+			Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: "reservation-1",
+			PolicyEpoch: 3, ControlRevision: 2, ClaimedAt: metav1.NewTime(time.Unix(100, 0).UTC()),
+		}},
+		PreparedAt: metav1.NewTime(time.Unix(123, 0).UTC()),
+	}
+	var err error
+	prepared.Status.PreparedReceipt.ReceiptHash, err = PreparedReceiptHash(*prepared.Status.PreparedReceipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt := prepared.Status.PreparedReceipt
+	activation := newUpgrade("settled-activation", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.UID = types.UID("activation-uid")
+		up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}}
+		up.Spec.TargetVersion = receipt.TargetVersion
+		up.Annotations = map[string]string{
+			managedprotocol.AnnotationManaged:                "true",
+			managedprotocol.AnnotationActivationApprovalHash: "sha256:" + strings.Repeat("f", 64),
+			managedprotocol.AnnotationPreparedReceiptHash:    receipt.ReceiptHash,
+			managedprotocol.AnnotationPreparedSourceDigest:   receipt.SourceDigest,
+			managedprotocol.AnnotationPreparedTrustHash:      receipt.TrustIdentityHash,
+			managedprotocol.AnnotationPreparedUpgradeName:    prepared.Name,
+			managedprotocol.AnnotationPreparedUpgradeUID:     string(prepared.UID),
+			managedprotocol.AnnotationCampaignUID:            receipt.CampaignUID,
+			managedprotocol.AnnotationPlanHash:               receipt.PlanHash,
+			managedprotocol.AnnotationDeviceUID:              receipt.DeviceUID,
+		}
+	})
+	activation.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
+	activation.Status.CompletionTime = &now
+	activation.Status.RunningVersion = receipt.ValidatedVersion
+	activation.Status.Conditions = []metav1.Condition{
+		{Type: "Verified", Status: metav1.ConditionTrue},
+		{Type: "DeviceMutationSettled", Status: metav1.ConditionTrue},
+	}
+	activation.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		ProtocolVersion: receipt.ManagedProtocolVersion,
+		State:           opsv1alpha1.UpgradeManagerAdmissionSettled,
+		LeafUID:         string(activation.UID), DeviceUID: receipt.DeviceUID,
+		DeviceGeneration: receipt.DeviceGeneration, NodeUID: receipt.NodeUID,
+		PhysicalIdentity: receipt.PhysicalIdentity, CampaignUID: receipt.CampaignUID,
+		PlanHash: receipt.PlanHash, PolicyUID: receipt.PolicyUID,
+		PolicyResourceVersion: receipt.PolicyResourceVersion, PolicyEpoch: receipt.PolicyEpoch,
+	}
+
+	next := newUpgrade("later-campaign", func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+		up.UID = types.UID("later-uid")
+		up.CreationTimestamp = metav1.NewTime(time.Unix(400, 0).UTC())
+	})
+	r := newReconciler(t, rig, next)
+	if err := r.Client.Create(context.Background(), prepared); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Client.Create(context.Background(), activation); err != nil {
+		t.Fatal(err)
+	}
+
+	owner, err := r.deviceUpgradeOwner(context.Background(), next, r.now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if owner != next.Name {
+		t.Fatalf("queue owner=%q, want later campaign %q after settled activation", owner, next.Name)
+	}
+
+	for _, mutate := range []func(*opsv1alpha1.IOSXESoftwareUpgrade){
+		func(up *opsv1alpha1.IOSXESoftwareUpgrade) { up.Status.Phase = opsv1alpha1.UpgradePhaseVerifying },
+		func(up *opsv1alpha1.IOSXESoftwareUpgrade) { up.Status.CompletionTime = nil },
+		func(up *opsv1alpha1.IOSXESoftwareUpgrade) { up.Status.Conditions[1].Status = metav1.ConditionFalse },
+		func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Status.ManagerAdmission.PlanHash = "sha256:" + strings.Repeat("0", 64)
+		},
+		func(up *opsv1alpha1.IOSXESoftwareUpgrade) {
+			up.Annotations[managedprotocol.AnnotationPreparedUpgradeUID] = "another-uid"
+		},
+	} {
+		candidate := activation.DeepCopy()
+		mutate(candidate)
+		if PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*candidate}) {
+			t.Fatalf("incomplete or mismatched activation consumed prepared ownership: %#v", candidate.Status)
+		}
+	}
+}
+
 func TestImageResolveErrorTerminalFails(t *testing.T) {
 	rig := newRig(t)
 	rig.os.verifyVersion = "17.14.01a"

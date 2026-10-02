@@ -1913,6 +1913,12 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 			if err := ValidatePreparedReceipt(item.Status.PreparedReceipt); err != nil {
 				return "", fmt.Errorf("prepared upgrade %s/%s has invalid retained receipt: %w", item.Namespace, item.Name, err)
 			}
+			// A successful activation consumes queue ownership without deleting
+			// the Prepared audit record. Use the same exact terminal predicate as
+			// the rollout manager so later campaigns cannot be blocked by history.
+			if PreparedReceiptConsumed(item, upgrades.Items) {
+				continue
+			}
 			// The exact activation child is the sole operation to which a
 			// Prepared owner may yield. Every identity and content binding is
 			// checked here; runPending has already revalidated current trust.

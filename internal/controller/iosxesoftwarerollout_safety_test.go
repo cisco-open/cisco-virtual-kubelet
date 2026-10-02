@@ -418,7 +418,7 @@ func TestSettledActivationConsumesPreparedOwnership(t *testing.T) {
 			},
 		},
 	}
-	if !preparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+	if !softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
 		t.Fatal("exact successful activation did not consume retained prepared ownership")
 	}
 
@@ -433,7 +433,7 @@ func TestSettledActivationConsumesPreparedOwnership(t *testing.T) {
 	}
 
 	consumer.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
-	if preparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
 		t.Fatal("non-terminal activation consumed prepared ownership")
 	}
 }
