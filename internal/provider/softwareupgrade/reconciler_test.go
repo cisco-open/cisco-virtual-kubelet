@@ -380,9 +380,10 @@ type fakeLifecycle struct {
 	observeErr    error
 	observeCalls  int
 
-	interruptedResult softwarelifecycle.InterruptedInstallObservation
-	interruptedErr    error
-	interruptedCalls  int
+	interruptedResult  softwarelifecycle.InterruptedInstallObservation
+	interruptedErr     error
+	interruptedCalls   int
+	interruptedRequest softwarelifecycle.InterruptedInstallRequest
 }
 
 func (f *fakeLifecycle) Inspect(_ context.Context, target string) (softwarelifecycle.InventoryImage, error) {
@@ -407,11 +408,12 @@ func (f *fakeLifecycle) Inspect(_ context.Context, target string) (softwarelifec
 
 func (f *fakeLifecycle) ObserveInterruptedInstall(
 	_ context.Context,
-	_ softwarelifecycle.InterruptedInstallRequest,
+	request softwarelifecycle.InterruptedInstallRequest,
 ) (softwarelifecycle.InterruptedInstallObservation, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.interruptedCalls++
+	f.interruptedRequest = request
 	if f.interruptedErr != nil {
 		return softwarelifecycle.InterruptedInstallObservation{}, f.interruptedErr
 	}
@@ -4282,6 +4284,12 @@ func TestInterruptedInstallAdvancesOnlyWithCorrelatedNativeProof(t *testing.T) {
 	}
 	if lifecycle.interruptedCalls != 1 || rig.os.installCalls != 0 {
 		t.Fatalf("native observations=%d Install calls=%d", lifecycle.interruptedCalls, rig.os.installCalls)
+	}
+	if lifecycle.interruptedRequest.DeviceNotBefore.IsZero() ||
+		lifecycle.interruptedRequest.DeviceObservedAt.IsZero() ||
+		lifecycle.interruptedRequest.DeviceObservedAt.Before(lifecycle.interruptedRequest.DeviceNotBefore) {
+		t.Fatalf("native observation did not receive a valid device-clock interval: %+v",
+			lifecycle.interruptedRequest)
 	}
 }
 

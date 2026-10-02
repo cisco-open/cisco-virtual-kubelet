@@ -1681,13 +1681,27 @@ func (r *Reconciler) observeUncertainInstall(
 	}
 	if !standby && interruptedInstallHasCurrentTransferProof(up) {
 		if observer, ok := r.Lifecycle.(softwarelifecycle.InterruptedInstallObserver); ok {
-			callCtx, cancel := context.WithTimeout(ctx, controlRPCTimeout)
-			observation, err := observer.ObserveInterruptedInstall(callCtx, softwarelifecycle.InterruptedInstallRequest{
+			request := softwarelifecycle.InterruptedInstallRequest{
 				TargetVersion: up.Spec.TargetVersion,
 				SourceSize:    up.Status.SourceSize,
 				NotBefore:     up.Status.InstallStartTime.Time,
 				ObservedAt:    now,
-			})
+			}
+			// IOS XE native operation timestamps use the device clock. Prefer a
+			// read-only gNOI System.Time sample so correlation stays narrow even
+			// when cluster and device clocks differ by more than the fallback
+			// allowance. Unsupported System service leaves the conservative local
+			// time window in place; it never weakens the remaining exact evidence.
+			if r.GNOI != nil {
+				if gnoiClient, clientErr := r.gnoiClient(ctx); clientErr == nil {
+					if deviceObservedAt, timeErr := deviceTime(ctx, gnoiClient); timeErr == nil {
+						request.DeviceObservedAt = deviceObservedAt
+						request.DeviceNotBefore = deviceObservedAt.Add(up.Status.InstallStartTime.Time.Sub(now))
+					}
+				}
+			}
+			callCtx, cancel := context.WithTimeout(ctx, controlRPCTimeout)
+			observation, err := observer.ObserveInterruptedInstall(callCtx, request)
 			cancel()
 			if err == nil {
 				return r.acceptObservedInstall(ctx, up, observation, now)

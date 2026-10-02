@@ -389,7 +389,10 @@ func inventoryImageFromNode(root map[string]any, target string) (lifecycle.Inven
 	panic("unreachable")
 }
 
-const interruptedInstallClockSkew = 5 * time.Minute
+const (
+	interruptedInstallClockSkew   = 5 * time.Minute
+	interruptedInstallClockJitter = 30 * time.Second
+)
 
 func correlateInterruptedInstall(
 	root map[string]any,
@@ -426,6 +429,16 @@ func correlateInterruptedInstall(
 		return time.Time{}, fmt.Errorf("decode IOS XE install operation history: %w", err)
 	}
 	var matched []time.Time
+	notBefore := request.NotBefore.Add(-interruptedInstallClockSkew)
+	observedAt := request.ObservedAt.Add(interruptedInstallClockSkew)
+	if !request.DeviceNotBefore.IsZero() || !request.DeviceObservedAt.IsZero() {
+		if request.DeviceNotBefore.IsZero() || request.DeviceObservedAt.IsZero() ||
+			request.DeviceObservedAt.Before(request.DeviceNotBefore) {
+			return time.Time{}, fmt.Errorf("interrupted install device-clock interval is incomplete or invalid")
+		}
+		notBefore = request.DeviceNotBefore.Add(-interruptedInstallClockJitter)
+		observedAt = request.DeviceObservedAt.Add(interruptedInstallClockJitter)
+	}
 	for _, operations := range [][]map[string]any{active, history} {
 		for _, operation := range operations {
 			add, ok := objectField(operation, "add-param")
@@ -436,9 +449,8 @@ func correlateInterruptedInstall(
 			started, startErr := time.Parse(time.RFC3339Nano, stringField(operation, "start-time"))
 			completed, endErr := time.Parse(time.RFC3339Nano, stringField(operation, "end-time"))
 			if startErr != nil || endErr != nil || completed.Before(started) ||
-				started.Before(request.NotBefore.Add(-interruptedInstallClockSkew)) ||
-				started.After(request.ObservedAt.Add(interruptedInstallClockSkew)) ||
-				completed.After(request.ObservedAt.Add(interruptedInstallClockSkew)) {
+				started.Before(notBefore) || started.After(observedAt) ||
+				completed.After(observedAt) {
 				continue
 			}
 			operationID := stringField(operation, "op-uuid")

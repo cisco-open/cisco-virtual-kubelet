@@ -267,6 +267,71 @@ func TestObserveInterruptedInstallCorrelatesStrongNativeEvidence(t *testing.T) {
 	}
 }
 
+func TestObserveInterruptedInstallUsesDeviceClockInterval(t *testing.T) {
+	localStarted := time.Date(2026, 10, 2, 2, 10, 53, 0, time.UTC)
+	localObserved := localStarted.Add(6 * time.Minute)
+	deviceStarted := localStarted.Add(-5*time.Minute - 9*time.Second)
+	deviceObserved := localObserved.Add(-5*time.Minute - 9*time.Second)
+	raw := interruptedInstallResponse(
+		"install-no-activity",
+		"install-state-added",
+		"install-package-verify-ok",
+		"1247897709",
+		"install-op-succ",
+		"op-complete",
+		deviceStarted,
+	)
+	a, err := New(&fakeTransport{kind: configtransport.KindRESTCONF, responses: map[string][]byte{installOperDataPath: raw}})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	request := lifecycle.InterruptedInstallRequest{
+		TargetVersion: "17.18.02",
+		SourceSize:    1247897709,
+		NotBefore:     localStarted,
+		ObservedAt:    localObserved,
+	}
+	if _, err := a.ObserveInterruptedInstall(context.Background(), request); err == nil {
+		t.Fatal("local-clock fallback unexpectedly accepted operation outside its bounded skew")
+	}
+	request.DeviceNotBefore = deviceStarted
+	request.DeviceObservedAt = deviceObserved
+	got, err := a.ObserveInterruptedInstall(context.Background(), request)
+	if err != nil {
+		t.Fatalf("ObserveInterruptedInstall with device clock: %v", err)
+	}
+	if got.Image.Version != "17.18.02.0.4112.1766116039" || !got.Image.State.Activatable() {
+		t.Fatalf("observation = %+v", got)
+	}
+}
+
+func TestObserveInterruptedInstallRejectsPartialDeviceClockInterval(t *testing.T) {
+	started := time.Date(2026, 10, 2, 2, 10, 53, 0, time.UTC)
+	raw := interruptedInstallResponse(
+		"install-no-activity",
+		"install-state-added",
+		"install-package-verify-ok",
+		"1247897709",
+		"install-op-succ",
+		"op-complete",
+		started,
+	)
+	a, err := New(&fakeTransport{kind: configtransport.KindRESTCONF, responses: map[string][]byte{installOperDataPath: raw}})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	_, err = a.ObserveInterruptedInstall(context.Background(), lifecycle.InterruptedInstallRequest{
+		TargetVersion:   "17.18.02",
+		SourceSize:      1247897709,
+		NotBefore:       started,
+		ObservedAt:      started.Add(10 * time.Minute),
+		DeviceNotBefore: started,
+	})
+	if err == nil || !strings.Contains(err.Error(), "device-clock interval") {
+		t.Fatalf("error = %v, want invalid device-clock interval", err)
+	}
+}
+
 func TestObserveInterruptedInstallFailsClosedOnPartialEvidence(t *testing.T) {
 	started := time.Date(2026, 10, 1, 22, 34, 53, 0, time.UTC)
 	tests := []struct {

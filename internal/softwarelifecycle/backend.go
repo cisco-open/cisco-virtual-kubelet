@@ -150,10 +150,12 @@ type DeviceFileObservation struct {
 // adapters may use stronger platform evidence to prove that exact attempt
 // completed without replaying it.
 type InterruptedInstallRequest struct {
-	TargetVersion string
-	SourceSize    int64
-	NotBefore     time.Time
-	ObservedAt    time.Time
+	TargetVersion    string
+	SourceSize       int64
+	NotBefore        time.Time
+	ObservedAt       time.Time
+	DeviceNotBefore  time.Time
+	DeviceObservedAt time.Time
 }
 
 // InterruptedInstallObservation is positive, platform-native proof that the
