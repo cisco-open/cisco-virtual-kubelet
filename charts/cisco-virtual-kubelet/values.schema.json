@@ -279,7 +279,7 @@
     "topology": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["enabled", "workerAccounts", "policy", "ledger"],
+      "required": ["enabled", "workerAccounts", "graph", "policy", "ledger"],
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -292,6 +292,62 @@
           "properties": {
             "appHosting": { "$ref": "#/definitions/workerAccount" },
             "networkManagement": { "$ref": "#/definitions/workerAccount" }
+          }
+        },
+        "graph": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "peerMappings", "declaredLinks"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "peerMappings": {
+              "type": "array",
+              "maxItems": 1024,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["source", "observedPeer", "physicalID"],
+                "properties": {
+                  "source": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "observedPeer": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "routingDomain": { "type": "string", "maxLength": 256 },
+                  "physicalID": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._:/-]*[A-Za-z0-9])?$"
+                  },
+                  "external": { "type": "boolean" }
+                }
+              }
+            },
+            "declaredLinks": {
+              "type": "array",
+              "maxItems": 1024,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["local", "peer", "interface", "remoteInterface"],
+                "properties": {
+                  "local": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._:/-]*[A-Za-z0-9])?$"
+                  },
+                  "peer": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128,
+                    "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._:/-]*[A-Za-z0-9])?$"
+                  },
+                  "source": { "type": "string", "maxLength": 256 },
+                  "interface": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "remoteInterface": { "type": "string", "minLength": 1, "maxLength": 256 },
+                  "routingDomain": { "type": "string", "maxLength": 256 }
+                }
+              }
+            }
           }
         },
         "policy": {

@@ -573,6 +573,21 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-topology-graph-viewer
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: [{{ include "cisco-virtual-kubelet.topologyPolicyName" . | quote }}]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: {{ include "cisco-virtual-kubelet.fullname" . }}-topology-policy-admin
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}

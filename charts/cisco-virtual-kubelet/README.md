@@ -83,6 +83,19 @@ topology:
     networkManagement:
       serviceAccountName: "" # <release-fullname>-network-management
       accessMode: readOnly
+  graph:
+    enabled: false
+    peerMappings: []
+    # - source: cdp
+    #   observedPeer: C9K-2
+    #   physicalID: FOC2520L6H1
+    #   external: false
+    declaredLinks: []
+    # - local: FOC2520L6E8
+    #   peer: FOC2520L6H1
+    #   source: cdp
+    #   interface: GigabitEthernet1/0/1
+    #   remoteInterface: GigabitEthernet1/0/1
   policy:
     namespace: "" # release namespace
     name: ""      # <fullname>-topology-policy
@@ -186,6 +199,17 @@ Campaign limits may tighten the administrator ceilings above; they cannot
 loosen them. The policy selector must be non-empty and every selector key must
 live under `topology.cisco.vk/*`; those are the enrollment labels protected by
 native admission from ordinary CiscoDevice editors.
+
+`topology.graph` is optional diagnostic input for `kubectl ciscovk topology
+graph`. When enabled, Helm writes a strictly bounded `graph.json` key into the
+same admission-protected topology-policy ConfigMap. It remains separate from
+`policy.json`, the ledger and campaign approval hashes. `peerMappings` binds an
+exact protocol/source/routing-domain peer string to an administrator-verified
+physical identity; discovery never creates this trust. Set `external: true`
+only for a verified endpoint that is intentionally outside CVK management.
+`declaredLinks` compares the accepted local/remote-port evidence with the
+administrator model. The graph can report drift and fail automation closed,
+but it cannot change labels, budgets, plans, approvals or device state.
 
 `disruptionProtections` is an administrator-owned, fail-closed selector list
 for critical-service and singleton-path devices. Every selector key must be in
@@ -725,6 +749,7 @@ The chart creates, but deliberately does not bind, these roles:
 
 | Role suffix | Purpose |
 | --- | --- |
+| `-topology-graph-viewer` | Read CiscoDevice accepted observations and the exact topology-policy ConfigMap for the diagnostic CLI; no mutation verbs |
 | `-topology-author` | Change protected topology/risk labels and explicit Node adoption or reclassification approvals |
 | `-rollout-planner` | Create campaigns and pass the separate `control` authorization check for pause/resume/cancel |
 | `-rollout-approver` | Patch a campaign and pass the separate `approve` authorization check |

@@ -118,8 +118,10 @@ This project is under active development and is published as open source under
   when you need a custom image. See [Getting Started](getting-started.md).
 - **Operator plugin** - the optional `kubectl-ciscovk` plugin provides
   read-only, ad-hoc IOS-XE commands and manager-accepted topology graph
-  diagnostics; it is available in the public Krew index. Graph output never
-  grants rollout authority. `v2026.8.1` was the first plugin-bearing release.
+  diagnostics; it is available in the public Krew index. The graph can consume
+  administrator-declared mappings and links from protected native Kubernetes
+  policy data while remaining separate from rollout authority. `v2026.8.1`
+  was the first plugin-bearing release.
   Signed release archives and a source-build path are documented in the
   [CLI & Plugin Reference](cisco-vk-cli.md).
 

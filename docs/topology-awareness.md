@@ -1786,6 +1786,29 @@ gNOI OS provisioning, image digest/compatibility, configuration persistence,
 health evidence, and physical redundancy. Synthetic labels on co-located
 switches are not evidence of real multi-site fault tolerance.
 
+### Read-only accepted topology graph
+
+`kubectl ciscovk topology graph` renders a bounded diagnostic using only the
+manager-owned `acceptedNetwork` snapshots. It carries local and remote ports,
+protocol/routing context, freshness and sample provenance. It never opens a
+device session, edits labels or becomes rollout authority.
+
+For protocol-local names such as CDP device IDs, enable `topology.graph` and
+declare exact `peerMappings` only after verifying the mapping from
+authenticated device inventory. Helm stores the resulting `graph.json` beside
+`policy.json` in the existing admission-protected topology-policy ConfigMap,
+but the keys have separate semantics: graph data is excluded from campaign
+policy and approval hashes. `declaredLinks` can then report missing or
+unexpected accepted links. Use `external: true` for a verified endpoint that
+is intentionally outside CVK management. Discovery never writes mappings or
+declarations back to Kubernetes.
+
+Operators pass the exact ConfigMap coordinate with `--policy-configmap`; JSON
+output binds the ConfigMap UID, resourceVersion and canonical content hash
+into graph provenance. This proves which accepted observations and declared
+model produced a finding. It does not prove forwarding reachability,
+redundancy, service health, bandwidth headroom or permission to upgrade.
+
 ## Deferred roadmap and limitations
 
 The [remaining implementation roadmap](topology-roadmap.md) maps these gaps
@@ -1795,8 +1818,10 @@ test work. The current code includes a partial T1/T2 evidence gate, a bounded
 ReplicaSet/Deployment drain path with partial physical evidence, ephemeral
 digest-addressed worker-local image caching, an optional Kubernetes 1.37
 native-TAS conformance lane, and a NoReboot strategy mapping. Independent
-stage/approval/activate semantics and diagnostic graph comparison remain
-unimplemented. The roadmap is not complete.
+stage/approval/activate semantics remain unimplemented. Read-only graph
+comparison is implemented, while controlled link-change/restore qualification
+and manager-owned persisted diagnostics remain open. The roadmap is not
+complete.
 
 To opt into the network gate, require complete evidence and name the exact
 interfaces and adjacencies that must be healthy:
@@ -1804,7 +1829,7 @@ interfaces and adjacencies that must be healthy:
 ```yaml
 spec:
   plan:
-    strategy: Reload # or NoReboot for preparation-only behavior
+    strategy: Reload # NoReboot is a combined strategy, not a proven prepare-only hold
     health:
       network:
         enabled: true

@@ -4,6 +4,46 @@ Status: **partial PASS**, 2 October 2026. This record qualifies the read-only
 runtime consumer and its fail-closed behavior. It does not qualify declared
 topology drift, path health, disruption authority, or E10 as a whole.
 
+## Exact-candidate remote-interface qualification
+
+Candidate `e5660db4` was built for Linux/amd64, imported on Ubuntu16 and
+deployed as Helm revision `132`. Before the pod rollout, only the reviewed
+additive `remoteInterface` CiscoDevice CRD schema field was server-side
+applied. The live CRD was backed up to
+`/tmp/ciscodevices-before-e5660db4.yaml`; no topology policy, ledger,
+rollout, label, credential or device configuration was changed.
+
+The manager, three app-hosting workers and three network-management workers
+all converged to `cvk-tas-extentions:e5660db4` and image config digest
+`sha256:f6ec8556a9c2ca0199379ba6e42d1604805c86424a3b80c90b970c57d8a35e92`.
+All three physical Nodes remained Ready and untainted. The imported image
+index digest was
+`sha256:22e0433b0b53576f6c1204818437c52b07fce0e6cc3f6eea52098b2bbddd7b05`.
+
+Fresh accepted observations proved that the manager-owned status retained
+every CDP remote port:
+
+| Device | Accepted sample | CDP neighbors | With remote port | Examples |
+| --- | ---: | ---: | ---: | --- |
+| `cat9k-lab-101` | 7 | 2 | 2 | `Gi1/0/1 -> C9K-1 Gi1/0/1`; `Gi0/0 -> MaC_Outside_Switch Gi1/0/15` |
+| `cat9k-lab-103` | 6 | 2 | 2 | `Gi1/0/23 -> C9K-1 Gi1/0/23`; `Gi0/0 -> MaC_Outside_Switch Gi1/0/16` |
+| `cat9k-live` | 4 | 5 | 5 | `Gi1/0/1 -> C9K-2 Gi1/0/1`; `Gi1/0/23 -> C9K-4... Gi1/0/23` |
+
+The exact-candidate plugin then rendered nine edges with a non-empty
+`RemoteInterface` on every edge. The structured result remained incomplete,
+as intended, because the administrator has not yet supplied trusted CDP-name
+to bound-serial mappings and the excluded NX-OS object remains unbound:
+
+```text
+complete=false nodes=4 edges=9 diagnostics=11
+evidence=sha256:541d679caaf047c8be7cbdd5d5e302e137cf8afa53d31f2b37454c1571c23a38
+provenance=sha256:efd0fbce42f311f637ef22e9f818271857e34496b329e3b79f2da391d9e2c934
+```
+
+`--require-complete` emitted the JSON and returned exit status `1`. This run
+therefore qualifies the additive collection/API/manager/CLI path without
+weakening the identity trust boundary or claiming the graph is healthy.
+
 ## Scope
 
 The Linux/amd64 `kubectl-ciscovk` plugin was built from the graph diagnostic
@@ -64,6 +104,9 @@ error: topology graph is incomplete; inspect diagnostics
 
 - [`graph.json`](graph.json) is the exact structured output, SHA-256
   `e523b7909ee9aea33ff2a29fbf44a84c65eeaecca4f71469fcd531059799d363`.
+- [`graph-remote-interface.json`](graph-remote-interface.json) is the exact
+  `e5660db4` structured output after all physical workers converged, SHA-256
+  `ab2bec2f0bcaf97ec54671fde410055564e26a6d832331ab187400949e790539`.
 - `evidenceHash` covers normalized graph content. `provenanceHash` separately
   covers the four manager-accepted device/sample identities and collection
   intervals recorded in `observations`; neither is disruption authority.

@@ -20,11 +20,13 @@ const (
 	DefaultGraphMaxEdges          = 512
 	DefaultGraphMaxInputNeighbors = 1024
 	DefaultGraphMaxDeclaredLinks  = 1024
+	DefaultGraphMaxPeerMappings   = 1024
 	DefaultGraphMaxDiagnostics    = 2048
 	MaxGraphFieldLength           = 256
 	MaxGraphNodes                 = 4096
 	MaxGraphEdges                 = 8192
 	MaxGraphInputNeighbors        = 16384
+	MaxGraphPeerMappings          = 1024
 )
 
 // GraphObservation is the manager-facing form of one authenticated network
@@ -53,19 +55,33 @@ type GraphPolicy struct {
 	MaxEdges          int
 	MaxInputNeighbors int
 	MaxDeclaredLinks  int
+	MaxPeerMappings   int
 	MaxDiagnostics    int
 	Now               time.Time
 	MaxObservationAge time.Duration
 	Declared          []DeclaredLink
+	PeerMappings      []PeerIdentityMapping
+}
+
+// PeerIdentityMapping is administrator-owned evidence that a protocol-local
+// peer identifier names one manager-bound physical device. It is diagnostic
+// input only: discovery never creates mappings and mappings never authorize a
+// rollout or mutate scheduling labels.
+type PeerIdentityMapping struct {
+	Source        string `json:"source"`
+	ObservedPeer  string `json:"observedPeer"`
+	RoutingDomain string `json:"routingDomain,omitempty"`
+	PhysicalID    string `json:"physicalID"`
+	External      bool   `json:"external,omitempty"`
 }
 
 type DeclaredLink struct {
-	Local           string
-	Peer            string
-	Source          string
-	Interface       string
-	RemoteInterface string
-	RoutingDomain   string
+	Local           string `json:"local"`
+	Peer            string `json:"peer"`
+	Source          string `json:"source,omitempty"`
+	Interface       string `json:"interface"`
+	RemoteInterface string `json:"remoteInterface"`
+	RoutingDomain   string `json:"routingDomain,omitempty"`
 }
 
 type Graph struct {
@@ -79,6 +95,7 @@ type Graph struct {
 type GraphEdge struct {
 	Local           string
 	Peer            string
+	ObservedPeer    string `json:",omitempty"`
 	Identity        string
 	Source          string
 	Interface       string
@@ -115,11 +132,15 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 	if maxDeclaredLinks <= 0 {
 		maxDeclaredLinks = DefaultGraphMaxDeclaredLinks
 	}
+	maxPeerMappings := policy.MaxPeerMappings
+	if maxPeerMappings <= 0 {
+		maxPeerMappings = DefaultGraphMaxPeerMappings
+	}
 	maxDiagnostics := policy.MaxDiagnostics
 	if maxDiagnostics <= 0 {
 		maxDiagnostics = DefaultGraphMaxDiagnostics
 	}
-	if maxNodes > MaxGraphNodes || maxEdges > MaxGraphEdges || maxInputNeighbors > MaxGraphInputNeighbors || maxDeclaredLinks > DefaultGraphMaxDeclaredLinks || maxDiagnostics > DefaultGraphMaxDiagnostics {
+	if maxNodes > MaxGraphNodes || maxEdges > MaxGraphEdges || maxInputNeighbors > MaxGraphInputNeighbors || maxDeclaredLinks > DefaultGraphMaxDeclaredLinks || maxPeerMappings > MaxGraphPeerMappings || maxDiagnostics > DefaultGraphMaxDiagnostics {
 		return Graph{}, fmt.Errorf("topology graph policy exceeds hard bounds")
 	}
 	if len(observations) > maxNodes {
@@ -176,6 +197,29 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 			})
 		}
 	}
+	peerMappings, err := validatedPeerMappings(policy.PeerMappings, maxPeerMappings)
+	if err != nil {
+		return Graph{}, err
+	}
+	usedPeerMappings := make(map[string]struct{}, len(peerMappings))
+	externalNodes := make(map[string]struct{})
+	for _, mapping := range peerMappings {
+		if !mapping.External {
+			continue
+		}
+		if _, alreadyExternal := externalNodes[mapping.PhysicalID]; alreadyExternal {
+			continue
+		}
+		if _, exists := nodes[mapping.PhysicalID]; exists {
+			return Graph{}, fmt.Errorf("external peer mapping %q overlaps a manager-bound device", mapping.PhysicalID)
+		}
+		if len(nodes) >= maxNodes {
+			return Graph{}, fmt.Errorf("topology graph has more than %d nodes after external mappings", maxNodes)
+		}
+		nodes[mapping.PhysicalID] = struct{}{}
+		graph.Nodes = append(graph.Nodes, mapping.PhysicalID)
+		externalNodes[mapping.PhysicalID] = struct{}{}
+	}
 	sort.Strings(graph.Nodes)
 
 	seen := make(map[string][]GraphEdge, maxEdges)
@@ -187,20 +231,30 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 			if inputNeighbors > maxInputNeighbors {
 				return Graph{}, fmt.Errorf("topology graph input has more than %d neighbors", maxInputNeighbors)
 			}
-			peer := strings.TrimSpace(neighbor.PeerID)
+			observedPeer := strings.TrimSpace(neighbor.PeerID)
+			peer := observedPeer
 			if len(peer) > MaxGraphFieldLength || len(neighbor.Interface) > MaxGraphFieldLength || len(neighbor.RemoteInterface) > MaxGraphFieldLength || len(neighbor.RoutingDomain) > MaxGraphFieldLength || len(neighbor.Source) > MaxGraphFieldLength || len(neighbor.Identity) > MaxGraphFieldLength || len(neighbor.State) > MaxGraphFieldLength {
 				return Graph{}, fmt.Errorf("topology adjacency field exceeds %d bytes", MaxGraphFieldLength)
 			}
 			identity := strings.TrimSpace(neighbor.Identity)
 			source := strings.TrimSpace(neighbor.Source)
+			routingDomain := strings.TrimSpace(neighbor.RoutingDomain)
+			mappingKey := peerMappingKey(source, observedPeer, routingDomain)
+			if mapped, ok := peerMappings[mappingKey]; ok {
+				peer = mapped.PhysicalID
+				usedPeerMappings[mappingKey] = struct{}{}
+			}
 			if identity == "" {
 				identity = graphEdgeIdentity(local, peer, source, neighbor.Interface, neighbor.RemoteInterface, neighbor.RoutingDomain)
 			}
 			key := canonicalKey(local, identity)
 			edge := GraphEdge{
 				Local: local, Peer: peer, Identity: identity, Source: source,
-				Interface: strings.TrimSpace(neighbor.Interface), RemoteInterface: strings.TrimSpace(neighbor.RemoteInterface), RoutingDomain: strings.TrimSpace(neighbor.RoutingDomain),
+				Interface: strings.TrimSpace(neighbor.Interface), RemoteInterface: strings.TrimSpace(neighbor.RemoteInterface), RoutingDomain: routingDomain,
 				State: strings.TrimSpace(neighbor.State),
+			}
+			if peer != observedPeer {
+				edge.ObservedPeer = observedPeer
 			}
 			seen[key] = append(seen[key], edge)
 			if len(seen) > maxEdges {
@@ -239,11 +293,26 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 		}
 		return graph.Edges[i].Identity < graph.Edges[j].Identity
 	})
-	graph.Diagnostics = append(graph.Diagnostics, asymmetricDiagnostics(graph.Edges, nodes)...)
-	if len(policy.Declared) > maxDeclaredLinks {
-		return Graph{}, fmt.Errorf("topology graph policy has more than %d declared links", maxDeclaredLinks)
+	graph.Diagnostics = append(graph.Diagnostics, asymmetricDiagnostics(graph.Edges, nodes, externalNodes)...)
+	for key, mapping := range peerMappings {
+		if _, used := usedPeerMappings[key]; !used {
+			graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+				Code: "UnusedPeerMapping", Severity: "Warning", Peer: mapping.PhysicalID,
+				Message: "administrator peer mapping did not match any accepted adjacency",
+			})
+		}
+		if _, known := nodes[mapping.PhysicalID]; !known && !mapping.External {
+			graph.Diagnostics = append(graph.Diagnostics, GraphDiagnostic{
+				Code: "MappedPeerUnavailable", Severity: "Error", Peer: mapping.PhysicalID,
+				Message: "administrator peer mapping targets no manager-bound device in the selected scope",
+			})
+		}
 	}
-	graph.Diagnostics = append(graph.Diagnostics, declaredDrift(graph.Edges, policy.Declared)...)
+	declared, err := validatedDeclaredLinks(policy.Declared, maxDeclaredLinks)
+	if err != nil {
+		return Graph{}, err
+	}
+	graph.Diagnostics = append(graph.Diagnostics, declaredDrift(graph.Edges, declared)...)
 	sort.Slice(graph.Diagnostics, func(i, j int) bool {
 		left := graph.Diagnostics[i].Code + "\x00" + graph.Diagnostics[i].Local + "\x00" + graph.Diagnostics[i].Peer + "\x00" + graph.Diagnostics[i].Message
 		right := graph.Diagnostics[j].Code + "\x00" + graph.Diagnostics[j].Local + "\x00" + graph.Diagnostics[j].Peer + "\x00" + graph.Diagnostics[j].Message
@@ -264,7 +333,42 @@ func BuildGraph(observations []GraphObservation, policy GraphPolicy) (Graph, err
 	return graph, nil
 }
 
-func asymmetricDiagnostics(edges []GraphEdge, nodes map[string]struct{}) []GraphDiagnostic {
+func validatedPeerMappings(mappings []PeerIdentityMapping, limit int) (map[string]PeerIdentityMapping, error) {
+	if len(mappings) > limit {
+		return nil, fmt.Errorf("topology graph policy has more than %d peer mappings", limit)
+	}
+	result := make(map[string]PeerIdentityMapping, len(mappings))
+	for i, mapping := range mappings {
+		source := strings.TrimSpace(mapping.Source)
+		observedPeer := strings.TrimSpace(mapping.ObservedPeer)
+		routingDomain := strings.TrimSpace(mapping.RoutingDomain)
+		if source == "" || observedPeer == "" {
+			return nil, fmt.Errorf("topology peer mapping %d requires source and observedPeer", i)
+		}
+		if len(source) > MaxGraphFieldLength || len(observedPeer) > MaxGraphFieldLength || len(routingDomain) > MaxGraphFieldLength {
+			return nil, fmt.Errorf("topology peer mapping field exceeds %d bytes", MaxGraphFieldLength)
+		}
+		physicalID, err := CanonicalPhysicalIdentity(mapping.PhysicalID)
+		if err != nil {
+			return nil, fmt.Errorf("topology peer mapping %d physicalID: %w", i, err)
+		}
+		key := peerMappingKey(source, observedPeer, routingDomain)
+		if existing, duplicate := result[key]; duplicate {
+			return nil, fmt.Errorf("topology peer mapping %d duplicates mapping to %q", i, existing.PhysicalID)
+		}
+		result[key] = PeerIdentityMapping{
+			Source: source, ObservedPeer: observedPeer, RoutingDomain: routingDomain,
+			PhysicalID: physicalID, External: mapping.External,
+		}
+	}
+	return result, nil
+}
+
+func peerMappingKey(source, observedPeer, routingDomain string) string {
+	return canonicalKey(strings.TrimSpace(source), strings.TrimSpace(observedPeer), strings.TrimSpace(routingDomain))
+}
+
+func asymmetricDiagnostics(edges []GraphEdge, nodes, externalNodes map[string]struct{}) []GraphDiagnostic {
 	seen := make(map[string]struct{}, len(edges))
 	for _, edge := range edges {
 		seen[adjacencyKey(edge.Local, edge.Peer, edge.Source, edge.RoutingDomain, edge.Interface, edge.RemoteInterface)] = struct{}{}
@@ -272,6 +376,9 @@ func asymmetricDiagnostics(edges []GraphEdge, nodes map[string]struct{}) []Graph
 	var diagnostics []GraphDiagnostic
 	for _, edge := range edges {
 		if _, known := nodes[edge.Peer]; !known {
+			continue
+		}
+		if _, external := externalNodes[edge.Peer]; external {
 			continue
 		}
 		if edge.RemoteInterface == "" {

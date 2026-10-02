@@ -63,6 +63,8 @@ import (
 	"text/tabwriter"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
 	ciscov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
@@ -177,9 +179,13 @@ Flags for exec:
 
 Flags for topology graph:
   -n, --namespace <ns>     limit the graph to one namespace (default: all)
+  -l, --selector <query>   limit CiscoDevices by Kubernetes label selector
   --max-age DURATION       maximum accepted collection age (default 5m)
   -o, --output FORMAT      table or json (default table)
   --require-complete       return an error when the graph is incomplete
+  --policy-configmap NS/NAME
+                           read graph.json from this admission-protected
+                           topology-policy ConfigMap
   --context NAME           kubeconfig context to use
   --kubeconfig PATH        path to the kubeconfig file
   --kubectl PATH           path to kubectl binary (default: from PATH)`
@@ -188,9 +194,11 @@ Flags for topology graph:
 
 type topologyGraphFlags struct {
 	namespace       string
+	selector        string
 	maxAge          time.Duration
 	output          string
 	requireComplete bool
+	policyConfigMap string
 	kubectlBin      string
 	kubeContext     string
 	kubeconfig      string
@@ -206,6 +214,15 @@ func parseTopologyGraphArgs(argv []string) (*topologyGraphFlags, error) {
 				return nil, errors.New("-n/--namespace requires a value")
 			}
 			f.namespace = argv[i]
+		case "-l", "--selector":
+			i++
+			if i >= len(argv) || strings.TrimSpace(argv[i]) == "" {
+				return nil, errors.New("-l/--selector requires a value")
+			}
+			if len(argv[i]) > 1024 || strings.ContainsAny(argv[i], "\r\n\x00") {
+				return nil, errors.New("-l/--selector exceeds the bounded single-line form")
+			}
+			f.selector = argv[i]
 		case "--max-age":
 			i++
 			if i >= len(argv) {
@@ -227,6 +244,12 @@ func parseTopologyGraphArgs(argv []string) (*topologyGraphFlags, error) {
 			}
 		case "--require-complete":
 			f.requireComplete = true
+		case "--policy-configmap":
+			i++
+			if i >= len(argv) || strings.TrimSpace(argv[i]) == "" {
+				return nil, errors.New("--policy-configmap requires namespace/name")
+			}
+			f.policyConfigMap = argv[i]
 		case "--context":
 			i++
 			if i >= len(argv) {
@@ -257,9 +280,17 @@ type topologyGraphDocument struct {
 	EvidenceHash   string                     `json:"evidenceHash"`
 	ProvenanceHash string                     `json:"provenanceHash"`
 	Observations   []topologyGraphProvenance  `json:"observations"`
+	GraphPolicy    *topologyGraphPolicyProof  `json:"graphPolicy,omitempty"`
 	Nodes          []string                   `json:"nodes"`
 	Edges          []topology.GraphEdge       `json:"edges"`
 	Diagnostics    []topology.GraphDiagnostic `json:"diagnostics"`
+}
+
+type topologyGraphPolicyProof struct {
+	ConfigMap       string `json:"configMap"`
+	UID             string `json:"uid"`
+	ResourceVersion string `json:"resourceVersion"`
+	ContentHash     string `json:"contentHash"`
 }
 
 type topologyGraphProvenance struct {
@@ -286,16 +317,25 @@ func runTopologyGraphWithIO(argv []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	observations, provenance := graphInputsFromDevices(devices)
-	graph, err := topology.BuildGraph(observations, topology.GraphPolicy{Now: time.Now().UTC(), MaxObservationAge: f.maxAge})
+	graphPolicy, graphPolicyProof, err := readTopologyGraphPolicy(ctx, f)
 	if err != nil {
 		return err
 	}
-	provenanceHash := hashTopologyGraphProvenance(provenance)
+	observations, provenance := graphInputsFromDevices(devices)
+	policy := topology.GraphPolicy{Now: time.Now().UTC(), MaxObservationAge: f.maxAge}
+	if graphPolicyProof != nil {
+		policy.PeerMappings = graphPolicy.PeerMappings
+		policy.Declared = graphPolicy.DeclaredLinks
+	}
+	graph, err := topology.BuildGraph(observations, policy)
+	if err != nil {
+		return err
+	}
+	provenanceHash := hashTopologyGraphProvenance(provenance, graphPolicyProof)
 	if f.output == "json" {
 		document := topologyGraphDocument{
 			Complete: graph.Complete, EvidenceHash: graph.EvidenceHash, ProvenanceHash: provenanceHash,
-			Observations: provenance, Nodes: graph.Nodes, Edges: graph.Edges, Diagnostics: graph.Diagnostics,
+			Observations: provenance, GraphPolicy: graphPolicyProof, Nodes: graph.Nodes, Edges: graph.Edges, Diagnostics: graph.Diagnostics,
 		}
 		encoder := json.NewEncoder(stdout)
 		encoder.SetIndent("", "  ")
@@ -303,12 +343,58 @@ func runTopologyGraphWithIO(argv []string, stdout io.Writer) error {
 			return fmt.Errorf("write topology graph: %w", err)
 		}
 	} else {
-		writeTopologyGraphTable(stdout, graph, provenanceHash)
+		writeTopologyGraphTable(stdout, graph, provenanceHash, graphPolicyProof)
 	}
 	if f.requireComplete && !graph.Complete {
 		return errors.New("topology graph is incomplete; inspect diagnostics")
 	}
 	return nil
+}
+
+func readTopologyGraphPolicy(ctx context.Context, f *topologyGraphFlags) (topology.GraphPolicyDocument, *topologyGraphPolicyProof, error) {
+	if strings.TrimSpace(f.policyConfigMap) == "" {
+		return topology.GraphPolicyDocument{}, nil, nil
+	}
+	namespace, name, ok := strings.Cut(f.policyConfigMap, "/")
+	if !ok || strings.TrimSpace(namespace) == "" || strings.TrimSpace(name) == "" || strings.Contains(name, "/") {
+		return topology.GraphPolicyDocument{}, nil, errors.New("--policy-configmap must be namespace/name")
+	}
+	kubectlPath, err := exec.LookPath(f.kubectlBin)
+	if err != nil {
+		return topology.GraphPolicyDocument{}, nil, fmt.Errorf("find kubectl: %w", err)
+	}
+	args := kubectlGlobalArgs(f.kubeconfig, f.kubeContext)
+	args = append(args, "get", "configmap", strings.TrimSpace(name), "-n", strings.TrimSpace(namespace), "-o", "json")
+	cmd := commandContext(ctx, kubectlPath, args...)
+	var output, diagnostics bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &diagnostics
+	if err := cmd.Run(); err != nil {
+		return topology.GraphPolicyDocument{}, nil, commandError("read topology graph policy", err, diagnostics.String())
+	}
+	var configMap corev1.ConfigMap
+	if err := json.Unmarshal(output.Bytes(), &configMap); err != nil {
+		return topology.GraphPolicyDocument{}, nil, fmt.Errorf("decode topology graph policy ConfigMap: %w", err)
+	}
+	if configMap.Annotations["topology.cisco.vk/managed-policy"] != "true" || configMap.Annotations["topology.cisco.vk/admission-contract-version"] != "v2" {
+		return topology.GraphPolicyDocument{}, nil, errors.New("topology graph policy ConfigMap is not protected by the managed v2 admission contract")
+	}
+	if configMap.UID == "" || configMap.ResourceVersion == "" {
+		return topology.GraphPolicyDocument{}, nil, errors.New("topology graph policy ConfigMap has no Kubernetes identity")
+	}
+	document, err := topology.ParseGraphPolicyDocument(configMap.Data[topology.GraphPolicyDataKey])
+	if err != nil {
+		return topology.GraphPolicyDocument{}, nil, fmt.Errorf("validate topology graph policy: %w", err)
+	}
+	contentHash, err := topology.GraphPolicyHash(document)
+	if err != nil {
+		return topology.GraphPolicyDocument{}, nil, fmt.Errorf("hash topology graph policy: %w", err)
+	}
+	proof := &topologyGraphPolicyProof{
+		ConfigMap: configMap.Namespace + "/" + configMap.Name, UID: string(configMap.UID),
+		ResourceVersion: configMap.ResourceVersion, ContentHash: contentHash,
+	}
+	return document, proof, nil
 }
 
 func readCiscoDevices(ctx context.Context, f *topologyGraphFlags) ([]ciscov1.CiscoDevice, error) {
@@ -322,6 +408,9 @@ func readCiscoDevices(ctx context.Context, f *topologyGraphFlags) ([]ciscov1.Cis
 		args = append(args, "--all-namespaces")
 	} else {
 		args = append(args, "-n", f.namespace)
+	}
+	if f.selector != "" {
+		args = append(args, "-l", f.selector)
 	}
 	args = append(args, "-o", "json")
 	cmd := commandContext(ctx, kubectlPath, args...)
@@ -407,8 +496,15 @@ func timestampString(value time.Time) string {
 	return value.UTC().Format(time.RFC3339Nano)
 }
 
-func hashTopologyGraphProvenance(provenance []topologyGraphProvenance) string {
-	encoded, _ := json.Marshal(provenance)
+func hashTopologyGraphProvenance(provenance []topologyGraphProvenance, policy ...*topologyGraphPolicyProof) string {
+	var value any = provenance
+	if len(policy) > 0 && policy[0] != nil {
+		value = struct {
+			Observations []topologyGraphProvenance `json:"observations"`
+			GraphPolicy  *topologyGraphPolicyProof `json:"graphPolicy"`
+		}{provenance, policy[0]}
+	}
+	encoded, _ := json.Marshal(value)
 	digest := sha256.Sum256(encoded)
 	return fmt.Sprintf("sha256:%x", digest)
 }
@@ -441,14 +537,17 @@ func unboundGraphIdentity(device *ciscov1.CiscoDevice) string {
 	return fmt.Sprintf("unbound:sha256:%x", digest)
 }
 
-func writeTopologyGraphTable(w io.Writer, graph topology.Graph, provenanceHash string) {
+func writeTopologyGraphTable(w io.Writer, graph topology.Graph, provenanceHash string, policy *topologyGraphPolicyProof) {
 	fmt.Fprintf(w, "Topology graph: complete=%t nodes=%d edges=%d diagnostics=%d evidence=%s provenance=%s\n",
 		graph.Complete, len(graph.Nodes), len(graph.Edges), len(graph.Diagnostics), graph.EvidenceHash, provenanceHash)
+	if policy != nil {
+		fmt.Fprintf(w, "Graph policy: configmap=%s uid=%s resourceVersion=%s content=%s\n", policy.ConfigMap, policy.UID, policy.ResourceVersion, policy.ContentHash)
+	}
 	tw := tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	if len(graph.Edges) > 0 {
-		fmt.Fprintln(tw, "\nLOCAL\tPEER\tSOURCE\tINTERFACE\tDOMAIN\tSTATE")
+		fmt.Fprintln(tw, "\nLOCAL\tPEER\tOBSERVED-PEER\tSOURCE\tINTERFACE\tREMOTE-INTERFACE\tDOMAIN\tSTATE")
 		for _, edge := range graph.Edges {
-			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\n", edge.Local, edge.Peer, edge.Source, edge.Interface, edge.RoutingDomain, edge.State)
+			fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", edge.Local, edge.Peer, edge.ObservedPeer, edge.Source, edge.Interface, edge.RemoteInterface, edge.RoutingDomain, edge.State)
 		}
 	}
 	if len(graph.Diagnostics) > 0 {

@@ -173,7 +173,7 @@ The {{ if .Values.aggregator.enabled }}aggregator-mode{{ else }}per-pod kubelet{
   through controller-reported retirement completion.
 {{- end }}
 
-  Planner, approver, topology-author, policy-admin, and ledger-breakglass roles
+  Graph-viewer, planner, approver, topology-author, policy-admin, and ledger-breakglass roles
   are intentionally unbound. Delegate only the roles required in each target
   namespace. See charts/cisco-virtual-kubelet/README.md before enrolling a
   CiscoDevice or changing policy.

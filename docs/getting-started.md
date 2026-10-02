@@ -152,7 +152,9 @@ guidance.
 The client-side `kubectl-ciscovk` plugin is optional; the controller and normal
 Kubernetes workflows do not depend on it. It provides read-only, ad-hoc IOS-XE
 commands and manager-accepted topology graph diagnostics. Graph output is
-observational and never grants rollout authority. It is available in the
+observational and never grants rollout authority; optional declared mappings
+and links live in an admission-protected ConfigMap key separate from rollout
+policy hashes. It is available in the
 public Krew index; install and upgrade it with:
 
 ```bash

@@ -120,6 +120,27 @@ topology:
       serviceAccountName: ""
       accessMode: readOnly
 
+  # Optional read-only graph input. Helm writes this as graph.json beside the
+  # rollout authority in the admission-protected topology-policy ConfigMap,
+  # but it remains separate from policy.json and from all campaign hashes.
+  # Mappings must be verified by the administrator from device inventory;
+  # CVK never learns or writes a mapping from unauthenticated CDP names.
+  graph:
+    enabled: false
+    peerMappings: []
+    #  - source: cdp
+    #    observedPeer: C9K-2
+    #    routingDomain: ""
+    #    physicalID: FOC2520L6H1
+    #    external: false # true for an observed but non-CVK-managed endpoint
+    declaredLinks: []
+    #  - local: FOC2520L6E8
+    #    peer: FOC2520L6H1
+    #    source: cdp
+    #    interface: GigabitEthernet1/0/1
+    #    remoteInterface: GigabitEthernet1/0/1
+    #    routingDomain: ""
+
   policy:
     # Empty namespace/name values use the release namespace and
     # <fullname>-topology-policy. The policy and ledger must remain in the same

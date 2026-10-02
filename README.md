@@ -137,7 +137,10 @@ the manager Deployment is restarted.
 The client-side `kubectl-ciscovk` plugin is not required to run the controller.
 It adds read-only, ad-hoc IOS-XE commands and manager-accepted topology graph
 diagnostics for operators. The topology output is observational and cannot
-grant rollout authority. The plugin is available from the public Krew index,
+grant rollout authority. Optional administrator-declared peer mappings and
+links come from a separate `graph.json` key in the admission-protected
+topology-policy ConfigMap and are included in output provenance, not campaign
+approval hashes. The plugin is available from the public Krew index,
 so install and upgrade it without building from source:
 
 ```bash

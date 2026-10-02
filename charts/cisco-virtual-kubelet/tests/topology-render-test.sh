@@ -10,6 +10,7 @@ trap 'rm -rf -- "$scratch_dir"' EXIT
 default_render="$scratch_dir/default.yaml"
 vk_pull_policy_render="$scratch_dir/vk-pull-policy.yaml"
 managed_render="$scratch_dir/managed.yaml"
+managed_graph_render="$scratch_dir/managed-graph.yaml"
 managed_short_account_render="$scratch_dir/managed-short-accounts.yaml"
 managed_upgrade_render="$scratch_dir/managed-upgrade.yaml"
 managed_drain_render="$scratch_dir/managed-drain.yaml"
@@ -108,6 +109,17 @@ helm template cvk "$chart_dir" \
   --set topology.enabled=true \
   --set controller.leaderElect=true \
   --set rbac.profile=strict >"$managed_render"
+
+helm template cvk "$chart_dir" \
+  --namespace cisco-vk-system \
+  --kube-version 1.35.0 \
+  --set topology.enabled=true \
+  --set controller.leaderElect=true \
+  --set rbac.profile=strict \
+  --set topology.graph.enabled=true \
+  --set-json 'topology.graph.peerMappings=[{"source":"cdp","observedPeer":"C9K-2","physicalID":"FOC2520L6H1"}]' \
+  --set-json 'topology.graph.declaredLinks=[{"local":"FOC2520L6E8","peer":"FOC2520L6H1","source":"cdp","interface":"GigabitEthernet1/0/1","remoteInterface":"GigabitEthernet1/0/1"}]' \
+  >"$managed_graph_render"
 
 # Valid short account names can overlap fixed CEL vocabulary. The manager must
 # canonicalize only the exact chart-bound literals, not matching substrings in
@@ -266,6 +278,7 @@ grep -Fq -- '- --app-hosting-service-account=cvk-peer-cisco-virtual-kubelet-app-
 grep -Fq -- '- --network-management-service-account=cvk-peer-cisco-virtual-kubelet-network-management' "$peer_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-policy' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-ledger' "$managed_render"
+grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-graph-viewer' "$managed_render"
 grep -Fq 'topology.cisco.vk/admission-policy-prefix: "cvk-cisco-virtual-kubelet"' "$managed_render"
 test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 55
 test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 66
@@ -277,6 +290,14 @@ grep -Fq '"configLeaseNamespace":""' "$managed_render"
 grep -Fq 'topology.cisco.vk/app-hosting-service-account: "cvk-cisco-virtual-kubelet-app-hosting"' "$managed_render"
 grep -Fq 'topology.cisco.vk/network-management-service-account: "cvk-cisco-virtual-kubelet-network-management"' "$managed_render"
 grep -Fq 'topology.cisco.vk/config-lease-namespace: ""' "$managed_render"
+if grep -Fq 'graph.json:' "$managed_render"; then
+  echo "disabled graph policy rendered graph.json" >&2
+  exit 1
+fi
+grep -Fq 'graph.json: |-' "$managed_graph_render"
+grep -Fq '"observedPeer":"C9K-2"' "$managed_graph_render"
+grep -Fq '"remoteInterface":"GigabitEthernet1/0/1"' "$managed_graph_render"
+grep -Fq '"version":"v1"' "$managed_graph_render"
 grep -Fq '"configLeaseNamespace":"cvk-leases"' "$managed_lease_namespace_render"
 grep -Fq 'topology.cisco.vk/config-lease-namespace: "cvk-leases"' "$managed_lease_namespace_render"
 grep -Fq 'name: CONFIG_LEASE_NAMESPACE' "$managed_lease_namespace_render"

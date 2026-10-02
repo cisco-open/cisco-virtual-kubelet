@@ -40,17 +40,19 @@ import (
 
 func TestParseTopologyGraphArgs(t *testing.T) {
 	f, err := parseTopologyGraphArgs([]string{
-		"-n", "cvk-live", "--max-age", "90s", "-o", "json", "--require-complete",
+		"-n", "cvk-live", "-l", "topology.cisco.vk/managed=true", "--max-age", "90s", "-o", "json", "--require-complete",
+		"--policy-configmap", "cisco-vk-system/cisco-vk-topology-policy",
 		"--context", "lab", "--kubeconfig", "/tmp/lab.conf", "--kubectl", "/usr/bin/kubectl",
 	})
 	if err != nil {
 		t.Fatalf("parseTopologyGraphArgs() error = %v", err)
 	}
-	if f.namespace != "cvk-live" || f.maxAge != 90*time.Second || f.output != "json" || !f.requireComplete ||
+	if f.namespace != "cvk-live" || f.selector != "topology.cisco.vk/managed=true" || f.maxAge != 90*time.Second || f.output != "json" || !f.requireComplete ||
+		f.policyConfigMap != "cisco-vk-system/cisco-vk-topology-policy" ||
 		f.kubeContext != "lab" || f.kubeconfig != "/tmp/lab.conf" || f.kubectlBin != "/usr/bin/kubectl" {
 		t.Fatalf("flags = %#v", f)
 	}
-	for _, argv := range [][]string{{"--max-age", "0s"}, {"-o", "yaml"}, {"--unknown"}} {
+	for _, argv := range [][]string{{"--max-age", "0s"}, {"-o", "yaml"}, {"--selector"}, {"--selector", "bad\nselector"}, {"--policy-configmap"}, {"--unknown"}} {
 		if _, err := parseTopologyGraphArgs(argv); err == nil {
 			t.Fatalf("parseTopologyGraphArgs(%q) succeeded", argv)
 		}
@@ -62,9 +64,60 @@ func TestTopologyGraphHelp(t *testing.T) {
 	if code := runCLI([]string{"kubectl-ciscovk", "topology", "graph", "--help"}, &stdout, &stderr); code != 0 {
 		t.Fatalf("runCLI() code = %d, stderr = %q", code, stderr.String())
 	}
-	if !strings.Contains(stderr.String(), "Flags for topology graph") || !strings.Contains(stderr.String(), "--require-complete") {
+	if !strings.Contains(stderr.String(), "Flags for topology graph") || !strings.Contains(stderr.String(), "--require-complete") || !strings.Contains(stderr.String(), "--policy-configmap") {
 		t.Fatalf("topology graph help = %q", stderr.String())
 	}
+}
+
+func TestReadTopologyGraphPolicyRequiresProtectedConfigMap(t *testing.T) {
+	previous := commandContext
+	commandContext = func(ctx context.Context, _ string, args ...string) *exec.Cmd {
+		helperArgs := append([]string{"-test.run=^TestGraphPolicyKubectlHelperProcess$", "--"}, args...)
+		cmd := exec.CommandContext(ctx, os.Args[0], helperArgs...)
+		cmd.Env = append(os.Environ(), "GO_WANT_CVK_GRAPH_POLICY_HELPER=1")
+		return cmd
+	}
+	t.Cleanup(func() { commandContext = previous })
+
+	document, proof, err := readTopologyGraphPolicy(context.Background(), &topologyGraphFlags{
+		policyConfigMap: "cisco-vk-system/cisco-vk-topology-policy", kubectlBin: os.Args[0],
+		kubeContext: "lab", kubeconfig: "/tmp/lab.conf",
+	})
+	if err != nil {
+		t.Fatalf("readTopologyGraphPolicy() error = %v", err)
+	}
+	if proof == nil || proof.ConfigMap != "cisco-vk-system/cisco-vk-topology-policy" || proof.UID != "policy-uid" || !strings.HasPrefix(proof.ContentHash, "sha256:") {
+		t.Fatalf("proof = %#v", proof)
+	}
+	if len(document.PeerMappings) != 1 || document.PeerMappings[0].PhysicalID != "serial-b" || len(document.DeclaredLinks) != 1 {
+		t.Fatalf("document = %#v", document)
+	}
+	withoutPolicy, withoutProof, err := readTopologyGraphPolicy(context.Background(), &topologyGraphFlags{})
+	if err != nil || withoutProof != nil || withoutPolicy.Version != "" {
+		t.Fatalf("optional policy = %#v, %#v, %v", withoutPolicy, withoutProof, err)
+	}
+}
+
+func TestGraphPolicyKubectlHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_CVK_GRAPH_POLICY_HELPER") != "1" {
+		return
+	}
+	separator := slices.Index(os.Args, "--")
+	if separator < 0 || separator == len(os.Args)-1 {
+		fmt.Fprintln(os.Stderr, "missing helper arguments")
+		os.Exit(2)
+	}
+	got := os.Args[separator+1:]
+	want := []string{
+		"--kubeconfig", "/tmp/lab.conf", "--context", "lab", "get", "configmap", "cisco-vk-topology-policy",
+		"-n", "cisco-vk-system", "-o", "json",
+	}
+	if !slices.Equal(got, want) {
+		fmt.Fprintf(os.Stderr, "unexpected graph policy kubectl arguments: %q\n", got)
+		os.Exit(2)
+	}
+	fmt.Fprint(os.Stdout, `{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"cisco-vk-topology-policy","namespace":"cisco-vk-system","uid":"policy-uid","resourceVersion":"42","annotations":{"topology.cisco.vk/managed-policy":"true","topology.cisco.vk/admission-contract-version":"v2"}},"data":{"graph.json":"{\"version\":\"v1\",\"peerMappings\":[{\"source\":\"cdp\",\"observedPeer\":\"C9K-2\",\"physicalID\":\"SERIAL-B\"}],\"declaredLinks\":[{\"local\":\"serial-a\",\"peer\":\"serial-b\",\"source\":\"cdp\",\"interface\":\"Gi1\",\"remoteInterface\":\"Gi2\"}]}"}}`)
+	os.Exit(0)
 }
 
 func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
@@ -145,6 +198,11 @@ func TestGraphProvenanceIsDeterministicAndAcceptedOnly(t *testing.T) {
 	_, reordered := graphInputsFromDevices(devices)
 	if got := hashTopologyGraphProvenance(reordered); got != wantHash {
 		t.Fatalf("provenance hash changed after input reorder: got %s want %s", got, wantHash)
+	}
+	policy := &topologyGraphPolicyProof{ConfigMap: "system/policy", UID: "uid-1", ResourceVersion: "42", ContentHash: "sha256:policy"}
+	withPolicy := hashTopologyGraphProvenance(reordered, policy)
+	if withPolicy == wantHash || withPolicy != hashTopologyGraphProvenance(provenance, policy) {
+		t.Fatalf("policy provenance was absent or nondeterministic: base=%s withPolicy=%s", wantHash, withPolicy)
 	}
 }
 

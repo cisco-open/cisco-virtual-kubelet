@@ -12,12 +12,12 @@ import (
 
 func TestBuildGraphIsBoundedDeterministicAndReportsDrift(t *testing.T) {
 	observations := []GraphObservation{
-		{PhysicalID: "leaf-b", Complete: true, Neighbors: []GraphNeighbor{{Identity: "ospf|leaf-b|Gi1|0", PeerID: "leaf-a", Interface: "Gi1", RoutingDomain: "0", State: "FULL"}}},
-		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{Identity: "cdp|leaf-a|Gi1|", PeerID: "leaf-b", Interface: "Gi1", State: "discovered"}}},
+		{PhysicalID: "leaf-b", Complete: true, Neighbors: []GraphNeighbor{{Identity: "ospf|leaf-b|Gi1|0", PeerID: "leaf-a", Interface: "Gi1", RemoteInterface: "Gi1", RoutingDomain: "0", State: "FULL"}}},
+		{PhysicalID: "leaf-a", Complete: true, Neighbors: []GraphNeighbor{{Identity: "cdp|leaf-a|Gi1|", PeerID: "leaf-b", Interface: "Gi1", RemoteInterface: "Gi1", State: "discovered"}}},
 	}
 	graph, err := BuildGraph(observations, GraphPolicy{Declared: []DeclaredLink{
-		{Local: "leaf-a", Peer: "leaf-b", Interface: "Gi1"},
-		{Local: "leaf-b", Peer: "leaf-a", Interface: "Gi1", RoutingDomain: "0"},
+		{Local: "leaf-a", Peer: "leaf-b", Interface: "Gi1", RemoteInterface: "Gi1"},
+		{Local: "leaf-b", Peer: "leaf-a", Interface: "Gi1", RemoteInterface: "Gi1", RoutingDomain: "0"},
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -31,8 +31,8 @@ func TestBuildGraphIsBoundedDeterministicAndReportsDrift(t *testing.T) {
 		}
 	}
 	second, err := BuildGraph(observations, GraphPolicy{Declared: []DeclaredLink{
-		{Local: "leaf-a", Peer: "leaf-b", Interface: "Gi1"},
-		{Local: "leaf-b", Peer: "leaf-a", Interface: "Gi1", RoutingDomain: "0"},
+		{Local: "leaf-a", Peer: "leaf-b", Interface: "Gi1", RemoteInterface: "Gi1"},
+		{Local: "leaf-b", Peer: "leaf-a", Interface: "Gi1", RemoteInterface: "Gi1", RoutingDomain: "0"},
 	}})
 	if err != nil || second.EvidenceHash != graph.EvidenceHash {
 		t.Fatalf("graph is not deterministic: first=%#v second=%#v err=%v", graph, second, err)
@@ -40,8 +40,8 @@ func TestBuildGraphIsBoundedDeterministicAndReportsDrift(t *testing.T) {
 	changed := observations
 	changed[0].Neighbors[0].State = "DOWN"
 	third, err := BuildGraph(changed, GraphPolicy{Declared: []DeclaredLink{
-		{Local: "leaf-a", Peer: "leaf-b", Interface: "Gi1"},
-		{Local: "leaf-b", Peer: "leaf-a", Interface: "Gi1", RoutingDomain: "0"},
+		{Local: "leaf-a", Peer: "leaf-b", Interface: "Gi1", RemoteInterface: "Gi1"},
+		{Local: "leaf-b", Peer: "leaf-a", Interface: "Gi1", RemoteInterface: "Gi1", RoutingDomain: "0"},
 	}})
 	if err != nil || third.EvidenceHash == graph.EvidenceHash {
 		t.Fatalf("graph hash did not include edge state: first=%s third=%s err=%v", graph.EvidenceHash, third.EvidenceHash, err)

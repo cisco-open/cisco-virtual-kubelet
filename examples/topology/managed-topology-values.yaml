@@ -25,6 +25,16 @@ topology:
     networkManagement:
       serviceAccountName: ""
       accessMode: readOnly
+
+  # Optional diagnostic-only graph policy. Keep disabled until every mapping
+  # has been verified from authenticated device inventory. This data is kept
+  # separate from rollout authority and is consumed only when the CLI receives
+  # the exact --policy-configmap coordinate.
+  graph:
+    enabled: false
+    peerMappings: []
+    declaredLinks: []
+
   policy:
     # Empty values select the Helm release namespace and generated names.
     namespace: ""
