@@ -635,6 +635,37 @@ func TestReconcileShowVersionFailsOnEmptyOutput(t *testing.T) {
 	}
 }
 
+func TestReconcileDiagnosticRejectionIsFailedWithEvidence(t *testing.T) {
+	ctx := context.Background()
+	const command = "verify /sha256 flash:nginx.tar"
+	const output = "% Invalid input detected at '^' marker."
+	op := newOperation("rejected-diagnostic", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Commands = []string{command}
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{Kind: transport.KindRESTCONF, SupportsDiagnosticExec: true},
+		results: []transport.CommandResult{{Command: command, Output: output,
+			Err: "IOS XE rejected diagnostic command syntax"}},
+	}
+	c := fake.NewClientBuilder().WithScheme(newScheme(t)).WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).Build()
+	r := &Reconciler{Client: c, DeviceName: "dev1", TP: &staticTP{tr: tr},
+		Now: func() time.Time { return time.Unix(100, 0).UTC() }}
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(op)}); err != nil {
+		t.Fatal(err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, client.ObjectKeyFromObject(op), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseFailed || tr.calls != 1 {
+		t.Fatalf("phase=%s calls=%d", got.Status.Phase, tr.calls)
+	}
+	if len(got.Status.Outputs) != 1 || got.Status.Outputs[0].Output != output || got.Status.Outputs[0].Err == "" {
+		t.Fatal("failed diagnostic lost its evidence")
+	}
+}
+
 func TestReconcileRejectsWriteCommandBeforeTransportExec(t *testing.T) {
 	ctx := context.Background()
 	scheme := newScheme(t)
