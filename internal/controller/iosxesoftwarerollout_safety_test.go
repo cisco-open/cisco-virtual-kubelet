@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -343,6 +344,110 @@ func TestPreparedReceiptRetainsExclusiveDeviceOwnership(t *testing.T) {
 	}
 	if !errors.Is(err, errPreparedOwnershipRetained) {
 		t.Fatalf("invalid retained receipt error = %v, want retained-ownership classification", err)
+	}
+}
+
+func TestActivationApprovalBindsCompleteExactPreparedReceiptSet(t *testing.T) {
+	now := time.Date(2026, 10, 2, 6, 0, 0, 0, time.UTC)
+	targets := []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+		policyFenceTarget("edge-a", "device-a-uid", "campaign-edge-a"),
+		policyFenceTarget("edge-b", "device-b-uid", "campaign-edge-b"),
+	}
+	rollout := policyFenceRollout(targets)
+	rollout.Spec.Plan.Strategy = opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly
+	rollout.Status.Phase = opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded
+	leaves := make(map[string]opsv1alpha1.IOSXESoftwareUpgrade, len(targets))
+	references := make([]opsv1alpha1.IOSXESoftwareRolloutActivationReceipt, 0, len(targets))
+	for i, target := range targets {
+		uid := types.UID(fmt.Sprintf("prepared-leaf-%d", i))
+		leaf := policyFenceLeaf(rollout, target, uid)
+		sourceHash, err := softwareupgrade.PreparedSourceIdentityHash(leaf.Spec.ImageSource)
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipt := &opsv1alpha1.UpgradePreparedReceiptStatus{
+			ProtocolVersion: "prepare-v1", UpgradeUID: string(uid), DeviceUID: target.DeviceUID,
+			NodeUID: target.NodeUID, PhysicalIdentity: target.PhysicalIdentity, DeviceGeneration: target.DeviceGeneration,
+			CampaignUID: string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
+			ManagedProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+			PolicyUID:              rollout.Status.FrozenPlan.Policy.UID, PolicyResourceVersion: rollout.Status.FrozenPlan.Policy.ResourceVersion,
+			PolicyEpoch: 1, WorkerRevision: "sha256:" + strings.Repeat("e", 64),
+			SourceDigest: "sha256:" + rollout.Spec.Plan.Image.SHA256, SourceSize: 1_249_368_115,
+			SourceIdentityHash: sourceHash, TrustIdentityHash: "sha256:" + strings.Repeat("f", 64),
+			ContentBinding: "source-digest-install-claim-v1",
+			TargetVersion:  rollout.Spec.Plan.TargetVersion, ValidatedVersion: rollout.Spec.Plan.TargetVersion + ".0.1",
+			RunningVersion: "17.18.3", PrimarySupervisorInstalled: true,
+			InstallStartedAt: metav1.NewTime(now.Add(-time.Hour)), PreparedAt: metav1.NewTime(now.Add(-30 * time.Minute)),
+			ManagedMutationClaims: []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage:         opsv1alpha1.UpgradeManagedMutationPrimaryInstall,
+				ReservationID: leaf.Status.ManagerAdmission.ReservationID, PolicyEpoch: 1,
+				ControlRevision: rollout.Spec.Control.Revision, ClaimedAt: metav1.NewTime(now.Add(-time.Hour)),
+			}},
+		}
+		receipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*receipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		leaf.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+		leaf.Status.PreparedReceipt = receipt
+		leaves[leaf.Name] = *leaf
+		references = append(references, opsv1alpha1.IOSXESoftwareRolloutActivationReceipt{
+			DeviceUID: target.DeviceUID, UpgradeUID: string(uid), ReceiptHash: receipt.ReceiptHash,
+		})
+	}
+	rollout.Spec.ActivationApproval = &opsv1alpha1.IOSXESoftwareRolloutActivationApproval{
+		PlanHash:  rollout.Status.FrozenPlan.Hash,
+		Receipts:  []opsv1alpha1.IOSXESoftwareRolloutActivationReceipt{references[1], references[0]},
+		NotBefore: metav1.NewTime(now.Add(time.Hour)), NotAfter: metav1.NewTime(now.Add(2 * time.Hour)),
+		ApprovedBy: "activator@example.test", ApprovedAt: metav1.NewTime(now),
+	}
+	validated, err := validateActivationApproval(rollout, leaves)
+	if err != nil {
+		t.Fatalf("validateActivationApproval() error = %v", err)
+	}
+	if !validSHA256Identity(validated.Hash) || len(validated.Receipts) != 2 {
+		t.Fatalf("validated activation = %#v", validated)
+	}
+
+	reordered := rollout.DeepCopy()
+	reordered.Spec.ActivationApproval.Receipts[0], reordered.Spec.ActivationApproval.Receipts[1] =
+		reordered.Spec.ActivationApproval.Receipts[1], reordered.Spec.ActivationApproval.Receipts[0]
+	second, err := validateActivationApproval(reordered, leaves)
+	if err != nil || second.Hash != validated.Hash {
+		t.Fatalf("receipt order changed canonical authorization: first=%s second=%#v err=%v", validated.Hash, second, err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareRollout, map[string]opsv1alpha1.IOSXESoftwareUpgrade)
+	}{
+		{name: "receipt substitution", mutate: func(r *opsv1alpha1.IOSXESoftwareRollout, _ map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			r.Spec.ActivationApproval.Receipts[0].ReceiptHash = "sha256:" + strings.Repeat("0", 64)
+		}},
+		{name: "missing receipt", mutate: func(r *opsv1alpha1.IOSXESoftwareRollout, _ map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			r.Spec.ActivationApproval.Receipts = r.Spec.ActivationApproval.Receipts[:1]
+		}},
+		{name: "leaf uid drift", mutate: func(_ *opsv1alpha1.IOSXESoftwareRollout, l map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			leaf := l[targets[0].ChildName]
+			leaf.UID = "recreated-leaf"
+			l[targets[0].ChildName] = leaf
+		}},
+		{name: "invalid window", mutate: func(r *opsv1alpha1.IOSXESoftwareRollout, _ map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			r.Spec.ActivationApproval.NotAfter = r.Spec.ActivationApproval.NotBefore
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := rollout.DeepCopy()
+			candidateLeaves := make(map[string]opsv1alpha1.IOSXESoftwareUpgrade, len(leaves))
+			for name, leaf := range leaves {
+				candidateLeaves[name] = *leaf.DeepCopy()
+			}
+			test.mutate(candidate, candidateLeaves)
+			if _, err := validateActivationApproval(candidate, candidateLeaves); err == nil {
+				t.Fatal("invalid activation approval was accepted")
+			}
+		})
 	}
 }
 
