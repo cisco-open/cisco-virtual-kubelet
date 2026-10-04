@@ -236,7 +236,7 @@ wait_for_group_condition edge-workers-0 True Scheduled
 CVK_NATIVE_TAS_TEST_CONTEXT="$expected_context" \
 CVK_NATIVE_TAS_GUARD_NAMESPACE="$namespace" \
 CVK_NATIVE_TAS_GUARD_POD="edge-worker-0" \
-  go test -tags native_tas_integration -count=1 \
+  go test -tags native_tas_integration -count=1 -v \
     ./internal/controller -run '^TestNativeTASServedSchedulingGroupGuard$'
 
 # Recreate one member after the group initially schedules. The replacement

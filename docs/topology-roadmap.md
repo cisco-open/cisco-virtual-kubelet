@@ -562,6 +562,11 @@ contains standalone Pods, so it does not by itself demonstrate a durable
 controller-backed lifecycle. CVK must not start owning Workload/PodGroup objects
 as a side effect of Node publication.
 
+The [4 October native-owner follow-up](evidence/topology-2026-10-02/e08-native-tas-served-guard.md#4-october-native-deployment-owner-and-process-restart)
+now proves Deployment/ReplicaSet member recreation and controller-process
+restart with a pre-created PodGroup on synthetic Nodes. This closes that narrow
+owner prerequisite, not app readiness, group relocation or physical drain.
+
 Test a maintenance-tainted member, insufficient capacity in the selected site,
 partial group failure, controller restart and recovery. Co-location can keep a
 replacement in a domain without spare capacity; that must remain an explained

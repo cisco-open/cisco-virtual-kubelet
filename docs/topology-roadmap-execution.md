@@ -285,14 +285,24 @@ the expected unsigned/no-storage failure as negative evidence only.
 
 #### R5 — implement and qualify native grouped-workload lifecycle
 
+**4 October prerequisite update:** the pinned real Kubernetes 1.37 lane now
+proves that the in-tree Deployment/ReplicaSet controllers create members,
+survive an actual controller-manager process restart, and recreate a deleted
+member while retaining its group/owner identity and site binding. The test
+supplies the PodGroup explicitly; it does not qualify automatic group creation.
+See [native owner evidence](evidence/topology-2026-10-02/e08-native-tas-served-guard.md#4-october-native-deployment-owner-and-process-restart).
+Group-drain implementation, rolling membership races and physical startup/
+continuity remain open. No production guard was loosened.
+
 **Scope:** E08-C/D, F10, with E08-A/B regression. Keep Kubernetes 1.35 as the
 baseline and the pinned optional-TAS lane separate. Use the repository's
 version/image/gates only after discovery confirms the served APIs.
 
-The current synthetic lane creates member Pods; it is not proof that a native
-owner recreates real applications. First prove a supported Kubernetes-native
-owner preserves group identity through member deletion/recreation and owner
-restart. If none supports the required contract, record the precise upstream
+The original synthetic example creates standalone member Pods. The new native
+owner subtest proves recreation/restart identity on fixture Nodes, but does not
+prove recreation of real applications. Retain that prerequisite test and qualify
+actual app startup under the same supported owner. If no native owner supports
+the full required lifecycle contract, record the precise upstream
 capability gap: do not introduce a third-party controller, hand-created Pod
 replacements or make CVK an implicit workload owner to claim completion.
 
