@@ -259,7 +259,10 @@ func qualifyNativeGroupOwner(t *testing.T, c client.Client, namespace string) {
 	if len(strings.Fields(process)) != 1 {
 		t.Fatal("expected exactly one native controller-manager container")
 	}
-	docker("exec", controlPlane, "crictl", "stop", process)
+	// crictl's default two-second RPC budget can expire after accepting the
+	// stop while the process is still shutting down. Bound graceful shutdown
+	// separately and give the transport enough time to observe completion.
+	docker("exec", controlPlane, "crictl", "--timeout=30s", "stop", "--timeout=10", process)
 	restarted := false
 	for ctx.Err() == nil {
 		next := docker("exec", controlPlane, "crictl", "ps", "--state", "Running", "--name", "kube-controller-manager", "-q")

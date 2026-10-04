@@ -453,7 +453,7 @@ runtime_scheduler_id="$(docker exec "$control_plane" \
   crictl ps --state Running --name kube-scheduler -q | head -1)"
 [[ -n "$runtime_scheduler_id" ]] || \
   fail "could not resolve the running native scheduler container"
-docker exec "$control_plane" crictl stop "$runtime_scheduler_id" >/dev/null
+docker exec "$control_plane" crictl --timeout=30s stop --timeout=10 "$runtime_scheduler_id" >/dev/null
 scheduler_restarted=false
 for _ in $(seq 1 60); do
   new_scheduler_container_id="$(kubectl get pod "$scheduler_pod" \
@@ -472,7 +472,7 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 [[ "$scheduler_restarted" == "true" ]] || \
-  fail "native scheduler did not recover with a new Pod UID"
+  fail "native scheduler did not recover with a new container ID"
 
 cat <<EOF | kubectl apply -f - >/dev/null
 apiVersion: scheduling.k8s.io/v1beta1

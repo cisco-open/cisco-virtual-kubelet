@@ -73,3 +73,31 @@ CVK still rejects grouped drain. The next implementation must freeze/recheck
 group, owner and membership identities; enforce PDB/domain capacity; and wait
 for device-clean acknowledgement plus genuine replacement readiness before
 physical upgrade/downgrade qualification.
+
+### Restart-probe transport deadline correction
+
+The native-TAS job passed remotely on `3dd991ae`, but the next run on
+`6bad9947` exposed a harness timing defect: `crictl stop` exceeded its default
+two-second RPC timeout while stopping kube-controller-manager. The job's
+diagnostic output showed that the process actually restarted; the test had
+already failed on the transport error before checking member recreation.
+This was not an application or group-identity failure, and the failed run is
+not counted as a pass.
+
+The controller and scheduler stop probes now use an explicit ten-second
+graceful-stop bound and a thirty-second CRI transport budget. They still
+require a different running container, real native member recreation, owner/
+group identity checks and all the original scheduling guards. The outer test
+deadline remains bounded. No production CVK or device-operation timeout changes.
+
+Two consecutive complete runs on separate fresh clusters passed after this
+correction, selecting site-a and site-b respectively. Both disposable clusters
+were removed after their tests. Raw log hashes:
+
+| Run | SHA-256 |
+| --- | --- |
+| Bounded stop, fresh cluster 1 | `471ef5840053eda86b868d7a64fea196e5f72eb0b11c43d69205a2d7d1e8d044` |
+| Bounded stop, fresh cluster 2 | `dd2fd3557255c4a715af3a47f4553e9814a30cd174533ff5a232d22b4a512057` |
+
+Required remote checks still apply to the subsequently pushed head. These
+synthetic results do not close the physical E08-C/D gates.
