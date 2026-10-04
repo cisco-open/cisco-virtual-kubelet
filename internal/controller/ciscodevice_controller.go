@@ -2728,7 +2728,8 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 		// fenced until a separate audited receipt-invalidation contract exists;
 		// never copy the receipt or its approval into a new owner implicitly.
 		if (upgrade.Status.Phase == opsv1alpha1.UpgradePhasePrepared || upgrade.Status.PreparedReceipt != nil) &&
-			!softwareupgrade.PreparedReceiptConsumed(upgrade, upgrades.Items) {
+			!softwareupgrade.PreparedReceiptConsumed(upgrade, upgrades.Items) &&
+			!softwareupgrade.PreparedReceiptInvalidated(upgrade) {
 			return fmt.Errorf("%s is blocked by retained prepared software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 		if upgrade.Status.Phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {

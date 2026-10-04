@@ -45,7 +45,11 @@ full race suite and all 43 real-API tests pass. See the
 [migration and diagnostic record](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
 
 R1 is still partial: interrupted deployment, reverse-manager operation and
-rollback qualification remain. R3 still lacks explicit receipt invalidation/recovery.
+rollback qualification remain. R3 now has a narrowly scoped, explicitly
+authorized invalidation implementation for cancelled, settled preparation that
+never authorized activation. Automated evidence is recorded in the
+[recovery follow-up](evidence/topology-2026-10-02/preparation-recovery-followup.md);
+physical recovery/drift qualification remains open.
 R2/R4/R9 need independent path/service evidence and the complete separately
 approved physical lifecycle matrix. The wider roadmap remains as enumerated
 below. See the [detailed follow-up](evidence/topology-2026-10-02/merge-readiness-followup.md)
@@ -211,10 +215,21 @@ or comparison against CVK's own derived counters cannot pass this stage.
 
 #### R3 — finish drift invalidation and staged recovery
 
+**4 October implementation update:** an append-only `preparationInvalidation`
+request, separate native `recover` permission, manager-owned receipt authority,
+read-only platform retirement capability and irreversible `PreparedInvalidated`
+evidence now implement the safe idle-preparation subset below. Original receipts
+remain immutable. No unknown install/activation claim can be cleared by this
+path; no package is deleted. See the operator procedure in
+[topology awareness](topology-awareness.md#abandoning-an-unused-preparation).
+Do not mark R3 complete until the physical drift, replacement, restart and
+fresh-plan tests below pass on the exact deployed candidate. Dual-supervisor
+recovery and already activation-authorized campaigns are explicitly held.
+
 **Scope:** E04-B/C, E05-A–C, E06-B/D, F04/F07/F08;
 `internal/softwarelifecycle`, `internal/provider/softwareupgrade`, IOS-XE
 inventory and rollout activation/ownership controllers, API/CEL/RBAC.
-First define an explicit invalidation/reconciliation state transition. Keep
+Preserve the implemented explicit invalidation/reconciliation transition. Keep
 the original receipt immutable; append the reason, exact identity, authorized
 actor and native evidence. Invalidating reuse must not itself release an
 unresolved device mutation or authorize activation. Release idle retained
@@ -736,7 +751,7 @@ deliverables.
 | E02 | T1–T2 | Measured traffic/headroom and supervisor/stack health | E01 | In progress: directional rate presence/validity and conservative headroom are implemented; controlled load, sampling provenance and supervisor evidence remain. |
 | E03 | T2 | Administrator network policy, overlapping risk groups, expiring grants | E01–E02 | In progress: evidence-bound expiring grants, monotonic renewal, uncached pre-claim enforcement, bounded administrator critical-service/singleton-path prohibitions, exact overlapping membership with cross-campaign ledger accounting, continuous accepted-evidence recovery/soak enforcement, worker byte pacing and physical `.103` pacing in both image directions are implemented; independent loaded/headroom measurement and service-path acceptance remain. |
 | E04 | T3 | Physical qualification of the preparation/activation boundary | E00; read-only investigation may start immediately | Core install-only boundary passed on physical C9300s in both directions: `.103` retained inactive 17.18.02 while running 17.18.03; `.101` retained inactive 17.18.03 while running 17.18.02. `PrepareOnly` issued no activation, exact native inventory and unchanged running versions were verified, and `.101` survived worker replacement with no replay. Native image removal/replacement and a qualified invalidation procedure remain open. Evidence: [`topology-2026-10-02`](evidence/topology-2026-10-02/README.md). |
-| E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Core implementation and physical ownership gate passed: immutable content-addressed receipts bind Kubernetes/device/source/trust/install identities; receipts survived restart; a competing approved campaign created no child and reported `Blocked/PreparedOwnershipRetained`. `ddc02b82` removed the expected-safety reconcile loop. Source/trust/inventory drift during a later activation must still be rejected by E06, and explicit invalidation remains intentionally unavailable until a safe device-side reconciliation contract exists. |
+| E05 | T3 | Durable staged receipts and staged ownership | E04 positive capability evidence | Core implementation and physical ownership gate passed: immutable content-addressed receipts bind Kubernetes/device/source/trust/install identities; receipts survived restart; a competing approved campaign created no child and reported `Blocked/PreparedOwnershipRetained`. `ddc02b82` removed the expected-safety reconcile loop. Explicit cancellation/retirement now has a native-proof-based implementation and automated tests; physical drift/recovery qualification remains open under R3. |
 | E06 | T4 | Separate activation approval, windows and phase reservations | E03, E05 | Complete for the tested C9300/IOS XE cohort. Exact receipt authorization, phase accounting, closed-window hold, independently approved upgrade and downgrade, no-replay recovery and final settlement passed through `3899e327`; see the E06 evidence record. |
 | E07 | T5 | Physical drain qualification and hard placement | E00, E03; full lifecycle tests need E06 | In progress: placement hashing and conservative feasibility now support node selectors, required node affinity and hard topology spread for the existing Deployment/ReplicaSet subset. Physical signed portable workload, endpoint continuity, no-capacity and restart/cancel qualification remain. |
 | E08 | T6 | Group recognition and actual CVK native TAS lifecycle | E00; group drain needs E07; physical owner transfer needs E12-B–D | E08-A passes through the production uncached guard against a real Kubernetes 1.37-served `spec.schedulingGroup` Pod, including a live resourceVersion race; E08-B's complete scheduler matrix passes. A qualified workload controller, physical native owner lifecycle and group-aware drain (E08-C/D) remain. |

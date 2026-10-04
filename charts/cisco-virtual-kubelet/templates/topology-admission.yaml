@@ -1132,6 +1132,22 @@ spec:
         authorizer.group('ops.cisco.vk').resource('iosxesoftwarerollouts').namespace(request.namespace).name(request.name).check('activate').allowed())
       message: adding activationApproval requires completed PrepareOnly targets, one exact receipt per frozen target, the frozen-plan hash, and distinct activate permission
     - expression: >-
+        request.operation != 'CREATE' || !has(object.spec.preparationInvalidation)
+      message: preparation invalidation cannot be requested at campaign creation
+    - expression: >-
+        (has(request.subResource) && request.subResource != '') || request.operation != 'UPDATE' ||
+        has(oldObject.spec.preparationInvalidation) || !has(object.spec.preparationInvalidation) ||
+        (object.spec.preparationInvalidation.requestedBy == request.userInfo.username &&
+         oldObject.spec.plan.strategy == 'PrepareOnly' &&
+         has(oldObject.spec.control.cancel) && oldObject.spec.control.cancel &&
+         !has(oldObject.spec.activationApproval) && has(oldObject.status.frozenPlan) &&
+         oldObject.status.phase == 'Cancelled' &&
+         object.spec.preparationInvalidation.planHash == oldObject.status.frozenPlan.hash &&
+         object.spec.preparationInvalidation.receipts.all(r,
+           oldObject.status.frozenPlan.targets.exists(t, t.deviceUID == r.deviceUID)) &&
+         authorizer.group('ops.cisco.vk').resource('iosxesoftwarerollouts').namespace(request.namespace).name(request.name).check('recover').allowed())
+      message: preparation invalidation requires settled cancellation, exact frozen intent, caller identity, and distinct recover permission
+    - expression: >-
         (has(request.subResource) && request.subResource != '') || request.operation != 'UPDATE' ||
         object.spec.control == oldObject.spec.control ||
         (object.spec.control.requestedBy == request.userInfo.username &&
@@ -1399,8 +1415,10 @@ spec:
         (has(object.status.managerControl) == has(oldObject.status.managerControl)) &&
         (!has(object.status.managerControl) || object.status.managerControl == oldObject.status.managerControl) &&
         (has(object.status.managerDrain) == has(oldObject.status.managerDrain)) &&
-        (!has(object.status.managerDrain) || object.status.managerDrain == oldObject.status.managerDrain))))
-      message: managed upgrade managerAdmission, managerControl, and managerDrain status are manager-owned
+        (!has(object.status.managerDrain) || object.status.managerDrain == oldObject.status.managerDrain) &&
+        (has(object.status.managerInvalidation) == has(oldObject.status.managerInvalidation)) &&
+        (!has(object.status.managerInvalidation) || object.status.managerInvalidation == oldObject.status.managerInvalidation))))
+      message: managed upgrade managerAdmission, managerControl, managerDrain, and managerInvalidation status are manager-owned
     - expression: >-
         !has(request.subResource) || request.subResource != 'status' ||
         variables.manager || variables.appDrainWriter ||
@@ -1427,6 +1445,7 @@ spec:
            !has(object.status.observedGeneration) &&
            !has(object.status.phase) &&
            !has(object.status.preparedReceipt) &&
+           !has(object.status.preparedInvalidation) &&
            !has(object.status.previousVersion) &&
            !has(object.status.primarySupervisorActivationRequested) &&
            !has(object.status.primarySupervisorInstallRequested) &&
@@ -1478,6 +1497,8 @@ spec:
            (!has(object.status.phase) || object.status.phase == oldObject.status.phase) &&
            (has(object.status.preparedReceipt) == has(oldObject.status.preparedReceipt)) &&
            (!has(object.status.preparedReceipt) || object.status.preparedReceipt == oldObject.status.preparedReceipt) &&
+           (has(object.status.preparedInvalidation) == has(oldObject.status.preparedInvalidation)) &&
+           (!has(object.status.preparedInvalidation) || object.status.preparedInvalidation == oldObject.status.preparedInvalidation) &&
            (has(object.status.previousVersion) == has(oldObject.status.previousVersion)) &&
            (!has(object.status.previousVersion) || object.status.previousVersion == oldObject.status.previousVersion) &&
            (has(object.status.primarySupervisorActivationRequested) == has(oldObject.status.primarySupervisorActivationRequested)) &&

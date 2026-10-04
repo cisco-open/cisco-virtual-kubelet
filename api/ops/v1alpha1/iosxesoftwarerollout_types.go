@@ -46,6 +46,7 @@ const (
 // +kubebuilder:printcolumn:name="Failed",type=integer,JSONPath=`.status.counts.failed`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.approval) || (has(self.status) && has(self.status.frozenPlan) && self.spec.approval.planHash == self.status.frozenPlan.hash)",message="approval must authorize the exact published frozen plan hash"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.preparationInvalidation) || (has(self.status) && has(self.status.frozenPlan) && self.spec.preparationInvalidation.planHash == self.status.frozenPlan.hash && has(self.status.phase) && self.status.phase == 'Cancelled')",message="invalidation requires a cancelled campaign and exact frozen plan"
 type IOSXESoftwareRollout struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -74,6 +75,8 @@ type IOSXESoftwareRolloutList struct {
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.approval) || (has(self.approval) && self.approval == oldSelf.approval)",message="approval is append-only and immutable once recorded"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.activationApproval) || (has(self.activationApproval) && self.activationApproval == oldSelf.activationApproval)",message="activationApproval is append-only and immutable once recorded"
 // +kubebuilder:validation:XValidation:rule="!has(self.activationApproval) || self.plan.strategy == 'PrepareOnly'",message="activationApproval is valid only for a PrepareOnly plan"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.preparationInvalidation) || (has(self.preparationInvalidation) && self.preparationInvalidation == oldSelf.preparationInvalidation)",message="preparationInvalidation is append-only"
+// +kubebuilder:validation:XValidation:rule="!has(self.preparationInvalidation) || (self.plan.strategy == 'PrepareOnly' && has(self.control.cancel) && self.control.cancel && !has(self.activationApproval))",message="preparation invalidation requires terminal cancellation and no activation approval"
 type IOSXESoftwareRolloutSpec struct {
 	// Plan is the immutable requested campaign input from which the manager
 	// creates a canonical frozen target plan.
@@ -91,6 +94,12 @@ type IOSXESoftwareRolloutSpec struct {
 	// explicit UTC window. Omission preserves the install-only boundary.
 	// +kubebuilder:validation:Optional
 	ActivationApproval *IOSXESoftwareRolloutActivationApproval `json:"activationApproval,omitempty"`
+
+	// PreparationInvalidation abandons exact, settled preparations in a
+	// cancelled campaign that never authorized activation. It is separately
+	// authorized recovery intent, not permission to delete files or clear claims.
+	// +optional
+	PreparationInvalidation *IOSXESoftwareRolloutPreparationInvalidation `json:"preparationInvalidation,omitempty"`
 
 	// Control carries pause/resume/cancel requests. Revision zero is the
 	// required neutral value at creation.

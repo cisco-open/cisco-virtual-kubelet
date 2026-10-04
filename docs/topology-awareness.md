@@ -1673,8 +1673,89 @@ and managed device deletion therefore remain blocked while any exact managed
 leaf is `Prepared` or carries a preparation receipt. Complete its approved
 activation while the managed owner is intact, or retain managed ownership. Do
 not copy the receipt/approval to another owner or delete the leaf as an
-invalidation shortcut; a device-reconciled receipt invalidation contract is
-not yet supported.
+invalidation shortcut. The explicit cancellation/recovery path below can retire
+an unused preparation after native verification; it cannot clear uncertain
+mutation outcomes.
+
+### Abandoning an unused preparation
+
+This development-branch recovery contract is **not yet physically qualified**.
+It applies only to a completed, settled `PrepareOnly` campaign that has never
+received `activationApproval`. It does not support dual-supervisor recovery,
+unresolved install/activation outcomes, or a running OS changed since preparation.
+It neither removes software nor changes boot settings, certificates, workload
+placement, or app-hosting configuration.
+
+1. As an operator with `control` permission, cancel the campaign using a new
+   control revision, your authenticated `requestedBy`, and current UTC
+   `requestedAt`. Wait for the campaign to reach `Cancelled` and the network
+   worker to acknowledge that exact control revision with `Settled` state.
+2. Review the retained leaf's `preparedReceipt`, its exact device/upgrade UIDs,
+   hash and the campaign's `status.frozenPlan.hash`. Do not regenerate a hash
+   or copy a receipt from another object. Retain the original objects for audit.
+3. A separately authorized operator adds `spec.preparationInvalidation` once.
+   Bind the chart's `*-rollout-recoverer` ClusterRole through a namespaced
+   RoleBinding. Neither worker account, planner nor activation approver gets
+   the custom `recover` permission implicitly. A recoverer does not receive
+   `control`, `approve`, or `activate` permission from this role.
+
+For example, after filling **all** placeholders in `invalidation.json` from
+the live objects and the authenticated operator identity:
+
+```json
+{
+  "spec": {
+    "preparationInvalidation": {
+      "planHash": "<exact status.frozenPlan.hash>",
+      "requestedBy": "<authenticated Kubernetes username>",
+      "requestedAt": "<current RFC3339 UTC timestamp>",
+      "reason": "Abandon unused preparation before replanning",
+      "receipts": [{
+        "deviceUID": "<preparedReceipt.deviceUID>",
+        "upgradeUID": "<preparedReceipt.upgradeUID>",
+        "receiptHash": "<preparedReceipt.receiptHash>"
+      }]
+    }
+  }
+}
+```
+
+```sh
+kubectl -n network-devices get iosxesoftwareupgrade PREPARED_LEAF -o yaml
+kubectl -n network-devices patch iosxesoftwarerollout CAMPAIGN \
+  --type=merge --patch-file=invalidation.json
+kubectl -n network-devices get iosxesoftwareupgrade PREPARED_LEAF -w
+kubectl -n network-devices wait iosxesoftwarerollout/CAMPAIGN \
+  --for=condition=PreparationInvalidated --timeout=5m
+```
+
+The request may name an exact subset of the cancelled campaign's prepared
+targets. The manager validates every requested reference before publishing
+per-leaf authority. Each bound network worker acquires the normal device-wide
+Lease, reads native install inventory and gNOI `OS.Verify`, and checks:
+
+- the installer is quiescent at every reported location;
+- the original running version remains committed and `OS.Verify` agrees;
+- the exact inactive target is installed or absent, not active, unknown or
+  in progress; and
+- cancellation, settlement, receipt identity and worker binding still match.
+
+Only then can the leaf become `PreparedInvalidated`, retaining the immutable
+receipt and appending actor/request binding, observation time, native-evidence
+hash, running version and worker provenance. Manager, worker queue, and device
+handoff checks use the same release predicate. The campaign remains
+`Cancelled`; `PreparationInvalidated=True` covers only its requested receipts.
+A request or phase string alone does not release ownership. Old activation
+intent cannot reuse an invalidated receipt. A new campaign needs fresh planning,
+preparation and approval.
+
+On missing/ambiguous inventory, live binding drift, an unavailable observation
+capability, or a foreign Lease, keep ownership and inspect worker logs. IOS XE
+inventory that remains `in-progress` despite an apparently completed install is
+deliberately not sufficient for this recovery path. Do not force-edit status,
+erase claims, remove finalizers, clear Leases, or delete packages to bypass it.
+The request and evidence are append-only; schema/runtime rollback must preserve
+them. Older writers that omit them are rejected by the current schema.
 
 One exact activation consumes that queue ownership only after it is terminal
 `Succeeded`, verifies the prepared target version, records a conclusively

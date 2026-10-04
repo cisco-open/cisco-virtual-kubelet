@@ -150,10 +150,15 @@ func (r *IOSXESoftwareRolloutReconciler) Reconcile(ctx context.Context, req ctrl
 	activationRequested := rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded &&
 		rollout.Spec.Plan.Strategy == opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly &&
 		rollout.Spec.ActivationApproval != nil
-	if (rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded && !activationRequested) ||
+	preparationCancellationRequested := rollout.Spec.Plan.Strategy == opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly &&
+		rollout.Spec.ActivationApproval == nil && rollout.Spec.Control.Cancel
+	if (rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded && !activationRequested && !preparationCancellationRequested) ||
 		rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled {
 		if err := r.reconcileTerminalDrainProtection(ctx, &rollout); err != nil {
 			return ctrl.Result{}, err
+		}
+		if rollout.Spec.PreparationInvalidation != nil {
+			return r.reconcilePreparationInvalidation(ctx, &rollout, now)
 		}
 		return ctrl.Result{}, nil
 	}

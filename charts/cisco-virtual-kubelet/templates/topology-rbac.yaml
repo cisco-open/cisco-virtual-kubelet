@@ -584,6 +584,17 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  name: {{ include "cisco-virtual-kubelet.fullname" . }}-rollout-recoverer
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwarerollouts"]
+    verbs: ["get", "list", "watch", "update", "patch", "recover"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
   name: {{ include "cisco-virtual-kubelet.fullname" . }}-topology-graph-viewer
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}

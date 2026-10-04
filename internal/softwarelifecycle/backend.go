@@ -172,6 +172,19 @@ type InterruptedInstallObserver interface {
 	ObserveInterruptedInstall(context.Context, InterruptedInstallRequest) (InterruptedInstallObservation, error)
 }
 
+// PreparationRetirementObserver is optional, read-only recovery evidence.
+// Implementations must prove every native install location is quiescent, the
+// original running image remains committed, and the exact target is inactive
+// or absent. Empty/malformed inventory and unknown operations are not absence.
+type PreparationRetirementObserver interface {
+	ObservePreparationRetirement(ctx context.Context, target, running string) (PreparationRetirementObservation, error)
+}
+
+type PreparationRetirementObservation struct {
+	TargetState  InventoryState
+	EvidenceHash string
+}
+
 // Backend is an optional platform capability. Generic gNOI byte transfer and
 // activation do not depend on it; preinstalled image selection, device-file
 // registration, install observation, and rollback inventory checks do.

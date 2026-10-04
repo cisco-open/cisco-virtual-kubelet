@@ -878,6 +878,17 @@ func TestTerminalRolloutPreservesAuditResultWhenDependenciesChange(t *testing.T)
 			if got.Status.Phase != phase || got.Status.Message != "retained audit result" {
 				t.Fatalf("terminal status changed to phase %q message %q", got.Status.Phase, got.Status.Message)
 			}
+			// Recovery must not reopen the existing combined-upgrade terminal
+			// path when an operator later cancels an already successful rollout.
+			got.Spec.Plan.Strategy = opsv1alpha1.IOSXESoftwareRolloutStrategyReload
+			got.Spec.Control.Cancel = true
+			if err := apiClient.Update(context.Background(), &got); err != nil {
+				t.Fatal(err)
+			}
+			result, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(rollout)})
+			if err != nil || result != (ctrl.Result{}) {
+				t.Fatalf("completed Reload cancellation reopened reconciliation: %+v %v", result, err)
+			}
 		})
 	}
 }

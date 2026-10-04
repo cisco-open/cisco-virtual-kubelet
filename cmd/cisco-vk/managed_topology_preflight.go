@@ -137,9 +137,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		variables:         []string{"manager"},
-		validations:       7,
-		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "activationApproval.receipts", "check('activate')", "check('control')", "request.subResource != 'status'", "spec.control.revision == 0"},
-		digest:            "sha256:8415a6e8149ef541200b7992a9dd0f494c54d99fdf5249869d81bf9cabc58ecf",
+		validations:       9,
+		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "activationApproval.receipts", "check('activate')", "check('control')", "check('recover')", "preparationInvalidation", "request.subResource != 'status'", "spec.control.revision == 0"},
+		digest:            "sha256:8df8e50f1d5cb91d69c7e10ee2685a06557d5aa82d0d419daa88e073c1e57844",
 	},
 	"managed-upgrade-leaf": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
@@ -148,7 +148,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		variables:         []string{"manager", "appDrainWriter", "oldClaims", "newClaims", "managerFunctionalWorkerBinding"},
 		validations:       8,
 		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "preparedReceipt", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:19d4ebd758a2d9fe7a7623784431f0e0a34902ba913a47bca6860c051bd3b172",
+		digest:            "sha256:80cedca07e67a45caa10fdedc9aaa174e39825b342af5d44b69a1334f6a6101a",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},

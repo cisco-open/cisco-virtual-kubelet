@@ -949,6 +949,9 @@ func (r *IOSXESoftwareRolloutReconciler) ensureNoPreparedOwnershipConflict(
 		if receipt == nil || receipt.DeviceUID != deviceUID {
 			continue
 		}
+		if softwareupgrade.PreparedReceiptInvalidated(leaf) {
+			continue
+		}
 		if leaf.Status.Phase != opsv1alpha1.UpgradePhasePrepared {
 			return fmt.Errorf("%w: retained prepared ownership %s/%s has inconsistent phase %q",
 				errPreparedOwnershipRetained,
@@ -1348,6 +1351,7 @@ func (r *IOSXESoftwareRolloutReconciler) patchLeafManagerFields(
 			return err
 		}
 		if reflect.DeepEqual(before.Status.ManagerAdmission, current.Status.ManagerAdmission) &&
+			reflect.DeepEqual(before.Status.ManagerInvalidation, current.Status.ManagerInvalidation) &&
 			reflect.DeepEqual(before.Status.ManagerControl, current.Status.ManagerControl) &&
 			reflect.DeepEqual(before.Status.ManagerDrain, current.Status.ManagerDrain) {
 			return nil
@@ -2127,6 +2131,7 @@ func terminalLeafPhase(phase opsv1alpha1.UpgradePhase) bool {
 	switch phase {
 	case opsv1alpha1.UpgradePhaseSucceeded,
 		opsv1alpha1.UpgradePhasePrepared,
+		opsv1alpha1.UpgradePhasePreparedInvalidated,
 		opsv1alpha1.UpgradePhaseStagedForNextBoot,
 		opsv1alpha1.UpgradePhaseFailed,
 		opsv1alpha1.UpgradePhasePreflightFailed,

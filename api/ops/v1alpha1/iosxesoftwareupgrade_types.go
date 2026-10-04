@@ -32,7 +32,7 @@ import (
 // AwaitingReachability → device unreachable while it boots the new image
 // Verifying → gNOI OS.Verify running-version check
 // RollingBack → activating the previously observed version after verify failure
-// Terminal phases: Succeeded, Prepared, StagedForNextBoot, Failed, PreflightFailed,
+// Terminal phases: Succeeded, Prepared, PreparedInvalidated, StagedForNextBoot, Failed, PreflightFailed,
 // ValidationFailed, RolledBack, RebootTimeout, Cancelled.
 type UpgradePhase string
 
@@ -49,6 +49,7 @@ const (
 	UpgradePhaseRollingBack          UpgradePhase = "RollingBack"
 	UpgradePhaseSucceeded            UpgradePhase = "Succeeded"
 	UpgradePhasePrepared             UpgradePhase = "Prepared"
+	UpgradePhasePreparedInvalidated  UpgradePhase = "PreparedInvalidated"
 	UpgradePhaseStagedForNextBoot    UpgradePhase = "StagedForNextBoot"
 	UpgradePhaseFailed               UpgradePhase = "Failed"
 	UpgradePhasePreflightFailed      UpgradePhase = "PreflightFailed"
@@ -570,7 +571,7 @@ func ManagedUpgradeProtocolMatches(up *IOSXESoftwareUpgrade) bool {
 		admission.ProtocolVersion == ExpectedManagedUpgradeProtocol(up.Spec.MaxTransferBytesPerSecond) &&
 		admission.State == UpgradeManagerAdmissionSettled &&
 		up.Status.WorkerControl != nil && up.Status.WorkerControl.EffectiveState == UpgradeWorkerControlSettled &&
-		(up.Status.Phase == UpgradePhasePrepared || up.Status.Phase == UpgradePhaseSucceeded)
+		(up.Status.Phase == UpgradePhasePrepared || up.Status.Phase == UpgradePhasePreparedInvalidated || up.Status.Phase == UpgradePhaseSucceeded)
 }
 
 // UpgradeManagerAdmissionState is the manager-owned mutation grant state.
@@ -1294,6 +1295,12 @@ type UpgradeManagedMutationClaimStatus struct {
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.workerDrain) || has(self.workerDrain)",message="workerDrain cannot be removed once published"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.preparedReceipt) || (has(self.preparedReceipt) && self.preparedReceipt == oldSelf.preparedReceipt)",message="preparedReceipt is append-only and immutable once published"
 // +kubebuilder:validation:XValidation:rule="!has(self.phase) || self.phase != 'Prepared' || has(self.preparedReceipt)",message="Prepared phase requires an immutable preparedReceipt"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerInvalidation) || (has(self.managerInvalidation) && self.managerInvalidation == oldSelf.managerInvalidation)",message="managerInvalidation is append-only"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.preparedInvalidation) || (has(self.preparedInvalidation) && self.preparedInvalidation == oldSelf.preparedInvalidation)",message="preparedInvalidation is append-only"
+// +kubebuilder:validation:XValidation:rule="!has(self.managerInvalidation) || (has(self.preparedReceipt) && self.managerInvalidation.receiptHash == self.preparedReceipt.receiptHash && self.managerInvalidation.planHash == self.preparedReceipt.planHash && self.managerInvalidation.campaignUID == self.preparedReceipt.campaignUID && has(self.managerControl) && has(self.managerControl.cancel) && self.managerControl.cancel && self.managerControl.revision >= self.managerInvalidation.controlRevision && has(self.managerAdmission) && self.managerAdmission.state == 'Settled')",message="invalidation authority requires the exact receipt and settled cancelled intent"
+// +kubebuilder:validation:XValidation:rule="!has(self.preparedInvalidation) || (has(self.managerInvalidation) && has(self.phase) && self.phase == 'PreparedInvalidated')",message="native invalidation evidence requires authorized PreparedInvalidated state"
+// +kubebuilder:validation:XValidation:rule="!has(self.phase) || self.phase != 'PreparedInvalidated' || (has(self.preparedInvalidation) && has(self.preparedReceipt))",message="PreparedInvalidated requires retained receipt and native evidence"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.phase) || oldSelf.phase != 'PreparedInvalidated' || self.phase == 'PreparedInvalidated'",message="prepared invalidation is irreversible"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(oldSelf.managerDrain.pods) || (has(self.managerDrain) && has(self.managerDrain.pods) && oldSelf.managerDrain.pods.all(p, self.managerDrain.pods.exists(n, n.uid == p.uid)))",message="managerDrain Pod entries cannot be removed once published"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(self.managerDrain) || !has(self.managerDrain.pods) || (has(oldSelf.managerDrain.pods) && self.managerDrain.pods.all(p, oldSelf.managerDrain.pods.exists(o, o.uid == p.uid)))",message="managerDrain Pod entries cannot be added after publication"
 // +kubebuilder:validation:XValidation:rule="!has(self.workerDrain) || (has(self.managerDrain) && self.workerDrain.protocolVersion == self.managerDrain.protocolVersion && self.workerDrain.observedSessionToken == self.managerDrain.sessionToken && self.workerDrain.observedPolicyEpoch == self.managerDrain.policyEpoch && self.workerDrain.observedControlRevision <= self.managerDrain.controlRevision)",message="workerDrain must bind the current manager drain session and may only lag its control revision"
@@ -1320,6 +1327,15 @@ type IOSXESoftwareUpgradeStatus struct {
 	// revocation compete through resourceVersion on this same leaf object.
 	// +kubebuilder:validation:Optional
 	ManagerControl *UpgradeManagerControlStatus `json:"managerControl,omitempty"`
+
+	// ManagerInvalidation authorizes read-only reconciliation of a cancelled
+	// preparation. It cannot release an unresolved mutation.
+	// +optional
+	ManagerInvalidation *UpgradePreparedInvalidationRequest `json:"managerInvalidation,omitempty"`
+
+	// PreparedInvalidation is worker-owned immutable native evidence.
+	// +optional
+	PreparedInvalidation *UpgradePreparedInvalidationStatus `json:"preparedInvalidation,omitempty"`
 
 	// WorkerControl is the worker-owned effective acknowledgement of manager
 	// admission and control. Native admission must keep its ownership disjoint

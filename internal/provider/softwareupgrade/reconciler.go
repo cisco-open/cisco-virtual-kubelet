@@ -246,6 +246,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		}
 		return reconcile.Result{RequeueAfter: managedAdmissionPoll}, nil
 	}
+	if up.Status.Phase == opsv1alpha1.UpgradePhasePrepared && up.Status.ManagerInvalidation != nil {
+		return r.reconcilePreparedInvalidation(ctx, &up)
+	}
 	unsupportedModel := unsupportedExecutionModel(&up)
 	terminalLegacyRisk := !unsupportedModel && terminalUpgradePhase(up.Status.Phase) &&
 		mutationguard.UpgradeRequiresQuarantineAt(&up, now)
@@ -1916,6 +1919,9 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 		// upgrades; otherwise a direct leaf could bypass the manager's retained
 		// receipt check. Malformed or partially migrated records fail closed.
 		if item.Status.Phase == opsv1alpha1.UpgradePhasePrepared || item.Status.PreparedReceipt != nil {
+			if PreparedReceiptInvalidated(item) {
+				continue
+			}
 			if item.Status.Phase != opsv1alpha1.UpgradePhasePrepared || item.Status.PreparedReceipt == nil {
 				return "", fmt.Errorf("prepared upgrade %s/%s has inconsistent phase or receipt", item.Namespace, item.Name)
 			}
@@ -2353,6 +2359,7 @@ func upgradeStateRequiresQuarantine(up *opsv1alpha1.IOSXESoftwareUpgrade, now ti
 func terminalUpgradePhase(phase opsv1alpha1.UpgradePhase) bool {
 	return phase == opsv1alpha1.UpgradePhaseSucceeded ||
 		phase == opsv1alpha1.UpgradePhasePrepared ||
+		phase == opsv1alpha1.UpgradePhasePreparedInvalidated ||
 		phase == opsv1alpha1.UpgradePhaseStagedForNextBoot ||
 		isTerminalFailurePhase(phase)
 }
@@ -4143,6 +4150,8 @@ func upgradeStatusCASMatches(expected, current *opsv1alpha1.IOSXESoftwareUpgrade
 	return e.SourceDigest == c.SourceDigest &&
 		e.SourceSize == c.SourceSize &&
 		reflect.DeepEqual(e.PreparedReceipt, c.PreparedReceipt) &&
+		reflect.DeepEqual(e.ManagerInvalidation, c.ManagerInvalidation) &&
+		reflect.DeepEqual(e.PreparedInvalidation, c.PreparedInvalidation) &&
 		e.StagingOperationID == c.StagingOperationID &&
 		e.StagingRequested == c.StagingRequested &&
 		e.PreviousVersion == c.PreviousVersion &&

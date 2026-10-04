@@ -831,6 +831,61 @@ spec:
                 - targets
                 - workloads
                 type: object
+              preparationInvalidation:
+                description: |-
+                  PreparationInvalidation abandons exact, settled preparations in a
+                  cancelled campaign that never authorized activation. It is separately
+                  authorized recovery intent, not permission to delete files or clear claims.
+                properties:
+                  planHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  reason:
+                    maxLength: 256
+                    minLength: 1
+                    type: string
+                  receipts:
+                    items:
+                      description: |-
+                        IOSXESoftwareRolloutActivationReceipt binds activation authority to one
+                        exact target, preparation leaf incarnation, and content-addressed receipt.
+                      properties:
+                        deviceUID:
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                        receiptHash:
+                          pattern: ^sha256:[a-f0-9]{64}$
+                          type: string
+                        upgradeUID:
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                      required:
+                      - deviceUID
+                      - receiptHash
+                      - upgradeUID
+                      type: object
+                    maxItems: 100
+                    minItems: 1
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - deviceUID
+                    x-kubernetes-list-type: map
+                  requestedAt:
+                    format: date-time
+                    type: string
+                  requestedBy:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - planHash
+                - reason
+                - receipts
+                - requestedAt
+                - requestedBy
+                type: object
             required:
             - control
             - plan
@@ -847,6 +902,14 @@ spec:
                 && self.activationApproval == oldSelf.activationApproval)'
             - message: activationApproval is valid only for a PrepareOnly plan
               rule: '!has(self.activationApproval) || self.plan.strategy == ''PrepareOnly'''
+            - message: preparationInvalidation is append-only
+              rule: '!has(oldSelf.preparationInvalidation) || (has(self.preparationInvalidation)
+                && self.preparationInvalidation == oldSelf.preparationInvalidation)'
+            - message: preparation invalidation requires terminal cancellation and
+                no activation approval
+              rule: '!has(self.preparationInvalidation) || (self.plan.strategy ==
+                ''PrepareOnly'' && has(self.control.cancel) && self.control.cancel
+                && !has(self.activationApproval))'
           status:
             description: |-
               IOSXESoftwareRolloutStatus is a bounded manager-owned audit and progress
@@ -1948,6 +2011,10 @@ spec:
         - message: approval must authorize the exact published frozen plan hash
           rule: '!has(self.spec.approval) || (has(self.status) && has(self.status.frozenPlan)
             && self.spec.approval.planHash == self.status.frozenPlan.hash)'
+        - message: invalidation requires a cancelled campaign and exact frozen plan
+          rule: '!has(self.spec.preparationInvalidation) || (has(self.status) && has(self.status.frozenPlan)
+            && self.spec.preparationInvalidation.planHash == self.status.frozenPlan.hash
+            && has(self.status.phase) && self.status.phase == ''Cancelled'')'
     served: true
     storage: true
     subresources:

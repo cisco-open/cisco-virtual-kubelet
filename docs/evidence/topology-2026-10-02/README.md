@@ -9,6 +9,11 @@ published with the branch.
 
 ## Candidate history
 
+The [preparation recovery follow-up](preparation-recovery-followup.md) adds a
+separately authorized, native-proof-based way to abandon cancelled, unused
+preparations without altering their receipts or device software. Physical
+qualification remains explicitly outstanding.
+
 The [migration and diagnostic follow-up](migration-and-diagnostic-followup.md)
 adds exact released-manager and stored-neighbor migration tests, fixes a
 physical CLI false-success defect, and records a read-only regression on all

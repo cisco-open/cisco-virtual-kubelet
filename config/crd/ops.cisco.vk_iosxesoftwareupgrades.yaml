@@ -1333,6 +1333,45 @@ spec:
                     and must follow start
                   rule: 'self.state in [''Recovering'', ''Settled''] ? (has(self.recoveryDeadline)
                     && self.recoveryDeadline > self.startedAt) : !has(self.recoveryDeadline)'
+              managerInvalidation:
+                description: |-
+                  ManagerInvalidation authorizes read-only reconciliation of a cancelled
+                  preparation. It cannot release an unresolved mutation.
+                properties:
+                  campaignUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  controlRevision:
+                    format: int64
+                    minimum: 1
+                    type: integer
+                  planHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  reason:
+                    maxLength: 256
+                    minLength: 1
+                    type: string
+                  receiptHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  requestedAt:
+                    format: date-time
+                    type: string
+                  requestedBy:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - campaignUID
+                - controlRevision
+                - planHash
+                - reason
+                - receiptHash
+                - requestedAt
+                - requestedBy
+                type: object
               message:
                 description: |-
                   Message is the human-readable status message. Mirrored on the
@@ -1352,6 +1391,48 @@ spec:
               phase:
                 description: Phase is the current state-machine position.
                 type: string
+              preparedInvalidation:
+                description: PreparedInvalidation is worker-owned immutable native
+                  evidence.
+                properties:
+                  nativeEvidenceHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  observedAt:
+                    format: date-time
+                    type: string
+                  requestHash:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                  runningVersion:
+                    description: RunningVersion must still be the receipt's original
+                      running version.
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  targetState:
+                    description: TargetState describes the inactive image; invalidation
+                      does not remove it.
+                    enum:
+                    - Absent
+                    - Installed
+                    type: string
+                  workerPodUID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  workerRevision:
+                    pattern: ^sha256:[a-f0-9]{64}$
+                    type: string
+                required:
+                - nativeEvidenceHash
+                - observedAt
+                - requestHash
+                - runningVersion
+                - targetState
+                - workerPodUID
+                - workerRevision
+                type: object
               preparedReceipt:
                 description: |-
                   PreparedReceipt is immutable evidence for PrepareOnly. It proves install
@@ -1899,6 +1980,31 @@ spec:
                 self.preparedReceipt == oldSelf.preparedReceipt)'
             - message: Prepared phase requires an immutable preparedReceipt
               rule: '!has(self.phase) || self.phase != ''Prepared'' || has(self.preparedReceipt)'
+            - message: managerInvalidation is append-only
+              rule: '!has(oldSelf.managerInvalidation) || (has(self.managerInvalidation)
+                && self.managerInvalidation == oldSelf.managerInvalidation)'
+            - message: preparedInvalidation is append-only
+              rule: '!has(oldSelf.preparedInvalidation) || (has(self.preparedInvalidation)
+                && self.preparedInvalidation == oldSelf.preparedInvalidation)'
+            - message: invalidation authority requires the exact receipt and settled
+                cancelled intent
+              rule: '!has(self.managerInvalidation) || (has(self.preparedReceipt)
+                && self.managerInvalidation.receiptHash == self.preparedReceipt.receiptHash
+                && self.managerInvalidation.planHash == self.preparedReceipt.planHash
+                && self.managerInvalidation.campaignUID == self.preparedReceipt.campaignUID
+                && has(self.managerControl) && has(self.managerControl.cancel) &&
+                self.managerControl.cancel && self.managerControl.revision >= self.managerInvalidation.controlRevision
+                && has(self.managerAdmission) && self.managerAdmission.state == ''Settled'')'
+            - message: native invalidation evidence requires authorized PreparedInvalidated
+                state
+              rule: '!has(self.preparedInvalidation) || (has(self.managerInvalidation)
+                && has(self.phase) && self.phase == ''PreparedInvalidated'')'
+            - message: PreparedInvalidated requires retained receipt and native evidence
+              rule: '!has(self.phase) || self.phase != ''PreparedInvalidated'' ||
+                (has(self.preparedInvalidation) && has(self.preparedReceipt))'
+            - message: prepared invalidation is irreversible
+              rule: '!has(oldSelf.phase) || oldSelf.phase != ''PreparedInvalidated''
+                || self.phase == ''PreparedInvalidated'''
             - message: managerDrain Pod entries cannot be removed once published
               rule: '!has(oldSelf.managerDrain) || !has(oldSelf.managerDrain.pods)
                 || (has(self.managerDrain) && has(self.managerDrain.pods) && oldSelf.managerDrain.pods.all(p,
