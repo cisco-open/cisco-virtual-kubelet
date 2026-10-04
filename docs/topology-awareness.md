@@ -1240,9 +1240,10 @@ Before replacing controllers, settle active older staging **and** network-gated
 campaigns using their compatible runtime. Do not edit immutable leaves or
 protocols, erase claims, or assume an arbitrary Helm rollback is safe. Apply
 new CRDs before the matching manager/workers, with new campaigns paused.
-The exact released-manager protocol check and stored neighbor map-to-atomic
-migration now pass. Interrupted deployment and the reverse-manager/rollback
-matrix remain merge gates; see the
+The exact released-manager protocol check, actual released-manager Pod's
+rejection of the newer native admission contract, and stored neighbor
+map-to-atomic migration now pass. Interrupted deployment and the wider
+reverse-manager/rollback matrix remain merge gates; see the
 [compatibility follow-up](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
 
 ### Admission and execution behavior

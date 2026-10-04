@@ -1,8 +1,10 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **physical runtime evidence reviewed through `6f3686e9`; release and
-native-TAS test-boundary fixes validated through `c1680a7b`; remaining gates
-are listed explicitly below**, 2 October 2026.
+Status: **physical runtime remains `6f3686e9`; preparation-recovery code is
+implemented in `f88afad1`; actual released-manager startup rejection and the
+website security repair are locally validated; remaining gates are listed
+explicitly below**, 4 October 2026. Current follow-up evidence is in the
+[recovery record](evidence/topology-2026-10-02/preparation-recovery-followup.md).
 Start with the **Remaining completion plan** below. It supersedes the older
 C0–C9 and N1–N5 action queues, not the E00–E13/F01–F13 acceptance definitions. The
 [November handoff](topology-november-handoff.md) preserves historical evidence
@@ -163,9 +165,15 @@ fixture/evidence prerequisites, not the later behavior tests.
 Completed subtests in `bfb826f0`: exact released-manager rejection of newer
 protocols (Granted and Settled) and real-API stored neighbor migration from
 the exact pre-atomic schema. Retain these tests; next exercise interrupted
-deployment and rollback rather than repeating these as new work. The actual
-old-manager deployment/restart matrix is not covered by its validation-function
-probe. [Results and limits](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
+deployment and rollback rather than repeating these as new work. The 4 October
+follow-up now runs the unchanged released manager entrypoint in a real Pod with
+the rendered manager account: it rejects the new native policy contract before
+controller startup, leaving policy/ledger unchanged. The full shared-account
+suite passes. Interrupted upgrades, mixed-version operation and rollback with
+retained objects still need qualification; this is one negative startup
+boundary, not that complete matrix.
+[Startup evidence](evidence/topology-2026-10-02/preparation-recovery-followup.md#actual-released-manager-startup-boundary)
+and [earlier results](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
 
 **Scope:** E01-C/E05-A and E13 migration; manager/worker protocol, generated
 CRDs, `charts/cisco-virtual-kubelet/tests/managed-shared-worker-kind-test.sh`.
@@ -249,6 +257,15 @@ to make a test pass. Probe services during PrepareOnly to establish its actual
 disruption class. Test both image directions and restart during the hold.
 
 #### R4 — qualify ordinary app drain before grouped drain
+
+**4 October fixture update:** a retry of the existing second Deployment now
+successfully installs, activates and runs on the previously failing C9K. Both
+test apps return HTTP 200, both Pods are `1/1 Running`, and the existing PDB
+allows one disruption. The second app uses DHCP: discover its current address
+instead of assuming the first switch's static allocation. This is a baseline
+on unchanged runtime `6f3686e9`, not a root-cause fix or an eviction/upgrade
+continuity pass. Both replicas remain running for controlled follow-up.
+See [captures and hashes](evidence/topology-2026-10-02/preparation-recovery-followup.md#existing-app-fixture-retry-successful-not-a-diagnosed-fix).
 
 **Scope:** E07-A–D, F05/F06; `iosxesoftwarerollout_drain*.go`,
 `internal/workloaddrain`, provider maintenance and app inventory.

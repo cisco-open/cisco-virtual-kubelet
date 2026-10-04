@@ -35,7 +35,7 @@ if [[ ! "$cluster_name" =~ ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$ ]] ||
   exit 2
 fi
 
-for required_command in docker helm kind kubectl; do
+for required_command in docker helm kind kubectl go git; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     printf 'required command not found: %s\n' "$required_command" >&2
     exit 1
@@ -243,6 +243,12 @@ for policy in $(kubectl --context "$context" get validatingadmissionpolicies \
     exit 1
   fi
 done
+
+# The released manager must not start controllers under a newer authority
+# contract, including during an interrupted upgrade or attempted rollback.
+bash "$chart_dir/../../scripts/test-released-manager-startup.sh" \
+  "$context" "$system_namespace" "$admission_prefix" \
+  "$app_service_account" "$network_service_account" "" "$controller_service_account"
 
 # Give the non-manager probe exactly the verbs needed to reach admission. A
 # bare RBAC rejection would not prove the fail-closed CEL rules.
