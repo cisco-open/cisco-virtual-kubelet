@@ -7,7 +7,7 @@
     "prebuild": "npm run licenses:check",
     "build": "next build && npm run licenses:check-build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "node --test scripts/eslint-glob.test.mjs && eslint",
     "licenses:generate": "node scripts/generate-third-party-licenses.mjs --write",
     "licenses:check": "node scripts/generate-third-party-licenses.mjs --check",
     "licenses:check-build": "node scripts/generate-third-party-licenses.mjs --check-build"
@@ -27,6 +27,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "fast-glob": "file:./scripts/next-root-glob",
     "mermaid": "11.17.2",
     "postcss": "^8.5.23",
     "resize-observer-polyfill": "1.5.1",
@@ -34,6 +35,9 @@
     "typescript": "^5"
   },
   "overrides": {
+    "@next/eslint-plugin-next": {
+      "fast-glob": "$fast-glob"
+    },
     "postcss": "$postcss",
     "minimatch": "10.2.4",
     "nanoid": "3.3.18",

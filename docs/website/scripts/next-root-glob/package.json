@@ -1,0 +1,11 @@
+{
+  "name": "@cvk/next-root-glob",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Narrow directory-glob compatibility adapter for Next ESLint",
+  "main": "index.cjs",
+  "dependencies": {
+    "tinyglobby": "0.2.15"
+  }
+}
