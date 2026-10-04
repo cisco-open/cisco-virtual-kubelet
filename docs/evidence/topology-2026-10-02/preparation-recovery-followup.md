@@ -23,6 +23,28 @@ and built-output notices. Raw log SHA-256:
 Remote CI must still complete on the next pushed head; the earlier failed run
 is not a pass, and local results do not substitute for required remote checks.
 
+The next smoke run (`37230837385`, source `60db561d`) passed that website gate,
+then exposed a stale assertion in `topology-kind-test.sh`. A bound worker's
+attempt to change `managerDrain` was correctly denied, but the test still
+matched the old message without the newly protected `managerInvalidation`
+field. Local line-level tracing reproduced the failure at the message check,
+not at the authorization request. The assertion now checks the current exact
+manager-owned field message; no admission permission was relaxed. Unhandled
+test failures now report their line number without printing token-bearing
+commands. The **entire** baseline real-API topology/migration/drain/scheduler
+suite passes after the repair, not merely the formerly failing assertion.
+
+Additional final-source validation on `3dd991ae`: all **44** pinned API tests
+and the affected controller/provider/IOS XE lifecycle race suites pass. Its
+native-TAS remote check also passes, including real Deployment ownership and
+controller-process restart. These are not new physical lifecycle results.
+
+| Final capture | SHA-256 |
+| --- | --- |
+| Full baseline topology integration after assertion repair | `db4b5e77d86c49175217ebff5be4a37e105ab828a9c2c5694c48fa0b0a80cf98` |
+| Final pinned 44-test API suite | `ff271fdafc46f365268a39df9142a55179edc9c2addc304e300af33bc5843511` |
+| Final affected runtime race suites | `a83b7eae246b06ed395f23952a09217406e04cfeabdcb343c6c89f780119a2cf` |
+
 ## Change and security boundary
 
 An operator can abandon selected exact receipts from a cancelled, settled

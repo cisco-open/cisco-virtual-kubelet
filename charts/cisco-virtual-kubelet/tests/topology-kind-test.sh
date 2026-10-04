@@ -5,6 +5,9 @@
 # The caller supplies the disposable cluster; CI runs this against kind.
 
 set -euo pipefail
+# Print only the assertion location, never a command that could contain a
+# synthetic bound token. Expected failures inside if/|| remain unaffected.
+trap 'printf "topology integration assertion failed at line %s (exit %s)\n" "$LINENO" "$?" >&2' ERR
 
 chart_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repo_root="$(cd "$chart_dir/../.." && pwd)"
@@ -229,7 +232,7 @@ on_exit() {
   local test_status=$?
   local final_status
 
-  trap - EXIT
+  trap - EXIT ERR
   set +e
   cleanup "$test_status"
   final_status=$?
@@ -1473,7 +1476,7 @@ if kubectl patch --as="$worker_username" iosxesoftwareupgrade managed-drain-prob
   echo "managed worker changed managerDrain" >&2
   exit 1
 fi
-grep -Eq 'managerDrain status are manager-owned|denied the request|failed expression' \
+grep -Fq 'managerDrain, and managerInvalidation status are manager-owned' \
   "$scratch_dir/worker-manager-drain-negative.txt"
 if kubectl patch --as="$manager_username" iosxesoftwareupgrade managed-drain-probe \
     --namespace "$device_namespace" --subresource=status --type=json --dry-run=server \
