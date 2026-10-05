@@ -121,6 +121,34 @@ were re-read during that review. Its runtime was `6f3686e9`; subsequent
 that older review. The complete roadmap is **not finished**. Some remaining work is
 implementation/design, not simply waiting for external lab inputs.
 
+**Revisited after the 5 October drain/retirement qualification:** the branch
+is still **not full-roadmap merge-ready**. Two separate 30-minute sampled
+management-Service captures each passed 1,799/1,799 requests. Clean `079f6b4f`
+retired the retained drain receipt without replay, then survived manager
+restart; all three Nodes/six workers and both apps are healthy. The exact
+evidence and test-harness corrections are in the
+[drain recovery record](evidence/topology-2026-10-05/settled-drain-retirement.md).
+Do not confuse that focused result with the still-required work:
+
+| Package | Remaining closure requirement |
+| --- | --- |
+| R0 | One candidate-specific fixture/profile/result inventory with every E/F gate mapped; keep historical checkpoints immutable. |
+| R1 | Complete interrupted/mixed-version, reverse-version, rollback and feature-disable qualification with retained settled and uncertain objects. |
+| R2 | Independently calibrated forwarding/rate/headroom tests on known isolated paths, including alternate-path and activation-denial cases; management HTTP is insufficient. |
+| R3 | Real inactive-image removal/replacement and source/trust/identity drift, fresh-plan recovery and both image directions. |
+| R4 | Complete negative/restart matrix and actual upgrade/downgrade with device-clean, real replacement readiness and service/path observations. The no-reload drain substep now passed. |
+| R5 | Implement the narrow opt-in native grouped-drain contract and qualify membership races, domain capacity, native-owner physical startup and continuity. Current production rejection remains intentional. |
+| R6 | Repeated cold/warm/restarted distribution samples for both images and two controlled origins, with CPU/RSS/disk and predeclared budgets; then decide durable caching. |
+| R7 | An explicitly authorized capable second platform plus two valid images, adapter qualification and physical lifecycle testing. No authorized target/image pair is established. |
+| R8 | Sustained whole-controller/watch/churn/conflict/resource qualification and independent-cluster, device-side-fenced transfer/return. Planning-read amplification is fixed, not this whole gate. |
+| R9 | Freeze the final candidate, obtain its complete CI/review, then six separate prepare/hold/approve/activate device-direction runs with all applicable prerequisites. |
+
+Do not use CI nodes, shared/unknown links or another cluster's credentials to
+fill missing fixtures. The isolated forwarding endpoints/fault points,
+second-platform authority/image pair and independently fenced destination
+cluster must be established before those tests. Missing fixtures do not waive
+the remaining implementation or allow a full-roadmap completion declaration.
+
 #### Rules for execution and closure
 
 - Use native Kubernetes scheduling, controllers, Eviction/PDB, admission and

@@ -137,11 +137,25 @@ after manager restart. Kubernetes independently reports both Deployments 1/1,
 both Pods Ready, PDB minimum 1 with one allowed disruption, and no Node cordon
 or maintenance taint. These are end-state checks, not forwarding proof.
 
-A separate 30-minute Service collector started at 10:26:19 UTC for migration
-and recovery. Its completed result must be recorded before claiming that
-whole interval; the earlier 1,799-sample capture ended before this deployment.
+A separate 30-minute Service collector completed from **10:26:19.405783 to
+10:56:19.986529 UTC** for migration and recovery (1,800.580 seconds).
+All **1,799** sequential HTTP samples returned 200, with p95 latency
+**0.003947 seconds**, below the predeclared 0.5-second budget. The completion
+record and sample sequence were checked. Actual maximum spacing between
+samples was 1.014788 seconds; raw timestamps remain in the capture.
+The earlier 1,799-sample capture ended before this deployment. These are two
+separate completed intervals, not an uninterrupted hour or forwarding proof.
 The preparation on `bed27185` and retirement on `079f6b4f` are intentionally a
 mixed-candidate migration test, not final same-candidate acceptance.
+
+The retained-history inventory also matters: four older `Prepared` records
+each have an exact UID-linked activation child in `Succeeded` with
+`DeviceMutationSettled=True`. They are consumed audit receipts, not four new
+preparations awaiting activation. One September `Transferring` record retains
+cancelled/Settled manager, drain and worker authority, with no install marker
+or mutation claims. It was not rewritten or deleted. An old unmanaged
+`ValidationFailed` record and empty tombstones remain historical evidence.
+Do not diagnose active ownership from phase names alone or erase those records.
 
 Local full race tests, all **48** real Kubernetes API tests (zero skips),
 native shared-worker/startup/admission tests, 36 offline Python safety tests,
@@ -210,6 +224,8 @@ These logs remain local; the durable account above contains no credentials.
 | `cvk-20261005-drain-retirement-final-100.jsonl` | `9d1bbae511d49341406ee013c72e5e7206fbe25e99127c9db96a1ead2387208a` |
 | `cvk-20261005-drain-retirement-final-101.jsonl` | `955de1cf55c80fd4083e4bc735189603e70dc9b3d8c8a27306d4c6877b9b43bd` |
 | `cvk-20261005-drain-retirement-final-103.jsonl` | `733efb2d7d5277075ab415f848aa07853ea342f5022c4e6c5fe6b7ad00b6ab60` |
+| `cvk-20261005-drain-retirement-final-leaves.json` | `b1e9fe3e711a24caf56fcf99779a9f667f52509e545d504a798196af483b82ed` |
+| `cvk-20261005-drain-retirement-migration-probes.jsonl` | `66f112c03a44206f0e05b5f64dca32eb255957875323d860dc2039bd0d2e2e55` |
 
 Remaining R4 gates include the wider negative/restart matrix, signed portable
 workloads, and actual upgrade and downgrade with replacement availability and
