@@ -1,7 +1,7 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **all six remote checks pass on `a9050970`; physical runtime remains
-`6f3686e9`; complete-roadmap acceptance is still open**, 5 October 2026.
+Status: **physical lab migration to `9229f755` is under qualification;
+complete-roadmap acceptance is still open**, 5 October 2026.
 The [current checkpoint and executable acceptance index](evidence/topology-2026-10-05/README.md)
 record every E/F acceptance row, the fresh read-only lab baseline and exact
 CI provenance. Preparation-recovery code in `f88afad1` is refined by
@@ -175,6 +175,19 @@ rewritten as evidence for the new candidate. R0 closes E00's remaining
 fixture/evidence prerequisites, not the later behavior tests.
 
 #### R1 — qualify compatibility and rollback before more API work
+
+**5 October live migration follow-up:** the matching two changed CRDs and
+Helm revision 158 deployed clean candidate `9229f755` to the manager and all
+six C9K workers. No activation was requested. The previous `6f3686e9` runtime
+is historical evidence, not the current deployment. New real-API tests prove
+outstanding claims, exact reservations and safety finalizers survive missing
+or replaced policy, cancellation and deletion across reconciler replacement;
+all 45 API tests pass. Live migration exposed repeated terminal-drain errors
+on older network-enabled campaigns whose immutable leaves predate
+`requireNetworkEvidence`. A narrow terminal-only compatibility fix validates
+the exact historical spec and settled outcome without relaxing live admission
+or rewriting audit; focused race tests pass. Redeployment and physical
+regression of that fix must precede the new PrepareOnly/retirement test.
 
 Completed subtests in `bfb826f0`: exact released-manager rejection of newer
 protocols (Granted and Settled) and real-API stored neighbor migration from

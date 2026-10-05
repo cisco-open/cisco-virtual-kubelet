@@ -1591,6 +1591,35 @@ func (r *IOSXESoftwareRolloutReconciler) ensureCompletedDrainPodUnprotected(
 	return nil
 }
 
+// validateTerminalManagerDrainBinding permits the one legacy schema difference
+// introduced by the network-evidence protocol: old Reload leaves did not carry
+// requireNetworkEvidence. Only already-settled terminal cleanup may interpret
+// that historical spec. Never use this for grants, rearming or device mutation.
+func validateTerminalManagerDrainBinding(
+	rollout *opsv1alpha1.IOSXESoftwareRollout,
+	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
+	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
+) error {
+	expected := expectedLeafSpec(rollout, target)
+	if expected.RequireNetworkEvidence && !leaf.Spec.RequireNetworkEvidence &&
+		leaf.Spec.Strategy == opsv1alpha1.UpgradeStrategyReload && leaf.Spec.ImageSource.Preinstalled == nil &&
+		(rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded || rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled) &&
+		leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
+		leaf.Status.ManagerDrain != nil && leaf.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainSettled &&
+		leafMutationOutcomeResolved(leaf) {
+		expected.RequireNetworkEvidence = false
+		if !reflect.DeepEqual(expected, leaf.Spec) {
+			return fmt.Errorf("terminal legacy leaf has differences beyond the network-evidence field")
+		}
+		// Validate against the old expectation in memory only. Retain every
+		// identity, epoch, claim and drain check, and never rewrite stored audit.
+		historical := rollout.DeepCopy()
+		historical.Spec.Plan.Health.Network = nil
+		return validateManagerDrainBinding(historical, target, leaf)
+	}
+	return validateManagerDrainBinding(rollout, target, leaf)
+}
+
 // reconcileTerminalDrainProtection keeps terminal rollout audit state
 // immutable while still repairing a Pod-side write committed by a stale
 // Preparing leader after the normal recovery cleanup. Only an exact Settled
@@ -1621,7 +1650,7 @@ func (r *IOSXESoftwareRolloutReconciler) reconcileTerminalDrainProtection(
 		if err := validateManagedLeafBinding(rollout, target, &leaf); err != nil {
 			return fmt.Errorf("%w: terminal drain leaf binding changed: %v", errDrainSafetyBlocked, err)
 		}
-		if err := validateManagerDrainBinding(rollout, target, &leaf); err != nil {
+		if err := validateTerminalManagerDrainBinding(rollout, target, &leaf); err != nil {
 			return fmt.Errorf("%w: terminal manager drain binding changed: %v", errDrainSafetyBlocked, err)
 		}
 		drain := leaf.Status.ManagerDrain
