@@ -179,6 +179,7 @@ func TestSyncNodeStatusUsesDriverPlatformMetadata(t *testing.T) {
 
 func TestSyncNodeStatusManagedPublishesStatusOnly(t *testing.T) {
 	ctx := context.Background()
+	t.Setenv(envKubeletInternalIP, "10.0.0.42")
 	driver := &nodeTopologyObservationTestDriver{}
 	node := NewAppHostingNodeWithTopologyMode(
 		ctx,
@@ -218,6 +219,12 @@ func TestSyncNodeStatusManagedPublishesStatusOnly(t *testing.T) {
 	}
 	if managedReady.Status != v1.ConditionTrue || managedReady.Reason != managedprotocol.ManagedWorkerReadyReason || managedReady.LastHeartbeatTime.IsZero() {
 		t.Fatalf("invalid managed writer-handoff condition: %#v", managedReady)
+	}
+	if got.Status.DaemonEndpoints.KubeletEndpoint.Port != 10250 {
+		t.Fatalf("kubelet endpoint port = %d, want 10250", got.Status.DaemonEndpoints.KubeletEndpoint.Port)
+	}
+	if len(got.Status.Addresses) != 1 || got.Status.Addresses[0].Address != "10.0.0.42" {
+		t.Fatalf("managed kubelet address = %#v, want worker pod IP", got.Status.Addresses)
 	}
 }
 

@@ -126,10 +126,25 @@ func (p *AppHostingProvider) buildMetricsResource(ctx context.Context) ([]*io_pr
 	}
 
 	gaugeType := io_prometheus_client.MetricType_GAUGE
+	counterType := io_prometheus_client.MetricType_COUNTER
+	timestampMs := time.Now().UnixMilli()
 
-	// CPU usage percentage
 	if operData != nil && operData.SystemCPU.Quota > 0 {
 		usedPct := float64(operData.SystemCPU.Quota-operData.SystemCPU.Available) / float64(operData.SystemCPU.Quota) * 100
+		usedCores := usedPct / 100
+		cpuSeconds := time.Since(processStartTime).Seconds() * usedCores
+		families = append(families, &io_prometheus_client.MetricFamily{
+			Name: proto.String("node_cpu_usage_seconds_total"),
+			Help: proto.String("[ALPHA] Cumulative cpu time consumed by the node in core-seconds"),
+			Type: &counterType,
+			Metric: []*io_prometheus_client.Metric{
+				{
+					Counter:     &io_prometheus_client.Counter{Value: &cpuSeconds},
+					TimestampMs: proto.Int64(timestampMs),
+				},
+			},
+		})
+
 		families = append(families, &io_prometheus_client.MetricFamily{
 			Name: proto.String("cisco_device_cpu_usage_percent"),
 			Help: proto.String("CPU usage percentage of the Cisco device IOx subsystem"),
@@ -145,6 +160,17 @@ func (p *AppHostingProvider) buildMetricsResource(ctx context.Context) ([]*io_pr
 		usedBytes := float64((operData.Memory.Quota - operData.Memory.Available) * 1024 * 1024)
 		totalBytes := float64(operData.Memory.Quota * 1024 * 1024)
 		families = append(families,
+			&io_prometheus_client.MetricFamily{
+				Name: proto.String("node_memory_working_set_bytes"),
+				Help: proto.String("[ALPHA] Current working set of the node in bytes"),
+				Type: &gaugeType,
+				Metric: []*io_prometheus_client.Metric{
+					{
+						Gauge:       &io_prometheus_client.Gauge{Value: &usedBytes},
+						TimestampMs: proto.Int64(timestampMs),
+					},
+				},
+			},
 			&io_prometheus_client.MetricFamily{
 				Name: proto.String("cisco_device_memory_used_bytes"),
 				Help: proto.String("Memory used in bytes on the Cisco device IOx subsystem"),

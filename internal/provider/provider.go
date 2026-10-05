@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -60,6 +61,7 @@ import (
 const defaultPodNotifierCapacity = 1024
 const podStatusNotificationSuppressedReasonUnchanged = "unchanged"
 const detachedPodOperationTimeout = 30 * time.Minute
+const envKubeletInternalIP = "CISCO_VK_KUBELET_INTERNAL_IP"
 
 type queuedAppEvent struct {
 	event       state.AppEvent
@@ -1148,8 +1150,14 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 		// We continue with basic device info, but conditions may be incomplete
 	}
 
-	// Determine node internal IP from device address
+	// Determine node internal IP from device address. Controller-managed
+	// workers may run the kubelet-compatible listener inside the per-device
+	// worker pod, so they can publish a reachable serving address without
+	// changing device identity.
 	nodeInternalIP := a.deviceSpec.Address
+	if servingIP := strings.TrimSpace(os.Getenv(envKubeletInternalIP)); servingIP != "" {
+		nodeInternalIP = servingIP
+	}
 
 	log.G(ctx).Debugf("Updating node status with device info, InternalIP=%s", nodeInternalIP)
 
@@ -1361,6 +1369,11 @@ func (a *AppHostingNode) syncNodeStatus(ctx context.Context, cb func(*v1.Node)) 
 			Conditions:  conditions,
 			Capacity:    capacity,
 			Allocatable: allocatable,
+			DaemonEndpoints: v1.NodeDaemonEndpoints{
+				KubeletEndpoint: v1.DaemonEndpoint{
+					Port: 10250,
+				},
+			},
 		},
 	}
 

@@ -252,7 +252,7 @@ func nonTelemetryEnv(env []corev1.EnvVar) []corev1.EnvVar {
 
 func isDownwardAPIEnvName(name string) bool {
 	switch name {
-	case "POD_NAME", "POD_NAMESPACE", "POD_UID", "NODE_NAME":
+	case "POD_NAME", "POD_NAMESPACE", "POD_UID", "NODE_NAME", "CISCO_VK_KUBELET_INTERNAL_IP":
 		return true
 	}
 	return false
