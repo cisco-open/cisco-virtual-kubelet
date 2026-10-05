@@ -70,7 +70,7 @@ func TestEnvtest_MigrationRetainsOutstandingClaims(t *testing.T) {
 	if err := yaml.Unmarshal(data, &example); err != nil {
 		t.Fatal(err)
 	}
-	for _, scenario := range []string{"missing-policy", "replaced-policy", "cancel-missing-policy", "delete-missing-policy"} {
+	for _, scenario := range []string{"missing-policy", "replaced-policy", "cancel-missing-policy", "delete-missing-policy", "legacy-network-tombstone"} {
 		t.Run(scenario, func(t *testing.T) {
 			now := time.Now().UTC().Truncate(time.Second)
 			target := policyFenceTarget("edge-"+scenario, "device-"+scenario, "leaf-"+scenario)
@@ -78,6 +78,10 @@ func TestEnvtest_MigrationRetainsOutstandingClaims(t *testing.T) {
 			r.Name, r.UID = scenario, ""
 			r.Finalizers = []string{rolloutSafetyFinalizer}
 			r.Spec.Plan = *example.Spec.Plan.DeepCopy()
+			legacy := scenario == "legacy-network-tombstone"
+			if legacy {
+				r.Spec.Plan.Health.Network = &ops.IOSXESoftwareRolloutNetworkHealthSpec{Enabled: true}
+			}
 			r.Spec.Control.RequestedBy = "migration-test"
 			r.Spec.Control.RequestedAt = &metav1.Time{Time: now}
 			ledger := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: "cvk-system", Name: "ledger-" + scenario}}
@@ -101,6 +105,9 @@ func TestEnvtest_MigrationRetainsOutstandingClaims(t *testing.T) {
 				t.Fatal(err)
 			}
 			leaf := policyFenceLeaf(r, target, "")
+			if legacy {
+				leaf.Spec.RequireNetworkEvidence = false
+			}
 			leafStatus := leaf.Status
 			leaf.Status = ops.IOSXESoftwareUpgradeStatus{}
 			if err := c.Create(ctx, leaf); err != nil {
@@ -113,12 +120,21 @@ func TestEnvtest_MigrationRetainsOutstandingClaims(t *testing.T) {
 				Stage: ops.UpgradeManagedMutationPrimaryInstall, ReservationID: leafStatus.ManagerAdmission.ReservationID,
 				PolicyEpoch: 1, ControlRevision: r.Spec.Control.Revision, ClaimedAt: metav1.NewTime(now),
 			}}
+			if legacy {
+				leafStatus.ExecutionModel = ""
+				leafStatus.PrimarySupervisorInstallRequested = false
+				leafStatus.ManagedMutationClaims = nil
+				leafStatus.ManagerAdmission.State = ops.UpgradeManagerAdmissionSettled
+			}
 			leaf.Status = leafStatus
 			if err := c.Status().Update(ctx, leaf); err != nil {
 				t.Fatal(err)
 			}
 			ledger.Data = policyFenceLedger(t, r, []ops.IOSXESoftwareRolloutPlannedTarget{target},
 				map[string]types.UID{target.DeviceUID: leaf.UID}, topologyrollout.ReservationGranted).Data
+			if legacy {
+				ledger.Data = policyFenceLedger(t, r, nil, nil, topologyrollout.ReservationGranted).Data
+			}
 			if err := c.Update(ctx, ledger); err != nil {
 				t.Fatal(err)
 			}
@@ -156,7 +172,7 @@ func TestEnvtest_MigrationRetainsOutstandingClaims(t *testing.T) {
 					t.Fatal(err)
 				}
 				if !reflect.DeepEqual(stored.Status.ManagedMutationClaims, leaf.Status.ManagedMutationClaims) ||
-					stored.Status.ManagerAdmission.State != ops.UpgradeManagerAdmissionRevoked ||
+					(!legacy && stored.Status.ManagerAdmission.State != ops.UpgradeManagerAdmissionRevoked) ||
 					stored.Status.CompletionTime != nil || stored.Status.PrimarySupervisorInstalled {
 					t.Fatalf("restart %d lost claim or admitted/settled outstanding operation: %+v", restart, stored.Status)
 				}
@@ -166,7 +182,11 @@ func TestEnvtest_MigrationRetainsOutstandingClaims(t *testing.T) {
 					t.Fatal(err)
 				}
 				reservation, found := retained.Reservations[leaf.Status.ManagerAdmission.ReservationID]
-				if !found || reservation.ChildUID != string(leaf.UID) || len(retained.Reservations) != 1 {
+				if legacy {
+					if len(retained.Reservations) != 0 || !reflect.DeepEqual(stored, *leaf) {
+						t.Fatal("historical empty tombstone or ledger was rewritten/rearmed")
+					}
+				} else if !found || reservation.ChildUID != string(leaf.UID) || len(retained.Reservations) != 1 {
 					t.Fatalf("restart %d lost or replaced outstanding reservation: %+v", restart, retained)
 				}
 				var retainedCampaign ops.IOSXESoftwareRollout
@@ -177,7 +197,7 @@ func TestEnvtest_MigrationRetainsOutstandingClaims(t *testing.T) {
 					t.Fatal("unresolved campaign lost its safety finalizer")
 				}
 			}
-			t.Log("claim and exact reservation retained across interruption and reconciler replacement; future admission revoked")
+			t.Log("claims/reservations retained (or empty settled tombstone unchanged) across interruption and reconciler replacement; no future admission")
 		})
 	}
 }

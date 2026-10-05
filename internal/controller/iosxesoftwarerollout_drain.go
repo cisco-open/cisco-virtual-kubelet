@@ -1600,22 +1600,13 @@ func validateTerminalManagerDrainBinding(
 	target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget,
 	leaf *opsv1alpha1.IOSXESoftwareUpgrade,
 ) error {
-	expected := expectedLeafSpec(rollout, target)
-	if expected.RequireNetworkEvidence && !leaf.Spec.RequireNetworkEvidence &&
-		leaf.Spec.Strategy == opsv1alpha1.UpgradeStrategyReload && leaf.Spec.ImageSource.Preinstalled == nil &&
-		(rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded || rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled) &&
+	if (rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded || rollout.Status.Phase == opsv1alpha1.IOSXESoftwareRolloutPhaseCancelled) &&
 		leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
 		leaf.Status.ManagerDrain != nil && leaf.Status.ManagerDrain.State == opsv1alpha1.UpgradeManagerDrainSettled &&
 		leafMutationOutcomeResolved(leaf) {
-		expected.RequireNetworkEvidence = false
-		if !reflect.DeepEqual(expected, leaf.Spec) {
-			return fmt.Errorf("terminal legacy leaf has differences beyond the network-evidence field")
+		if historical := historicalNetworkAuditPlan(rollout, target, leaf); historical != nil {
+			return validateManagerDrainBinding(historical, target, leaf)
 		}
-		// Validate against the old expectation in memory only. Retain every
-		// identity, epoch, claim and drain check, and never rewrite stored audit.
-		historical := rollout.DeepCopy()
-		historical.Spec.Plan.Health.Network = nil
-		return validateManagerDrainBinding(historical, target, leaf)
 	}
 	return validateManagerDrainBinding(rollout, target, leaf)
 }

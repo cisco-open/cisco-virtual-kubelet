@@ -4,12 +4,15 @@
 package controller
 
 import (
+	"context"
 	"reflect"
 	"testing"
 	"time"
 
 	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func TestTerminalDrainLegacyNetworkProtocolIsCleanupOnly(t *testing.T) {
@@ -60,6 +63,56 @@ func TestTerminalDrainLegacyNetworkProtocolIsCleanupOnly(t *testing.T) {
 			}
 			if !reflect.DeepEqual(rollout, beforeRollout) || !reflect.DeepEqual(leaf, beforeLeaf) {
 				t.Fatal("compatibility validation rewrote retained audit")
+			}
+		})
+	}
+}
+
+func TestLegacyNetworkTombstoneIsReadOnlyAndNeverRearmed(t *testing.T) {
+	for _, scenario := range []string{"empty-settled", "cancel-empty-settled", "granted", "revoked", "claim", "dispatch", "worker-status", "drain", "source", "identity"} {
+		t.Run(scenario, func(t *testing.T) {
+			target := policyFenceTarget("edge", "device-uid", "leaf")
+			rollout := policyFenceRollout([]ops.IOSXESoftwareRolloutPlannedTarget{target})
+			leaf := policyFenceLeaf(rollout, target, "leaf-uid")
+			leaf.Status.ManagerAdmission.State = ops.UpgradeManagerAdmissionSettled
+			rollout.Spec.Plan.Health.Network = &ops.IOSXESoftwareRolloutNetworkHealthSpec{Enabled: true}
+			switch scenario {
+			case "granted":
+				leaf.Status.ManagerAdmission.State = ops.UpgradeManagerAdmissionGranted
+			case "revoked":
+				leaf.Status.ManagerAdmission.State = ops.UpgradeManagerAdmissionRevoked
+			case "claim":
+				leaf.Status.ManagedMutationClaims = []ops.UpgradeManagedMutationClaimStatus{{Stage: ops.UpgradeManagedMutationPrimaryInstall}}
+			case "dispatch":
+				leaf.Status.PrimarySupervisorInstallRequested = true
+			case "worker-status":
+				leaf.Status.Phase = ops.UpgradePhaseSucceeded
+			case "drain":
+				leaf.Status.ManagerDrain = &ops.UpgradeManagerDrainStatus{State: ops.UpgradeManagerDrainSettled}
+			case "source":
+				leaf.Spec.ImageSource.URL = "https://other.example/image.bin"
+			case "identity":
+				leaf.Status.ManagerAdmission.DeviceUID = "other"
+			}
+			c := fake.NewClientBuilder().WithScheme(drainTestScheme(t)).WithObjects(leaf).
+				WithStatusSubresource(leaf).Build()
+			r := &IOSXESoftwareRolloutReconciler{Client: c, APIReader: c}
+			var before ops.IOSXESoftwareUpgrade
+			if err := c.Get(context.Background(), client.ObjectKeyFromObject(leaf), &before); err != nil {
+				t.Fatal(err)
+			}
+			_, err := r.ensureRetainedFenceForTarget(context.Background(), rollout, target, rollout.Spec.Control.Revision+1,
+				scenario == "cancel-empty-settled", "AdministratorPolicyChanged", time.Now().UTC())
+			wantPass := scenario == "empty-settled" || scenario == "cancel-empty-settled"
+			if (err == nil) != wantPass {
+				t.Fatalf("tombstone compatibility: %v, want pass=%v", err, wantPass)
+			}
+			var after ops.IOSXESoftwareUpgrade
+			if err := c.Get(context.Background(), client.ObjectKeyFromObject(leaf), &after); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(before, after) {
+				t.Fatal("historical tombstone was rewritten or rearmed")
 			}
 		})
 	}

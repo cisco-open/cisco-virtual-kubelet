@@ -733,6 +733,24 @@ func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alp
 	}
 }
 
+// historicalNetworkAuditPlan recognizes exactly the legacy network-bit gap.
+// It supplies an in-memory validation expectation, never mutation authority.
+// Callers must separately prove settled terminal cleanup or an empty tombstone.
+func historicalNetworkAuditPlan(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget, leaf *opsv1alpha1.IOSXESoftwareUpgrade) *opsv1alpha1.IOSXESoftwareRollout {
+	expected := expectedLeafSpec(rollout, target)
+	if !expected.RequireNetworkEvidence || leaf.Spec.RequireNetworkEvidence ||
+		leaf.Spec.Strategy != opsv1alpha1.UpgradeStrategyReload || leaf.Spec.ImageSource.Preinstalled != nil {
+		return nil
+	}
+	expected.RequireNetworkEvidence = false
+	if !reflect.DeepEqual(expected, leaf.Spec) {
+		return nil
+	}
+	historical := rollout.DeepCopy()
+	historical.Spec.Plan.Health.Network = nil
+	return historical
+}
+
 func (r *IOSXESoftwareRolloutReconciler) currentWorkerUsername(ctx context.Context, target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget) (string, error) {
 	var node corev1.Node
 	if err := r.reader().Get(ctx, types.NamespacedName{Name: target.NodeName}, &node); err != nil {
@@ -2841,6 +2859,21 @@ func (r *IOSXESoftwareRolloutReconciler) ensureRetainedFenceForTarget(
 		return nil, err
 	}
 	if !reflect.DeepEqual(leaf.Spec, expectedLeafSpec(rollout, target)) {
+		// An already-settled, never-executed historical tombstone needs no
+		// new fence or control write. Its name/UID still blocks delayed Create.
+		// Reject any worker status, claim, drain or dispatch evidence, including
+		// fields introduced later: only these two manager records may exist.
+		workerStatus := *leaf.Status.DeepCopy()
+		workerStatus.ManagerAdmission, workerStatus.ManagerControl = nil, nil
+		if leaf.Status.ManagerAdmission != nil && leaf.Status.ManagerAdmission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
+			leaf.Status.ManagerControl != nil && reflect.DeepEqual(workerStatus, opsv1alpha1.IOSXESoftwareUpgradeStatus{}) {
+			if historical := historicalNetworkAuditPlan(rollout, target, leaf); historical != nil {
+				if err := validateManagerAdmission(historical, target, leaf); err != nil {
+					return nil, err
+				}
+				return leaf, nil
+			}
+		}
 		return nil, fmt.Errorf("cancellation tombstone %s spec does not equal the immutable frozen target", key)
 	}
 
