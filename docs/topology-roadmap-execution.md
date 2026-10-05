@@ -1,7 +1,7 @@
 # Topology roadmap: execution and acceptance plan
 
 Status: **physical retirement and fresh preparation/recovery passed through
-`dfe02ae4` without duplicate install or activation;
+`bed27185` without duplicate install or activation;
 complete-roadmap acceptance is still open**, 5 October 2026.
 The [current checkpoint and executable acceptance index](evidence/topology-2026-10-05/README.md)
 record every E/F acceptance row, the fresh read-only lab baseline and exact
@@ -24,8 +24,13 @@ and the ledger and device Lease are released. These are mixed-candidate
 recovery tests, not final same-candidate acceptance. Subsequent `dbdbb4e7`
 qualification passed strict worker HTTPS, fresh preparation, immutable-receipt
 retirement and invalid/missing/restored public-CA fault tests on `.103`.
-The public snapshot hardening described under R3 still needs its own physical
-qualification; network-only gNOI mounts are not app-worker trust configuration.
+The public snapshot follow-up exposed a native-cleanup compatibility defect,
+repaired in `bed27185`. That exact candidate passed strict HTTPS preparation,
+retirement and public-CA fault/restoration tests; all six C9K workers and three
+Nodes recovered. The stable-Service collector passed after correcting an
+earlier fixed-DHCP-address measurement failure. See the
+[latest physical validation](evidence/topology-2026-10-05/bed27185-physical-validation.md).
+Network-only gNOI mounts are not app-worker trust configuration.
 See the [live migration/recovery record](evidence/topology-2026-10-05/live-migration-and-recovery.md).
 Earlier follow-up evidence is in the
 [recovery record](evidence/topology-2026-10-02/preparation-recovery-followup.md).
@@ -303,9 +308,15 @@ through native admission. Its full race suite, all 46 real-API tests and native
 startup/admission matrix pass locally; committed-candidate physical deployment
 remains necessary.
 See [public CA and migration evidence](evidence/topology-2026-10-05/public-ca-and-policy-migration.md).
-Next repeat strict-transport preparation/recovery and CA faults on the public
-snapshot candidate, then finish drift/removal/replacement and both-direction
-gates. The focused results do not close those wider tests.
+**Completed follow-up on `bed27185`:** native cleanup of legacy CA Deployments
+is repaired and qualified. All six scoped workers converged on Helm revision
+166. Strict HTTPS preparation and exact-receipt retirement passed with no
+replay/activation; invalid/missing/restored public CA tests passed on both
+worker planes. All 47 real-API tests, the full race/native admission suites and
+all six remote CI jobs passed. See the
+[candidate-specific physical record](evidence/topology-2026-10-05/bed27185-physical-validation.md).
+Next finish actual inactive-image drift/removal/replacement and both-direction
+gates. These focused results do not close the wider R3 acceptance matrix.
 
 **5 October implementation follow-up (`f4a64d5d`):** receipt-bound native corroboration now
 addresses the normal IOS XE completed-add/`InProgress` combination without
@@ -361,6 +372,19 @@ instead of assuming the first switch's static allocation. This is a baseline
 on unchanged runtime `6f3686e9`, not a root-cause fix or an eviction/upgrade
 continuity pass. Both replicas remain running for controlled follow-up.
 See [captures and hashes](evidence/topology-2026-10-02/preparation-recovery-followup.md#existing-app-fixture-retry-successful-not-a-diagnosed-fix).
+
+**5 October fixture correction:** inspection of the actual Deployment templates
+shows preferred affinity, not hard node pinning. During recovery from the
+earlier failed CA-policy migration, native taint eviction/ReplicaSet recreation
+placed the replacement apps on opposite eligible USB-backed switches; both
+started successfully. The old fixed-IP collector then followed abandoned DHCP
+addresses (52 timeouts), so it cannot qualify continuity. A new native ClusterIP
+Service and one-second collector recorded 600/600 HTTP 200 during the subsequent
+canary CA faults. Native server-dry-run Eviction succeeds with PDB minimum 1 and
+is denied at minimum 2; the PDB was restored and no Pod was evicted. The next
+R4 step is a **controlled CVK voluntary drain** with this stable Service,
+UID/owner/placement and spare-capacity checks, not another fixed-address probe.
+This does not yet qualify that complete workflow or any OS activation.
 
 **Scope:** E07-A–D, F05/F06; `iosxesoftwarerollout_drain*.go`,
 `internal/workloaddrain`, provider maintenance and app inventory.
