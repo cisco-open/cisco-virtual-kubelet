@@ -15,6 +15,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
+	"github.com/cisco/virtual-kubelet-cisco/internal/workloaddrain"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -82,6 +83,72 @@ func TestPreparedInvalidationRequiresExactSettledAuthorityAndProof(t *testing.T)
 			mutate(x)
 			if PreparedReceiptInvalidated(x) {
 				t.Fatal("unsafe release")
+			}
+		})
+	}
+}
+
+func withSettledInvalidationDrain(t *testing.T, u *ops.IOSXESoftwareUpgrade) {
+	t.Helper()
+	u.Status.ManagerControl.Revision = 0
+	u.Status.WorkerControl.ObservedControlRevision = 0
+	u.Status.ManagerControl.Cancel = false
+	u.Status.ManagerInvalidation.ControlRevision = u.Status.ManagerControl.Revision + 1
+	revision := u.Status.ManagerControl.Revision
+	u.Status.ManagerAdmission.ControlRevision = &revision
+	u.Status.ManagerDrain = &ops.UpgradeManagerDrainStatus{
+		ProtocolVersion: ops.ManagedDrainProtocolPDBV1, State: ops.UpgradeManagerDrainSettled,
+		SessionToken: "6a144e34-cd5d-4479-905d-6023cc60f42a", NodeUID: u.Status.ManagerAdmission.NodeUID,
+		ReservationID: u.Status.ManagerAdmission.ReservationID, PolicyEpoch: u.Status.ManagerAdmission.PolicyEpoch,
+		ControlRevision: revision, StartedAt: metav1.NewTime(managedTestTime.Add(-2 * time.Hour)),
+		DrainDeadline: metav1.NewTime(managedTestTime.Add(-time.Hour)), UpdatedAt: *u.Status.CompletionTime,
+		RecoveryDeadline: &metav1.Time{Time: managedTestTime.Add(time.Hour)},
+	}
+	pod := ops.UpgradeDrainPodStatus{
+		Namespace: "apps", Name: "web", UID: "old-pod", Phase: ops.UpgradeDrainPodComplete,
+		Controller:                    ops.UpgradeDrainObjectReference{APIVersion: "apps/v1", Kind: "ReplicaSet", Namespace: "apps", Name: "web", UID: "rs", Generation: 1},
+		TerminationGracePeriodSeconds: 30,
+		DeviceCleanInventoryRevision:  2,
+	}
+	var err error
+	pod.EligibilityHash, err = workloaddrain.EligibilityHash(&pod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	u.Status.ManagerDrain.Pods = []ops.UpgradeDrainPodStatus{pod}
+}
+
+func TestPreparedInvalidationPreservesSettledDrainControl(t *testing.T) {
+	u := invalidationTestLeaf(t)
+	withSettledInvalidationDrain(t, u)
+	revision := u.Status.ManagerControl.Revision
+	before := u.DeepCopy()
+	if err := ValidatePreparedInvalidationRequest(u); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(before, u) {
+		t.Fatal("validation rewrote settled drain audit")
+	}
+	for name, change := range map[string]func(*ops.IOSXESoftwareUpgrade){
+		"not settled":       func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerDrain.State = ops.UpgradeManagerDrainRecovering },
+		"unknown protocol":  func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerDrain.ProtocolVersion = "future" },
+		"wrong node":        func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerDrain.NodeUID = "other" },
+		"wrong reservation": func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerDrain.ReservationID = "other" },
+		"wrong epoch":       func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerDrain.PolicyEpoch++ },
+		"wrong control":     func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerDrain.ControlRevision++ },
+		"stale request":     func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerInvalidation.ControlRevision = revision },
+		"incomplete pod": func(x *ops.IOSXESoftwareUpgrade) {
+			x.Status.ManagerDrain.Pods = []ops.UpgradeDrainPodStatus{{UID: "pending", Phase: ops.UpgradeDrainPodEvictionRequested}}
+		},
+		"paused":              func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerControl.Pause = true },
+		"missing ack":         func(x *ops.IOSXESoftwareUpgrade) { x.Status.WorkerControl = nil },
+		"changed eligibility": func(x *ops.IOSXESoftwareUpgrade) { x.Status.ManagerDrain.Pods[0].UID = "replacement" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			x := u.DeepCopy()
+			change(x)
+			if ValidatePreparedInvalidationRequest(x) == nil {
+				t.Fatal("unsafe settled-drain retirement accepted")
 			}
 		})
 	}
@@ -161,45 +228,55 @@ func TestPreparedInvalidationRetainsOwnershipAcrossLeaseAndCASRaces(t *testing.T
 }
 
 func TestPreparedInvalidationWorkerObservesWithoutMutation(t *testing.T) {
-	for _, blocked := range []bool{false, true} {
-		t.Run(fmt.Sprint(blocked), func(t *testing.T) {
-			u := invalidationTestLeaf(t)
-			r := newManagedTestReconciler(t, u, nil)
-			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(u), u); err != nil {
-				t.Fatal(err)
-			}
-			r.MutationLeaser = &engine.FamilyLeaser{Client: r.Client, Namespace: u.Namespace, TTL: time.Minute}
-			rig := newRig(t)
-			rig.os.verifyVersion = "17.18.03"
-			r.GNOI = &staticGNOI{c: rig.client}
-			observer := &fakeRetirementObserver{}
-			if blocked {
-				observer.err = fmt.Errorf("installer still active")
-			}
-			r.Lifecycle = observer
-			_, err := r.reconcilePreparedInvalidation(context.Background(), u)
-			if (err != nil) != blocked {
-				t.Fatalf("error=%v", err)
-			}
-			var got ops.IOSXESoftwareUpgrade
-			if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(u), &got); err != nil {
-				t.Fatal(err)
-			}
-			if PreparedReceiptInvalidated(&got) == blocked {
-				t.Fatalf("unexpected release: %+v", got.Status.PreparedInvalidation)
-			}
-			if !reflect.DeepEqual(got.Status.PreparedReceipt, u.Status.PreparedReceipt) {
-				t.Fatal("receipt changed")
-			}
-			receipt := u.Status.PreparedReceipt
-			if observer.request.TargetVersion != receipt.ValidatedVersion || observer.request.RunningVersion != receipt.RunningVersion ||
-				observer.request.SourceSize != receipt.SourceSize || !observer.request.InstallStartedAt.Equal(receipt.InstallStartedAt.Time) ||
-				!observer.request.PreparedAt.Equal(receipt.PreparedAt.Time) {
-				t.Fatal("native observer did not receive the immutable receipt evidence")
-			}
-			if rig.os.installCalls != 0 || rig.os.activateCalls != 0 {
-				t.Fatal("recovery mutated device")
-			}
-		})
+	for _, drained := range []bool{false, true} {
+		for _, blocked := range []bool{false, true} {
+			t.Run(fmt.Sprintf("drained=%t/blocked=%t", drained, blocked), func(t *testing.T) {
+				u := invalidationTestLeaf(t)
+				if drained {
+					withSettledInvalidationDrain(t, u)
+				}
+				r := newManagedTestReconciler(t, u, nil)
+				if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(u), u); err != nil {
+					t.Fatal(err)
+				}
+				r.MutationLeaser = &engine.FamilyLeaser{Client: r.Client, Namespace: u.Namespace, TTL: time.Minute}
+				rig := newRig(t)
+				rig.os.verifyVersion = "17.18.03"
+				r.GNOI = &staticGNOI{c: rig.client}
+				observer := &fakeRetirementObserver{}
+				if blocked {
+					observer.err = fmt.Errorf("installer still active")
+				}
+				r.Lifecycle = observer
+				_, err := r.reconcilePreparedInvalidation(context.Background(), u)
+				if (err != nil) != blocked {
+					t.Fatalf("error=%v", err)
+				}
+				var got ops.IOSXESoftwareUpgrade
+				if err := r.Client.Get(context.Background(), client.ObjectKeyFromObject(u), &got); err != nil {
+					t.Fatal(err)
+				}
+				if PreparedReceiptInvalidated(&got) == blocked {
+					t.Fatalf("unexpected release: %+v", got.Status.PreparedInvalidation)
+				}
+				if !reflect.DeepEqual(got.Status.PreparedReceipt, u.Status.PreparedReceipt) {
+					t.Fatal("receipt changed")
+				}
+				if !reflect.DeepEqual(got.Status.ManagerDrain, u.Status.ManagerDrain) ||
+					!reflect.DeepEqual(got.Status.ManagerControl, u.Status.ManagerControl) ||
+					!reflect.DeepEqual(got.Status.ManagedMutationClaims, u.Status.ManagedMutationClaims) {
+					t.Fatal("observation changed immutable drain or mutation audit")
+				}
+				receipt := u.Status.PreparedReceipt
+				if observer.request.TargetVersion != receipt.ValidatedVersion || observer.request.RunningVersion != receipt.RunningVersion ||
+					observer.request.SourceSize != receipt.SourceSize || !observer.request.InstallStartedAt.Equal(receipt.InstallStartedAt.Time) ||
+					!observer.request.PreparedAt.Equal(receipt.PreparedAt.Time) {
+					t.Fatal("native observer did not receive the immutable receipt evidence")
+				}
+				if rig.os.installCalls != 0 || rig.os.activateCalls != 0 {
+					t.Fatal("recovery mutated device")
+				}
+			})
+		}
 	}
 }

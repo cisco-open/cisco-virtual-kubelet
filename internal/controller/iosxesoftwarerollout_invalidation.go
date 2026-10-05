@@ -60,6 +60,14 @@ func (r *IOSXESoftwareRolloutReconciler) reconcilePreparationInvalidation(ctx co
 		for _, target := range rollout.Status.FrozenPlan.Targets {
 			if target.DeviceUID == reference.DeviceUID {
 				leaf = byName[target.ChildName]
+				if leaf != nil && leaf.Status.ManagerDrain != nil {
+					if err := validateManagerDrainBinding(rollout, target, leaf); err != nil {
+						return ctrl.Result{}, err
+					}
+					if err := validateDrainPodsComplete(leaf.Status.ManagerDrain); err != nil {
+						return ctrl.Result{}, err
+					}
+				}
 				if leaf != nil && (leaf.Status.PreparedReceipt == nil ||
 					leaf.Status.PreparedReceipt.NodeUID != target.NodeUID ||
 					leaf.Status.PreparedReceipt.PhysicalIdentity != target.PhysicalIdentity ||

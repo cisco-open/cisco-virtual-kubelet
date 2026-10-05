@@ -373,6 +373,17 @@ disruption class. Test both image directions and restart during the hold.
 
 #### R4 — qualify ordinary app drain before grouped drain
 
+**5 October controlled-drain follow-up:** CVK's real PDB gate blocked with
+minimum 2, then recovered normally after restoration to minimum 1. The native
+ReplicaSet recreated the evicted `.101` app on `.100` with unchanged owner
+identity; device cleanup was acknowledged before image preparation. Across
+the 30-minute capture, all 1,799 stable-Service samples returned HTTP 200.
+This qualifies the bounded no-reload drain/PrepareOnly substep, not forwarding
+or actual upgrade/downgrade continuity. Subsequent cancellation exposed a
+settled-drain retirement authority mismatch; the correction preserves the
+original drain audit and needs exact-candidate physical recovery testing.
+See [drain and retirement evidence](evidence/topology-2026-10-05/settled-drain-retirement.md).
+
 **4 October fixture update:** a retry of the existing second Deployment now
 successfully installs, activates and runs on the previously failing C9K. Both
 test apps return HTTP 200, both Pods are `1/1 Running`, and the existing PDB

@@ -20,6 +20,7 @@ import (
 	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
+	"github.com/cisco/virtual-kubelet-cisco/internal/workloaddrain"
 )
 
 func PreparedInvalidationRequestHash(request *ops.UpgradePreparedInvalidationRequest) string {
@@ -41,7 +42,7 @@ func ValidatePreparedInvalidationRequest(up *ops.IOSXESoftwareUpgrade) error {
 	receipt, request := up.Status.PreparedReceipt, up.Status.ManagerInvalidation
 	a, c, w := up.Status.ManagerAdmission, up.Status.ManagerControl, up.Status.WorkerControl
 	if !ops.ManagedUpgradeProtocolMatches(up) || a == nil || c == nil || w == nil ||
-		a.State != ops.UpgradeManagerAdmissionSettled || !c.Cancel ||
+		a.State != ops.UpgradeManagerAdmissionSettled || c.Pause ||
 		w.EffectiveState != ops.UpgradeWorkerControlSettled || w.ObservedAdmissionState != a.State ||
 		w.ObservedControlRevision != c.Revision || w.ObservedPolicyEpoch != a.PolicyEpoch ||
 		!meta.IsStatusConditionTrue(up.Status.Conditions, conditionTypeMutationSettled) ||
@@ -53,12 +54,36 @@ func ValidatePreparedInvalidationRequest(up *ops.IOSXESoftwareUpgrade) error {
 		!reflect.DeepEqual(receipt.ManagedMutationClaims, up.Status.ManagedMutationClaims) {
 		return fmt.Errorf("invalidation requires acknowledged cancellation and conclusively settled preparation-only claims")
 	}
+	controlAuthorized := c.Cancel && request.ControlRevision <= c.Revision
+	if drain := up.Status.ManagerDrain; drain != nil {
+		// A terminal drain's control revision is immutable recovery evidence.
+		// The manager separately authorizes retirement from the cancelled parent;
+		// a newer retirement request must not rearm or rewrite that old session.
+		if drain.ProtocolVersion != ops.ManagedDrainProtocolPDBV1 || drain.State != ops.UpgradeManagerDrainSettled ||
+			drain.SessionToken == "" || drain.NodeUID != a.NodeUID || drain.ReservationID != a.ReservationID ||
+			drain.PolicyEpoch != a.PolicyEpoch || drain.ControlRevision != c.Revision ||
+			a.ControlRevision == nil || *a.ControlRevision != drain.ControlRevision ||
+			drain.StartedAt.IsZero() || drain.UpdatedAt.Before(&drain.StartedAt) ||
+			drain.RecoveryDeadline == nil || !drain.RecoveryDeadline.After(drain.StartedAt.Time) {
+			return fmt.Errorf("invalidation requires exact settled drain authority")
+		}
+		for i := range drain.Pods {
+			pod := &drain.Pods[i]
+			if pod.UID == "" || pod.Phase != ops.UpgradeDrainPodComplete || workloaddrain.VerifyEligibilityHash(pod) != nil {
+				return fmt.Errorf("invalidation requires complete immutable drain Pod evidence")
+			}
+		}
+		controlAuthorized = controlAuthorized || request.ControlRevision > c.Revision
+	}
+	if !controlAuthorized {
+		return fmt.Errorf("invalidation requires cancelled control or separately authorized retirement of an exact settled drain")
+	}
 	if receipt.UpgradeUID != string(up.UID) || a.LeafUID != string(up.UID) ||
 		receipt.DeviceUID != a.DeviceUID || receipt.NodeUID != a.NodeUID ||
 		receipt.PhysicalIdentity != a.PhysicalIdentity || receipt.DeviceGeneration != a.DeviceGeneration ||
 		receipt.CampaignUID != a.CampaignUID || receipt.PlanHash != a.PlanHash ||
 		request.ReceiptHash != receipt.ReceiptHash || request.PlanHash != receipt.PlanHash ||
-		request.CampaignUID != receipt.CampaignUID || request.ControlRevision > c.Revision ||
+		request.CampaignUID != receipt.CampaignUID ||
 		request.ControlRevision < 1 || request.RequestedAt.IsZero() ||
 		request.RequestedAt.Before(&receipt.PreparedAt) ||
 		strings.TrimSpace(request.RequestedBy) == "" || strings.TrimSpace(request.Reason) == "" {

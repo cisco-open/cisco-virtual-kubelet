@@ -88,7 +88,11 @@ func TestEnvtest_PreparationInvalidationNativeAuthorization(t *testing.T) {
 	if err := c.Status().Update(ctx, rollout); err != nil {
 		t.Fatal(err)
 	}
+	drained := leaf.DeepCopy()
 	testNativeInvalidationAudit(t, ctx, c, leaf, now, root)
+	drained.Name += "-settled-drain"
+	settledInvalidationDrain(drained, now)
+	testNativeInvalidationAudit(t, ctx, c, drained, now, root)
 	// Only the rollout policy is installed here; the full shared-account suite
 	// separately qualifies the complete rendered policy set.
 	rendered, err := exec.CommandContext(ctx, "helm", "template", "cvk", filepath.Join(root, "charts/cisco-virtual-kubelet"), "--namespace", "cvk-system", "--kube-version", "1.35.0", "--set", "topology.enabled=true", "--set", "gnoi.enableSoftwareUpgrade=true", "--set", "topology.workerAccounts.networkManagement.accessMode=readWrite", "--set", "controller.leaderElect=true", "--set", "rbac.profile=strict").CombinedOutput()
@@ -201,6 +205,16 @@ func testNativeInvalidationAudit(t *testing.T, ctx context.Context, c client.Cli
 	leaf.Status.ManagerInvalidation = &ops.UpgradePreparedInvalidationRequest{
 		ReceiptHash: status.PreparedReceipt.ReceiptHash, PlanHash: status.PreparedReceipt.PlanHash, CampaignUID: status.PreparedReceipt.CampaignUID,
 		ControlRevision: status.ManagerControl.Revision, RequestedBy: "recoverer", RequestedAt: metav1.NewTime(now), Reason: "cancelled preparation",
+	}
+	if leaf.Status.ManagerDrain != nil {
+		leaf.Status.ManagerInvalidation.ControlRevision++
+		for _, state := range []ops.UpgradeManagerDrainState{ops.UpgradeManagerDrainRecovering, ops.UpgradeManagerDrainPromoted} {
+			unsafe := leaf.DeepCopy()
+			unsafe.Status.ManagerDrain.State = state
+			if err := c.Status().Update(ctx, unsafe); !apierrors.IsInvalid(err) {
+				t.Fatalf("unsettled drain retirement accepted: %s %v", state, err)
+			}
+		}
 	}
 	if err := c.Status().Update(ctx, leaf); err != nil {
 		t.Fatalf("recovery authority: %v", err)

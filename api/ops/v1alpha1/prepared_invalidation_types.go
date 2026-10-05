@@ -36,6 +36,9 @@ type UpgradePreparedInvalidationRequest struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=128
 	CampaignUID string `json:"campaignUID"`
+	// ControlRevision identifies the cancelled parent campaign revision. For a
+	// settled drain this may be newer than the retained, immutable leaf control
+	// revision; it authorizes observation only, never rearming the drain.
 	// +kubebuilder:validation:Minimum=1
 	ControlRevision int64 `json:"controlRevision"`
 	// +kubebuilder:validation:MinLength=1

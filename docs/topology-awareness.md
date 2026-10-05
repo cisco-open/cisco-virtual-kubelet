@@ -1692,10 +1692,21 @@ unresolved install/activation outcomes, or a running OS changed since preparatio
 It neither removes software nor changes boot settings, certificates, workload
 placement, or app-hosting configuration.
 
+For retirement after a settled workload drain, install the matching CRDs before
+the manager and network workers. Older binaries cannot authorize this case;
+they retain the receipt rather than rewriting the settled drain. Do not roll
+back to a schema that rejects an already recorded retirement authority. Keep
+the complete original drain and preparation audit when upgrading.
+
 1. As an operator with `control` permission, cancel the campaign using a new
    control revision, your authenticated `requestedBy`, and current UTC
    `requestedAt`. Wait for the campaign to reach `Cancelled` and the network
    worker to acknowledge that exact control revision with `Settled` state.
+   An already-settled workload drain is an exception: its original control,
+   admission, drain session and worker acknowledgement remain unchanged. The
+   manager validates the cancelled parent and complete drain evidence, then
+   publishes separate, observation-only retirement authority carrying the
+   newer parent revision. Do not manually advance the retained leaf revision.
 2. Review the retained leaf's `preparedReceipt`, its exact device/upgrade UIDs,
    hash and the campaign's `status.frozenPlan.hash`. Do not regenerate a hash
    or copy a receipt from another object. Retain the original objects for audit.

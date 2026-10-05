@@ -1343,6 +1343,10 @@ spec:
                     minLength: 1
                     type: string
                   controlRevision:
+                    description: |-
+                      ControlRevision identifies the cancelled parent campaign revision. For a
+                      settled drain this may be newer than the retained, immutable leaf control
+                      revision; it authorizes observation only, never rearming the drain.
                     format: int64
                     minimum: 1
                     type: integer
@@ -1986,15 +1990,30 @@ spec:
             - message: preparedInvalidation is append-only
               rule: '!has(oldSelf.preparedInvalidation) || (has(self.preparedInvalidation)
                 && self.preparedInvalidation == oldSelf.preparedInvalidation)'
-            - message: invalidation authority requires the exact receipt and settled
-                cancelled intent
+            - message: invalidation authority requires the exact receipt and cancelled
+                control or separately authorized settled-drain retirement
               rule: '!has(self.managerInvalidation) || (has(self.preparedReceipt)
                 && self.managerInvalidation.receiptHash == self.preparedReceipt.receiptHash
                 && self.managerInvalidation.planHash == self.preparedReceipt.planHash
                 && self.managerInvalidation.campaignUID == self.preparedReceipt.campaignUID
-                && has(self.managerControl) && has(self.managerControl.cancel) &&
-                self.managerControl.cancel && self.managerControl.revision >= self.managerInvalidation.controlRevision
-                && has(self.managerAdmission) && self.managerAdmission.state == ''Settled'')'
+                && has(self.managerControl) && (!has(self.managerControl.pause) ||
+                !self.managerControl.pause) && has(self.managerAdmission) && self.managerAdmission.state
+                == ''Settled'' && ((has(self.managerControl.cancel) && self.managerControl.cancel
+                && self.managerControl.revision >= self.managerInvalidation.controlRevision)
+                || (has(self.managerDrain) && self.managerDrain.state == ''Settled''
+                && self.managerInvalidation.controlRevision > self.managerControl.revision)))'
+            - message: invalidation must preserve an exact settled drain with complete
+                Pod evidence
+              rule: '!has(self.managerInvalidation) || !has(self.managerDrain) ||
+                (self.managerDrain.protocolVersion == ''pdb-drain-v1'' && self.managerDrain.state
+                == ''Settled'' && has(self.managerAdmission) && has(self.managerAdmission.controlRevision)
+                && has(self.managerControl) && self.managerDrain.controlRevision ==
+                self.managerControl.revision && self.managerAdmission.controlRevision
+                == self.managerDrain.controlRevision && self.managerDrain.nodeUID
+                == self.managerAdmission.nodeUID && self.managerDrain.reservationID
+                == self.managerAdmission.reservationID && self.managerDrain.policyEpoch
+                == self.managerAdmission.policyEpoch && (!has(self.managerDrain.pods)
+                || self.managerDrain.pods.all(p, p.phase == ''Complete'')))'
             - message: native invalidation evidence requires authorized PreparedInvalidated
                 state
               rule: '!has(self.preparedInvalidation) || (has(self.managerInvalidation)
