@@ -129,6 +129,14 @@ manager Deployment restart succeeded, reacquired leadership at 10:35:35Z,
 and preserved the same native proof and revision-zero settled drain. No
 admission policy, finalizer, receipt, claim or Lease was manually cleared.
 
+Final independent CLI captures on all three authorized switches report healthy
+control processors/memory, committed 17.18.03, inactive 17.18.02 and inactive
+abort timers. Both native applications are Running on `.100`; `.101` and `.103`
+have no hosted apps. The final `.101` installer-history hash is still identical
+after manager restart. Kubernetes independently reports both Deployments 1/1,
+both Pods Ready, PDB minimum 1 with one allowed disruption, and no Node cordon
+or maintenance taint. These are end-state checks, not forwarding proof.
+
 A separate 30-minute Service collector started at 10:26:19 UTC for migration
 and recovery. Its completed result must be recorded before claiming that
 whole interval; the earlier 1,799-sample capture ended before this deployment.
@@ -142,6 +150,40 @@ startup harness's old summary labelled its pre-commit working-tree build with
 base `0749a0f1`; that line is not clean-commit binary provenance. A follow-up
 corrects the harness to label dirty source and emit the executed binary hash.
 The physical image above has separate clean-archive provenance.
+
+### Clean startup and native TAS regression follow-up
+
+The clean `bbd20e38f8114a2730853bd87f3116f901270fd8` startup/admission run
+passed. Its tested manager binary hash is
+`080aae089da0394b6bd1069379265e3b1ffba3b437e4146aa12462462c471c25`;
+the harness explicitly recorded `worktree=clean`.
+
+Additional optional-TAS testing discovered a hard-coded scheduler Pod name in
+the custom disposable-cluster path. The corrected harness derives both the
+Docker control-plane container and scheduler Pod from the selected context,
+checks their ownership, and requires the pinned v1.37.0 kubectl. No production
+group-drain guard was loosened. A fresh custom-name kind v0.33.0/Kubernetes
+v1.37.0 run passed native owner recreation, controller and scheduler restart,
+maintenance and insufficient-capacity rejection. Four offline preflight
+negatives bring `scripts/tests` to **40 passing tests**, without cluster access.
+
+Preserved initial failures were test setup/harness failures, not passes: the
+system kind used obsolete kubeadm configuration; an old kubectl exceeded
+supported skew; the original hard-coded scheduler name was not found; the
+first new client-version probe incorrectly used unsupported version-command
+JSONPath output. The successful rerun uses pinned kind and kubectl, JSON
+version decoding and the corrected scheduler identity.
+
+This remains synthetic scheduling qualification, **not** production grouped
+drain, physical grouped-app startup or topology-aware service continuity.
+
+The release-plugin packaging gate also passed on clean detached `bbd20e38`
+with Go 1.26.7: all four platform archives were built twice, compared identical,
+and the native darwin/arm64 archive's embedded identity and execution verified.
+No release was published. The temporary clean worktree was removed; archives
+and logs remain under `/tmp/cvk-retirement-packaging.fx2uDg`. Initial attempts
+without Git metadata and with the system Go 1.26.2 correctly failed packaging
+preconditions; only the clean worktree/pinned-toolchain run is a pass.
 
 ## Private raw captures
 
@@ -161,6 +203,13 @@ These logs remain local; the durable account above contains no credentials.
 | `cvk-20261005-drain-retirement-full-api.log` | `09a9502a2e61f3feba8dd60b25c0cf16f951fa2e21e12df7ee819555bebf54d0` |
 | `cvk-20261005-drain-retirement-full-race.log` | `8abf056422178d6458cf432ccbaae707a8b1a067097a997b80c197a4f164a4b2` |
 | `cvk-20261005-drain-retirement-kind.log` | `535f404a43ab295143df18eaadeaba0ae164019bb6dd13d30e73fe8cd91398e8` |
+| `cvk-20261005-drain-retirement-kind-clean.log` | `f65a781f07825b16060072687ab8f8c3a9e400d0c0bf94d75ed7af2247382a7c` |
+| `cvk-20261005-drain-retirement-native-tas-corrected.log` | `c0167cc44eead332f0dd26dc8afe1a5a07dc5d9eafac62ba89c45839d492cb9b` |
+| `cvk-20261005-drain-retirement-python-final.log` | `911dcd6934b37acd3907d4e50f94f2b667099f10d734b6d820807188586312ab` |
+| `cvk-20261005-drain-retirement-packaging.log` | `99d8406f4beb87b8af8d1781c96edc06d456f67b919ffb92b93df53545bc8d0e` |
+| `cvk-20261005-drain-retirement-final-100.jsonl` | `9d1bbae511d49341406ee013c72e5e7206fbe25e99127c9db96a1ead2387208a` |
+| `cvk-20261005-drain-retirement-final-101.jsonl` | `955de1cf55c80fd4083e4bc735189603e70dc9b3d8c8a27306d4c6877b9b43bd` |
+| `cvk-20261005-drain-retirement-final-103.jsonl` | `733efb2d7d5277075ab415f848aa07853ea342f5022c4e6c5fe6b7ad00b6ab60` |
 
 Remaining R4 gates include the wider negative/restart matrix, signed portable
 workloads, and actual upgrade and downgrade with replacement availability and

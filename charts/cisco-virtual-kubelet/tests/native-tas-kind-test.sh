@@ -29,6 +29,9 @@ if [[ "$current_context" != "$expected_context" ]] && \
    [[ "${CVK_NATIVE_TAS_TEST_ALLOW_DISPOSABLE_CONTEXT:-}" != "true" ]]; then
   fail "refusing unexpected kind context $current_context; expected $expected_context"
 fi
+client_version="$(kubectl version --client -o json | jq -r '.clientVersion.gitVersion')"
+[[ "$client_version" == v1.37.0 ]] || \
+  fail "qualification requires pinned kubectl v1.37.0, got $client_version"
 
 # Never adopt or delete a pre-existing namespace or Node. A prior interrupted
 # run must be discarded with its disposable cluster rather than guessed at.
@@ -440,12 +443,15 @@ assert_unbound edge-capacity-0 edge-capacity-1
 # container inside the control-plane node and waits for a different container.
 # This catches state that exists only in one scheduler process and verifies
 # that API-backed group state survives the restart.
-scheduler_pod="kube-scheduler-cvk-native-tas-control-plane"
-kind_cluster="${expected_context#kind-}"
+kind_cluster="${current_context#kind-}"
 control_plane="${kind_cluster}-control-plane"
+scheduler_pod="kube-scheduler-${control_plane}"
 [[ "$(docker inspect --format '{{ index .Config.Labels "io.x-k8s.kind.cluster" }}' \
   "$control_plane")" == "$kind_cluster" ]] || \
   fail "container $control_plane is not part of kind cluster $kind_cluster"
+[[ "$(kubectl get pod "$scheduler_pod" --namespace kube-system \
+  -o jsonpath='{.spec.nodeName}')" == "$control_plane" ]] || \
+  fail "scheduler Pod does not belong to the selected control-plane Node"
 scheduler_container_id="$(kubectl get pod "$scheduler_pod" \
   --namespace kube-system \
   -o jsonpath='{.status.containerStatuses[?(@.name=="kube-scheduler")].containerID}')"

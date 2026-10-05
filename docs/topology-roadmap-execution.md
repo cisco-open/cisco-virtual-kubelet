@@ -382,7 +382,7 @@ the 30-minute capture, all 1,799 stable-Service samples returned HTTP 200.
 This qualifies the bounded no-reload drain/PrepareOnly substep, not forwarding
 or actual upgrade/downgrade continuity. Subsequent cancellation exposed a
 settled-drain retirement authority mismatch; the correction preserves the
-original drain audit and needs exact-candidate physical recovery testing.
+original drain audit and passed the physical recovery follow-up below.
 See [drain and retirement evidence](evidence/topology-2026-10-05/settled-drain-retirement.md).
 
 **Completed recovery follow-up:** clean `079f6b4f` converged all six workers on
