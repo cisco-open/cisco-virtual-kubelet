@@ -344,6 +344,14 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 	if err != nil {
 		return nil, nil, err
 	}
+	workerSnapshot, err := newPlanningWorkerSnapshot(ctx, r.reader(), rollout.Namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+	// Do not install this reader on the shared reconciler. A plan is only an
+	// approval proposal; execution must independently revalidate live authority.
+	planner := *r
+	planner.APIReader = workerSnapshot
 
 	planned := make([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget, 0, len(devices))
 	summaries := make([]opsv1alpha1.IOSXESoftwareRolloutTargetStatus, 0, len(devices))
@@ -358,7 +366,7 @@ func (r *IOSXESoftwareRolloutReconciler) buildFrozenPlan(
 		if err != nil {
 			return nil, nil, fmt.Errorf("target %s image source: %w", device.Name, err)
 		}
-		target, err := r.freezeTarget(ctx, rollout, device, policy, source, cohorts[device.Name], now)
+		target, err := planner.freezeTarget(ctx, rollout, device, policy, source, cohorts[device.Name], now)
 		if err != nil {
 			return nil, nil, fmt.Errorf("target %s: %w", device.Name, err)
 		}

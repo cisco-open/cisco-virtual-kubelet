@@ -485,6 +485,15 @@ real-API 1,000-member snapshot/deletion test pass. This is a measured substep,
 not the sustained whole-controller gate below. See the
 [fleet-read evidence and limits](evidence/topology-2026-10-05/fleet-read-budget.md).
 
+**Further planning repair:** the complete planning path separately used 601
+reads at 100 targets. A planning-local, four-list worker/Node snapshot reduces
+this to five inventory reads without changing the uncached execution reader.
+Eighty complete real-API planning reconciles over a 1,000-member inventory
+passed with nine total requests each and p99 below 145 ms. Negative controls
+retain fresh admission after worker deletion. This closes the planning request
+amplification, not the sustained execution/watch/RSS gate below. See the
+[complete planning evidence](evidence/topology-2026-10-05/planning-read-budget.md).
+
 **Scope:** remaining E12-A/D and B/C regressions, ownership portion of F12.
 Extend `internal/topologyrollout`'s versioned scale profile to a sustained real
 API-server/controller run at 1/10/50/100 targets with 1,000 fleet members,
