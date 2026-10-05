@@ -8,6 +8,7 @@ package controller
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
@@ -52,7 +53,7 @@ func TestEnvtest_PreparationInvalidationNativeAuthorization(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 	rollout, leaf, now := invalidationCampaignFixture(t)
 	request := rollout.Spec.PreparationInvalidation
@@ -87,7 +88,7 @@ func TestEnvtest_PreparationInvalidationNativeAuthorization(t *testing.T) {
 	if err := c.Status().Update(ctx, rollout); err != nil {
 		t.Fatal(err)
 	}
-	testNativeInvalidationAudit(t, ctx, c, leaf, now)
+	testNativeInvalidationAudit(t, ctx, c, leaf, now, root)
 	// Only the rollout policy is installed here; the full shared-account suite
 	// separately qualifies the complete rendered policy set.
 	rendered, err := exec.CommandContext(ctx, "helm", "template", "cvk", filepath.Join(root, "charts/cisco-virtual-kubelet"), "--namespace", "cvk-system", "--kube-version", "1.35.0", "--set", "topology.enabled=true", "--set", "gnoi.enableSoftwareUpgrade=true", "--set", "topology.workerAccounts.networkManagement.accessMode=readWrite", "--set", "controller.leaderElect=true", "--set", "rbac.profile=strict").CombinedOutput()
@@ -176,7 +177,7 @@ func TestEnvtest_PreparationInvalidationNativeAuthorization(t *testing.T) {
 	}
 }
 
-func testNativeInvalidationAudit(t *testing.T, ctx context.Context, c client.Client, leaf *ops.IOSXESoftwareUpgrade, now time.Time) {
+func testNativeInvalidationAudit(t *testing.T, ctx context.Context, c client.Client, leaf *ops.IOSXESoftwareUpgrade, now time.Time, root string) {
 	t.Helper()
 	status := leaf.Status
 	leaf.UID = ""
@@ -195,6 +196,8 @@ func testNativeInvalidationAudit(t *testing.T, ctx context.Context, c client.Cli
 	if err := c.Status().Update(ctx, leaf); err != nil {
 		t.Fatalf("prepared audit fixture: %v", err)
 	}
+	oldWriter := buildReleasedUpgradeSerializer(t, ctx, root)
+	testReleasedUpgradeWriteDenied(t, ctx, c, oldWriter, leaf)
 	leaf.Status.ManagerInvalidation = &ops.UpgradePreparedInvalidationRequest{
 		ReceiptHash: status.PreparedReceipt.ReceiptHash, PlanHash: status.PreparedReceipt.PlanHash, CampaignUID: status.PreparedReceipt.CampaignUID,
 		ControlRevision: status.ManagerControl.Revision, RequestedBy: "recoverer", RequestedAt: metav1.NewTime(now), Reason: "cancelled preparation",
@@ -218,6 +221,7 @@ func testNativeInvalidationAudit(t *testing.T, ctx context.Context, c client.Cli
 	if !softwareupgrade.PreparedReceiptInvalidated(leaf) {
 		t.Fatal("API round trip invalidated proof")
 	}
+	testReleasedUpgradeWriteDenied(t, ctx, c, oldWriter, leaf)
 	for name, mutate := range map[string]func(*ops.IOSXESoftwareUpgrade){
 		"old writer drops new fields": func(u *ops.IOSXESoftwareUpgrade) {
 			u.Status.ManagerInvalidation = nil
@@ -235,4 +239,65 @@ func testNativeInvalidationAudit(t *testing.T, ctx context.Context, c client.Cli
 			t.Fatalf("%s accepted: %v", name, err)
 		}
 	}
+}
+
+func buildReleasedUpgradeSerializer(t *testing.T, ctx context.Context, root string) string {
+	t.Helper()
+	const baseline = "cf33e51c8ffc6d47acb313857665366d74eefe6c"
+	work := t.TempDir()
+	archive := filepath.Join(work, "source.tar")
+	for _, command := range [][]string{
+		{"git", "-C", root, "archive", "--format=tar", "--output", archive, baseline},
+		{"tar", "-xf", archive, "-C", work},
+	} {
+		if out, err := exec.CommandContext(ctx, command[0], command[1:]...).CombinedOutput(); err != nil {
+			t.Fatalf("prepare exact released source %s: %v: %s", baseline, err, out)
+		}
+	}
+	binary := filepath.Join(work, "released-upgrade-roundtrip")
+	build := exec.CommandContext(ctx, "go", "build", "-mod=readonly", "-trimpath", "-buildvcs=false", "-o", binary,
+		filepath.Join(root, "scripts/testdata/october_upgrade_roundtrip.go"))
+	build.Dir = work // Resolves the imports against the released go.mod/API.
+	if out, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("compile released API serializer: %v: %s", err, out)
+	}
+	return binary
+}
+
+func testReleasedUpgradeWriteDenied(t *testing.T, ctx context.Context, c client.Client, binary string, leaf *ops.IOSXESoftwareUpgrade) {
+	t.Helper()
+	data, err := json.Marshal(leaf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := exec.CommandContext(ctx, binary)
+	command.Stdin = bytes.NewReader(data)
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+	encoded, err := command.Output()
+	if err != nil {
+		t.Fatalf("released serializer: %v: %s", err, &stderr)
+	}
+	var old unstructured.Unstructured
+	if err := json.Unmarshal(encoded, &old.Object); err != nil {
+		t.Fatal(err)
+	}
+	if _, found, err := unstructured.NestedFieldNoCopy(old.Object, "status", "preparedReceipt"); err != nil || found {
+		t.Fatal("probe did not reproduce the released client's missing receipt field")
+	}
+	old.SetAPIVersion(ops.GroupVersion.String())
+	old.SetKind("IOSXESoftwareUpgrade")
+	// The retained new CRD must protect audit data even without native policy:
+	// a rollback to an older typed writer is not permission to prune its state.
+	if err := c.Status().Update(ctx, &old); !apierrors.IsInvalid(err) || !strings.Contains(err.Error(), "preparedReceipt") {
+		t.Fatalf("released %s writer did not receive exact receipt preservation denial: %v", leaf.Status.Phase, err)
+	}
+	var after ops.IOSXESoftwareUpgrade
+	if err := c.Get(ctx, client.ObjectKeyFromObject(leaf), &after); err != nil {
+		t.Fatal(err)
+	}
+	if after.ResourceVersion != leaf.ResourceVersion {
+		t.Fatal("rejected released write changed persisted audit/ownership")
+	}
+	t.Logf("released typed writer denied for %s; receipt and resourceVersion preserved", leaf.Status.Phase)
 }

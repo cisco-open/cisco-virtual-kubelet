@@ -35,7 +35,7 @@ if [[ ! "$cluster_name" =~ ^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$ ]] ||
   exit 2
 fi
 
-for required_command in docker helm kind kubectl go git; do
+for required_command in docker helm kind kubectl go git jq; do
   if ! command -v "$required_command" >/dev/null 2>&1; then
     printf 'required command not found: %s\n' "$required_command" >&2
     exit 1

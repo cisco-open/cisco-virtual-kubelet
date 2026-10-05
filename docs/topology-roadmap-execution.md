@@ -1,11 +1,14 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **all six remote checks pass on `0067e363`; physical runtime remains
+Status: **all six remote checks pass on `a9050970`; physical runtime remains
 `6f3686e9`; complete-roadmap acceptance is still open**, 5 October 2026.
 The [current checkpoint and executable acceptance index](evidence/topology-2026-10-05/README.md)
 record every E/F acceptance row, the fresh read-only lab baseline and exact
-CI provenance. Preparation-recovery code is implemented in `f88afad1`, but
-physical recovery, interrupted migration and the wider gates remain open.
+CI provenance. Preparation-recovery code in `f88afad1` is refined by
+receipt-bound IOS XE corroboration in `f4a64d5d`. Physical recovery and the
+wider gates remain open. New migration tests qualify more startup and retained
+audit boundaries; they do not establish unrestricted rollback. See the
+[migration matrix](evidence/topology-2026-10-05/migration-startup-matrix.md).
 Earlier follow-up evidence is in the
 [recovery record](evidence/topology-2026-10-02/preparation-recovery-followup.md).
 Start with the **Remaining completion plan** below. It supersedes the older
@@ -180,9 +183,14 @@ deployment and rollback rather than repeating these as new work. The 4 October
 follow-up now runs the unchanged released manager entrypoint in a real Pod with
 the rendered manager account: it rejects the new native policy contract before
 controller startup, leaving policy/ledger unchanged. The full shared-account
-suite passes. Interrupted upgrades, mixed-version operation and rollback with
-retained objects still need qualification; this is one negative startup
-boundary, not that complete matrix.
+suite passes. The 5 October extension adds the exact lab-manager rejection,
+candidate rejection of incomplete policy/binding deployment, recovery from an
+initialized-but-unbound empty ledger, leadership/restart preservation, and
+actual October typed-client rejection when a status write would erase a
+retained or invalidated preparation receipt. These are isolated real-API
+tests, not physical migration. Interrupted upgrades with outstanding claims,
+mixed-version operation and operational rollback with retained objects still
+need qualification; do not equate startup recovery with that complete matrix.
 [Startup evidence](evidence/topology-2026-10-02/preparation-recovery-followup.md#actual-released-manager-startup-boundary)
 and [earlier results](evidence/topology-2026-10-02/migration-and-diagnostic-followup.md).
 
