@@ -445,6 +445,13 @@ blocked; an IOS-XR stub or CLI fallback is not completion.
 
 #### R8 — finish scale and offline cross-cluster ownership qualification
 
+**5 October request-budget repair:** a 1,000-device regression demonstrated
+1,001 reads in fleet assessment alone. Two uncached lists replace the per-Node
+GET loop while preserving identity/health checks. The controller race suite and
+real-API 1,000-member snapshot/deletion test pass. This is a measured substep,
+not the sustained whole-controller gate below. See the
+[fleet-read evidence and limits](evidence/topology-2026-10-05/fleet-read-budget.md).
+
 **Scope:** remaining E12-A/D and B/C regressions, ownership portion of F12.
 Extend `internal/topologyrollout`'s versioned scale profile to a sustained real
 API-server/controller run at 1/10/50/100 targets with 1,000 fleet members,

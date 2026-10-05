@@ -1926,6 +1926,17 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 	if err := r.reader().List(ctx, &devices); err != nil {
 		return nil, nil, fmt.Errorf("list administrator-managed fleet: %w", err)
 	}
+	// One fresh API snapshot avoids a GET per fleet member. Do not use the
+	// informer cache: all existing UID, projection and health checks below still
+	// apply, and later claim admission independently revalidates live authority.
+	var nodes corev1.NodeList
+	if err := r.reader().List(ctx, &nodes); err != nil {
+		return nil, nil, fmt.Errorf("list managed fleet Nodes: %w", err)
+	}
+	nodesByName := make(map[string]*corev1.Node, len(nodes.Items))
+	for i := range nodes.Items {
+		nodesByName[nodes.Items[i].Name] = &nodes.Items[i]
+	}
 	members := make([]topologyrollout.Member, 0, len(devices.Items))
 	workers := map[string]string{}
 	for i := range devices.Items {
@@ -1940,11 +1951,11 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 		if identity.DeviceUID != string(device.UID) {
 			return nil, nil, fmt.Errorf("managed fleet identity is stale for %s/%s", device.Namespace, device.Name)
 		}
-		var node corev1.Node
-		if err := r.reader().Get(ctx, types.NamespacedName{Name: identity.NodeName}, &node); err != nil {
-			return nil, nil, fmt.Errorf("read managed fleet Node %q: %w", identity.NodeName, err)
+		node := nodesByName[identity.NodeName]
+		if node == nil {
+			return nil, nil, fmt.Errorf("managed fleet Node %q is absent", identity.NodeName)
 		}
-		if string(node.UID) != identity.NodeUID || !managedNodeMatchesDevice(&node, device) ||
+		if string(node.UID) != identity.NodeUID || !managedNodeMatchesDevice(node, device) ||
 			node.Annotations[managedprotocol.AnnotationNodeUID] != identity.NodeUID ||
 			node.Annotations[managedprotocol.AnnotationWorkerProtocol] != managedprotocol.Version {
 			return nil, nil, fmt.Errorf("managed fleet Node binding is invalid for %s/%s", device.Namespace, device.Name)
@@ -1954,7 +1965,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 				return nil, nil, fmt.Errorf("managed fleet Node projection %q is stale for %s/%s", key, device.Namespace, device.Name)
 			}
 		}
-		physicalID, err := stablePhysicalIdentity(device, &node)
+		physicalID, err := stablePhysicalIdentity(device, node)
 		if err != nil {
 			return nil, nil, fmt.Errorf("managed fleet identity for %s/%s: %w", device.Namespace, device.Name, err)
 		}
@@ -1977,13 +1988,13 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 		if err != nil {
 			return nil, nil, fmt.Errorf("managed fleet risk groups for %s/%s: %w", device.Namespace, device.Name, err)
 		}
-		readyCondition := nodeReadyCondition(&node)
+		readyCondition := nodeReadyCondition(node)
 		healthy := device.Status.Phase == "Ready" && readyCondition != nil && readyCondition.Status == corev1.ConditionTrue &&
 			deviceConditionCurrentTrue(device, ciskov1.CiscoDeviceConditionNodeIdentityReady) &&
 			deviceConditionCurrentTrue(device, ciskov1.CiscoDeviceConditionTopologyReady) &&
 			deviceConditionCurrentTrue(device, ciskov1.CiscoDeviceConditionGNOIConfigurationReady) &&
-			managedWorkerReadyForProjection(&node, device.Status.TopologyProjection) &&
-			!hasTopologyInitializationGuard(&node)
+			managedWorkerReadyForProjection(node, device.Status.TopologyProjection) &&
+			!hasTopologyInitializationGuard(node)
 		// A Node heartbeat and CiscoDevice conditions change independently. The
 		// manager-authenticated snapshot binds both sources; neither a fresh Node
 		// nor an old True device condition can mask stale evidence from the other.
@@ -1992,7 +2003,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 			ciskov1.CiscoDeviceConditionTopologyReady,
 			ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
 		}
-		observed, observationErr := managedDeviceHealthObservedAt(device, &node, r.now(), healthConditionTypes...)
+		observed, observationErr := managedDeviceHealthObservedAt(device, node, r.now(), healthConditionTypes...)
 		if observationErr != nil {
 			healthy = false
 			observed = time.Time{}
@@ -2004,7 +2015,7 @@ func (r *IOSXESoftwareRolloutReconciler) currentFleetMembers(
 			HealthKnown: observationErr == nil && !observed.IsZero(), Healthy: healthy,
 			Maintenance: maintenance, HealthObserved: observed,
 		})
-		workers[string(device.UID)] = managedNetworkWorkerUsername(&node)
+		workers[string(device.UID)] = managedNetworkWorkerUsername(node)
 	}
 	if len(members) == 0 {
 		return nil, nil, fmt.Errorf("administrator-managed fleet is empty")
