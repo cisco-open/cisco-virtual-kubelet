@@ -123,6 +123,8 @@ const (
 	AnnotationWorkerConfigRevision     = "topology.cisco.vk/worker-config-revision"
 	AnnotationWorkerObservedRevision   = "topology.cisco.vk/worker-observed-revision"
 	AnnotationCredentialSecretRevision = "cisco.vk/credential-resource-version"
+	AnnotationDeviceTLSCARevision      = "cisco.vk/device-tls-ca-resource-version"
+	DeviceTLSCAProjectionVersion       = "v1"
 	AnnotationGNOITLSSecretRevision    = "cisco.vk/gnoi-tls-secret-resource-version"
 	AnnotationGNOIProvisioningRevision = "cisco.vk/gnoi-provisioning-secret-resource-version"
 	AnnotationWorkerMode               = "topology.cisco.vk/worker-mode"
@@ -214,6 +216,8 @@ const (
 	EnvWorkerAccess             = "CISCO_VK_WORKER_ACCESS"
 	EnvExpectedWorkerUsername   = "CISCO_VK_EXPECTED_WORKER_USERNAME"
 	EnvCredentialSecretRevision = "CISCO_VK_CREDENTIAL_SECRET_RESOURCE_VERSION"
+	EnvDeviceTLSCARevision      = "CISCO_VK_DEVICE_TLS_CA_RESOURCE_VERSION"
+	EnvDeviceTLSCADigest        = "CISCO_VK_DEVICE_TLS_CA_SHA256"
 	EnvGNOITLSSecretRevision    = "CISCO_VK_GNOI_TLS_SECRET_RESOURCE_VERSION"
 	EnvGNOIProvisioningRevision = "CISCO_VK_GNOI_PROVISIONING_SECRET_RESOURCE_VERSION"
 )

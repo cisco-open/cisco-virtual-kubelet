@@ -427,6 +427,22 @@ spec:
                   caFile:
                     description: CAFile is the path to the CA certificate file.
                     type: string
+                  caSecretRef:
+                    description: |-
+                      CASecretRef projects only ca.crt from a same-namespace Secret into both
+                      per-device workers. It does not expose client or signer private keys.
+                      Local-file and aggregator deployments must use CAFile instead.
+                    properties:
+                      name:
+                        description: Name is the Secret in the CiscoDevice's namespace;
+                          ca.crt is required.
+                        maxLength: 253
+                        minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                        type: string
+                    required:
+                    - name
+                    type: object
                   certFile:
                     description: CertFile is the path to the client certificate file.
                     type: string
@@ -442,6 +458,11 @@ spec:
                 required:
                 - enabled
                 type: object
+                x-kubernetes-validations:
+                - message: caSecretRef requires verified TLS and is mutually exclusive
+                    with caFile
+                  rule: '!has(self.caSecretRef) || (self.enabled && (!has(self.insecureSkipVerify)
+                    || !self.insecureSkipVerify) && !has(self.caFile))'
               transport:
                 default: restconf
                 description: |-

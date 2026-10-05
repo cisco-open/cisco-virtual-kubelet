@@ -510,13 +510,26 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// passes through this controller path.
 	configDriverRegistered := drivers.ConfigDriverRegistered(device.Spec.Driver)
 	perDeviceWorkerExpected := !(r.AggregatorEnabled && configDriverRegistered)
+	if !perDeviceWorkerExpected && device.Spec.TLS != nil && device.Spec.TLS.CASecretRef != nil {
+		return ctrl.Result{}, fmt.Errorf("device TLS caSecretRef requires per-device workers; aggregator mode uses caFile")
+	}
+	deviceTLSCA, deviceTLSCAErr := r.inspectDeviceTLSCA(ctx, &device)
+	if deviceTLSCAErr != nil {
+		var readErr *projectedSecretReadError
+		if stderrors.As(deviceTLSCAErr, &readErr) || deviceTLSCA.revision == "" {
+			return ctrl.Result{}, deviceTLSCAErr
+		}
+		if r.Recorder != nil {
+			r.Recorder.Eventf(&device, corev1.EventTypeWarning, "DeviceTLSCAInvalid", "%v", deviceTLSCAErr)
+		}
+	}
 	var gnoiTLSState gnoiTLSProjectionState
 	var gnoiConfigurationErr error
 	if perDeviceWorkerExpected && gnoiTLSSecretRef(&device.Spec) != nil && !gNOIDisabled() {
 		var inspectErr error
 		gnoiTLSState, inspectErr = r.inspectGNOITLSSecret(ctx, &device)
 		if inspectErr != nil {
-			var readErr *gnoiSecretReadError
+			var readErr *projectedSecretReadError
 			if stderrors.As(inspectErr, &readErr) {
 				return ctrl.Result{}, inspectErr
 			}
@@ -738,7 +751,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			writeClassGNOIEnabled(),
 		)
 		if err != nil {
-			var readErr *gnoiSecretReadError
+			var readErr *projectedSecretReadError
 			if stderrors.As(err, &readErr) {
 				return ctrl.Result{}, err
 			}
@@ -794,7 +807,8 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			!templateMutationsEnabled && deploymentRolloutComplete(deploy)
 		mutationWorkerMayBeRunning := gnoiMutationsEnabled || templateMutationsEnabled ||
 			(mutationLifecyclePending && !mutationCleanupComplete)
-		if r.ManagedTopology || managed.Managed || managed.LegacyWorker || signerMayBeResident || mutationWorkerMayBeRunning {
+		deviceTrustWasMounted := slices.ContainsFunc(deploy.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool { return v.Name == deviceTLSCAVolume })
+		if r.ManagedTopology || managed.Managed || managed.LegacyWorker || signerMayBeResident || mutationWorkerMayBeRunning || deviceTLSCA.name != "" || deviceTrustWasMounted {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 		} else {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{
@@ -1053,6 +1067,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				}},
 			})
 		}
+		deviceTLSCA.project(&deploy.Spec.Template)
 		// Deployment PodTemplates are defaulted by the API server on write. Keep
 		// the desired object in that same explicit form before CreateOrUpdate
 		// compares it and before managed mode content-addresses it. Otherwise the
@@ -1263,6 +1278,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	} else if err := r.updateGNOIConfigurationCondition(ctx, &device, deploy, desiredWorkerRevision, gnoiConfigurationErr); err != nil {
 		return ctrl.Result{}, err
+	}
+	if deviceTLSCAErr != nil {
+		return ctrl.Result{}, deviceTLSCAErr
 	}
 	if maintenanceRecovery {
 		// The guarded recovery lane ends here. In particular, do not reconcile
@@ -2398,6 +2416,10 @@ func renderDeviceConfigForWorker(spec *ciskov1.DeviceSpec, gnoiTLSClientCertific
 	sanitized.CredentialSecretRef = nil
 	sanitized.ConfigPrereqs = nil
 	sanitized.Worker = nil
+	if sanitized.TLS != nil && sanitized.TLS.CASecretRef != nil {
+		sanitized.TLS.CASecretRef = nil
+		sanitized.TLS.CAFile = deviceTLSCAMount + "/ca.crt"
+	}
 	if sanitized.GNOI != nil && sanitized.GNOI.TLS != nil {
 		gnoiTLS := sanitized.GNOI.TLS
 		if gnoiTLS.SecretRef != nil {
@@ -3466,7 +3488,7 @@ func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, 
 }
 
 // mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
-// namespace that reference it through device credentials, generic gNOI TLS,
+// namespace that reference it through device credentials, device HTTPS CA, generic gNOI TLS,
 // or the IOS-XE-only gNOI certificate-provisioning block. A legacy token
 // Secret for either reserved shared account fans out to every device so the
 // controller revokes its grants immediately rather than waiting for polling.
@@ -3488,11 +3510,12 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 	for i := range devices.Items {
 		dev := &devices.Items[i]
 		credentialMatch := dev.Spec.CredentialSecretRef != nil && dev.Spec.CredentialSecretRef.Name == secret.Name
+		deviceCAMatch := dev.Spec.TLS != nil && dev.Spec.TLS.CASecretRef != nil && dev.Spec.TLS.CASecretRef.Name == secret.Name
 		gnoiTLSRef := gnoiTLSSecretRef(&dev.Spec)
 		gnoiTLSMatch := gnoiTLSRef != nil && gnoiTLSRef.Name == secret.Name
 		provisioning := xeGNOICertificateProvisioning(&dev.Spec)
 		provisioningMatch := provisioning != nil && provisioning.SecretRef.Name == secret.Name
-		if !legacySharedToken && !credentialMatch && !gnoiTLSMatch && !provisioningMatch {
+		if !legacySharedToken && !credentialMatch && !deviceCAMatch && !gnoiTLSMatch && !provisioningMatch {
 			continue
 		}
 		requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{
@@ -3511,10 +3534,10 @@ type gnoiTLSProjectionState struct {
 }
 
 // Unexpected API failures are retryable without changing a working Deployment.
-// Missing or invalid Secret material instead disables only this worker's gNOI.
-type gnoiSecretReadError struct{ error }
+// Missing or invalid material follows the affected projection's fail-closed path.
+type projectedSecretReadError struct{ error }
 
-func (e *gnoiSecretReadError) Unwrap() error { return e.error }
+func (e *projectedSecretReadError) Unwrap() error { return e.error }
 
 type managedWorkerRevisionFence struct {
 	desiredRevision string
@@ -3915,7 +3938,7 @@ func (r *CiscoDeviceReconciler) inspectGNOITLSSecret(ctx context.Context, device
 		if errors.IsNotFound(err) {
 			return gnoiTLSProjectionState{}, fmt.Errorf("gNOI TLS Secret %s/%s was not found", key.Namespace, key.Name)
 		}
-		return gnoiTLSProjectionState{}, &gnoiSecretReadError{fmt.Errorf("read gNOI TLS Secret %s/%s: %w", key.Namespace, key.Name, err)}
+		return gnoiTLSProjectionState{}, &projectedSecretReadError{fmt.Errorf("read gNOI TLS Secret %s/%s: %w", key.Namespace, key.Name, err)}
 	}
 	caPEM := secret.Data["ca.crt"]
 	if len(caPEM) == 0 {
@@ -4089,7 +4112,7 @@ func (r *CiscoDeviceReconciler) gnoiProvisioningSecretState(
 		if errors.IsNotFound(err) {
 			return "", false, fmt.Errorf("gNOI provisioning Secret %s/%s was not found", namespace, name)
 		}
-		return "", false, &gnoiSecretReadError{fmt.Errorf("read gNOI provisioning Secret %s/%s: %w", namespace, name, err)}
+		return "", false, &projectedSecretReadError{fmt.Errorf("read gNOI provisioning Secret %s/%s: %w", namespace, name, err)}
 	}
 	for _, requiredKey := range []string{"tls.crt", "ca.crt"} {
 		if len(secret.Data[requiredKey]) == 0 {

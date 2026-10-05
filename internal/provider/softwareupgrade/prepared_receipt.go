@@ -54,12 +54,14 @@ func PreparedSourceIdentityHash(source opsv1alpha1.UpgradeImageSource) (string, 
 
 // PreparedTrustIdentityHash binds the exact device-access Secret revisions
 // loaded by the worker without exposing any credential or certificate bytes.
-func PreparedTrustIdentityHash(credential, tls, provisioning string) (string, error) {
+func PreparedTrustIdentityHash(credential, tls, provisioning, deviceCA string) (string, error) {
 	return canonicalPreparedHash(struct {
 		Credential   string `json:"credential"`
 		TLS          string `json:"tls"`
 		Provisioning string `json:"provisioning"`
-	}{credential, tls, provisioning})
+		// Omission preserves the exact hash of historical three-source receipts.
+		DeviceCA string `json:"deviceCA,omitempty"`
+	}{credential, tls, provisioning, deviceCA})
 }
 
 func canonicalPreparedHash(value any) (string, error) {

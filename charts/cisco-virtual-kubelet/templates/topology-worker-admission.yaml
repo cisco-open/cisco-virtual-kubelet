@@ -1450,6 +1450,18 @@ spec:
         variables.manager || variables.namespaceCleanup ||
         variables.nativeDeploymentMetadata || variables.nativeDeploymentStatus
       message: only the topology manager, exact native Deployment controller, or namespace cleanup may mutate a Deployment that uses a reserved worker account
+    - expression: >-
+        request.operation == 'DELETE' ||
+        !has(object.spec.template.spec.volumes) ||
+        object.spec.template.spec.volumes.all(v, v.name != 'device-tls-ca' ||
+          has(v.emptyDir) ||
+          (has(v.projected) && v.projected.sources.size() == 1 &&
+           has(v.projected.sources[0].secret) &&
+           has(v.projected.sources[0].secret.items) &&
+           v.projected.sources[0].secret.items.size() == 1 &&
+           v.projected.sources[0].secret.items[0].key == 'ca.crt' &&
+           v.projected.sources[0].secret.items[0].path == 'ca.crt'))
+      message: device TLS CA projection may expose only ca.crt, or an empty mount while invalid
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

@@ -1233,6 +1233,7 @@ type NetAsCodeModelStatus struct {
 }
 
 // TLSConfig represents TLS configuration for device communication.
+// +kubebuilder:validation:XValidation:rule="!has(self.caSecretRef) || (self.enabled && (!has(self.insecureSkipVerify) || !self.insecureSkipVerify) && !has(self.caFile))",message="caSecretRef requires verified TLS and is mutually exclusive with caFile"
 type TLSConfig struct {
 	// Enabled toggles TLS for device communication.
 	Enabled bool `json:"enabled" mapstructure:"enabled"`
@@ -1252,6 +1253,21 @@ type TLSConfig struct {
 	// CAFile is the path to the CA certificate file.
 	// +kubebuilder:validation:Optional
 	CAFile string `json:"caFile,omitempty" mapstructure:"caFile,omitempty"`
+
+	// CASecretRef projects only ca.crt from a same-namespace Secret into both
+	// per-device workers. It does not expose client or signer private keys.
+	// Local-file and aggregator deployments must use CAFile instead.
+	// +kubebuilder:validation:Optional
+	CASecretRef *DeviceTLSCASecretReference `json:"caSecretRef,omitempty" mapstructure:"caSecretRef,omitempty"`
+}
+
+// DeviceTLSCASecretReference names the public device HTTPS CA bundle.
+type DeviceTLSCASecretReference struct {
+	// Name is the Secret in the CiscoDevice's namespace; ca.crt is required.
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Name string `json:"name" mapstructure:"name"`
 }
 
 // OTELConfig holds OpenTelemetry topology export configuration.

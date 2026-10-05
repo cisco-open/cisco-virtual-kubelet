@@ -15,7 +15,9 @@ cp "$root/scripts/testdata/october_staged_protocol_test.go" \
   "$work/internal/provider/softwareupgrade/"
 cp "$root/scripts/testdata/october_manager_protocol_test.go" \
   "$work/internal/controller/"
+cp "$root/scripts/testdata/october_device_ca_contract_test.go" \
+  "$work/cmd/cisco-vk/"
 printf 'Released manager/worker commit: %s\nRetained test source: %s\n' "$baseline" "$work"
 cd "$work"
-go test -count=1 ./internal/provider/softwareupgrade ./internal/controller \
-  -run '^TestOctober(WorkerStagedProtocolFence|ManagerRejectsNewWorkerProtocols)$' -v
+go test -count=1 ./internal/provider/softwareupgrade ./internal/controller ./cmd/cisco-vk \
+  -run '^TestOctober(WorkerStagedProtocolFence|ManagerRejectsNewWorkerProtocols|WorkerRejectsDeviceCAContract)$' -v

@@ -278,6 +278,13 @@ func TestLoadRejectsCertificateProvisioningAtGenericGNOIPath(t *testing.T) {
 	}
 }
 
+func TestUnresolvedDeviceTLSCAReferenceRejected(t *testing.T) {
+	spec := &v1alpha1.DeviceSpec{TLS: &v1alpha1.TLSConfig{Enabled: true, CASecretRef: &v1alpha1.DeviceTLSCASecretReference{Name: "ca"}}}
+	if err := validateDeviceSpec(spec); err == nil {
+		t.Fatal("local configuration accepted unresolved Kubernetes CA reference")
+	}
+}
+
 func TestValidateDeviceSpecGNOITrustSources(t *testing.T) {
 	provisioning := func() *v1alpha1.XEGNOIConfig {
 		return &v1alpha1.XEGNOIConfig{

@@ -98,6 +98,7 @@ type configReconcilerOptions struct {
 	WorkerPodUID             string
 	CredentialSecretRevision string
 	GNOITLSSecretRevision    string
+	DeviceTLSCARevision      string
 	GNOIProvisioningRevision string
 	// ReadOnly is a runtime authorization boundary, not just an RBAC hint. It
 	// prevents config, software lifecycle, operational action, and certificate
@@ -600,6 +601,7 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 			WorkerPodUID:             runtimeID,
 			CredentialSecretRevision: opts.CredentialSecretRevision,
 			GNOITLSSecretRevision:    opts.GNOITLSSecretRevision,
+			DeviceTLSCARevision:      opts.DeviceTLSCARevision,
 			GNOIProvisioningRevision: opts.GNOIProvisioningRevision,
 			GNOI:                     gnoiProv,
 			Lifecycle:                lifecycleBackend,

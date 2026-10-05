@@ -2486,7 +2486,7 @@ func TestManagedPreinstalledActivationRequiresExactReceiptAndTrustBinding(t *tes
 		t.Fatal("managed preinstalled leaf without receipt authorization was accepted")
 	}
 	trust, err := PreparedTrustIdentityHash(
-		r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision)
+		r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision, r.DeviceTLSCARevision)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2499,6 +2499,11 @@ func TestManagedPreinstalledActivationRequiresExactReceiptAndTrustBinding(t *tes
 	if err := r.validateManagedActivationBinding(up); err != nil {
 		t.Fatalf("exact activation receipt binding rejected: %v", err)
 	}
+	r.DeviceTLSCARevision = "new-device-ca"
+	if err := r.validateManagedActivationBinding(up); err == nil || !strings.Contains(err.Error(), "trust identity") {
+		t.Fatalf("device CA change did not invalidate activation trust: %v", err)
+	}
+	r.DeviceTLSCARevision = ""
 	r.GNOITLSSecretRevision = "tls-rv-10"
 	if err := r.validateManagedActivationBinding(up); err == nil || !strings.Contains(err.Error(), "trust identity") {
 		t.Fatalf("trust drift was not rejected: %v", err)
@@ -2514,7 +2519,7 @@ func TestManagedPreinstalledActivationRequiresExactReceiptAndTrustBinding(t *tes
 
 func TestManagedPreparedInventoryIsRevalidatedImmediatelyBeforeActivateClaim(t *testing.T) {
 	rig := newRig(t)
-	trust, err := PreparedTrustIdentityHash("credential-rv", "tls-rv", "provisioning-rv")
+	trust, err := PreparedTrustIdentityHash("credential-rv", "tls-rv", "provisioning-rv", "")
 	if err != nil {
 		t.Fatal(err)
 	}

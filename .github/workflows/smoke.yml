@@ -245,6 +245,7 @@ jobs:
           git fetch --no-tags origin cf33e51c8ffc6d47acb313857665366d74eefe6c
           git fetch --no-tags origin 44d02a4b1f17c832e79ea554e7f77795e4472fc4
           git fetch --no-tags origin 6f3686e98dad0ca4f30f8f21453d57683170537e
+          git fetch --no-tags origin dfe02ae43bd9ce721ab481bde05d970fc6fe5100
           bash scripts/test-staged-protocol-compat.sh
 
       - name: Kubernetes generated artefact drift check

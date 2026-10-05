@@ -560,6 +560,24 @@ expect_denied "non-manager reserved Deployment" \
   create_reserved_deployment "$tenant_username" forbidden-worker
 
 create_reserved_deployment "$manager_username" reserved-worker >/dev/null
+# Exercise the public device CA contract through the actual API, without
+# changing the running fixture Pod or requiring any Secret material.
+kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
+  -n "$worker_namespace" --dry-run=server --type=merge \
+  -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"secret":{"name":"public-ca","items":[{"key":"ca.crt","path":"ca.crt"}]}}]}}]}}}}' >/dev/null
+expect_denied "private key in device CA projection" \
+  "device TLS CA projection may expose only ca.crt" \
+  kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
+    -n "$worker_namespace" --dry-run=server --type=merge \
+    -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"secret":{"name":"public-ca","items":[{"key":"ca.key","path":"ca.crt"}]}}]}}]}}}}'
+expect_denied "whole Secret in device CA projection" \
+  "device TLS CA projection may expose only ca.crt" \
+  kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
+    -n "$worker_namespace" --dry-run=server --type=merge \
+    -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"secret":{"name":"public-ca"}}]}}]}}}}'
+kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
+  -n "$worker_namespace" --dry-run=server --type=merge \
+  -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","emptyDir":{}}]}}}}' >/dev/null
 kubectl --context "$context" rollout status deployment/reserved-worker \
   --namespace "$worker_namespace" --timeout=90s >/dev/null
 kubectl --context "$context" wait pod \

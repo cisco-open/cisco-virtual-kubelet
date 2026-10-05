@@ -121,6 +121,7 @@ type Reconciler struct {
 	// into the immutable PodTemplate alongside WorkerRevision.
 	CredentialSecretRevision string
 	GNOITLSSecretRevision    string
+	DeviceTLSCARevision      string
 	GNOIProvisioningRevision string
 	GNOI                     gnoi.Provider
 	Lifecycle                softwarelifecycle.Backend
@@ -1175,9 +1176,9 @@ func (r *Reconciler) completePreparation(
 		return reconcile.Result{}, err
 	}
 	trustIdentityHash := ""
-	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" {
+	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" || r.DeviceTLSCARevision != "" {
 		trustIdentityHash, err = PreparedTrustIdentityHash(
-			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision)
+			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision, r.DeviceTLSCARevision)
 		if err != nil {
 			return reconcile.Result{}, err
 		}

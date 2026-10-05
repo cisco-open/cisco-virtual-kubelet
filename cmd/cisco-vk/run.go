@@ -81,6 +81,7 @@ var (
 	enableIOSXESoftwareUpgrade bool
 	workerModeFlag             string
 	workerAccessFlag           string
+	deviceTLSCAProjectionFlag  string
 )
 
 const (
@@ -143,6 +144,8 @@ func init() {
 		"runtime plane: combined, app-hosting, or network-management (default: $CISCO_VK_WORKER_MODE or combined)")
 	runCmd.Flags().StringVar(&workerAccessFlag, "worker-access", "",
 		"runtime access: readOnly or readWrite (default: $CISCO_VK_WORKER_ACCESS or readWrite)")
+	runCmd.Flags().StringVar(&deviceTLSCAProjectionFlag, "device-tls-ca-projection", "",
+		"controller-owned public device CA projection contract")
 }
 
 // validateConfig checks if the config file exists at the given path
@@ -372,6 +375,10 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	appCfg, err := config.Load(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config from %s: %w", configPath, err)
+	}
+	if err := validateDeviceTLSCAProjection(&appCfg.Device, deviceTLSCAProjectionFlag,
+		os.Getenv(managedprotocol.EnvDeviceTLSCARevision), os.Getenv(managedprotocol.EnvDeviceTLSCADigest)); err != nil {
+		return err
 	}
 
 	// Resolve device password from environment variable when the controller
@@ -706,6 +713,7 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 		WorkerPodUID:               identity.WorkerPodUID,
 		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
 		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
+		DeviceTLSCARevision:        os.Getenv(managedprotocol.EnvDeviceTLSCARevision),
 		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),
 		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
 		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),
@@ -795,6 +803,7 @@ func runNetworkManagementRuntime(
 		WorkerPodUID:               identity.WorkerPodUID,
 		CredentialSecretRevision:   os.Getenv(managedprotocol.EnvCredentialSecretRevision),
 		GNOITLSSecretRevision:      os.Getenv(managedprotocol.EnvGNOITLSSecretRevision),
+		DeviceTLSCARevision:        os.Getenv(managedprotocol.EnvDeviceTLSCARevision),
 		GNOIProvisioningRevision:   os.Getenv(managedprotocol.EnvGNOIProvisioningRevision),
 		EnableWriteClassGNOI:       flagOrEnvBool(enableWriteClassGNOI, envEnableWriteClassGNOI),
 		EnableIOSXESoftwareUpgrade: flagOrEnvBool(enableIOSXESoftwareUpgrade, envEnableIOSXESoftwareUpgrade),

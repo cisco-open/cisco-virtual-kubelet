@@ -79,9 +79,10 @@ Runtime settings are **not** in the config file — they are passed as flags or 
 ### Shared TLS
 
 The file paths in this block are directly usable in local configuration or a
-custom Deployment that mounts them. The controller and stock chart do not
-automatically mount these shared paths into per-device workers. For
-controller-managed gNOI, use `spec.gnoi.tls.secretRef` instead.
+custom Deployment that mounts them. For controller-managed device HTTPS,
+`spec.tls.caSecretRef` projects a public CA bundle into both per-device worker
+planes. Arbitrary local paths are not automatically mounted. Dedicated gNOI
+trust remains separate: use `spec.gnoi.tls.secretRef` or IOS XE provisioning.
 
 ```yaml
 tls:
@@ -99,10 +100,47 @@ tls:
 | `tls.certFile` | string | — | Local/custom-Deployment client certificate path; must be configured together with `tls.keyFile`. |
 | `tls.keyFile` | string | — | Local/custom-Deployment client key path; must be configured together with `tls.certFile`. |
 | `tls.caFile` | string | — | Local/custom-Deployment CA bundle path. |
+| `tls.caSecretRef.name` | string | — | Same-namespace Secret containing `ca.crt`; per-device workers only. Requires verified TLS and excludes `caFile`. Only the public CA key is projected. |
 
 An incomplete shared client-certificate pair now fails startup consistently
 for configdriver, telemetry, gNOI, and NX-API consumers. Before upgrading,
 remove any obsolete lone `certFile` or `keyFile`, or configure both paths.
+
+For a CiscoDevice managed by the controller:
+
+```yaml
+spec:
+  tls:
+    enabled: true
+    insecureSkipVerify: false
+    caSecretRef:
+      name: switch-https-public-ca
+```
+
+Create that Secret from the independently trusted CA bundle, with key `ca.crt`.
+The HTTPS certificate must match the device address (IP SAN for an IP address).
+Prefer a dedicated public-CA-only Secret; the controller never projects
+`tls.key`, `ca.key` or unrelated keys through this reference. This does not
+change existing Kubernetes Secret-read permissions or replace RBAC isolation.
+It does not provision/replace a certificate on the switch.
+
+The controller binds the CA revision and SHA-256 into each worker template.
+Workers verify the actual mounted bytes before opening clients. Rotation,
+deletion or recreation triggers a fenced `Recreate` rollout; missing/malformed
+CA material leaves workers unready rather than falling back to insecure TLS.
+Managed software claims additionally re-read the current Secret revision, and
+preparation receipts bind that revision so later trust changes block reuse.
+Keep old receipts for audit; do not rewrite them after CA rotation.
+
+Upgrade the CRD, native admission contract, manager and workers before enabling
+this opt-in field. The manager attests the native public-CA-only projection
+policy; an older manager must fail that changed contract at startup. The
+controller-owned startup flag also makes older worker binaries reject the
+configuration before startup. No arbitrary rollback is supported
+while the reference remains enabled. The aggregator and standalone file
+configuration must continue to use an explicitly mounted `caFile`; they do
+not resolve Kubernetes CA references. Existing configurations without the new
+field retain their current behavior.
 
 ### gNOI
 

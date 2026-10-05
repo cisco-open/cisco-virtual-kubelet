@@ -261,9 +261,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"shared-worker-deployment": {
 		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"deployments", "deployments/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		matchConditions: []string{"reserved-worker-account"}, variables: []string{"nativeForegroundCleanup", "manager", "namespaceCleanup", "nativeDeploymentMetadata", "nativeDeploymentStatus"}, validations: 1, coreTyped: true,
+		matchConditions: []string{"reserved-worker-account"}, variables: []string{"nativeForegroundCleanup", "manager", "namespaceCleanup", "nativeDeploymentMetadata", "nativeDeploymentStatus"}, validations: 2, coreTyped: true,
 		requiredFragments: []string{"serviceAccountName", "namespace-controller", "!has(request.name)", "deployment-controller", "deployment.kubernetes.io/revision", "request.subResource == 'status'", "system:authenticated", "object.metadata.uid == oldObject.metadata.uid", "object.spec == oldObject.spec", "cisco-vk-(managed|legacy)-"},
-		digest:            "sha256:4fef309c1ef90eb17cfd6489a7f8c9b844256cd8cb5d6aff1d43ce01decd9ac0",
+		digest:            "sha256:5d1f9e89b84c9eda661a652fe78f9beda28e07f7f2e1a4952c212443f34f7270",
 	},
 	"shared-worker-replicaset": {
 		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"replicasets", "replicasets/status"},

@@ -531,10 +531,10 @@ func (r *Reconciler) validateManagedActivationBinding(up *opsv1alpha1.IOSXESoftw
 	}
 	expectedTrust := annotations[managedprotocol.AnnotationPreparedTrustHash]
 	currentTrust := ""
-	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" {
+	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" || r.DeviceTLSCARevision != "" {
 		var err error
 		currentTrust, err = PreparedTrustIdentityHash(
-			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision)
+			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision, r.DeviceTLSCARevision)
 		if err != nil {
 			return err
 		}
@@ -717,6 +717,7 @@ func (r *Reconciler) validateManagedRuntimeSecretRevisions(ctx context.Context, 
 		{purpose: "device credential", expected: r.CredentialSecretRevision},
 		{purpose: "gNOI TLS", expected: r.GNOITLSSecretRevision},
 		{purpose: "gNOI provisioning", expected: r.GNOIProvisioningRevision},
+		{purpose: "device TLS CA", expected: r.DeviceTLSCARevision},
 	}
 	if device.Spec.CredentialSecretRef != nil {
 		bindings[0].name = device.Spec.CredentialSecretRef.Name
@@ -726,6 +727,9 @@ func (r *Reconciler) validateManagedRuntimeSecretRevisions(ctx context.Context, 
 	}
 	if provisioning := managedGNOIProvisioning(&device.Spec); provisioning != nil {
 		bindings[2].name = provisioning.SecretRef.Name
+	}
+	if device.Spec.TLS != nil && device.Spec.TLS.CASecretRef != nil {
+		bindings[3].name = device.Spec.TLS.CASecretRef.Name
 	}
 	for _, binding := range bindings {
 		if binding.name == "" {
