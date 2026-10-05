@@ -1999,7 +1999,24 @@ func inertManagedSettledTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 		mutationguard.UpgradeMutationSubmitted(up) {
 		return false
 	}
-	return settledManagedLeafBinding(up)
+	if settledManagedLeafBinding(up) {
+		return true
+	}
+	// Before staged-activation-v1, a manager could cancel a PrepareOnly
+	// target before any worker saw it. That immutable, entirely empty worker
+	// status is historical audit, not an outstanding staging operation. Keep
+	// this exception out of live protocol validation and reject every worker
+	// field (including future additions), rather than trusting phase alone.
+	admission, control := up.Status.ManagerAdmission, up.Status.ManagerControl
+	if up.Spec.Strategy != opsv1alpha1.UpgradeStrategyPrepareOnly || up.Spec.RequireNetworkEvidence ||
+		up.Spec.MaxTransferBytesPerSecond != 0 || up.Spec.ImageSource.Preinstalled != nil ||
+		admission == nil || admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolRolloutV1 ||
+		control == nil || !control.Cancel || control.Pause {
+		return false
+	}
+	workerStatus := *up.Status.DeepCopy()
+	workerStatus.ManagerAdmission, workerStatus.ManagerControl = nil, nil
+	return reflect.DeepEqual(workerStatus, opsv1alpha1.IOSXESoftwareUpgradeStatus{}) && settledManagedLeafIdentity(up)
 }
 
 // SettledUnclaimedManagedOperation reports whether a retained managed leaf is
@@ -2098,12 +2115,16 @@ func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) boo
 }
 
 func settledManagedLeafBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return opsv1alpha1.ManagedUpgradeProtocolMatches(up) && settledManagedLeafIdentity(up)
+}
+
+func settledManagedLeafIdentity(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if up == nil || up.UID == "" || up.Annotations[managedprotocol.AnnotationManaged] != "true" {
 		return false
 	}
 	admission := up.Status.ManagerAdmission
 	control := up.Status.ManagerControl
-	return admission != nil && opsv1alpha1.ManagedUpgradeProtocolMatches(up) &&
+	return admission != nil &&
 		admission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
 		admission.RevocationReason == "" && admission.LeafUID == string(up.UID) &&
 		admission.CampaignUID != "" && admission.CampaignUID == up.Annotations[managedprotocol.AnnotationCampaignUID] &&
