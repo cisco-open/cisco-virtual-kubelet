@@ -122,7 +122,12 @@ func (r *Reconciler) reconcilePreparedInvalidation(ctx context.Context, up *ops.
 			retErr = fmt.Errorf("release observation lease: %w", err)
 		}
 	}()
-	native, err := observer.ObservePreparationRetirement(callCtx, up.Status.PreparedReceipt.ValidatedVersion, up.Status.PreparedReceipt.RunningVersion)
+	receipt := up.Status.PreparedReceipt
+	native, err := observer.ObservePreparationRetirement(callCtx, softwarelifecycle.PreparationRetirementRequest{
+		TargetVersion: receipt.ValidatedVersion, RunningVersion: receipt.RunningVersion,
+		SourceSize: receipt.SourceSize, InstallStartedAt: receipt.InstallStartedAt.Time,
+		PreparedAt: receipt.PreparedAt.Time,
+	})
 	if err != nil {
 		return wait, fmt.Errorf("native preparation retirement is not proven: %w", err)
 	}

@@ -1,0 +1,246 @@
+{
+  "Cisco-IOS-XE-install-oper:install-oper-data": {
+    "install-location-information": [
+      {
+        "oper-state": {
+          "sys-activity": "install-no-activity"
+        },
+        "install-version-info": [
+          {
+            "version": "17.18.02.0.4112",
+            "version-extension": "1766116039",
+            "current": "install-version-state-provisioned-committed",
+            "src-filename": "/mnt/sd3/user/gNOI_iosxe_17.18.02.0.4112.1766116039.bin",
+            "install-package-state-info": [
+              {
+                "pkg-name": "cat9k-lni.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "pkg-name": "cat9k-wlc.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "pkg-name": "cat9k-webui.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "pkg-name": "cat9k-rpbase.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "pkg-name": "cat9k-rpboot.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "pkg-name": "cat9k-srdriver.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "pkg-name": "cat9k-guestshell.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "pkg-name": "cat9k-cc_srdriver.17.18.02.SPA.pkg",
+                "package-state": "install-state-committed"
+              }
+            ]
+          },
+          {
+            "version": "17.18.03.0.5496",
+            "version-extension": "1776157760",
+            "current": "install-version-state-in-progress",
+            "src-filename": "/mnt/sd3/user/gNOI_iosxe_17.18.03.0.5496.1776157760.bin",
+            "install-package-state-info": [
+              {
+                "pkg-name": "gNOI_iosxe_17.18.03.0.5496.1776157760.bin",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-lni.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-wlc.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-webui.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-rpbase.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-rpboot.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-srdriver.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-guestshell.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "pkg-name": "cat9k-cc_srdriver.17.18.03.SPA.pkg",
+                "package-state": "install-state-added"
+              }
+            ]
+          }
+        ],
+        "install-packages": [
+          {
+            "pkg-name": "cat9k-lni.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-ok"
+            }
+          },
+          {
+            "pkg-name": "cat9k-lni.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-deferred"
+            }
+          },
+          {
+            "pkg-name": "cat9k-wlc.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-ok"
+            }
+          },
+          {
+            "pkg-name": "cat9k-wlc.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-deferred"
+            }
+          },
+          {
+            "pkg-name": "cat9k-webui.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "20386816",
+              "verify-status": "install-package-verify-ok"
+            }
+          },
+          {
+            "pkg-name": "cat9k-webui.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "20403200",
+              "verify-status": "install-package-verify-deferred"
+            }
+          },
+          {
+            "pkg-name": "cat9k-rpbase.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "1093157888",
+              "verify-status": "install-package-verify-ok"
+            }
+          },
+          {
+            "pkg-name": "cat9k-rpbase.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "1094640640",
+              "verify-status": "install-package-verify-deferred"
+            }
+          },
+          {
+            "pkg-name": "cat9k-rpboot.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "66933861",
+              "verify-status": "install-package-verify-not-done"
+            }
+          },
+          {
+            "pkg-name": "cat9k-rpboot.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "66954283",
+              "verify-status": "install-package-verify-not-done"
+            }
+          },
+          {
+            "pkg-name": "cat9k-srdriver.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "40907780",
+              "verify-status": "install-package-verify-ok"
+            }
+          },
+          {
+            "pkg-name": "cat9k-srdriver.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "40883204",
+              "verify-status": "install-package-verify-deferred"
+            }
+          },
+          {
+            "pkg-name": "cat9k-guestshell.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "1963012",
+              "verify-status": "install-package-verify-ok"
+            }
+          },
+          {
+            "pkg-name": "cat9k-guestshell.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "1963012",
+              "verify-status": "install-package-verify-deferred"
+            }
+          },
+          {
+            "pkg-name": "cat9k-cc_srdriver.17.18.02.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "25199624",
+              "verify-status": "install-package-verify-ok"
+            }
+          },
+          {
+            "pkg-name": "cat9k-cc_srdriver.17.18.03.SPA.pkg",
+            "pkg-data": {
+              "pkg-size": "25166856",
+              "verify-status": "install-package-verify-deferred"
+            }
+          },
+          {
+            "pkg-name": "gNOI_iosxe_17.18.03.0.5496.1776157760.bin",
+            "pkg-data": {
+              "pkg-size": "1249368115",
+              "verify-status": "install-package-verify-ok"
+            }
+          }
+        ]
+      }
+    ],
+    "install-oper-hist": [
+      {
+        "op-uuid": "895c73fb-4572-4d57-86ff-b917342da1c5",
+        "op-status": "install-op-succ",
+        "op-done": "op-complete",
+        "start-time": "2026-10-02T02:05:25.208329+00:00",
+        "end-time": "2026-10-02T02:05:26.009082+00:00",
+        "add-param": null
+      },
+      {
+        "op-uuid": "cce38a96-654c-4eb8-90b7-ee0bbff39af1",
+        "op-status": "install-op-succ",
+        "op-done": "op-complete",
+        "start-time": "2026-10-02T02:05:44.113361+00:00",
+        "end-time": "2026-10-02T02:07:33.810614+00:00",
+        "add-param": {
+          "dest-filename": "gNOI_iosxe_17.18.03.0.5496.1776157760.bin"
+        }
+      },
+      {
+        "op-uuid": "cce38a96-654c-4eb8-90b7-ee0bbff39af1",
+        "op-status": "install-op-succ",
+        "op-done": "op-complete",
+        "start-time": "2026-10-02T02:05:44.114047+00:00",
+        "end-time": "2026-10-02T02:05:44.133811+00:00",
+        "add-param": null
+      }
+    ]
+  }
+}

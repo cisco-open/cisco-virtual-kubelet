@@ -177,7 +177,18 @@ type InterruptedInstallObserver interface {
 // original running image remains committed, and the exact target is inactive
 // or absent. Empty/malformed inventory and unknown operations are not absence.
 type PreparationRetirementObserver interface {
-	ObservePreparationRetirement(ctx context.Context, target, running string) (PreparationRetirementObservation, error)
+	ObservePreparationRetirement(context.Context, PreparationRetirementRequest) (PreparationRetirementObservation, error)
+}
+
+// PreparationRetirementRequest carries immutable receipt evidence, not a new
+// install authorization. Adapters must not infer completion from age or idle
+// state alone when native inventory still reports an in-progress operation.
+type PreparationRetirementRequest struct {
+	TargetVersion    string
+	RunningVersion   string
+	SourceSize       int64
+	InstallStartedAt time.Time
+	PreparedAt       time.Time
 }
 
 type PreparationRetirementObservation struct {

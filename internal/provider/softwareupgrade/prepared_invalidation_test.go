@@ -89,11 +89,13 @@ func TestPreparedInvalidationRequiresExactSettledAuthorityAndProof(t *testing.T)
 
 type fakeRetirementObserver struct {
 	fakeLifecycle
-	err    error
-	before func(context.Context)
+	err     error
+	before  func(context.Context)
+	request softwarelifecycle.PreparationRetirementRequest
 }
 
-func (f *fakeRetirementObserver) ObservePreparationRetirement(ctx context.Context, _ string, _ string) (softwarelifecycle.PreparationRetirementObservation, error) {
+func (f *fakeRetirementObserver) ObservePreparationRetirement(ctx context.Context, request softwarelifecycle.PreparationRetirementRequest) (softwarelifecycle.PreparationRetirementObservation, error) {
+	f.request = request
 	if f.before != nil {
 		f.before(ctx)
 	}
@@ -188,6 +190,12 @@ func TestPreparedInvalidationWorkerObservesWithoutMutation(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.Status.PreparedReceipt, u.Status.PreparedReceipt) {
 				t.Fatal("receipt changed")
+			}
+			receipt := u.Status.PreparedReceipt
+			if observer.request.TargetVersion != receipt.ValidatedVersion || observer.request.RunningVersion != receipt.RunningVersion ||
+				observer.request.SourceSize != receipt.SourceSize || !observer.request.InstallStartedAt.Equal(receipt.InstallStartedAt.Time) ||
+				!observer.request.PreparedAt.Equal(receipt.PreparedAt.Time) {
+				t.Fatal("native observer did not receive the immutable receipt evidence")
 			}
 			if rig.os.installCalls != 0 || rig.os.activateCalls != 0 {
 				t.Fatal("recovery mutated device")

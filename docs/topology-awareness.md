@@ -1752,8 +1752,17 @@ preparation and approval.
 
 On missing/ambiguous inventory, live binding drift, an unavailable observation
 capability, or a foreign Lease, keep ownership and inspect worker logs. IOS XE
-inventory that remains `in-progress` despite an apparently completed install is
-deliberately not sufficient for this recovery path. Do not force-edit status,
+inventory that remains `in-progress` is not sufficient by itself. The IOS XE
+adapter can corroborate that exact target only when the original immutable
+receipt's positive source size and installation interval match one completed
+native add, every target package is added, the source package is verified, all
+install locations are idle, and the original running image remains committed.
+It requires the native response clock to map that original interval; the later
+recovery request does not extend the permitted history window. Missing,
+ambiguous, later or unresolved native activity keeps ownership held. This
+normalizes observation proof only; it does not modify device inventory or
+authorize image reuse/activation. Physical recovery qualification is still
+required for the release cohort. Do not force-edit status,
 erase claims, remove finalizers, clear Leases, or delete packages to bypass it.
 The request and evidence are append-only; schema/runtime rollback must preserve
 them. Older writers that omit them are rejected by the current schema.
