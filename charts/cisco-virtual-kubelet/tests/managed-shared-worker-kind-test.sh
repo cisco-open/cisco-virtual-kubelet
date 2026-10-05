@@ -564,17 +564,22 @@ create_reserved_deployment "$manager_username" reserved-worker >/dev/null
 # changing the running fixture Pod or requiring any Secret material.
 kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
   -n "$worker_namespace" --dry-run=server --type=merge \
-  -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"secret":{"name":"public-ca","items":[{"key":"ca.crt","path":"ca.crt"}]}}]}}]}}}}' >/dev/null
+  -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"configMap":{"name":"device-config","items":[{"key":"device-ca.crt","path":"ca.crt"}]}}]}}]}}}}' >/dev/null
 expect_denied "private key in device CA projection" \
-  "device TLS CA projection may expose only ca.crt" \
+  "device TLS CA projection requires a validated public ConfigMap snapshot" \
   kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
     -n "$worker_namespace" --dry-run=server --type=merge \
     -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"secret":{"name":"public-ca","items":[{"key":"ca.key","path":"ca.crt"}]}}]}}]}}}}'
 expect_denied "whole Secret in device CA projection" \
-  "device TLS CA projection may expose only ca.crt" \
+  "device TLS CA projection requires a validated public ConfigMap snapshot" \
   kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
     -n "$worker_namespace" --dry-run=server --type=merge \
     -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"secret":{"name":"public-ca"}}]}}]}}}}'
+expect_denied "mutable source Secret in device CA projection" \
+  "device TLS CA projection requires a validated public ConfigMap snapshot" \
+  kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
+    -n "$worker_namespace" --dry-run=server --type=merge \
+    -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","projected":{"sources":[{"secret":{"name":"public-ca","items":[{"key":"ca.crt","path":"ca.crt"}]}}]}}]}}}}'
 kubectl --context "$context" --as="$manager_username" patch deployment reserved-worker \
   -n "$worker_namespace" --dry-run=server --type=merge \
   -p '{"spec":{"template":{"spec":{"volumes":[{"name":"device-tls-ca","emptyDir":{}}]}}}}' >/dev/null

@@ -107,7 +107,7 @@ func TestEnvtest_WorkerTemplateDefaultsAreAPIRoundTripStable(t *testing.T) {
 				}},
 			},
 		}
-		deviceTLSCAProjection{name: "device-public-ca", revision: "7", valid: true}.project(&deployment.Spec.Template)
+		deviceTLSCAProjection{name: "device-public-ca", revision: "7", valid: true}.project(&deployment.Spec.Template, "device-config")
 		configureNetworkWorkerHealthProbes(&deployment.Spec.Template)
 		applyVKPodTemplateDefaults(&deployment.Spec.Template)
 		revision, err := managedWorkerPodTemplateRevision(&deployment.Spec.Template)

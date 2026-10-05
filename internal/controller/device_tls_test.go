@@ -47,11 +47,11 @@ func TestDeviceTLSProjectsOnlyPublicCA(t *testing.T) {
 		}
 		found = true
 		p := volume.Projected
-		if p == nil || len(p.Sources) != 1 || p.Sources[0].Secret == nil {
+		if p == nil || len(p.Sources) != 1 || p.Sources[0].ConfigMap == nil || p.Sources[0].Secret != nil {
 			t.Fatalf("invalid CA projection: %+v", volume)
 		}
-		ref := p.Sources[0].Secret
-		if ref.Name != secret.Name || len(ref.Items) != 1 || ref.Items[0].Key != "ca.crt" || ref.Items[0].Path != "ca.crt" {
+		ref := p.Sources[0].ConfigMap
+		if ref.Name != device.Name+configMapSuffix || len(ref.Items) != 1 || ref.Items[0].Key != "device-ca.crt" || ref.Items[0].Path != "ca.crt" {
 			t.Fatalf("CA projection exposed extra keys: %+v", ref)
 		}
 	}
@@ -66,20 +66,23 @@ func TestDeviceTLSProjectsOnlyPublicCA(t *testing.T) {
 	if !strings.Contains(config, "caFile: /var/run/secrets/cisco-vk/device-tls-ca/ca.crt") || strings.Contains(config, "caSecretRef") || strings.Contains(config, string(key)) || strings.Contains(config, string(ca)) {
 		t.Fatal("device trust was not resolved to a public-CA-only file reference")
 	}
+	if cm.Data["device-ca.crt"] != string(ca) || strings.Contains(cm.Data["device-ca.crt"], string(key)) {
+		t.Fatal("validated public CA snapshot was not isolated from the mutable Secret")
+	}
 }
 
 func TestDeviceTLSCARotationAndRemovalReplaceTrust(t *testing.T) {
 	ctx := context.Background()
 	device := newDevice("device-rotation", "default")
 	device.Spec.TLS = &ciskov1.TLSConfig{Enabled: true, CASecretRef: &ciskov1.DeviceTLSCASecretReference{Name: "ca"}}
-	ca, _, _ := gnoiTLSSecretMaterial(t)
+	ca, leaf, _ := gnoiTLSSecretMaterial(t)
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "ca", Namespace: device.Namespace}, Data: map[string][]byte{"ca.crt": ca}}
 	r := reconcilerFor(t, device, secret)
 	var previous string
-	for _, scenario := range []string{"valid", "rotated", "invalid", "private-key-in-ca", "missing", "recreated"} {
+	for _, scenario := range []string{"valid", "rotated", "invalid", "leaf-in-ca", "private-key-in-ca", "missing", "recreated"} {
 		t.Run(scenario, func(t *testing.T) {
 			switch scenario {
-			case "rotated", "invalid", "private-key-in-ca":
+			case "rotated", "invalid", "leaf-in-ca", "private-key-in-ca":
 				if err := r.Get(ctx, client.ObjectKeyFromObject(secret), secret); err != nil {
 					t.Fatal(err)
 				}
@@ -87,6 +90,9 @@ func TestDeviceTLSCARotationAndRemovalReplaceTrust(t *testing.T) {
 				secret.Annotations = map[string]string{"rotation": scenario}
 				if scenario == "invalid" {
 					secret.Data["ca.crt"] = []byte("not a certificate")
+				}
+				if scenario == "leaf-in-ca" {
+					secret.Data["ca.crt"] = leaf
 				}
 				if scenario == "private-key-in-ca" {
 					secret.Data["ca.crt"] = append(append([]byte{}, ca...), []byte("-----BEGIN PRIVATE KEY-----\naccidental-private-material\n-----END PRIVATE KEY-----\n")...)
@@ -106,7 +112,7 @@ func TestDeviceTLSCARotationAndRemovalReplaceTrust(t *testing.T) {
 				}
 			}
 			_, err := r.Reconcile(ctx, reconcileRequest(device.Namespace, device.Name))
-			invalid := scenario == "invalid" || scenario == "missing" || scenario == "private-key-in-ca"
+			invalid := scenario == "invalid" || scenario == "missing" || scenario == "private-key-in-ca" || scenario == "leaf-in-ca"
 			if (err != nil) != invalid {
 				t.Fatalf("reconcile error=%v invalid=%v", err, invalid)
 			}
@@ -120,6 +126,13 @@ func TestDeviceTLSCARotationAndRemovalReplaceTrust(t *testing.T) {
 			}
 			previous = revision
 			if invalid {
+				var currentConfig corev1.ConfigMap
+				if err := r.Get(ctx, client.ObjectKey{Namespace: device.Namespace, Name: device.Name + configMapSuffix}, &currentConfig); err != nil {
+					t.Fatal(err)
+				}
+				if _, exists := currentConfig.Data[deviceTLSCAConfigKey]; exists {
+					t.Fatal("invalid/private source material survived in the public snapshot")
+				}
 				for _, volume := range d.Spec.Template.Spec.Volumes {
 					if volume.Name == deviceTLSCAVolume && (volume.Projected != nil || volume.EmptyDir == nil) {
 						t.Fatal("invalid/private CA material was still projected")
@@ -211,7 +224,7 @@ func TestDeviceTLSCAPreservedInBothManagedPlanes(t *testing.T) {
 		for _, volume := range d.Spec.Template.Spec.Volumes {
 			if volume.Name == deviceTLSCAVolume {
 				found = true
-				if !reflect.DeepEqual(volume.Projected.Sources[0].Secret.Items, []corev1.KeyToPath{{Key: "ca.crt", Path: "ca.crt"}}) {
+				if volume.Projected.Sources[0].Secret != nil || volume.Projected.Sources[0].ConfigMap == nil || !reflect.DeepEqual(volume.Projected.Sources[0].ConfigMap.Items, []corev1.KeyToPath{{Key: deviceTLSCAConfigKey, Path: "ca.crt"}}) {
 					t.Fatal("private material exposed")
 				}
 			}

@@ -147,20 +147,29 @@ docker build --platform "linux/$architecture" -t "$lab_image" \
 kind load docker-image --name "${context#kind-}" "$lab_image" >"$work/lab-image-load.log" 2>&1
 run_probe lab-new-contract "$lab_image" Failed 'has 9 validations, want exactly 7'
 
-# The immediately previous manager understands staged recovery but would drop
-# caSecretRef while reading DeviceSpec. It must stop at the new native public
-# CA projection contract, not silently fall back to system trust.
+# Older staged managers either drop caSecretRef or project its mutable Secret
+# directly. Both must stop at the exact current native public-CA contract.
 pre_ca_baseline=dfe02ae43bd9ce721ab481bde05d970fc6fe5100
-git -C "$root" cat-file -e "$pre_ca_baseline^{commit}"
-mkdir "$work/pre-ca-source" "$work/pre-ca-image"
-git -C "$root" archive "$pre_ca_baseline" | tar -x -C "$work/pre-ca-source"
-(cd "$work/pre-ca-source" && CGO_ENABLED=0 GOOS=linux GOARCH="$architecture" \
-  go build -mod=readonly -trimpath -buildvcs=false -o "$work/pre-ca-image/october-manager" ./cmd/cisco-vk)
-pre_ca_image="cvk-pre-ca-startup:probe-$$"
-docker build --platform "linux/$architecture" -t "$pre_ca_image" \
-  -f "$root/scripts/testdata/released-manager.Dockerfile" "$work/pre-ca-image" >"$work/pre-ca-image-build.log" 2>&1
-kind load docker-image --name "${context#kind-}" "$pre_ca_image" >"$work/pre-ca-image-load.log" 2>&1
-run_probe pre-ca-new-contract "$pre_ca_image" Failed 'has 2 validations, want exactly 1'
+direct_ca_baseline=dbdbb4e7cbc4ce258fa3275b620ac01a2c409556
+for stage in pre-ca direct-ca; do
+  if [ "$stage" = pre-ca ]; then
+    revision="$pre_ca_baseline"
+    denial='has 2 validations, want exactly 1'
+  else
+    revision="$direct_ca_baseline"
+    denial='want sha256:5d1f9e89b84c9eda661a652fe78f9beda28e07f7f2e1a4952c212443f34f7270'
+  fi
+  git -C "$root" cat-file -e "$revision^{commit}"
+  mkdir "$work/$stage-source" "$work/$stage-image"
+  git -C "$root" archive "$revision" | tar -x -C "$work/$stage-source"
+  (cd "$work/$stage-source" && CGO_ENABLED=0 GOOS=linux GOARCH="$architecture" \
+    go build -mod=readonly -trimpath -buildvcs=false -o "$work/$stage-image/october-manager" ./cmd/cisco-vk)
+  historical_image="cvk-$stage-startup:probe-$$"
+  docker build --platform "linux/$architecture" -t "$historical_image" \
+    -f "$root/scripts/testdata/released-manager.Dockerfile" "$work/$stage-image" >"$work/$stage-image-build.log" 2>&1
+  kind load docker-image --name "${context#kind-}" "$historical_image" >"$work/$stage-image-load.log" 2>&1
+  run_probe "$stage-new-contract" "$historical_image" Failed "$denial"
+done
 
 # Reuse the same isolated binary container layout for the exact current source.
 (cd "$root" && CGO_ENABLED=0 GOOS=linux GOARCH="$architecture" \
@@ -218,6 +227,6 @@ run_probe candidate-restart "$current_image" Running
 cmp "$work/candidate-restart-authority-before.json" "$work/candidate-restart-authority-after.json"
 jq -e '[.items[] | select(.data["ledger.json"] != null) | .data["ledger.json"] | fromjson | .reservations | length] == [0]' \
   "$work/candidate-restart-authority-after.json" >/dev/null
-printf 'PASS: released=%s lab=%s pre-ca=%s candidate=%s startup/interrupted-policy/restart matrix; evidence %s\n' \
-  "$baseline" "$lab_baseline" "$pre_ca_baseline" "$(git -C "$root" rev-parse HEAD)" "$work"
+printf 'PASS: released=%s lab=%s pre-ca=%s direct-ca=%s candidate=%s startup/interrupted-policy/restart matrix; evidence %s\n' \
+  "$baseline" "$lab_baseline" "$pre_ca_baseline" "$direct_ca_baseline" "$(git -C "$root" rev-parse HEAD)" "$work"
 # The parent suite owns and removes the exact disposable cluster and this Pod.

@@ -21,10 +21,11 @@ exposed IOS XE's repeated-add source placeholder; `dfe02ae4` fixes exact
 native correlation without replay. The fresh receipt was created and retired,
 the original OS remained committed, all scoped workers/Nodes/apps are Ready,
 and the ledger and device Lease are released. These are mixed-candidate
-recovery tests, not final same-candidate acceptance. HTTPS chain/IP verification
-also passed independently, but strict worker RESTCONF still needs a public-CA
-projection usable by both worker planes; network-only gNOI mounts are not a
-safe app-worker trust configuration.
+recovery tests, not final same-candidate acceptance. Subsequent `dbdbb4e7`
+qualification passed strict worker HTTPS, fresh preparation, immutable-receipt
+retirement and invalid/missing/restored public-CA fault tests on `.103`.
+The public snapshot hardening described under R3 still needs its own physical
+qualification; network-only gNOI mounts are not app-worker trust configuration.
 See the [live migration/recovery record](evidence/topology-2026-10-05/live-migration-and-recovery.md).
 Earlier follow-up evidence is in the
 [recovery record](evidence/topology-2026-10-02/preparation-recovery-followup.md).
@@ -282,17 +283,29 @@ These mixed-candidate runs close the discovered integration failures, not
 same-candidate final acceptance, removal/replacement or both-direction drift.
 See the [completed physical recovery evidence](evidence/topology-2026-10-05/live-migration-and-recovery.md#fresh-preparation-and-retirement-completed-without-replay).
 
-Before the next production-trust qualification, resolve public CA delivery to
-both app and network RESTCONF clients. The current device API has file paths,
-not a device-TLS Secret projection; the app worker correctly excludes gNOI
-trust/signing mounts. The existing `.103` HTTPS chain and IP SAN verify against
-its provisioned CA, but its workers still have the historical verification
-bypass. Any projection addition must expose **only public CA data**, preserve
-the two-account split, handle rotation/deletion/recreation with current worker
-revision fencing, reject invalid/missing CA or conflicting file/reference
-configuration, and cover real-API defaulting plus both worker startup paths.
-Do not solve this by exposing signer keys, bypassing admission or hand-editing
-manager-owned Pods. Then repeat strict-transport inventory and recovery.
+**5 October strict-transport implementation:** `83e7e10a` adds opt-in public
+`spec.tls.caSecretRef` projection to both worker planes, preserving the two
+functional accounts and excluding signer/private keys. It includes invalid/
+missing material rejection, current Secret revision and mounted-byte fences,
+claim/receipt trust binding, real-API defaulting and old-manager/worker rejection.
+The physical policy migration exposed a historical empty PrepareOnly tombstone
+compatibility gap, fixed and regression-tested in `dbdbb4e7` without changing
+live protocol validation or retained audit. Helm revision 164 converged all six
+C9K workers on that exact candidate. `.103` now uses its existing independently
+trusted CA with verified HTTPS; the native inventory request passed, and both
+worker projections are Ready. Fresh preparation and explicit retirement passed
+with unchanged receipt/claims, no activation and unchanged native history after
+retirement. Invalid, missing and recreated public CA tests converged fail-closed
+and recovered. No device certificate was replaced. Review then identified a
+mutable-Secret projection race; the follow-up copies only validated public CA
+bytes into the existing managed ConfigMap and rejects direct Secret projection
+through native admission. Its full race suite, all 46 real-API tests and native
+startup/admission matrix pass locally; committed-candidate physical deployment
+remains necessary.
+See [public CA and migration evidence](evidence/topology-2026-10-05/public-ca-and-policy-migration.md).
+Next repeat strict-transport preparation/recovery and CA faults on the public
+snapshot candidate, then finish drift/removal/replacement and both-direction
+gates. The focused results do not close those wider tests.
 
 **5 October implementation follow-up (`f4a64d5d`):** receipt-bound native corroboration now
 addresses the normal IOS XE completed-add/`InProgress` combination without

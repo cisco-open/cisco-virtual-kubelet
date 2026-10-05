@@ -5,8 +5,9 @@ local-configuration variants. Unless a field is labelled local-only, it lives
 under `spec` on the CR. The controller reads the CR, strips credentials and
 controller-resolved references, and materializes the non-secret runtime
 configuration into a ConfigMap that the VK pod reads — you do not edit the
-ConfigMap directly. Secret data is never copied into that ConfigMap; individual
-reference fields below state how each Secret is projected.
+ConfigMap directly. Credentials and private keys are never copied into that
+ConfigMap. The public-CA option described below copies only validated public
+certificates; other reference fields state how their Secrets are projected.
 
 For device-side prerequisites (IOS-XE CLI config, DHCP pools, VLANs, etc.) and per-platform networking examples, see:
 
@@ -119,22 +120,31 @@ spec:
 
 Create that Secret from the independently trusted CA bundle, with key `ca.crt`.
 The HTTPS certificate must match the device address (IP SAN for an IP address).
-Prefer a dedicated public-CA-only Secret; the controller never projects
-`tls.key`, `ca.key` or unrelated keys through this reference. This does not
+Prefer a dedicated public-CA-only Secret. The controller validates its complete
+`ca.crt` as public CA certificates and copies those public bytes into
+`device-ca.crt` in the existing managed ConfigMap. Workers mount only that
+validated snapshot, **not the mutable source Secret**. A later malformed or
+key-containing Secret update therefore cannot be refreshed directly into a
+running worker by kubelet. No `tls.key`, `ca.key`, unrelated key or invalid
+bundle is copied. Public certificates in this ConfigMap are intentionally
+readable to principals with ConfigMap-read access. This does not
 change existing Kubernetes Secret-read permissions or replace RBAC isolation.
 It does not provision/replace a certificate on the switch.
 
 The controller binds the CA revision and SHA-256 into each worker template.
 Workers verify the actual mounted bytes before opening clients. Rotation,
 deletion or recreation triggers a fenced `Recreate` rollout; missing/malformed
-CA material leaves workers unready rather than falling back to insecure TLS.
+CA material removes the public snapshot and leaves replacement workers unready
+rather than falling back to insecure TLS. Revision/claim fencing precedes
+replacement; convergence is asynchronous, not instantaneous connection revocation.
 Managed software claims additionally re-read the current Secret revision, and
 preparation receipts bind that revision so later trust changes block reuse.
 Keep old receipts for audit; do not rewrite them after CA rotation.
 
 Upgrade the CRD, native admission contract, manager and workers before enabling
 this opt-in field. The manager attests the native public-CA-only projection
-policy; an older manager must fail that changed contract at startup. The
+policy (including rejection of direct source-Secret projections); an older
+manager must fail that changed contract at startup. The
 controller-owned startup flag also makes older worker binaries reject the
 configuration before startup. No arbitrary rollback is supported
 while the reference remains enabled. The aggregator and standalone file

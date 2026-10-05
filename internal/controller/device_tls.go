@@ -20,9 +20,11 @@ import (
 
 const deviceTLSCAVolume = "device-tls-ca"
 const deviceTLSCAMount = "/var/run/secrets/cisco-vk/device-tls-ca"
+const deviceTLSCAConfigKey = "device-ca.crt"
 
 type deviceTLSCAProjection struct {
 	name, revision, digest string
+	publicPEM              string
 	valid                  bool
 }
 
@@ -54,10 +56,14 @@ func (r *CiscoDeviceReconciler) inspectDeviceTLSCA(ctx context.Context, device *
 		return state, fmt.Errorf("device TLS CA Secret %s/%s ca.crt: %w", device.Namespace, state.name, err)
 	}
 	state.valid = true
+	// Freeze validated public bytes. Never project the mutable source Secret:
+	// kubelet could otherwise deliver a later key-containing update without
+	// passing through this validation, even to an already running worker.
+	state.publicPEM = string(secret.Data["ca.crt"])
 	return state, nil
 }
 
-func (state deviceTLSCAProjection) project(template *corev1.PodTemplateSpec) {
+func (state deviceTLSCAProjection) project(template *corev1.PodTemplateSpec, configMapName string) {
 	if state.name == "" {
 		return
 	}
@@ -69,9 +75,9 @@ func (state deviceTLSCAProjection) project(template *corev1.PodTemplateSpec) {
 	if state.valid {
 		volume.VolumeSource = corev1.VolumeSource{Projected: &corev1.ProjectedVolumeSource{
 			DefaultMode: ptr.To[int32](0o440),
-			Sources: []corev1.VolumeProjection{{Secret: &corev1.SecretProjection{
-				LocalObjectReference: corev1.LocalObjectReference{Name: state.name},
-				Items:                []corev1.KeyToPath{{Key: "ca.crt", Path: "ca.crt"}},
+			Sources: []corev1.VolumeProjection{{ConfigMap: &corev1.ConfigMapProjection{
+				LocalObjectReference: corev1.LocalObjectReference{Name: configMapName},
+				Items:                []corev1.KeyToPath{{Key: deviceTLSCAConfigKey, Path: "ca.crt"}},
 			}}},
 		}}
 	}

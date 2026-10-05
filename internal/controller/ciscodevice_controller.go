@@ -557,6 +557,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		cm.Data = map[string]string{
 			configFileName: configData,
 		}
+		if deviceTLSCA.valid {
+			// Public certificates only; credentials and signer keys remain in
+			// Secrets. The validated snapshot prevents kubelet refreshing a raw
+			// source Secret into either worker after inspection.
+			cm.Data[deviceTLSCAConfigKey] = deviceTLSCA.publicPEM
+		}
 		return controllerutil.SetControllerReference(&device, cm, r.Scheme)
 	})
 	if err != nil {
@@ -1067,7 +1073,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				}},
 			})
 		}
-		deviceTLSCA.project(&deploy.Spec.Template)
+		deviceTLSCA.project(&deploy.Spec.Template, cm.Name)
 		// Deployment PodTemplates are defaulted by the API server on write. Keep
 		// the desired object in that same explicit form before CreateOrUpdate
 		// compares it and before managed mode content-addresses it. Otherwise the
