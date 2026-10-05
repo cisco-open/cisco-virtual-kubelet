@@ -434,6 +434,18 @@ func correlateInterruptedInstall(
 	if !found || len(locations) == 0 {
 		return time.Time{}, fmt.Errorf("IOS XE interrupted install locations are absent")
 	}
+	if sourceName == "gNOI_iosxe_.bin" {
+		// Repeated gNOI adds can leave this exact placeholder in IOS XE's
+		// version record. Resolve it only through that version's unique IMG
+		// package at every location; ordinary source mismatches stay rejected.
+		if image.State != lifecycle.InventoryStateInProgress || request.DeviceNotBefore.IsZero() || request.DeviceObservedAt.IsZero() {
+			return time.Time{}, fmt.Errorf("placeholder source requires in-progress inventory and native response clock")
+		}
+		sourceName, err = repeatedInstallSourceName(locations, image)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
 	for _, location := range locations {
 		if err := validateInterruptedInstallLocation(location, image.Version, sourceName, request.SourceSize); err != nil {
 			return time.Time{}, err
@@ -489,6 +501,46 @@ func correlateInterruptedInstall(
 			image.Version, len(matched), lifecycle.ErrAmbiguousOperation)
 	}
 	return matched[0], nil
+}
+
+// This does not repair or rewrite inventory. The resolved name still has to
+// pass verified size, package-state and exact recent-add correlation below.
+func repeatedInstallSourceName(locations []map[string]any, image lifecycle.InventoryImage) (string, error) {
+	if !path.IsAbs(image.SourcePath) || path.Clean(image.SourcePath) != image.SourcePath {
+		return "", fmt.Errorf("placeholder source has no canonical native directory")
+	}
+	want := "gNOI_iosxe_" + image.Version + ".bin"
+	for _, location := range locations {
+		versions, _, err := directNamedList(location, "install-version-info")
+		if err != nil {
+			return "", err
+		}
+		matches, images := 0, 0
+		for _, version := range versions {
+			entry := inventoryVersion{Version: stringField(version, "version"), VersionExtension: stringField(version, "version-extension")}
+			if entry.identity() != image.Version {
+				continue
+			}
+			matches++
+			packages, _, err := directNamedList(version, "install-package-state-info")
+			if err != nil {
+				return "", err
+			}
+			for _, pkg := range packages {
+				if stringField(pkg, "package-type") != "install-pkg-img" {
+					continue
+				}
+				images++
+				if stringField(pkg, "pkg-name") != want || stringField(pkg, "pkg-dir") != path.Dir(image.SourcePath) || stringField(pkg, "package-state") != "install-state-added" {
+					return "", fmt.Errorf("placeholder source does not bind the exact added IMG package")
+				}
+			}
+		}
+		if matches != 1 || images != 1 {
+			return "", fmt.Errorf("placeholder source requires one exact version and IMG package per location")
+		}
+	}
+	return want, nil
 }
 
 func validateInterruptedInstallLocation(location map[string]any, version, sourceName string, sourceSize int64) error {
