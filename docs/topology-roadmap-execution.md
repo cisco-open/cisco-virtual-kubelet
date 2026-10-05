@@ -1,14 +1,31 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **physical lab migration to `9229f755` is under qualification;
+Status: **physical retirement and fresh preparation/recovery passed through
+`dfe02ae4` without duplicate install or activation;
 complete-roadmap acceptance is still open**, 5 October 2026.
 The [current checkpoint and executable acceptance index](evidence/topology-2026-10-05/README.md)
 record every E/F acceptance row, the fresh read-only lab baseline and exact
 CI provenance. Preparation-recovery code in `f88afad1` is refined by
-receipt-bound IOS XE corroboration in `f4a64d5d`. Physical recovery and the
-wider gates remain open. New migration tests qualify more startup and retained
+receipt-bound IOS XE corroboration in `f4a64d5d`. The wider physical recovery
+matrix remains open. New migration tests qualify more startup and retained
 audit boundaries; they do not establish unrestricted rollback. See the
 [migration matrix](evidence/topology-2026-10-05/migration-startup-matrix.md).
+Live migration also exposed and repaired two historical settled-record
+compatibility errors (`bcde632a`, `79725f27`). A new physical PrepareOnly run
+passed preparation and cancellation, then exposed a missing optional-capability
+forwarder in the runtime driver wrapper; `b55157ce` repairs that integration.
+The replacement worker then recorded native invalidation proof with unchanged
+running OS and immutable receipt. This closes that specific defect, not the
+full drift/both-direction or final acceptance matrix. A fresh preparation then
+exposed IOS XE's repeated-add source placeholder; `dfe02ae4` fixes exact
+native correlation without replay. The fresh receipt was created and retired,
+the original OS remained committed, all scoped workers/Nodes/apps are Ready,
+and the ledger and device Lease are released. These are mixed-candidate
+recovery tests, not final same-candidate acceptance. HTTPS chain/IP verification
+also passed independently, but strict worker RESTCONF still needs a public-CA
+projection usable by both worker planes; network-only gNOI mounts are not a
+safe app-worker trust configuration.
+See the [live migration/recovery record](evidence/topology-2026-10-05/live-migration-and-recovery.md).
 Earlier follow-up evidence is in the
 [recovery record](evidence/topology-2026-10-02/preparation-recovery-followup.md).
 Start with the **Remaining completion plan** below. It supersedes the older
@@ -89,12 +106,12 @@ The coherent final-candidate run is documented separately in the
 
 ### Remaining completion plan
 
-**Review baseline:** clean branch `pr/johalley/tas-extentions` at `c024e040`;
+**Original review baseline (2 October):** clean branch `pr/johalley/tas-extentions` at `c024e040`;
 [PR #197](https://github.com/cisco-open/cisco-virtual-kubelet/pull/197) and
 [six successful CI checks](https://github.com/cisco-open/cisco-virtual-kubelet/actions/runs/37003807669)
-were re-read during this review. This update changes the plan only: it is not
-a new physical test or deployment. The latest runtime evidence remains
-`6f3686e9`. The complete roadmap is **not finished**. Some remaining work is
+were re-read during that review. Its runtime was `6f3686e9`; subsequent
+5 October deployment and qualification are recorded above, not attributed to
+that older review. The complete roadmap is **not finished**. Some remaining work is
 implementation/design, not simply waiting for external lab inputs.
 
 #### Rules for execution and closure
@@ -176,18 +193,18 @@ fixture/evidence prerequisites, not the later behavior tests.
 
 #### R1 — qualify compatibility and rollback before more API work
 
-**5 October live migration follow-up:** the matching two changed CRDs and
-Helm revision 158 deployed clean candidate `9229f755` to the manager and all
-six C9K workers. No activation was requested. The previous `6f3686e9` runtime
-is historical evidence, not the current deployment. New real-API tests prove
-outstanding claims, exact reservations and safety finalizers survive missing
-or replaced policy, cancellation and deletion across reconciler replacement;
-all 45 API tests pass. Live migration exposed repeated terminal-drain errors
-on older network-enabled campaigns whose immutable leaves predate
-`requireNetworkEvidence`. A narrow terminal-only compatibility fix validates
-the exact historical spec and settled outcome without relaxing live admission
-or rewriting audit; focused race tests pass. Redeployment and physical
-regression of that fix must precede the new PrepareOnly/retirement test.
+**5 October live migration follow-up:** Helm revisions 158–160 deployed
+`9229f755`, `bcde632a`, then `79725f27` with the matching CRDs/native policies.
+All six scoped C9K workers converged. No activation was requested. New real-API
+tests prove outstanding claims, exact reservations and safety finalizers survive
+missing/replaced policy, cancellation and deletion across reconciler replacement;
+all 45 API tests and the full race suite pass on `79725f27`. Two live historical
+spec-mismatch loops (settled terminal drains and empty settled tombstones) are
+fixed without rewriting audit or relaxing active admission. New physical
+preparation succeeded. Recovery then identified the runtime forwarding defect
+fixed by `b55157ce`; its normal manager-owned deployment preserves the same
+cancelled campaign, immutable receipt and recovery authority. See the
+[candidate-specific record](evidence/topology-2026-10-05/live-migration-and-recovery.md).
 
 Completed subtests in `bfb826f0`: exact released-manager rejection of newer
 protocols (Granted and Settled) and real-API stored neighbor migration from
@@ -254,6 +271,28 @@ frozen profile, with request/device-history correlation. A label-only topology
 or comparison against CVK's own derived counters cannot pass this stage.
 
 #### R3 — finish drift invalidation and staged recovery
+
+**5 October physical follow-up:** two preparations on `.103` reached exact
+17.18.02 validation while 17.18.03 stayed committed. Both were explicitly
+cancelled and natively retired with their original receipts/claims unchanged.
+The second survived an outstanding-install worker replacement and produced a
+fresh receipt without repeating the native add. Runtime fixes `b55157ce` and
+`dfe02ae4` are covered by the full race suite and all 45 real-API tests.
+These mixed-candidate runs close the discovered integration failures, not
+same-candidate final acceptance, removal/replacement or both-direction drift.
+See the [completed physical recovery evidence](evidence/topology-2026-10-05/live-migration-and-recovery.md#fresh-preparation-and-retirement-completed-without-replay).
+
+Before the next production-trust qualification, resolve public CA delivery to
+both app and network RESTCONF clients. The current device API has file paths,
+not a device-TLS Secret projection; the app worker correctly excludes gNOI
+trust/signing mounts. The existing `.103` HTTPS chain and IP SAN verify against
+its provisioned CA, but its workers still have the historical verification
+bypass. Any projection addition must expose **only public CA data**, preserve
+the two-account split, handle rotation/deletion/recreation with current worker
+revision fencing, reject invalid/missing CA or conflicting file/reference
+configuration, and cover real-API defaulting plus both worker startup paths.
+Do not solve this by exposing signer keys, bypassing admission or hand-editing
+manager-owned Pods. Then repeat strict-transport inventory and recovery.
 
 **5 October implementation follow-up (`f4a64d5d`):** receipt-bound native corroboration now
 addresses the normal IOS XE completed-add/`InProgress` combination without

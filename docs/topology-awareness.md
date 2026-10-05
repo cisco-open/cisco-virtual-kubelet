@@ -1680,7 +1680,12 @@ mutation outcomes.
 
 ### Abandoning an unused preparation
 
-This development-branch recovery contract is **not yet physically qualified**.
+This development-branch recovery contract has a
+[physical single-supervisor C9300 retirement result](evidence/topology-2026-10-05/live-migration-and-recovery.md#successful-native-recovery-after-replacement),
+including runtime replacement and immutable receipt preservation. It is **not
+full production qualification**: fresh re-preparation and no-replay recovery
+also passed in that follow-up, but image drift, both image directions and
+verified worker RESTCONF transport remain separate acceptance requirements.
 It applies only to a completed, settled `PrepareOnly` campaign that has never
 received `activationApproval`. It does not support dual-supervisor recovery,
 unresolved install/activation outcomes, or a running OS changed since preparation.
@@ -1761,8 +1766,12 @@ It requires the native response clock to map that original interval; the later
 recovery request does not extend the permitted history window. Missing,
 ambiguous, later or unresolved native activity keeps ownership held. This
 normalizes observation proof only; it does not modify device inventory or
-authorize image reuse/activation. Physical recovery qualification is still
-required for the release cohort. Do not force-edit status,
+authorize image reuse/activation. A repeated IOS XE add may leave the exact
+`gNOI_iosxe_.bin` source placeholder; corroboration additionally requires one
+exact version-bound, added IMG package at every location before applying the
+same size/history/clock checks. Arbitrary or absent filenames remain blocked.
+Full recovery qualification is still required for the release cohort, including
+verification of the separate RESTCONF server identity. Do not force-edit status,
 erase claims, remove finalizers, clear Leases, or delete packages to bypass it.
 The request and evidence are append-only; schema/runtime rollback must preserve
 them. Older writers that omit them are rejected by the current schema.
