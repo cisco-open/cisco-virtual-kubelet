@@ -117,8 +117,13 @@ jobs:
       - name: Unit tests
         run: go test -race -count=1 ./...
 
-      - name: gNOI lab runner safety tests (offline)
-        run: python3 -m unittest discover -s scripts/tests -p 'test_iosxe_gnoi_lab_cycle.py' -v
+      - name: gNOI lab runner and acceptance evidence safety tests (offline)
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+          # Validate the saved checkpoint, not full-roadmap completion or a
+          # claim that its older evidence qualifies this workflow's HEAD.
+          python3 scripts/validate-topology-acceptance.py \
+            docs/evidence/topology-2026-10-05/acceptance.json
 
       - name: Website lint, audit, build, and license gate
         working-directory: docs/website

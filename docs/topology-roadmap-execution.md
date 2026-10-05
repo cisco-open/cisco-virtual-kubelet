@@ -1,9 +1,12 @@
 # Topology roadmap: execution and acceptance plan
 
-Status: **physical runtime remains `6f3686e9`; preparation-recovery code is
-implemented in `f88afad1`; actual released-manager startup rejection and the
-website security repair are locally validated; remaining gates are listed
-explicitly below**, 4 October 2026. Current follow-up evidence is in the
+Status: **all six remote checks pass on `0067e363`; physical runtime remains
+`6f3686e9`; complete-roadmap acceptance is still open**, 5 October 2026.
+The [current checkpoint and executable acceptance index](evidence/topology-2026-10-05/README.md)
+record every E/F acceptance row, the fresh read-only lab baseline and exact
+CI provenance. Preparation-recovery code is implemented in `f88afad1`, but
+physical recovery, interrupted migration and the wider gates remain open.
+Earlier follow-up evidence is in the
 [recovery record](evidence/topology-2026-10-02/preparation-recovery-followup.md).
 Start with the **Remaining completion plan** below. It supersedes the older
 C0–C9 and N1–N5 action queues, not the E00–E13/F01–F13 acceptance definitions. The
@@ -116,6 +119,14 @@ implementation/design, not simply waiting for external lab inputs.
 
 #### R0 — establish an executable validation contract (first)
 
+**5 October update:** the offline acceptance validator and exhaustive 71-row
+candidate checkpoint now exist. CI runs its negative controls and all existing
+lab-runner safety tests (36 local tests pass, no skips). The checkpoint validator
+passes; `--require-complete` deliberately fails with open gates. This closes the
+missing accounting tool, not R0's remaining fixture, measurement-profile and
+full candidate-evidence requirements. See the
+[checkpoint procedure](evidence/topology-2026-10-05/README.md#executable-acceptance-accounting).
+
 Execution follow-up: [staged-protocol safety and app preflight](evidence/topology-2026-10-02/merge-readiness-followup.md).
 An actual released-worker compatibility hole was repaired and tested, but R1
 is not wholly closed. Fresh `.101` inventory shows USB-backed IOx, correcting
@@ -222,6 +233,17 @@ frozen profile, with request/device-history correlation. A label-only topology
 or comparison against CVK's own derived counters cannot pass this stage.
 
 #### R3 — finish drift invalidation and staged recovery
+
+**5 October implementation follow-up (`f4a64d5d`):** receipt-bound native corroboration now
+addresses the normal IOS XE completed-add/`InProgress` combination without
+accepting idle state alone. The original receipt interval, source size, exact
+target, added packages and native response clock must corroborate one completed
+add; later or unresolved activity still blocks. A minimized real inventory
+capture and synthetic positive/negative controls cover the adapter, while the
+worker passes immutable receipt fields without changing authorization or
+dispatching a write. This is not physical recovery qualification or closure of
+R3's removal/replacement, restart and both-direction acceptance gates.
+[Implementation and test evidence](evidence/topology-2026-10-05/receipt-bound-retirement.md).
 
 **4 October implementation update:** an append-only `preparationInvalidation`
 request, separate native `recover` permission, manager-owned receipt authority,

@@ -9,6 +9,11 @@ published with the branch.
 
 ## Candidate history
 
+The [5 October merge-gate checkpoint](../topology-2026-10-05/README.md) records
+all six passing checks on `0067e363`, a healthy read-only app/device baseline,
+and machine-checkable acceptance accounting. It does not turn this older
+physical evidence into qualification of the newer candidate.
+
 The [preparation recovery follow-up](preparation-recovery-followup.md) adds a
 separately authorized, native-proof-based way to abandon cancelled, unused
 preparations without altering their receipts or device software. Physical
