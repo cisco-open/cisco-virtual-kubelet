@@ -24,11 +24,11 @@ record (20 samples each, two requests per sample):
 
 | Campaign target slots | Fleet-read p50 | p95 | p99 |
 | --- | --- | --- | --- |
+| 1 | 40.96 ms | 49.64 ms | 50.39 ms |
 | 10 | 41.77 ms | 56.01 ms | 93.86 ms |
 | 50 | 41.98 ms | 55.17 ms | 62.12 ms |
 | 100 | 43.08 ms | 50.00 ms | 55.54 ms |
 
-The one-target case also passed; the raw log contains its measurements.
 Raw local logs: `/tmp/cvk-20261005-fleet-reads-before.log`,
 `/tmp/cvk-20261005-fleet-reads-after.log`,
 `/tmp/cvk-20261005-fleet-api.log`.

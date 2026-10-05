@@ -160,6 +160,41 @@ the exact compiled contract rejects older managers. The snapshot implementation
 still needs its own committed-candidate deployment and physical regression;
 the `dbdbb4e7` results above must not be relabelled as that later candidate.
 
+### Snapshot migration exposed native cleanup compatibility
+
+The snapshot fix was committed as `3d1ee490`. Its clean image has manifest
+`sha256:c71f50faac3c64ab7130133912ea79a534b65d407da7c9755ba027c03291191c`
+and Linux/amd64 config
+`sha256:9bf004fb66ccc1011bd27a1c243dbb432a27d6393d6d4ae8e08ff5e5226d7f30`.
+Helm revision 165 applied the new native contract. Normal policy-epoch rotation
+then stopped at the old `.103` Deployments' foreground deletion. The new CA
+validation also ran on native metadata/status updates and rejected the stored
+legacy Secret projection even though the native cleanup changed no PodTemplate.
+
+A server dry-run using the native garbage-collector account reproduced the
+exact public-CA validation denial. No live finalizer was removed. An initial
+dry-run using the controller-manager username failed at RBAC instead and is
+not counted as admission evidence. The two device application endpoints
+continued returning 200 in the ongoing probe samples; Node/worker migration
+had not completed and no software preparation was started on `3d1ee490`.
+
+The repair reuses the existing exact native foreground-cleanup, Deployment
+metadata and status predicates for the CA validation. Each predicate already
+requires the same UID and unchanged spec; garbage collection may remove only
+its own finalizer from an already-deleting object. New/changed direct Secret
+projections are still rejected. The disposable regression now stores an actual
+legacy direct-CA Deployment under the historical rule, restores the current
+rule, and exercises native foreground deletion of its Deployment/ReplicaSet/Pod.
+Its historical-rule setup is **only** in the owned test cluster, not a lab
+recovery procedure. The first harness attempt exposed asynchronous policy
+propagation during setup; bounded positive/negative dry-runs now establish
+which rule is active before asserting migration behavior.
+
+The exact rendered contract changes again, to
+`sha256:d84fd8de5299b5f010bf1df6732b7b8ee1d5e613846f862cb12987ce6ec3e52d`.
+Physical recovery must use the matching corrected manager/chart, leaving
+normal Kubernetes garbage collection and shared-account rotation in charge.
+
 The two existing device applications continued returning HTTP 200 in the
 sampled migration interval. That is not a forwarding or zero-loss guarantee.
 There was no image activation or reload in this migration. App worker identity

@@ -1452,6 +1452,7 @@ spec:
       message: only the topology manager, exact native Deployment controller, or namespace cleanup may mutate a Deployment that uses a reserved worker account
     - expression: >-
         request.operation == 'DELETE' ||
+        variables.nativeForegroundCleanup || variables.nativeDeploymentMetadata || variables.nativeDeploymentStatus ||
         !has(object.spec.template.spec.volumes) ||
         object.spec.template.spec.volumes.all(v, v.name != 'device-tls-ca' ||
           has(v.emptyDir) ||
