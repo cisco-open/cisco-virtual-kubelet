@@ -1,5 +1,12 @@
 # November topology roadmap handoff
 
+**5 October update:** the owner has approved an incremental merge boundary.
+Read the [current PR scope](topology-merge-scope.md) before the historical
+checkpoint below. Remaining R0–R9 work is future roadmap, not a prerequisite
+for this bounded merge; its implementation and physical acceptance tests are
+preserved in the [execution plan](topology-roadmap-execution.md#remaining-completion-plan).
+No release date or full-roadmap completion is implied by that decision.
+
 Checkpoint date: **2 October 2026**. Continue on
 **`pr/johalley/tas-extentions`**. This is a saved development checkpoint for
 November release work, **not a merge recommendation or completed roadmap**.

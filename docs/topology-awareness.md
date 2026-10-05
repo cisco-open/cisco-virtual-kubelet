@@ -8,8 +8,8 @@ ValidatingAdmissionPolicy, ConfigMaps, Leases, the Eviction/PDB APIs, status
 conditions, Events, and the default kube-scheduler. It installs no alternate
 scheduler, scheduling plugin, webhook, or third-party topology controller.
 
-The implementation covers roadmap Phases 0–2, the first evidence-backed part
-of Phase 3, and one deliberately narrow Phase 4 slice:
+The current development branch extends the managed-topology foundation with
+the [bounded PR #197 scope](topology-merge-scope.md). It includes:
 
 - correct Node identity, ownership, topology projection, capacity, and
   maintenance fencing;
@@ -20,12 +20,16 @@ of Phase 3, and one deliberately narrow Phase 4 slice:
   artifact endpoints, with a concrete endpoint and Secret UID frozen per
   target; and
 - a disabled-by-default, native Eviction/PDB-aware drain for an explicitly
-  marked subset of ReplicaSet-backed workloads.
+  marked subset of ReplicaSet-backed workloads;
+- IOS-XE install-only preparation with immutable receipts, retained ownership,
+  separately approved activation and narrowly authorized receipt retirement;
+- manager-accepted network evidence, claim-time and recovery gates,
+  administrator risk protections and worker byte pacing; and
+- read-only accepted graph diagnostics and measured worker-local distribution.
 
-Later roadmap work is not hidden behind incomplete API fields. Durable
-prefetch/cache optimization, broader workload drain support, independently
-durable stage/activate, an observed graph API, mandatory native TAS, and a
-public multi-driver rollout API remain separate, evidence-gated work. See
+Broader physical service/path qualification, persistent shared-cache
+optimization, grouped workload drain, multi-platform lifecycle and
+cross-cluster transfer remain separate, evidence-gated work. See
 [Deferred roadmap](#deferred-roadmap-and-limitations).
 
 !!! warning
@@ -33,9 +37,12 @@ public multi-driver rollout API remain separate, evidence-gated work. See
     Managed topology changes a cluster security and Node-writer boundary. It
     is disabled by default. Do not enable it on a production fleet until the
     admission probes, migration checks, secure gNOI path, and rollback
-    procedure in this guide have passed on that cluster. Workload drain is an
-    additional pre-release capability and has not been qualified on physical
-    IOS-XE hardware by this change.
+    procedure in this guide have passed on that cluster. Staged/recovery
+    extensions and workload drain remain controlled-evaluation capabilities
+    within the documented cohort. A bounded physical voluntary drain and
+    receipt-retirement test passed; the complete application/service-through-
+    reload and rollback matrices remain unqualified. See the
+    [scope and evidence](topology-merge-scope.md).
 
 ## Architecture and ownership
 
@@ -2010,17 +2017,22 @@ redundancy, service health, bandwidth headroom or permission to upgrade.
 The [remaining implementation roadmap](topology-roadmap.md) maps these gaps
 to PR slices, ownership boundaries, dependencies and qualification gates. The
 [execution plan](topology-roadmap-execution.md) records outstanding code and
-test work. The current code includes a partial T1/T2 evidence gate, a bounded
+test work. Under the [explicit merge-scope decision](topology-merge-scope.md),
+the remaining R0–R9 qualification is future work, not a prerequisite for
+merging this bounded increment. The current code includes a T1/T2 evidence gate
+with outstanding independent forwarding/load qualification, a bounded
 ReplicaSet/Deployment drain path with partial physical evidence, ephemeral
 digest-addressed worker-local image caching, an optional Kubernetes 1.37
 native-TAS conformance lane, and a NoReboot strategy mapping. Independent
 prepare/approval/activate semantics are implemented with physical evidence for
-the tested IOS-XE cohort; image invalidation/recovery and the complete combined
-service-continuity matrix remain open. Read-only graph comparison and
+the tested IOS-XE cohort. Narrow observation-only retirement of eligible
+cancelled preparation is implemented and physically exercised; broader image
+drift/invalidation recovery and the complete combined service-continuity
+matrix remain open. Read-only graph comparison and
 manager-owned persisted diagnostics passed the recorded controlled
 link-change/restore qualification. Graphs do not establish independent
 forwarding-path safety. The wider roadmap is not complete; use the
-[current evidence index](evidence/topology-2026-10-02/README.md) rather than
+[revision-specific evidence table](topology-merge-scope.md#evidence-supporting-this-increment) rather than
 inferring untested acceptance from feature availability.
 
 To opt into the network gate, require complete evidence and name the exact
@@ -2068,10 +2080,10 @@ The following remain intentionally bounded or deferred:
   per-worker cache is digest-addressed and fail-closed; shared caching still
   requires measured WAN benefit and a separate ownership protocol;
 - general-purpose drain, StatefulSet/PVC/DaemonSet/Job/custom-controller
-  evacuation, forced deletion or PDB bypass, and independently approved
-  activation. The implemented path is limited to ReplicaSet/Deployment owners
+  evacuation, forced deletion, PDB bypass or native grouped drain.
+  The implemented path is limited to ReplicaSet/Deployment owners
   with portable workloads and PDB-aware eviction; complete physical service
-  qualification and hard-placement support require E07;
+  qualification and the broader hard-placement matrix require E07;
 - an authoritative discovered graph, graph-cost workload scheduling, a custom
   scheduler, or automatic declared-topology mutation;
 - a mandatory dependency on alpha native Workload/PodGroup/TAS APIs. Native

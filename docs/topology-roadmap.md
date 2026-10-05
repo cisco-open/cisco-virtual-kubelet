@@ -1,5 +1,12 @@
 # Topology awareness: remaining implementation roadmap
 
+**5 October scope decision:** remaining roadmap items are explicitly deferred
+to future work under the [bounded PR #197 merge scope](topology-merge-scope.md).
+They are no longer prerequisites for merging this increment. Their tests and
+acceptance criteria remain required before claiming full-roadmap completion
+or broader production support. The dated status below is historical; use the
+merge-scope evidence table for newer results and R0–R9 for future execution.
+
 Status: **incomplete only where explicitly listed below; physical runtime
 evidence reviewed through `6f3686e9` and test-boundary fixes through
 `c1680a7b`**, 2 October 2026.

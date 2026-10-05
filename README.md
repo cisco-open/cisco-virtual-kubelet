@@ -38,6 +38,11 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 See [Production Readiness](docs/production-readiness.md) for the current NX-OS runtime-parity scope and hardening roadmap.
 See [Managed Topology and Rollouts](docs/topology-awareness.md) before enabling
 the Kubernetes 1.35+ manager-owned Node and IOS-XE campaign trust boundary.
+This development branch extends that foundation with staged IOS-XE activation,
+accepted network evidence, diagnostic graphs and bounded drain/recovery
+hardening. See [PR #197 scope and future work](docs/topology-merge-scope.md)
+for the tested cohort, opt-in safeguards and remaining qualification. These
+additions are not part of the historical October feature table below.
 See the [October 2026 release candidate notes](docs/releases/v2026.10.0.md)
 for the release scope, gates, compatibility boundary, and deferred roadmap.
 

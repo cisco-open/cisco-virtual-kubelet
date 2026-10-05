@@ -6,6 +6,11 @@ App-Hosting capabilities.
 
 **Make your network infrastructure a first-class Kubernetes citizen.**
 
+For the current development branch's staged IOS-XE rollout extensions, read
+the [bounded PR scope](topology-merge-scope.md). It distinguishes implemented
+features and recorded lab evidence from future production qualification;
+the complete topology roadmap is not yet finished.
+
 ## Concepts at a glance
 
 Four ideas you'll see referenced throughout the docs:

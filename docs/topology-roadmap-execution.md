@@ -1,5 +1,14 @@
 # Topology roadmap: execution and acceptance plan
 
+**5 October scope decision:** the project owner approved deferring the
+unfinished R0–R9 work to the future roadmap. The
+[bounded PR #197 merge scope](topology-merge-scope.md) now defines merge
+prerequisites; this document continues to define complete-roadmap acceptance.
+Historical "merge gaps" below describe the former full-roadmap objective,
+not additional blockers for the bounded increment. No test result is waived
+or relabelled, and a known defect in an included safety contract still blocks
+merge. Required CI and human review remain current merge gates.
+
 Status: **physical retirement and fresh preparation/recovery passed through
 `bed27185`; subsequent physical drain-receipt retirement passed on `079f6b4f`
 without duplicate install or activation;
@@ -112,6 +121,12 @@ The coherent final-candidate run is documented separately in the
 [E13 physical matrix](evidence/topology-2026-10-02/e13-final-candidate-physical-matrix.md).
 
 ### Remaining completion plan
+
+**Future roadmap backlog:** execute these packages before expanding the
+qualification boundary or declaring full completion. The owner's 5 October
+deferral separates them from the [current merge checklist](topology-merge-scope.md#bounded-merge-checklist);
+it does not remove implementation work, change the 71-row historical
+checkpoint, or turn untested scenarios into supported behavior.
 
 **Original review baseline (2 October):** clean branch `pr/johalley/tas-extentions` at `c024e040`;
 [PR #197](https://github.com/cisco-open/cisco-virtual-kubelet/pull/197) and
