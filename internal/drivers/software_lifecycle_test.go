@@ -18,6 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -156,6 +158,140 @@ func TestDynamicSoftwareLifecyclePreservesUnsupportedTransportClassification(t *
 	}
 	if _, err := backend.Inspect(context.Background(), "17.18.04"); !errors.Is(err, softwarelifecycle.ErrUnsupported) {
 		t.Fatalf("Inspect error = %v, want ErrUnsupported", err)
+	}
+}
+
+type retirementBackendStub struct {
+	lifecycleBackendStub
+	observe func(context.Context, softwarelifecycle.PreparationRetirementRequest) (softwarelifecycle.PreparationRetirementObservation, error)
+}
+
+func (s retirementBackendStub) ObservePreparationRetirement(ctx context.Context, request softwarelifecycle.PreparationRetirementRequest) (softwarelifecycle.PreparationRetirementObservation, error) {
+	return s.observe(ctx, request)
+}
+
+// Exercise the same lazy factory boundary used by config_reconciler, not just
+// the adapter directly. Optional capabilities must survive that wrapper and
+// continue using the current transport after deferred connection recovery.
+func TestDynamicSoftwareLifecyclePreparationRetirement(t *testing.T) {
+	kind := lifecycleTestKind("test-retirement")
+	provider := &lifecycleTransportProvider{}
+	var selected softwarelifecycle.Backend = lifecycleBackendStub{}
+	var factoryErr error
+	var calls int
+	RegisterSoftwareLifecycle(kind, func(tr transport.Interface) (softwarelifecycle.Backend, error) {
+		calls++
+		if tr != provider.current {
+			t.Fatal("retirement used a stale transport")
+		}
+		return selected, factoryErr
+	}, func(string) error { return nil })
+	backend, err := NewSoftwareLifecycle(kind, provider)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observer, ok := backend.(softwarelifecycle.PreparationRetirementObserver)
+	if !ok {
+		t.Fatal("runtime lifecycle wrapper drops preparation retirement capability")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	request := softwarelifecycle.PreparationRetirementRequest{
+		TargetVersion: "17.18.02", RunningVersion: "17.18.03", SourceSize: 1247897709,
+		InstallStartedAt: time.Now().Add(-time.Minute), PreparedAt: time.Now(),
+	}
+	if _, err := observer.ObservePreparationRetirement(ctx, request); err == nil || calls != 0 {
+		t.Fatalf("missing transport did not fail before factory: calls=%d err=%v", calls, err)
+	}
+	provider.current = &lifecycleTransportStub{kind: transport.KindRESTCONF}
+	if _, err := observer.ObservePreparationRetirement(ctx, request); !errors.Is(err, softwarelifecycle.ErrUnsupported) {
+		t.Fatalf("unsupported retirement error = %v", err)
+	}
+	want := softwarelifecycle.PreparationRetirementObservation{TargetState: softwarelifecycle.InventoryStateInstalled, EvidenceHash: "native-proof"}
+	proofErr := errors.New("native proof unavailable")
+	var observationErr error
+	selected = retirementBackendStub{observe: func(gotCtx context.Context, got softwarelifecycle.PreparationRetirementRequest) (softwarelifecycle.PreparationRetirementObservation, error) {
+		if gotCtx != ctx || !reflect.DeepEqual(got, request) {
+			t.Fatal("receipt interval, context or request changed in forwarding")
+		}
+		return want, observationErr
+	}}
+	for _, nextErr := range []error{nil, proofErr, context.Canceled} {
+		provider.current = &lifecycleTransportStub{kind: transport.KindRESTCONF}
+		observationErr = nextErr
+		if nextErr == context.Canceled {
+			cancel()
+		}
+		got, err := observer.ObservePreparationRetirement(ctx, request)
+		if !reflect.DeepEqual(got, want) || !errors.Is(err, nextErr) {
+			t.Fatalf("observation=%+v err=%v, want %+v/%v", got, err, want, nextErr)
+		}
+	}
+	factoryErr = errors.New("factory failed")
+	if _, err := observer.ObservePreparationRetirement(ctx, request); !errors.Is(err, factoryErr) {
+		t.Fatalf("factory error lost: %v", err)
+	}
+	selected, factoryErr = nil, nil
+	if _, err := observer.ObservePreparationRetirement(ctx, request); err == nil {
+		t.Fatal("nil backend accepted")
+	}
+}
+
+type retirementReadTransport struct {
+	lifecycleTransportStub
+	t     *testing.T
+	raw   []byte
+	reads int
+}
+
+func (s *retirementReadTransport) Fetch(_ context.Context, path string) ([]byte, error) {
+	s.t.Helper()
+	if !strings.Contains(path, "Cisco-IOS-XE-install-oper:install-oper-data") {
+		s.t.Fatalf("unexpected retirement read: %s", path)
+	}
+	s.reads++
+	return s.raw, nil
+}
+
+func (s *retirementReadTransport) StartTransaction(context.Context) (transport.TxHandle, error) {
+	s.t.Fatal("retirement opened a mutation transaction")
+	return "", errors.New("unexpected mutation")
+}
+
+func (s *retirementReadTransport) Mutate(context.Context, transport.TxHandle, []transport.Op) error {
+	s.t.Fatal("retirement submitted a device mutation")
+	return errors.New("unexpected mutation")
+}
+
+func TestDynamicSoftwareLifecycleIOSXERetirement(t *testing.T) {
+	kind := lifecycleTestKind("test-iosxe-retirement")
+	RegisterSoftwareLifecycle(kind, func(tr transport.Interface) (softwarelifecycle.Backend, error) {
+		return iosxelifecycle.New(tr)
+	}, iosxelifecycle.ValidateDevicePath)
+	const inventory = `{"install-location-information":[{"oper-state":{"sys-activity":"install-no-activity"},"install-version-info":[{"version":"17.18.03","current":"install-version-state-provisioned-committed"},{"version":"17.18.02","current":"install-version-state-installed"}]}]}`
+	provider := &lifecycleTransportProvider{}
+	backend, err := NewSoftwareLifecycle(kind, provider)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observer, ok := backend.(softwarelifecycle.PreparationRetirementObserver)
+	if !ok {
+		t.Fatal("runtime wrapper hides real IOS XE retirement observer")
+	}
+	for _, healthy := range []bool{true, false} {
+		raw := inventory
+		if !healthy {
+			raw = strings.ReplaceAll(raw, "install-no-activity", "install-add")
+		}
+		tr := &retirementReadTransport{lifecycleTransportStub: lifecycleTransportStub{kind: transport.KindRESTCONF}, t: t, raw: []byte(raw)}
+		provider.current = tr
+		got, err := observer.ObservePreparationRetirement(context.Background(), softwarelifecycle.PreparationRetirementRequest{TargetVersion: "17.18.02", RunningVersion: "17.18.03"})
+		if (err == nil) != healthy || tr.reads != 1 {
+			t.Fatalf("healthy=%v reads=%d result=%+v error=%v", healthy, tr.reads, got, err)
+		}
+		if healthy && (got.TargetState != softwarelifecycle.InventoryStateInstalled || len(got.EvidenceHash) != 71) {
+			t.Fatalf("native proof not forwarded: %+v", got)
+		}
 	}
 }
 
