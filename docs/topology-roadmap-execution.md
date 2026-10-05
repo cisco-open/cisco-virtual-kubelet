@@ -249,6 +249,15 @@ Publish the exact supported upgrade/rollback order and negative-test outputs.
 
 #### R2 — qualify measured network protection on real forwarding paths
 
+**5 October discovery:** the two running nginx fixtures attach to
+`mgmt-bridge100`, confirmed by native app detail. Their stable-Service HTTP
+result is not front-panel forwarding evidence. Read-only interface/CDP captures
+map `.100`–`.101` on Gi1/0/1 and `.100`–`.103` on Gi1/0/23; other active ports
+and outside links do not establish a safe alternate-path fixture. Before load
+or fault injection, identify isolated data-plane endpoints/ports and calibrate
+the independent measurements. Do not stress the shared management network.
+See [discovery and limitations](evidence/topology-2026-10-05/bed27185-physical-validation.md#read-only-forwarding-fixture-discovery).
+
 **Scope:** E02-A–C, E03-C–F, F01–F03; IOS-XE observation adapter,
 `internal/topologyhealth`, `internal/topologyrollout`, manager/worker grants.
 Requires R0 path/calibration inputs and R1's safe deployment sequence.

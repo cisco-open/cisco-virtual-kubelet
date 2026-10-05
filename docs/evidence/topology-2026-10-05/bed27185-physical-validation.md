@@ -151,6 +151,32 @@ installer history still has the exact post-preparation hash above.
 The stable Service kept both existing `.100`/`.101` workloads observable during
 these `.103` trust faults. It is not a transit-forwarding or redundant-path test.
 
+## Read-only forwarding-fixture discovery
+
+After recovery, ten read-only Cisco commands per authorized switch captured
+interfaces, VLANs, trunks, routes and CDP neighbors. Follow-up app detail on
+`.100` and `.101` confirms both current containers attach `eth0` to
+**`mgmt-bridge100`**, with their DHCP addresses in the management subnet.
+The management interfaces are in `Mgmt-vrf`, attached to a shared outside
+switch. These successful HTTP probes are therefore not front-panel forwarding,
+alternate-path, oversubscription or independently calibrated link-rate evidence.
+
+Observed authorized front-panel adjacencies are `.100` ↔ `.101` on Gi1/0/1
+and `.100` ↔ `.103` on Gi1/0/23. No direct `.101` ↔ `.103` adjacency was found
+in these CDP captures. `.101` also has two active 10-Gigabit ports without
+CDP mapping in this capture; default interface configuration does not establish
+their remote endpoints or that they are safe test ports. The `.100` switch
+also has links to outside switches. CDP absence is not proof of physical
+absence, and none of those outside devices was accessed or changed.
+
+The next forwarding prerequisite is an explicitly isolated data-plane fixture:
+known ingress/egress endpoints and ports/VLANs, a verified alternate path and
+capacity, a safe fault point, independent generator/receiver calibration and
+fixed tolerances. Do not saturate the shared management network or relabel its
+HTTP success as R2 qualification. Raw read-only captures are
+`/tmp/cvk-20261005-path-{100,101,103}.jsonl` and
+`/tmp/cvk-20261005-app-path-{100,101}.jsonl`; they remain local.
+
 ## Validation scope
 
 Before this deployment: full uncached race suite (61 packages), all 47 pinned
