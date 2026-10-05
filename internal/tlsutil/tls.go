@@ -28,6 +28,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -64,9 +65,9 @@ const (
 //   - If exactly one of certFile/keyFile is present, an error is returned;
 //     this typically indicates a partial or misconfigured Secret mount.
 //
-// deviceAddr is added as a Subject Alternative Name when generating a
+// servingAddrs are added as Subject Alternative Names when generating a
 // self-signed certificate so that both local and remote health checks pass.
-func EnsureTLSConfig(certFile, keyFile, genCertFile, genKeyFile, deviceAddr string) (*tls.Config, error) {
+func EnsureTLSConfig(certFile, keyFile, genCertFile, genKeyFile string, servingAddrs ...string) (*tls.Config, error) {
 	certExists := fileExists(certFile)
 	keyExists := fileExists(keyFile)
 
@@ -74,7 +75,7 @@ func EnsureTLSConfig(certFile, keyFile, genCertFile, genKeyFile, deviceAddr stri
 	case certExists && keyExists:
 		return loadTLSConfig(certFile, keyFile)
 	case !certExists && !keyExists:
-		return generateAndWrite(genCertFile, genKeyFile, deviceAddr)
+		return generateAndWrite(genCertFile, genKeyFile, servingAddrs...)
 	default:
 		return nil, fmt.Errorf(
 			"tls misconfiguration: only one of %q / %q is present; provide both or neither",
@@ -99,7 +100,7 @@ func loadTLSConfig(certFile, keyFile string) (*tls.Config, error) {
 	}, nil
 }
 
-func generateAndWrite(certFile, keyFile, deviceAddr string) (*tls.Config, error) {
+func generateAndWrite(certFile, keyFile string, servingAddrs ...string) (*tls.Config, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("generate ECDSA key: %w", err)
@@ -125,10 +126,16 @@ func generateAndWrite(certFile, keyFile, deviceAddr string) (*tls.Config, error)
 		DNSNames:              []string{"localhost"},
 	}
 
-	if ip := net.ParseIP(deviceAddr); ip != nil {
-		tmpl.IPAddresses = append(tmpl.IPAddresses, ip)
-	} else if deviceAddr != "" {
-		tmpl.DNSNames = append(tmpl.DNSNames, deviceAddr)
+	for _, address := range servingAddrs {
+		address = strings.TrimSpace(address)
+		if address == "" {
+			continue
+		}
+		if ip := net.ParseIP(address); ip != nil {
+			tmpl.IPAddresses = append(tmpl.IPAddresses, ip)
+		} else {
+			tmpl.DNSNames = append(tmpl.DNSNames, address)
+		}
 	}
 
 	certDER, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)

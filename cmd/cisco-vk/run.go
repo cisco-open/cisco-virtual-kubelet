@@ -88,14 +88,15 @@ const (
 	envEnableWriteClassGNOI       = "CISCO_VK_ENABLE_WRITE_CLASS_GNOI"
 	envEnableIOSXESoftwareUpgrade = "CISCO_VK_ENABLE_IOSXE_SOFTWARE_UPGRADE"
 
-	envDeviceNamespace = managedprotocol.EnvDeviceNamespace
-	envDeviceName      = managedprotocol.EnvDeviceName
-	envDeviceUID       = managedprotocol.EnvDeviceUID
-	envNodeName        = managedprotocol.EnvNodeName
-	envManagedTopology = managedprotocol.EnvManagedTopology
-	envWorkerRevision  = managedprotocol.EnvWorkerRevision
-	envWorkerPodUID    = "POD_UID"
-	legacyEnvNodeName  = "VKUBELET_NODE_NAME"
+	envDeviceNamespace   = managedprotocol.EnvDeviceNamespace
+	envDeviceName        = managedprotocol.EnvDeviceName
+	envDeviceUID         = managedprotocol.EnvDeviceUID
+	envNodeName          = managedprotocol.EnvNodeName
+	envManagedTopology   = managedprotocol.EnvManagedTopology
+	envWorkerRevision    = managedprotocol.EnvWorkerRevision
+	envWorkerPodUID      = "POD_UID"
+	envKubeletInternalIP = "CISCO_VK_KUBELET_INTERNAL_IP"
+	legacyEnvNodeName    = "VKUBELET_NODE_NAME"
 )
 
 // workerRuntimeIdentity keeps namespaced CiscoDevice identity separate from
@@ -512,7 +513,9 @@ func runVirtualKubelet(cmd *cobra.Command, args []string) error {
 	if keyFile == "" {
 		keyFile = tlsutil.DefaultKeyFile
 	}
-	tlsCfg, err := tlsutil.EnsureTLSConfig(certFile, keyFile, tlsutil.DefaultGenCertFile, tlsutil.DefaultGenKeyFile, appCfg.Device.Address)
+	tlsCfg, err := tlsutil.EnsureTLSConfig(certFile, keyFile,
+		tlsutil.DefaultGenCertFile, tlsutil.DefaultGenKeyFile,
+		appCfg.Device.Address, os.Getenv(envKubeletInternalIP))
 	if err != nil {
 		return fmt.Errorf("failed to configure kubelet TLS: %w", err)
 	}
