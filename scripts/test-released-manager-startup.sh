@@ -172,8 +172,18 @@ for stage in pre-ca direct-ca; do
 done
 
 # Reuse the same isolated binary container layout for the exact current source.
+candidate_revision=$(git -C "$root" rev-parse HEAD)
+candidate_worktree=clean
+if [ -n "$(git -C "$root" status --porcelain)" ]; then
+  candidate_worktree=dirty
+fi
 (cd "$root" && CGO_ENABLED=0 GOOS=linux GOARCH="$architecture" \
   go build -mod=readonly -trimpath -buildvcs=false -o "$work/image/october-manager" ./cmd/cisco-vk)
+if command -v sha256sum >/dev/null 2>&1; then
+  candidate_binary_sha256=$(sha256sum "$work/image/october-manager" | awk '{print $1}')
+else
+  candidate_binary_sha256=$(shasum -a 256 "$work/image/october-manager" | awk '{print $1}')
+fi
 current_image="cvk-candidate-startup:probe-$$"
 docker build --platform "linux/$architecture" -t "$current_image" \
   -f "$root/scripts/testdata/released-manager.Dockerfile" "$work/image" >"$work/current-image-build.log" 2>&1
@@ -227,6 +237,9 @@ run_probe candidate-restart "$current_image" Running
 cmp "$work/candidate-restart-authority-before.json" "$work/candidate-restart-authority-after.json"
 jq -e '[.items[] | select(.data["ledger.json"] != null) | .data["ledger.json"] | fromjson | .reservations | length] == [0]' \
   "$work/candidate-restart-authority-after.json" >/dev/null
-printf 'PASS: released=%s lab=%s pre-ca=%s direct-ca=%s candidate=%s startup/interrupted-policy/restart matrix; evidence %s\n' \
-  "$baseline" "$lab_baseline" "$pre_ca_baseline" "$direct_ca_baseline" "$(git -C "$root" rev-parse HEAD)" "$work"
+# Do not misattribute an uncommitted source build to HEAD, or a changed HEAD at
+# the end of a long test to the source used earlier. The binary digest identifies
+# what actually ran even for explicitly labelled development-tree tests.
+printf 'PASS: released=%s lab=%s pre-ca=%s direct-ca=%s candidate-base=%s worktree=%s binary-sha256=%s startup/interrupted-policy/restart matrix; evidence %s\n' \
+  "$baseline" "$lab_baseline" "$pre_ca_baseline" "$direct_ca_baseline" "$candidate_revision" "$candidate_worktree" "$candidate_binary_sha256" "$work"
 # The parent suite owns and removes the exact disposable cluster and this Pod.

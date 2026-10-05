@@ -1,7 +1,8 @@
 # Topology roadmap: execution and acceptance plan
 
 Status: **physical retirement and fresh preparation/recovery passed through
-`bed27185` without duplicate install or activation;
+`bed27185`; subsequent physical drain-receipt retirement passed on `079f6b4f`
+without duplicate install or activation;
 complete-roadmap acceptance is still open**, 5 October 2026.
 The [current checkpoint and executable acceptance index](evidence/topology-2026-10-05/README.md)
 record every E/F acceptance row, the fresh read-only lab baseline and exact
@@ -383,6 +384,16 @@ or actual upgrade/downgrade continuity. Subsequent cancellation exposed a
 settled-drain retirement authority mismatch; the correction preserves the
 original drain audit and needs exact-candidate physical recovery testing.
 See [drain and retirement evidence](evidence/topology-2026-10-05/settled-drain-retirement.md).
+
+**Completed recovery follow-up:** clean `079f6b4f` converged all six workers on
+Helm revision 167. The original pending request retired at 10:32:45 UTC with
+byte-identical receipt/claims/drain/control/admission and unchanged native
+installer history. The worker acknowledged the original control revision 0
+under its new binding. Reservations and device mutation Leases are released;
+manager restart retained the proof and all Nodes are Ready/uncordoned.
+Direct operator deletion of a reserved worker Pod was denied, not bypassed.
+The no-reload drain was on `bed27185`, so this is mixed-version recovery,
+not final same-candidate R4/R9 acceptance. The wider tests below remain open.
 
 **4 October fixture update:** a retry of the existing second Deployment now
 successfully installs, activates and runs on the previously failing C9K. Both
