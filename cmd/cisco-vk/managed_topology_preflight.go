@@ -90,9 +90,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"managed-node": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
-		matchConditions: []string{"managed-node"}, variables: []string{"nativeNodeLifecycle", "manager", "oldManaged", "managerLegacyHandoff", "managerReleasedLegacyNodeUpdate", "legacyHandoffMarkerPreserved", "managerFunctionalWorkerBinding"}, validations: 5, coreTyped: true,
-		requiredFragments: []string{"worker-username", "app-worker-username", "network-worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "managerReleasedLegacyNodeUpdate", "legacy-handoff", "oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==", "oldObject.metadata.uid", "topology.cisco.vk/uninitialized", "t.effect == 'NoSchedule'", "oldObject.spec.taints.filter", "projected-keys", "managed-taints"},
-		digest:            "sha256:5d59b86010277307c9821769347b8a46e58696d0002eb3f7e92bbab5a31d2d34",
+		matchConditions: []string{"managed-node"}, variables: []string{"nativeNodeLifecycle", "manager", "oldManaged", "managerLegacyHandoff", "managerUIDBoundLegacyNodeUpdate", "legacyHandoffMarkerPreserved", "managerFunctionalWorkerBinding"}, validations: 5, coreTyped: true,
+		requiredFragments: []string{"worker-username", "app-worker-username", "network-worker-username", "request.subResource == 'status'", "object.spec == oldObject.spec", "node-uid", "device-uid", "worker-protocol", "worker-observed-revision", "last-applied-node-status", "managerLegacyHandoff", "managerUIDBoundLegacyNodeUpdate", "legacy-handoff", "oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==", "oldObject.metadata.uid", "topology.cisco.vk/uninitialized", "t.effect == 'NoSchedule'", "oldObject.spec.taints.filter", "projected-keys", "managed-taints"},
+		digest:            "sha256:384e1d61eff5f86e6c6aa2b25088a57c740a575049b3c4078880466ead2beeb9",
 	},
 	"legacy-node-marker": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
@@ -128,18 +128,18 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"managed-device": {
 		apiGroups: []string{"cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"ciscodevices", "ciscodevices/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		variables:         []string{"manager", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations", "newDrainCordonHold", "oldDrainCordonHold"},
-		validations:       14,
-		requiredFragments: []string{"drain-cordon-hold", "check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "SharedWriterPending", "healthObservation", "workerRevision", "networkWorkerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "cisco.vk/device-cleanup", "oldObject.status.legacyHandoff.phase == 'Complete'"},
-		digest:            "sha256:351c7b22f077b3fe1b345ee0407680ec9b730d26bc5fbe8ac9ae63c016698777",
+		variables:         []string{"manager", "networkWorker", "networkObservationOnly", "networkObservationPodUIDs", "newProtectedLabels", "oldProtectedLabels", "newProtectedAnnotations", "oldProtectedAnnotations", "newDrainCordonHold", "oldDrainCordonHold"},
+		validations:       16,
+		requiredFragments: []string{"drain-cordon-hold", "check('topology')", "nodeIdentity", "topologyProjection", "topologyLock", "maintenanceSession", "distribution.cisco.vk/", "request-legacy-handoff", "isolated-legacy-worker", "legacyHandoff", "SharedWriterPending", "healthObservation", "acceptedNetwork", "networkObservationOnly", "networkObservationPodUIDs", "authentication.kubernetes.io/pod-uid", "sampleSequence", "collectionEndedAt", "podReadyTime", "workerRevision", "networkWorkerRevision", "request.subResource", "object.spec == oldObject.spec", "object.spec.labels == oldObject.spec.labels", "object.spec.taints == oldObject.spec.taints", "object.spec.maxPods", "object.spec.maxPods <= 110", "ownerReferences", "finalizers", "cisco.vk/device-cleanup", "oldObject.status.legacyHandoff.phase == 'Complete'"},
+		digest:            "sha256:903a1107c26b4170a9faf8c0910afe7add9a39e09b6cc497cba84dce098ebde0",
 	},
 	"managed-rollout": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwarerollouts", "iosxesoftwarerollouts/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		variables:         []string{"manager"},
-		validations:       6,
-		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "check('control')", "request.subResource != 'status'", "spec.control.revision == 0"},
-		digest:            "sha256:d9dd48735236cddeb73385993cafc67da0cb5177cd9e2482c056b4472665e0f4",
+		validations:       9,
+		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "activationApproval.receipts", "check('activate')", "check('control')", "check('recover')", "preparationInvalidation", "request.subResource != 'status'", "spec.control.revision == 0"},
+		digest:            "sha256:8df8e50f1d5cb91d69c7e10ee2685a06557d5aa82d0d419daa88e073c1e57844",
 	},
 	"managed-upgrade-leaf": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
@@ -147,8 +147,8 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		matchConditions:   []string{"managed-leaf"},
 		variables:         []string{"manager", "appDrainWriter", "oldClaims", "newClaims", "managerFunctionalWorkerBinding"},
 		validations:       8,
-		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:b20d64d81c79a07900f62927c2420feb9cc489fb463763a3989ffc48bf8d2bdf",
+		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "preparedReceipt", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
+		digest:            "sha256:80cedca07e67a45caa10fdedc9aaa174e39825b342af5d44b69a1334f6a6101a",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
@@ -261,9 +261,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 	"shared-worker-deployment": {
 		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"deployments", "deployments/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
-		matchConditions: []string{"reserved-worker-account"}, variables: []string{"nativeForegroundCleanup", "manager", "namespaceCleanup", "nativeDeploymentMetadata", "nativeDeploymentStatus"}, validations: 1, coreTyped: true,
+		matchConditions: []string{"reserved-worker-account"}, variables: []string{"nativeForegroundCleanup", "manager", "namespaceCleanup", "nativeDeploymentMetadata", "nativeDeploymentStatus"}, validations: 2, coreTyped: true,
 		requiredFragments: []string{"serviceAccountName", "namespace-controller", "!has(request.name)", "deployment-controller", "deployment.kubernetes.io/revision", "request.subResource == 'status'", "system:authenticated", "object.metadata.uid == oldObject.metadata.uid", "object.spec == oldObject.spec", "cisco-vk-(managed|legacy)-"},
-		digest:            "sha256:4fef309c1ef90eb17cfd6489a7f8c9b844256cd8cb5d6aff1d43ce01decd9ac0",
+		digest:            "sha256:d84fd8de5299b5f010bf1df6732b7b8ee1d5e613846f862cb12987ce6ec3e52d",
 	},
 	"shared-worker-replicaset": {
 		apiGroups: []string{"apps"}, apiVersions: []string{"v1"}, resources: []string{"replicasets", "replicasets/status"},

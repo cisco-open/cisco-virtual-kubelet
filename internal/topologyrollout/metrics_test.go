@@ -17,6 +17,7 @@ package topologyrollout
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -26,6 +27,8 @@ func TestTopologyRolloutMetricsUseOnlyBoundedLabels(t *testing.T) {
 	RegisterMetrics(registry)
 
 	RecordReconcile("unexpected-result", errors.Join(ErrBudgetExceeded, errors.New("device-a.example")))
+	RecordReconcileDuration("unexpected-result", errors.Join(ErrBudgetExceeded, errors.New("device-a.example")), 25*time.Millisecond)
+	RecordLedgerConflictRetry()
 	RecordTargetTransition("future-state-device-a", "Blocked", "unbounded-device-a.example")
 	observeLedger(&Ledger{Reservations: map[string]Reservation{"sensitive-reservation": {}}}, 1234)
 
@@ -33,8 +36,8 @@ func TestTopologyRolloutMetricsUseOnlyBoundedLabels(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(families) != 5 {
-		t.Fatalf("metric family count = %d, want 5", len(families))
+	if len(families) != 7 {
+		t.Fatalf("metric family count = %d, want 7", len(families))
 	}
 	for _, family := range families {
 		for _, metric := range family.Metric {

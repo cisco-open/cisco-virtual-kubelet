@@ -1,0 +1,108 @@
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareUpgrade
+metadata:
+  annotations:
+    topology.cisco.vk/app-worker-config-revision: sha256:3bca4865a8c2d2ac490acc614d7dff7d84fca7c387869a3fc9e8bd06b95d66c0
+    topology.cisco.vk/app-worker-pod-name: cat9k-lab-103-vk-5f56549b56-qvs6d
+    topology.cisco.vk/app-worker-pod-uid: ed738e31-bce7-49de-9290-837ffc5c549a
+    topology.cisco.vk/app-worker-username: system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting
+    topology.cisco.vk/campaign-name: roadmap-pacing-downgrade-20261002-103
+    topology.cisco.vk/campaign-namespace: cvk-live
+    topology.cisco.vk/campaign-uid: b57d4bf9-3c3c-4998-8a79-954cfd2ff51e
+    topology.cisco.vk/device-generation: "7"
+    topology.cisco.vk/device-name: cat9k-lab-103
+    topology.cisco.vk/device-namespace: cvk-live
+    topology.cisco.vk/device-uid: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+    topology.cisco.vk/ledger-uid: 8587a09e-451e-43a1-b638-0b2c11af78b6
+    topology.cisco.vk/managed: "true"
+    topology.cisco.vk/network-worker-pod-name: u782dc4b2-7e43-4188-8436-87633f0bf4fb-network-65f554f95b-gxjpr
+    topology.cisco.vk/network-worker-pod-uid: 98b04dce-e05a-4048-b958-b7abcefd36b6
+    topology.cisco.vk/network-worker-username: system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management
+    topology.cisco.vk/node-name: cat9k-lab-103
+    topology.cisco.vk/node-uid: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+    topology.cisco.vk/plan-hash: sha256:69887ad50f58fbe51a014b53559be34869331be35cbd384ced02a31771fced53
+    topology.cisco.vk/reservation-id: 0f3c4e98245e52b85475fcbf06f74383
+    topology.cisco.vk/source-secret-uid: 05d5617d-d807-4388-902f-9148c667fcc3
+    topology.cisco.vk/worker-protocol: rollout-v1
+    topology.cisco.vk/worker-username: system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management
+  creationTimestamp: "2026-10-01T22:33:21Z"
+  finalizers:
+  - ops.cisco.vk/iosxesoftwareupgrade-cleanup
+  generation: 1
+  labels:
+    topology.cisco.vk/campaign-uid: b57d4bf9-3c3c-4998-8a79-954cfd2ff51e
+  name: roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98
+  namespace: cvk-live
+  resourceVersion: "9694693"
+  uid: 6419e3de-94b3-4a19-9f6e-4974f2ef2cad
+spec:
+  deviceRef:
+    name: cat9k-lab-103
+  imageSource:
+    sha256: c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+    url: sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.02.SPA.bin
+    urlSecretRef:
+      name: pr194-iosxe-image-source
+  installTimeoutSeconds: 7200
+  maxRetries: 3
+  maxTransferBytesPerSecond: 25000000
+  rebootTimeoutSeconds: 3600
+  resumePolicy: Retry
+  rollbackOnFailure: true
+  strategy: Reload
+  targetVersion: 17.18.02
+status:
+  conditions:
+  - lastTransitionTime: "2026-10-01T22:33:29Z"
+    message: preflight passed; resolving a content-addressed image for gNOI OS.Install
+    observedGeneration: 1
+    reason: TransferPending
+    status: "False"
+    type: Ready
+  - lastTransitionTime: "2026-10-01T22:33:51Z"
+    message: waiting to resolve and stream image bytes with gNOI OS.Install
+    observedGeneration: 1
+    reason: TransferPending
+    status: "False"
+    type: Transferred
+  executionModel: AtMostOnceV1
+  managerAdmission:
+    campaignUID: b57d4bf9-3c3c-4998-8a79-954cfd2ff51e
+    controlRevision: 0
+    deviceGeneration: 7
+    deviceUID: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+    leafUID: 6419e3de-94b3-4a19-9f6e-4974f2ef2cad
+    ledgerUID: 8587a09e-451e-43a1-b638-0b2c11af78b6
+    networkEvidenceHash: sha256:f5be56d45ac089ba698baf5dde56e7979e507109e2aa381e1d80cbc7ffc8d857
+    networkEvidenceNotAfter: "2026-10-01T22:38:29Z"
+    networkEvidenceProducerRevision: sha256:4726fc5dc0f7e0c48f5df10bae7550b2992f33df4a478cdc1b0fea5f67fcbeca
+    networkEvidenceSampleSequence: 13
+    networkEvidenceWorkerPodUID: 98b04dce-e05a-4048-b958-b7abcefd36b6
+    nodeUID: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+    physicalIdentity: foc2416u0mv
+    planHash: sha256:69887ad50f58fbe51a014b53559be34869331be35cbd384ced02a31771fced53
+    policyEpoch: 1
+    policyResourceVersion: "9694052"
+    policyUID: 525ff87f-b74a-44c4-b54e-408e63a3a2e7
+    protocolVersion: rollout-byte-pacing-v1
+    reservationID: 0f3c4e98245e52b85475fcbf06f74383
+    state: Granted
+    topologyLockID: faa4004e5e613aafa43edef7d08987da
+    updatedAt: "2026-10-01T22:33:50Z"
+  managerControl:
+    reason: CampaignControl
+    revision: 0
+    updatedAt: "2026-10-01T22:33:19Z"
+  message: preflight passed; resolving a content-addressed image for gNOI OS.Install
+  observedGeneration: 1
+  phase: Transferring
+  previousVersion: 17.18.03.0.5496.1776157760
+  startTime: "2026-10-01T22:33:51Z"
+  workerControl:
+    effectiveState: Ready
+    message: manager grant and control revision are ready for worker progress
+    observedAdmissionState: Granted
+    observedControlRevision: 0
+    observedPolicyEpoch: 1
+    observedWorkerConfigRevision: sha256:4726fc5dc0f7e0c48f5df10bae7550b2992f33df4a478cdc1b0fea5f67fcbeca
+    updatedAt: "2026-10-01T22:33:28Z"

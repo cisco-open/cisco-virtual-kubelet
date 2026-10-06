@@ -29,6 +29,7 @@ import (
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 // TestReconcileHandlesMissingCR verifies that a reconcile for a
@@ -83,6 +84,58 @@ func TestReconcileIgnoresForeignDevice(t *testing.T) {
 	}
 	if got.Status.Phase != "" {
 		t.Fatalf("status touched on foreign device CR: phase=%q", got.Status.Phase)
+	}
+}
+
+func TestManagedConfigWaitsForExactReplacementWorkerBinding(t *testing.T) {
+	scheme := newTestScheme(t)
+	device := newDevice("edge-01")
+	cr := newCR("edge-01", "edge-01")
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(device, cr).
+		WithStatusSubresource(&configv1alpha1.IOSXEConfig{}).
+		Build()
+	r := &ConfigReconciler{
+		Client: c, DeviceName: "edge-01", DeviceNamespace: "network",
+		ManagedTopology: true, DeviceUID: "device-uid", WorkerPodName: "network-pod", WorkerPodUID: "network-pod-uid",
+		Leaser: &engine.FamilyLeaser{Client: c, Namespace: "network"},
+	}
+	req := reconcile.Request{NamespacedName: types.NamespacedName{Namespace: "network", Name: "edge-01"}}
+
+	result, err := r.Reconcile(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Reconcile before binding: %v", err)
+	}
+	if result.RequeueAfter != managedConfigBindingPoll {
+		t.Fatalf("RequeueAfter=%s, want %s", result.RequeueAfter, managedConfigBindingPoll)
+	}
+	var waiting configv1alpha1.IOSXEConfig
+	if err := c.Get(context.Background(), req.NamespacedName, &waiting); err != nil {
+		t.Fatal(err)
+	}
+	if len(waiting.Finalizers) != 0 || waiting.Status.Phase != "" {
+		t.Fatalf("unbound worker mutated object: finalizers=%v phase=%q", waiting.Finalizers, waiting.Status.Phase)
+	}
+
+	waiting.Annotations = map[string]string{
+		managedprotocol.AnnotationManaged:               "true",
+		managedprotocol.AnnotationDeviceNamespace:       "network",
+		managedprotocol.AnnotationDeviceName:            "edge-01",
+		managedprotocol.AnnotationDeviceUID:             "device-uid",
+		managedprotocol.AnnotationNetworkWorkerUsername: "system:serviceaccount:network:network-management",
+		managedprotocol.AnnotationNetworkWorkerPodName:  "network-pod",
+		managedprotocol.AnnotationNetworkWorkerPodUID:   "network-pod-uid",
+	}
+	if err := c.Update(context.Background(), &waiting); err != nil {
+		t.Fatal(err)
+	}
+	result, err = r.Reconcile(context.Background(), req)
+	if err != nil {
+		t.Fatalf("Reconcile after binding: %v", err)
+	}
+	if result.RequeueAfter == managedConfigBindingPoll {
+		t.Fatal("exact replacement binding remained blocked")
 	}
 }
 

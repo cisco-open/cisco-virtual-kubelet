@@ -32,7 +32,7 @@ import (
 // AwaitingReachability → device unreachable while it boots the new image
 // Verifying → gNOI OS.Verify running-version check
 // RollingBack → activating the previously observed version after verify failure
-// Terminal phases: Succeeded, StagedForNextBoot, Failed, PreflightFailed,
+// Terminal phases: Succeeded, Prepared, PreparedInvalidated, StagedForNextBoot, Failed, PreflightFailed,
 // ValidationFailed, RolledBack, RebootTimeout, Cancelled.
 type UpgradePhase string
 
@@ -48,6 +48,8 @@ const (
 	UpgradePhaseVerifying            UpgradePhase = "Verifying"
 	UpgradePhaseRollingBack          UpgradePhase = "RollingBack"
 	UpgradePhaseSucceeded            UpgradePhase = "Succeeded"
+	UpgradePhasePrepared             UpgradePhase = "Prepared"
+	UpgradePhasePreparedInvalidated  UpgradePhase = "PreparedInvalidated"
 	UpgradePhaseStagedForNextBoot    UpgradePhase = "StagedForNextBoot"
 	UpgradePhaseFailed               UpgradePhase = "Failed"
 	UpgradePhasePreflightFailed      UpgradePhase = "PreflightFailed"
@@ -62,7 +64,7 @@ const (
 
 // UpgradeStrategy controls how the activate step is sequenced.
 //
-// +kubebuilder:validation:Enum=Reload;ISSU;NoReboot
+// +kubebuilder:validation:Enum=Reload;ISSU;NoReboot;PrepareOnly
 type UpgradeStrategy string
 
 const (
@@ -83,6 +85,12 @@ const (
 	// StagedForNextBoot. The operator triggers the reload via a separate
 	// IOSXEOperationalAction (Phase D).
 	UpgradeStrategyNoReboot UpgradeStrategy = "NoReboot"
+
+	// UpgradeStrategyPrepareOnly performs and validates image installation but
+	// never submits OS.Activate. It requires native install inventory and emits
+	// an immutable prepared receipt. That receipt is evidence, not activation
+	// authorization; a separately approved activation protocol must consume it.
+	UpgradeStrategyPrepareOnly UpgradeStrategy = "PrepareOnly"
 )
 
 // IOSXESoftwareUpgrade drives a multi-phase IOS-XE image upgrade via
@@ -92,6 +100,8 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced,shortName=xeupgrade
 // +kubebuilder:subresource:status
+// +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !has(self.spec.requireNetworkEvidence) || !self.spec.requireNetworkEvidence || (has(self.status.managerAdmission.networkEvidenceHash) && self.status.managerAdmission.protocolVersion in ['rollout-network-evidence-v1', 'rollout-staged-activation-v1'])",message="network-gated grants require network evidence and a compatible worker protocol"
+// +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !(self.spec.strategy == 'PrepareOnly' || has(self.spec.imageSource.preinstalled)) || self.status.managerAdmission.protocolVersion == 'rollout-staged-activation-v1'",message="managed preparation and preinstalled activation require the staged lifecycle protocol before granting work"
 // +kubebuilder:printcolumn:name="Device",type=string,JSONPath=`.spec.deviceRef.name`
 // +kubebuilder:printcolumn:name="Target",type=string,JSONPath=`.spec.targetVersion`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
@@ -143,9 +153,24 @@ type IOSXESoftwareUpgradeSpec struct {
 	// +kubebuilder:validation:Pattern=`^[0-9]+(\.[0-9]+)+([a-z])?$`
 	TargetVersion string `json:"targetVersion"`
 
-	// Strategy controls whether Activate performs the reload itself
-	// (default Reload), requests the currently unsupported ISSU strategy, or stages without
-	// rebooting (NoReboot).
+	// MaxTransferBytesPerSecond optionally paces both remote image resolution
+	// and the gNOI OS.Install byte stream. Managed rollouts derive and freeze
+	// this value from administrator-owned overlapping risk-group policy.
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1099511627776
+	MaxTransferBytesPerSecond int64 `json:"maxTransferBytesPerSecond,omitempty"`
+
+	// RequireNetworkEvidence freezes the managed campaign's network gate into
+	// leaf intent. It requires fresh manager-accepted evidence at each mutation
+	// claim and a protocol that older workers reject rather than ignore.
+	// +optional
+	RequireNetworkEvidence bool `json:"requireNetworkEvidence,omitempty"`
+
+	// Strategy controls whether Activate performs the reload itself (default
+	// Reload), requests the currently unsupported ISSU strategy, stages through
+	// OS.Activate without rebooting (NoReboot), or installs and validates without
+	// calling OS.Activate (PrepareOnly).
 	// +optional
 	// +kubebuilder:default=Reload
 	Strategy UpgradeStrategy `json:"strategy,omitempty"`
@@ -325,6 +350,145 @@ const (
 	UpgradeInventoryStateUnknown                UpgradeInventoryState = "Unknown"
 )
 
+// UpgradePreparedReceiptStatus is immutable worker-produced evidence that one
+// exact image was installed and remained inactive after read-only verification.
+// It does not authorize a later activation.
+//
+// +kubebuilder:validation:XValidation:rule="has(self.campaignUID) == has(self.planHash)",message="campaignUID and planHash must be supplied together"
+type UpgradePreparedReceiptStatus struct {
+	// ProtocolVersion identifies the canonical receipt contract.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=prepare-v1
+	ProtocolVersion string `json:"protocolVersion"`
+
+	// UpgradeUID and DeviceUID bind the receipt to exact Kubernetes object
+	// incarnations rather than reusable names.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	UpgradeUID string `json:"upgradeUID"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	DeviceUID string `json:"deviceUID"`
+
+	// NodeUID and PhysicalIdentity bind managed preparation to the exact
+	// schedulable and physical targets selected by the frozen plan.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	NodeUID string `json:"nodeUID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	PhysicalIdentity string `json:"physicalIdentity,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	DeviceGeneration int64 `json:"deviceGeneration,omitempty"`
+
+	// CampaignUID and PlanHash are present on manager-created leaves and bind the
+	// receipt to the approved frozen plan. Standalone legacy leaves omit both.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	CampaignUID string `json:"campaignUID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	PlanHash string `json:"planHash,omitempty"`
+	// +kubebuilder:validation:Optional
+	ManagedProtocolVersion ManagedUpgradeProtocolVersion `json:"managedProtocolVersion,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	PolicyUID string `json:"policyUID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	PolicyResourceVersion string `json:"policyResourceVersion,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	PolicyEpoch int64 `json:"policyEpoch,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	WorkerRevision string `json:"workerRevision,omitempty"`
+
+	// SourceDigest is the verified content identity installed by this leaf.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	SourceDigest string `json:"sourceDigest"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=0
+	SourceSize int64 `json:"sourceSize,omitempty"`
+	// SourceIdentityHash covers the credential-free source locator and declared
+	// digest. SourceSecretUID, when present, binds managed transfer credentials
+	// without copying secret material into status.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	SourceIdentityHash string `json:"sourceIdentityHash"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	SourceSecretUID string `json:"sourceSecretUID,omitempty"`
+	// TrustIdentityHash covers the device credential, TLS and provisioning
+	// Secret revisions loaded by the worker that performed the install.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	TrustIdentityHash string `json:"trustIdentityHash,omitempty"`
+
+	// ContentBinding records the IOS XE limitation precisely: CVK binds verified
+	// source bytes to its durable install claim and exact installed version, but
+	// native inventory does not report an installed-image content digest.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=source-digest-install-claim-v1
+	ContentBinding string `json:"contentBinding"`
+
+	// TargetVersion is requested intent; ValidatedVersion is the exact native
+	// activation identity returned by installation/inventory.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	TargetVersion string `json:"targetVersion"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	ValidatedVersion string `json:"validatedVersion"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MaxLength=128
+	RunningVersion string `json:"runningVersion"`
+
+	// IndividualSupervisorInstall records that both supervisor install claims
+	// were completed before the receipt was issued.
+	// +kubebuilder:validation:Optional
+	IndividualSupervisorInstall bool `json:"individualSupervisorInstall,omitempty"`
+	// +kubebuilder:validation:Required
+	PrimarySupervisorInstalled bool `json:"primarySupervisorInstalled"`
+	// +kubebuilder:validation:Optional
+	StandbySupervisorInstalled bool `json:"standbySupervisorInstalled,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	StandbySupervisorID string `json:"standbySupervisorID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=128
+	StandbyRunningVersion string `json:"standbyRunningVersion,omitempty"`
+
+	// InstallStartedAt and StagingOperationID retain the local durable claim
+	// identity. ManagedMutationClaims additionally retain manager reservation,
+	// policy and control-revision authority for managed preparations.
+	// +kubebuilder:validation:Required
+	InstallStartedAt metav1.Time `json:"installStartedAt"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Format=uuid
+	StagingOperationID string `json:"stagingOperationID,omitempty"`
+	// +kubebuilder:validation:Optional
+	// Device-file registration plus primary and standby install can produce three
+	// distinct durable install claims.
+	// +kubebuilder:validation:MaxItems=3
+	// +listType=map
+	// +listMapKey=stage
+	ManagedMutationClaims []UpgradeManagedMutationClaimStatus `json:"managedMutationClaims,omitempty"`
+
+	// PreparedAt is the read-only inventory/OS verification time.
+	// +kubebuilder:validation:Required
+	PreparedAt metav1.Time `json:"preparedAt"`
+
+	// ReceiptHash is SHA-256 over the canonical receipt with this field empty.
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	ReceiptHash string `json:"receiptHash"`
+}
+
 // UpgradeExecutionModel identifies the durable mutation-safety contract used
 // by the reconciler that owns an upgrade workflow.
 type UpgradeExecutionModel string
@@ -355,12 +519,60 @@ type UpgradeWindow struct {
 // ManagedUpgradeProtocolVersion identifies the manager/worker handshake that
 // gates every new device mutation for a campaign-created leaf.
 //
-// +kubebuilder:validation:Enum=rollout-v1
+// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1;rollout-staged-activation-v1;rollout-network-evidence-v1
 type ManagedUpgradeProtocolVersion string
 
 const (
-	ManagedUpgradeProtocolRolloutV1 ManagedUpgradeProtocolVersion = "rollout-v1"
+	ManagedUpgradeProtocolRolloutV1           ManagedUpgradeProtocolVersion = "rollout-v1"
+	ManagedUpgradeProtocolRolloutBytePacingV1 ManagedUpgradeProtocolVersion = "rollout-byte-pacing-v1"
+	ManagedUpgradeProtocolStagedActivationV1  ManagedUpgradeProtocolVersion = "rollout-staged-activation-v1"
+	ManagedUpgradeProtocolNetworkEvidenceV1   ManagedUpgradeProtocolVersion = "rollout-network-evidence-v1"
 )
+
+// ExpectedManagedUpgradeProtocol selects the narrowest manager/worker
+// handshake required by immutable leaf intent. Older workers reject the
+// pacing protocol instead of silently ignoring the additive rate field.
+func ExpectedManagedUpgradeProtocol(maxTransferBytesPerSecond int64) ManagedUpgradeProtocolVersion {
+	if maxTransferBytesPerSecond > 0 {
+		return ManagedUpgradeProtocolRolloutBytePacingV1
+	}
+	return ManagedUpgradeProtocolRolloutV1
+}
+
+// RequiredManagedUpgradeProtocol fences staged lifecycle intent from workers
+// predating PrepareOnly and receipt-bound activation. The staged protocol also
+// requires byte pacing and network evidence when specified; an unpaced install
+// must not fall back to rollout-v1, whose workers can interpret an unknown
+// strategy as Reload. Non-staged network gates have their own protocol so an
+// older worker cannot silently omit claim-time evidence validation.
+func RequiredManagedUpgradeProtocol(spec IOSXESoftwareUpgradeSpec) ManagedUpgradeProtocolVersion {
+	if spec.Strategy == UpgradeStrategyPrepareOnly || spec.ImageSource.Preinstalled != nil {
+		return ManagedUpgradeProtocolStagedActivationV1
+	}
+	if spec.RequireNetworkEvidence {
+		return ManagedUpgradeProtocolNetworkEvidenceV1
+	}
+	return ExpectedManagedUpgradeProtocol(spec.MaxTransferBytesPerSecond)
+}
+
+// ManagedUpgradeProtocolMatches preserves already-settled staged audit records
+// written before the staged protocol was introduced. This exception cannot
+// authorize work: both sides must have settled and the phase must be terminal.
+// Unsettled old-protocol staging must be resolved before upgrading controllers.
+func ManagedUpgradeProtocolMatches(up *IOSXESoftwareUpgrade) bool {
+	if up == nil || up.Status.ManagerAdmission == nil {
+		return false
+	}
+	admission := up.Status.ManagerAdmission
+	if admission.ProtocolVersion == RequiredManagedUpgradeProtocol(up.Spec) {
+		return true
+	}
+	return RequiredManagedUpgradeProtocol(up.Spec) == ManagedUpgradeProtocolStagedActivationV1 &&
+		admission.ProtocolVersion == ExpectedManagedUpgradeProtocol(up.Spec.MaxTransferBytesPerSecond) &&
+		admission.State == UpgradeManagerAdmissionSettled &&
+		up.Status.WorkerControl != nil && up.Status.WorkerControl.EffectiveState == UpgradeWorkerControlSettled &&
+		(up.Status.Phase == UpgradePhasePrepared || up.Status.Phase == UpgradePhasePreparedInvalidated || up.Status.Phase == UpgradePhaseSucceeded)
+}
 
 // UpgradeManagerAdmissionState is the manager-owned mutation grant state.
 // Missing admission means denied for a managed device. It remains optional on
@@ -396,6 +608,9 @@ const (
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.nodeUID) || self.nodeUID == oldSelf.nodeUID",message="nodeUID is immutable once set"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.protocolVersion) || self.protocolVersion == oldSelf.protocolVersion",message="protocolVersion is immutable once set"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.controlRevision) || (has(self.controlRevision) && self.controlRevision >= oldSelf.controlRevision)",message="admission controlRevision cannot decrease or be removed"
+// +kubebuilder:validation:XValidation:rule="has(self.networkEvidenceHash) == has(self.networkEvidenceProducerRevision) && has(self.networkEvidenceHash) == has(self.networkEvidenceWorkerPodUID) && has(self.networkEvidenceHash) == has(self.networkEvidenceSampleSequence) && has(self.networkEvidenceHash) == has(self.networkEvidenceNotAfter)",message="network evidence authority must be complete or omitted"
+// +kubebuilder:validation:XValidation:rule="self.state != 'Pending' || !has(self.networkEvidenceHash)",message="pending admission cannot carry network evidence authority"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.networkEvidenceHash) || (oldSelf.state == 'Revoked' && has(oldSelf.revocationReason) && oldSelf.revocationReason == 'PolicyEpochTransition' && self.state == 'Pending' && !has(self.networkEvidenceHash)) || (has(self.networkEvidenceHash) && ((self.networkEvidenceHash == oldSelf.networkEvidenceHash && self.networkEvidenceProducerRevision == oldSelf.networkEvidenceProducerRevision && self.networkEvidenceWorkerPodUID == oldSelf.networkEvidenceWorkerPodUID && self.networkEvidenceSampleSequence == oldSelf.networkEvidenceSampleSequence && self.networkEvidenceNotAfter == oldSelf.networkEvidenceNotAfter) || (oldSelf.state == 'Granted' && self.state == 'Granted' && self.networkEvidenceNotAfter > oldSelf.networkEvidenceNotAfter)))",message="network evidence authority may only renew monotonically while granted or clear during policy-epoch rearm"
 // +kubebuilder:validation:XValidation:rule="self.policyEpoch >= oldSelf.policyEpoch",message="policy epoch cannot decrease"
 // +kubebuilder:validation:XValidation:rule="oldSelf.state == 'Pending' ? self.state in ['Pending', 'Granted', 'Revoked'] : (oldSelf.state == 'Granted' ? self.state in ['Granted', 'Revoked', 'Settled'] : (oldSelf.state == 'Revoked' ? (self.state in ['Revoked', 'Settled'] || (self.state == 'Pending' && has(oldSelf.revocationReason) && oldSelf.revocationReason == 'PolicyEpochTransition' && self.policyEpoch > oldSelf.policyEpoch)) : self.state == 'Settled'))",message="manager admission state cannot regress except a newer policy epoch may rearm a policy-transition revocation"
 // +kubebuilder:validation:XValidation:rule="self.state == 'Revoked' ? has(self.revocationReason) : !has(self.revocationReason)",message="revoked admission requires a reason and non-revoked admission must not retain one"
@@ -508,6 +723,34 @@ type UpgradeManagerAdmissionStatus struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Minimum=0
 	ControlRevision *int64 `json:"controlRevision,omitempty"`
+
+	// NetworkEvidenceHash binds a network-enabled grant to the exact
+	// manager-accepted observation. All networkEvidence fields are omitted for
+	// campaigns that did not opt into a network gate. The manager may atomically
+	// renew the complete authority to a newer accepted sample while Granted.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	NetworkEvidenceHash string `json:"networkEvidenceHash,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	NetworkEvidenceProducerRevision string `json:"networkEvidenceProducerRevision,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	NetworkEvidenceWorkerPodUID string `json:"networkEvidenceWorkerPodUID,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Minimum=1
+	NetworkEvidenceSampleSequence *uint64 `json:"networkEvidenceSampleSequence,omitempty"`
+
+	// NetworkEvidenceNotAfter is an absolute, non-renewable claim deadline
+	// derived from the accepted sample's original collection start. Expiry
+	// blocks a new mutation claim but never abandons an existing claim.
+	// +kubebuilder:validation:Optional
+	NetworkEvidenceNotAfter *metav1.Time `json:"networkEvidenceNotAfter,omitempty"`
 
 	// UpdatedAt is the manager admission transition time.
 	// +kubebuilder:validation:Required
@@ -727,6 +970,7 @@ type UpgradeDrainPDBStatus struct {
 //
 // +kubebuilder:validation:XValidation:rule="oldSelf.phase == 'Selected' ? self.phase in ['Selected', 'Protected', 'Complete'] : (oldSelf.phase == 'Protected' ? self.phase in ['Protected', 'EvictionRequested', 'TerminationObserved', 'Released'] : (oldSelf.phase == 'EvictionRequested' ? self.phase in ['EvictionRequested', 'TerminationObserved'] : (oldSelf.phase == 'TerminationObserved' ? self.phase in ['TerminationObserved', 'DeviceClean'] : (oldSelf.phase == 'DeviceClean' ? self.phase in ['DeviceClean', 'Released'] : (oldSelf.phase == 'Released' ? self.phase in ['Released', 'Complete'] : self.phase == 'Complete')))))",message="drain Pod phase cannot regress or skip accepted-teardown cleanup evidence"
 // +kubebuilder:validation:XValidation:rule="self.eligibilityHash == oldSelf.eligibilityHash",message="drain Pod eligibility snapshot is immutable"
+// +kubebuilder:validation:XValidation:rule="has(oldSelf.placementHash) == has(self.placementHash) && (!has(oldSelf.placementHash) || self.placementHash == oldSelf.placementHash)",message="drain Pod placement snapshot is immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.protectedAt) || (has(self.protectedAt) && self.protectedAt == oldSelf.protectedAt)",message="protectedAt is append-only and immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.evictionRequestedAt) || (has(self.evictionRequestedAt) && self.evictionRequestedAt == oldSelf.evictionRequestedAt)",message="evictionRequestedAt is append-only and immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.deletionObservedAt) || (has(self.deletionObservedAt) && self.deletionObservedAt == oldSelf.deletionObservedAt)",message="deletionObservedAt is append-only and immutable"
@@ -767,6 +1011,17 @@ type UpgradeDrainPodStatus struct {
 	// +kubebuilder:validation:MaxLength=71
 	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
 	EligibilityHash string `json:"eligibilityHash"`
+
+	// PlacementHash binds the exact node selector, required node affinity, and
+	// topology-spread intent that the manager admitted. It is intentionally
+	// separate from the controller identity so a template edit that preserves
+	// the controller UID cannot relax replacement placement during recovery.
+	// Older settled drain records may omit this additive field; every newly
+	// admitted drain writes it and includes it in EligibilityHash.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MaxLength=71
+	// +kubebuilder:validation:Pattern=`^sha256:[a-f0-9]{64}$`
+	PlacementHash string `json:"placementHash,omitempty"`
 
 	// Controller is the Pod's exact controlling owner.
 	// +kubebuilder:validation:Required
@@ -1038,6 +1293,15 @@ type UpgradeManagedMutationClaimStatus struct {
 // only state-machine and observation progress.
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || has(self.managerDrain)",message="managerDrain cannot be removed once published"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.workerDrain) || has(self.workerDrain)",message="workerDrain cannot be removed once published"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.preparedReceipt) || (has(self.preparedReceipt) && self.preparedReceipt == oldSelf.preparedReceipt)",message="preparedReceipt is append-only and immutable once published"
+// +kubebuilder:validation:XValidation:rule="!has(self.phase) || self.phase != 'Prepared' || has(self.preparedReceipt)",message="Prepared phase requires an immutable preparedReceipt"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerInvalidation) || (has(self.managerInvalidation) && self.managerInvalidation == oldSelf.managerInvalidation)",message="managerInvalidation is append-only"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.preparedInvalidation) || (has(self.preparedInvalidation) && self.preparedInvalidation == oldSelf.preparedInvalidation)",message="preparedInvalidation is append-only"
+// +kubebuilder:validation:XValidation:rule="!has(self.managerInvalidation) || (has(self.preparedReceipt) && self.managerInvalidation.receiptHash == self.preparedReceipt.receiptHash && self.managerInvalidation.planHash == self.preparedReceipt.planHash && self.managerInvalidation.campaignUID == self.preparedReceipt.campaignUID && has(self.managerControl) && (!has(self.managerControl.pause) || !self.managerControl.pause) && has(self.managerAdmission) && self.managerAdmission.state == 'Settled' && ((has(self.managerControl.cancel) && self.managerControl.cancel && self.managerControl.revision >= self.managerInvalidation.controlRevision) || (has(self.managerDrain) && self.managerDrain.state == 'Settled' && self.managerInvalidation.controlRevision > self.managerControl.revision)))",message="invalidation authority requires the exact receipt and cancelled control or separately authorized settled-drain retirement"
+// +kubebuilder:validation:XValidation:rule="!has(self.managerInvalidation) || !has(self.managerDrain) || (self.managerDrain.protocolVersion == 'pdb-drain-v1' && self.managerDrain.state == 'Settled' && has(self.managerAdmission) && has(self.managerAdmission.controlRevision) && has(self.managerControl) && self.managerDrain.controlRevision == self.managerControl.revision && self.managerAdmission.controlRevision == self.managerDrain.controlRevision && self.managerDrain.nodeUID == self.managerAdmission.nodeUID && self.managerDrain.reservationID == self.managerAdmission.reservationID && self.managerDrain.policyEpoch == self.managerAdmission.policyEpoch && (!has(self.managerDrain.pods) || self.managerDrain.pods.all(p, p.phase == 'Complete')))",message="invalidation must preserve an exact settled drain with complete Pod evidence"
+// +kubebuilder:validation:XValidation:rule="!has(self.preparedInvalidation) || (has(self.managerInvalidation) && has(self.phase) && self.phase == 'PreparedInvalidated')",message="native invalidation evidence requires authorized PreparedInvalidated state"
+// +kubebuilder:validation:XValidation:rule="!has(self.phase) || self.phase != 'PreparedInvalidated' || (has(self.preparedInvalidation) && has(self.preparedReceipt))",message="PreparedInvalidated requires retained receipt and native evidence"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.phase) || oldSelf.phase != 'PreparedInvalidated' || self.phase == 'PreparedInvalidated'",message="prepared invalidation is irreversible"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(oldSelf.managerDrain.pods) || (has(self.managerDrain) && has(self.managerDrain.pods) && oldSelf.managerDrain.pods.all(p, self.managerDrain.pods.exists(n, n.uid == p.uid)))",message="managerDrain Pod entries cannot be removed once published"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.managerDrain) || !has(self.managerDrain) || !has(self.managerDrain.pods) || (has(oldSelf.managerDrain.pods) && self.managerDrain.pods.all(p, oldSelf.managerDrain.pods.exists(o, o.uid == p.uid)))",message="managerDrain Pod entries cannot be added after publication"
 // +kubebuilder:validation:XValidation:rule="!has(self.workerDrain) || (has(self.managerDrain) && self.workerDrain.protocolVersion == self.managerDrain.protocolVersion && self.workerDrain.observedSessionToken == self.managerDrain.sessionToken && self.workerDrain.observedPolicyEpoch == self.managerDrain.policyEpoch && self.workerDrain.observedControlRevision <= self.managerDrain.controlRevision)",message="workerDrain must bind the current manager drain session and may only lag its control revision"
@@ -1064,6 +1328,15 @@ type IOSXESoftwareUpgradeStatus struct {
 	// revocation compete through resourceVersion on this same leaf object.
 	// +kubebuilder:validation:Optional
 	ManagerControl *UpgradeManagerControlStatus `json:"managerControl,omitempty"`
+
+	// ManagerInvalidation authorizes read-only reconciliation of a cancelled
+	// preparation. It cannot release an unresolved mutation.
+	// +optional
+	ManagerInvalidation *UpgradePreparedInvalidationRequest `json:"managerInvalidation,omitempty"`
+
+	// PreparedInvalidation is worker-owned immutable native evidence.
+	// +optional
+	PreparedInvalidation *UpgradePreparedInvalidationStatus `json:"preparedInvalidation,omitempty"`
 
 	// WorkerControl is the worker-owned effective acknowledgement of manager
 	// admission and control. Native admission must keep its ownership disjoint
@@ -1124,6 +1397,11 @@ type IOSXESoftwareUpgradeStatus struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	SourceSize int64 `json:"sourceSize,omitempty"`
+
+	// PreparedReceipt is immutable evidence for PrepareOnly. It proves install
+	// and read-only inventory convergence but grants no activation authority.
+	// +kubebuilder:validation:Optional
+	PreparedReceipt *UpgradePreparedReceiptStatus `json:"preparedReceipt,omitempty"`
 
 	// StagingOperationID is the durable correlation key for a platform-native
 	// device-file registration operation. It is persisted before submission;

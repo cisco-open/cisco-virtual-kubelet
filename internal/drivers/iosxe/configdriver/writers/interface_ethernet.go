@@ -210,6 +210,23 @@ func (w ethernetWriter) Diff(desired, observed any) ([]transport.Op, error) {
 			Body:     body,
 		})
 
+		// IOS-XE models shutdown as a YANG empty leaf: presence means
+		// administratively down and absence means no shutdown. Omitting
+		// shutdown:false from the MERGE body is necessary, but it does not
+		// remove an already-present leaf. Emit an explicit DELETE when the
+		// desired state is false and the observed interface is shut down.
+		// This keeps the declarative false value convergent across RESTCONF,
+		// NETCONF, and gNMI instead of repeatedly detecting unrepaired drift.
+		if isExplicitFalse(entry["shutdown"]) && isTrue(observedEntry["shutdown"]) {
+			ops = append(ops, transport.Op{
+				Verb: transport.VerbDelete,
+				Path: fmt.Sprintf("%s=%s/shutdown", path, encodeKeyValue(k.name)),
+				PathSpec: pathSpecForInterfaceChild(
+					k.typ, k.name, "shutdown",
+				),
+			})
+		}
+
 		// PIM sparse-mode must be applied at its own sub-path; IOS-XE
 		// rejects the pim augmentation when merged at the interface level.
 		if isTrue(entry["ip_pim_sparse_mode"]) {

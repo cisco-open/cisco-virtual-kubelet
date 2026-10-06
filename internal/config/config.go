@@ -64,6 +64,9 @@ func Load(filePath ...string) (*Config, error) {
 
 // validateDeviceSpec validates common and driver-specific DeviceSpec fields.
 func validateDeviceSpec(spec *v1alpha1.DeviceSpec) error {
+	if spec.TLS != nil && spec.TLS.CASecretRef != nil {
+		return fmt.Errorf("device TLS caSecretRef must be resolved by the CiscoDevice controller; local configuration uses caFile")
+	}
 	if err := spec.GNOI.Validate(); err != nil {
 		return fmt.Errorf("invalid gNOI config: %w", err)
 	}

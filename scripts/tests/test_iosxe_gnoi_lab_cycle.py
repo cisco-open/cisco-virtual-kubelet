@@ -108,7 +108,7 @@ class LabCycleTests(unittest.TestCase):
             self.cycle.transition("cat9k-1", "upgrade")
         self.cycle.submit.assert_called_once()
         self.assertTrue(self.cycle.kubectl.called, "ambiguous create skipped evidence collection")
-        self.assertTrue(any(call.args[:3] == ("get", "xeupgrade", f"{self.cycle.prefix}-cat9k-1-upgrade")
+        self.assertTrue(any(call.args[:3] == ("get", "xerollout", f"{self.cycle.prefix}-cat9k-1-upgrade-rollout")
                             for call in self.cycle.kubectl.call_args_list))
         for call in self.cycle.kubectl.call_args_list:
             self.assertIn(call.args[0], {"get", "logs"})
@@ -212,8 +212,12 @@ class LabCycleTests(unittest.TestCase):
         self.cycle.worker_snapshot = Mock(return_value=[])
         self.cycle.verify = Mock()
         self.cycle.submit = Mock()
+        self.cycle.approve_rollout = Mock()
         self.cycle.wait = Mock(return_value={"status": {"runningVersion": "17.18.03",
-            "primarySupervisorActivationRequested": True, "conditions": [{"type": "Ready", "status": "True"}]}})
+            "primarySupervisorActivationRequested": True, "targets": [{"deviceName": "cat9k-1",
+            "phase": "Succeeded", "leafName": "offline-leaf"}]}})
+        self.cycle.get = Mock(return_value={"status": {"phase": "Succeeded", "runningVersion": "17.18.03",
+            "primarySupervisorActivationRequested": True}})
         self.cycle.kubectl = Mock(side_effect=["{}", "{}", RuntimeError("logs unavailable")])
         with self.assertRaisesRegex(RuntimeError, "required evidence collection incomplete"):
             self.cycle.transition("cat9k-1", "upgrade")

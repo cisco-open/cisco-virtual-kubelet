@@ -157,7 +157,13 @@ if (
 
 const lock = JSON.parse(read(path.join(websiteDir, "package-lock.json")));
 const entries = [];
-for (const [packagePath, metadata] of Object.entries(lock.packages)) {
+for (const [packagePath, lockedMetadata] of Object.entries(lock.packages)) {
+  // Local npm links keep their dev/production classification at the target.
+  // Resolve it instead of misclassifying a lint-only link as redistributed.
+  const metadata = lockedMetadata.link ? lock.packages[lockedMetadata.resolved] : lockedMetadata;
+  if (!metadata) {
+    throw new Error(`linked package has no locked target: ${packagePath}`);
+  }
   if (
     !packagePath.startsWith("node_modules/") ||
     metadata.dev === true ||

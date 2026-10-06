@@ -6,6 +6,11 @@ App-Hosting capabilities.
 
 **Make your network infrastructure a first-class Kubernetes citizen.**
 
+For the current development branch's staged IOS-XE rollout extensions, read
+the [bounded PR scope](topology-merge-scope.md). It distinguishes implemented
+features and recorded lab evidence from future production qualification;
+the complete topology roadmap is not yet finished.
+
 ## Concepts at a glance
 
 Four ideas you'll see referenced throughout the docs:
@@ -149,9 +154,12 @@ This project is under active development and is published as open source under
   `oci://ghcr.io/cisco-open/charts/cisco-virtual-kubelet`. Build locally only
   when you need a custom image. See [Getting Started](getting-started.md).
 - **Operator plugin** - the optional `kubectl-ciscovk` plugin provides
-  read-only, ad-hoc IOS-XE diagnostics and is available in the public Krew
-  index. `v2026.8.1` was the first plugin-bearing release. Signed release
-  archives and a source-build path are documented in the
+  read-only, ad-hoc IOS-XE commands and manager-accepted topology graph
+  diagnostics; it is available in the public Krew index. The graph can consume
+  administrator-declared mappings and links from protected native Kubernetes
+  policy data while remaining separate from rollout authority. `v2026.8.1`
+  was the first plugin-bearing release.
+  Signed release archives and a source-build path are documented in the
   [CLI & Plugin Reference](cisco-vk-cli.md).
 
 ### Feature Maturity

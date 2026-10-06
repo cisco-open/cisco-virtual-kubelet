@@ -26,11 +26,317 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	topology "github.com/cisco/virtual-kubelet-cisco/internal/topologygraph"
 )
+
+func TestParseTopologyGraphArgs(t *testing.T) {
+	f, err := parseTopologyGraphArgs([]string{
+		"-n", "cvk-live", "-l", "topology.cisco.vk/managed=true", "--max-age", "90s", "-o", "json", "--require-complete",
+		"--policy-configmap", "cisco-vk-system/cisco-vk-topology-policy",
+		"--context", "lab", "--kubeconfig", "/tmp/lab.conf", "--kubectl", "/usr/bin/kubectl",
+	})
+	if err != nil {
+		t.Fatalf("parseTopologyGraphArgs() error = %v", err)
+	}
+	if f.namespace != "cvk-live" || f.selector != "topology.cisco.vk/managed=true" || f.maxAge != 90*time.Second || f.output != "json" || !f.requireComplete ||
+		f.policyConfigMap != "cisco-vk-system/cisco-vk-topology-policy" ||
+		f.kubeContext != "lab" || f.kubeconfig != "/tmp/lab.conf" || f.kubectlBin != "/usr/bin/kubectl" {
+		t.Fatalf("flags = %#v", f)
+	}
+	for _, argv := range [][]string{{"--max-age", "0s"}, {"-o", "yaml"}, {"--selector"}, {"--selector", "bad\nselector"}, {"--policy-configmap"}, {"--unknown"}} {
+		if _, err := parseTopologyGraphArgs(argv); err == nil {
+			t.Fatalf("parseTopologyGraphArgs(%q) succeeded", argv)
+		}
+	}
+}
+
+func TestTopologyGraphHelp(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := runCLI([]string{"kubectl-ciscovk", "topology", "graph", "--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("runCLI() code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "Flags for topology graph") || !strings.Contains(stderr.String(), "--require-complete") || !strings.Contains(stderr.String(), "--policy-configmap") {
+		t.Fatalf("topology graph help = %q", stderr.String())
+	}
+}
+
+func TestReadTopologyGraphPolicyRequiresProtectedConfigMap(t *testing.T) {
+	previous := commandContext
+	commandContext = func(ctx context.Context, _ string, args ...string) *exec.Cmd {
+		helperArgs := append([]string{"-test.run=^TestGraphPolicyKubectlHelperProcess$", "--"}, args...)
+		cmd := exec.CommandContext(ctx, os.Args[0], helperArgs...)
+		cmd.Env = append(os.Environ(), "GO_WANT_CVK_GRAPH_POLICY_HELPER=1")
+		return cmd
+	}
+	t.Cleanup(func() { commandContext = previous })
+
+	document, proof, err := readTopologyGraphPolicy(context.Background(), &topologyGraphFlags{
+		policyConfigMap: "cisco-vk-system/cisco-vk-topology-policy", kubectlBin: os.Args[0],
+		kubeContext: "lab", kubeconfig: "/tmp/lab.conf",
+	})
+	if err != nil {
+		t.Fatalf("readTopologyGraphPolicy() error = %v", err)
+	}
+	if proof == nil || proof.ConfigMap != "cisco-vk-system/cisco-vk-topology-policy" || proof.UID != "policy-uid" || !strings.HasPrefix(proof.ContentHash, "sha256:") {
+		t.Fatalf("proof = %#v", proof)
+	}
+	if len(document.PeerMappings) != 1 || document.PeerMappings[0].PhysicalID != "serial-b" || len(document.DeclaredLinks) != 1 {
+		t.Fatalf("document = %#v", document)
+	}
+	withoutPolicy, withoutProof, err := readTopologyGraphPolicy(context.Background(), &topologyGraphFlags{})
+	if err != nil || withoutProof != nil || withoutPolicy.Version != "" {
+		t.Fatalf("optional policy = %#v, %#v, %v", withoutPolicy, withoutProof, err)
+	}
+}
+
+func TestGraphPolicyKubectlHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_CVK_GRAPH_POLICY_HELPER") != "1" {
+		return
+	}
+	separator := slices.Index(os.Args, "--")
+	if separator < 0 || separator == len(os.Args)-1 {
+		fmt.Fprintln(os.Stderr, "missing helper arguments")
+		os.Exit(2)
+	}
+	got := os.Args[separator+1:]
+	want := []string{
+		"--kubeconfig", "/tmp/lab.conf", "--context", "lab", "get", "configmap", "cisco-vk-topology-policy",
+		"-n", "cisco-vk-system", "-o", "json",
+	}
+	if !slices.Equal(got, want) {
+		fmt.Fprintf(os.Stderr, "unexpected graph policy kubectl arguments: %q\n", got)
+		os.Exit(2)
+	}
+	fmt.Fprint(os.Stdout, `{"apiVersion":"v1","kind":"ConfigMap","metadata":{"name":"cisco-vk-topology-policy","namespace":"cisco-vk-system","uid":"policy-uid","resourceVersion":"42","annotations":{"topology.cisco.vk/managed-policy":"true","topology.cisco.vk/admission-contract-version":"v2"}},"data":{"graph.json":"{\"version\":\"v1\",\"peerMappings\":[{\"source\":\"cdp\",\"observedPeer\":\"C9K-2\",\"physicalID\":\"SERIAL-B\"}],\"declaredLinks\":[{\"local\":\"serial-a\",\"peer\":\"serial-b\",\"source\":\"cdp\",\"interface\":\"Gi1\",\"remoteInterface\":\"Gi2\"}]}"}}`)
+	os.Exit(0)
+}
+
+func TestGraphFromDevicesUsesOnlyManagerAcceptedEvidence(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	acceptedAt := now.Add(-time.Minute)
+	devices := []topologyDevice{
+		{
+			Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+			Spec:     topologyDeviceSpec{PhysicalIdentity: "SERIAL-A"},
+			Status: topologyDeviceStatus{
+				NodeIdentity: &topologyNodeIdentity{PhysicalIdentity: "serial-a"},
+				HealthObservation: &topologyHealthObservation{
+					Network: &topologyNetworkObservation{Complete: false, UnknownReason: "untrusted raw sample"},
+					AcceptedNetwork: &topologyNetworkObservation{
+						CollectionStartedAt: acceptedAt,
+						ObservedAt:          acceptedAt,
+						Complete:            true,
+						Neighbors: []topologyNetworkNeighbor{{
+							Identity: "cdp-a-b", ID: "serial-b", Source: "cdp", Interface: "Gi1/0/1",
+							RemoteInterface: "Gi1/0/2", State: "up",
+						}},
+					},
+				},
+			},
+		},
+		{
+			Metadata: topologyObjectMeta{Name: "leaf-b", Namespace: "cvk-live"},
+			Spec:     topologyDeviceSpec{PhysicalIdentity: "SERIAL-B"},
+			Status: topologyDeviceStatus{
+				NodeIdentity: &topologyNodeIdentity{PhysicalIdentity: "serial-b"},
+				HealthObservation: &topologyHealthObservation{AcceptedNetwork: &topologyNetworkObservation{
+					CollectionStartedAt: acceptedAt, ObservedAt: acceptedAt, Complete: true,
+				}},
+			},
+		},
+	}
+	graph, err := graphFromDevices(devices, now, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("graphFromDevices() error = %v", err)
+	}
+	if len(graph.Nodes) != 2 || len(graph.Edges) != 1 || graph.Edges[0].Local != "serial-a" || graph.Edges[0].Peer != "serial-b" || graph.Edges[0].RemoteInterface != "Gi1/0/2" {
+		t.Fatalf("graph = %#v", graph)
+	}
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Message == "untrusted raw sample" {
+			t.Fatalf("raw worker evidence entered graph diagnostics: %#v", graph.Diagnostics)
+		}
+	}
+}
+
+func TestGraphProvenanceIsDeterministicAndAcceptedOnly(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 123, time.UTC)
+	started := now.Add(-time.Second)
+	ended := now
+	devices := []topologyDevice{
+		{
+			Metadata: topologyObjectMeta{Name: "leaf-b", Namespace: "cvk-live", UID: "device-b", ResourceVersion: "12"},
+			Spec:     topologyDeviceSpec{PhysicalIdentity: "serial-b"},
+			Status: topologyDeviceStatus{HealthObservation: &topologyHealthObservation{
+				Network: &topologyNetworkObservation{WorkerPodUID: "raw-must-not-appear", ProducerRevision: "raw"},
+				AcceptedNetwork: &topologyNetworkObservation{
+					WorkerPodUID: "accepted-pod", ProducerRevision: "sha256:accepted", SampleSequence: 7,
+					CollectionStartedAt: started, CollectionEndedAt: ended, DeviceIdentityHash: "sha256:device",
+				},
+			}},
+		},
+		{Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"}, Spec: topologyDeviceSpec{PhysicalIdentity: "serial-a"}},
+	}
+	_, provenance := graphInputsFromDevices(devices)
+	if len(provenance) != 2 || provenance[0].PhysicalID != "serial-a" || provenance[1].WorkerPodUID != "accepted-pod" {
+		t.Fatalf("provenance = %#v", provenance)
+	}
+	if strings.Contains(string(mustJSON(t, provenance)), "raw-must-not-appear") {
+		t.Fatalf("raw worker sample entered provenance: %#v", provenance)
+	}
+	wantHash := hashTopologyGraphProvenance(provenance)
+	sort.Slice(devices, func(i, j int) bool { return devices[i].Metadata.Name < devices[j].Metadata.Name })
+	_, reordered := graphInputsFromDevices(devices)
+	if got := hashTopologyGraphProvenance(reordered); got != wantHash {
+		t.Fatalf("provenance hash changed after input reorder: got %s want %s", got, wantHash)
+	}
+	policy := &topologyGraphPolicyProof{ConfigMap: "system/policy", UID: "uid-1", ResourceVersion: "42", ContentHash: "sha256:policy"}
+	withPolicy := hashTopologyGraphProvenance(reordered, policy)
+	if withPolicy == wantHash || withPolicy != hashTopologyGraphProvenance(provenance, policy) {
+		t.Fatalf("policy provenance was absent or nondeterministic: base=%s withPolicy=%s", wantHash, withPolicy)
+	}
+}
+
+func mustJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
+}
+
+func TestGraphFromDevicesFailsClosedWithoutAcceptedEvidence(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	devices := []topologyDevice{{
+		Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+		Spec:     topologyDeviceSpec{PhysicalIdentity: "serial-a"},
+		Status: topologyDeviceStatus{HealthObservation: &topologyHealthObservation{
+			Network: &topologyNetworkObservation{Complete: true, ObservedAt: now},
+		}},
+	}}
+	graph, err := graphFromDevices(devices, now, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("graphFromDevices() error = %v", err)
+	}
+	if graph.Complete {
+		t.Fatalf("unaccepted worker sample produced complete graph: %#v", graph)
+	}
+	want := map[string]bool{"ObservationTimeMissing": false, "IncompleteObservation": false}
+	for _, diagnostic := range graph.Diagnostics {
+		if _, ok := want[diagnostic.Code]; ok {
+			want[diagnostic.Code] = true
+		}
+	}
+	for code, found := range want {
+		if !found {
+			t.Fatalf("missing %s diagnostic: %#v", code, graph.Diagnostics)
+		}
+	}
+}
+
+func TestGraphFromDevicesReportsUnboundDeviceWithoutHidingFleet(t *testing.T) {
+	now := time.Date(2026, 10, 2, 12, 0, 0, 0, time.UTC)
+	graph, err := graphFromDevices([]topologyDevice{{
+		Metadata: topologyObjectMeta{Name: "legacy", Namespace: "cvk-live"},
+	}}, now, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("graphFromDevices() error = %v", err)
+	}
+	if graph.Complete || len(graph.Nodes) != 1 || graph.Nodes[0] != "unbound:cvk-live/legacy" {
+		t.Fatalf("graph = %#v", graph)
+	}
+	found := false
+	for _, diagnostic := range graph.Diagnostics {
+		if diagnostic.Code == "IncompleteObservation" && strings.Contains(diagnostic.Message, "no manager-bound physical identity") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("missing unbound-device diagnostic: %#v", graph.Diagnostics)
+	}
+}
+
+func TestGraphDeviceIdentityCanonicalizesAndFailsClosed(t *testing.T) {
+	device := &topologyDevice{
+		Metadata: topologyObjectMeta{Name: "leaf-a", Namespace: "cvk-live"},
+		Spec:     topologyDeviceSpec{PhysicalIdentity: "SERIAL-SPEC"},
+		Status: topologyDeviceStatus{NodeIdentity: &topologyNodeIdentity{
+			PhysicalIdentity: "SERIAL-BOUND",
+		}},
+	}
+	if got, reason := graphDeviceIdentity(device); got != "serial-bound" || reason != "" {
+		t.Fatalf("graphDeviceIdentity() = %q, %q", got, reason)
+	}
+	device.Status.NodeIdentity.PhysicalIdentity = "invalid identity"
+	if got, reason := graphDeviceIdentity(device); !strings.HasPrefix(got, "unbound:") || !strings.Contains(reason, "manager-bound") {
+		t.Fatalf("invalid bound identity fell back to spec: %q, %q", got, reason)
+	}
+	device.Status.NodeIdentity = nil
+	if got, reason := graphDeviceIdentity(device); got != "serial-spec" || reason != "" {
+		t.Fatalf("canonical spec fallback = %q, %q", got, reason)
+	}
+}
+
+func TestUnboundGraphIdentityIsBounded(t *testing.T) {
+	device := &topologyDevice{Metadata: topologyObjectMeta{
+		Namespace: strings.Repeat("n", 63),
+		Name:      strings.Repeat("d", 253),
+	}}
+	got := unboundGraphIdentity(device)
+	if len(got) > topology.MaxGraphFieldLength || !strings.HasPrefix(got, "unbound:sha256:") {
+		t.Fatalf("unboundGraphIdentity() = %q (%d bytes)", got, len(got))
+	}
+}
+
+func TestReadCiscoDevicesUsesScopedKubectlJSON(t *testing.T) {
+	previous := commandContext
+	commandContext = func(ctx context.Context, _ string, args ...string) *exec.Cmd {
+		helperArgs := append([]string{"-test.run=^TestGraphKubectlHelperProcess$", "--"}, args...)
+		cmd := exec.CommandContext(ctx, os.Args[0], helperArgs...)
+		cmd.Env = append(os.Environ(), "GO_WANT_CVK_GRAPH_KUBECTL_HELPER=1")
+		return cmd
+	}
+	t.Cleanup(func() { commandContext = previous })
+
+	devices, err := readCiscoDevices(context.Background(), &topologyGraphFlags{
+		namespace: "cvk-live", kubectlBin: os.Args[0], kubeContext: "lab", kubeconfig: "/tmp/lab.conf",
+	})
+	if err != nil {
+		t.Fatalf("readCiscoDevices() error = %v", err)
+	}
+	if len(devices) != 1 || devices[0].Metadata.Name != "leaf-a" {
+		t.Fatalf("devices = %#v", devices)
+	}
+}
+
+func TestGraphKubectlHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_CVK_GRAPH_KUBECTL_HELPER") != "1" {
+		return
+	}
+	separator := slices.Index(os.Args, "--")
+	if separator < 0 || separator == len(os.Args)-1 {
+		fmt.Fprintln(os.Stderr, "missing helper arguments")
+		os.Exit(2)
+	}
+	got := os.Args[separator+1:]
+	want := []string{
+		"--kubeconfig", "/tmp/lab.conf", "--context", "lab", "get", "ciscodevices.cisco.vk",
+		"-n", "cvk-live", "-o", "json",
+	}
+	if !slices.Equal(got, want) {
+		fmt.Fprintf(os.Stderr, "unexpected graph kubectl arguments: %q\n", got)
+		os.Exit(2)
+	}
+	fmt.Fprint(os.Stdout, `{"apiVersion":"cisco.vk/v1alpha1","kind":"CiscoDeviceList","items":[{"apiVersion":"cisco.vk/v1alpha1","kind":"CiscoDevice","metadata":{"name":"leaf-a","namespace":"cvk-live"},"spec":{"physicalIdentity":"serial-a","address":"192.0.2.10","driver":"XE"}}]}`)
+	os.Exit(0)
+}
 
 func TestParseExecArgs(t *testing.T) {
 	cases := []struct {

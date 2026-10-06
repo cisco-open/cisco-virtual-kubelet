@@ -1,0 +1,42 @@
+[
+  {
+    "containers": [
+      {
+        "containerID": "containerd://ad71a5764fcd715114180bfcd27d92d98b918094c9d5b73f9e1410bfb0c8edfa",
+        "image": "docker.io/library/cvk-tas-extentions:665a7954-settled2",
+        "imageID": "sha256:579bf6c4db995d0254a38015ebbb3185b6cdb4ac92128155587f283b3fa49ca9",
+        "lastState": {
+          "terminated": {
+            "containerID": "containerd://7a873e603ad496165daeb676f02f55d10c3ce83ff6928eca837006e91ae308f4",
+            "exitCode": 1,
+            "finishedAt": "2026-10-01T06:19:31Z",
+            "reason": "Error",
+            "startedAt": "2026-10-01T06:19:01Z"
+          }
+        },
+        "name": "cisco-vk",
+        "ready": true,
+        "restartCount": 1,
+        "state": {
+          "running": {
+            "startedAt": "2026-10-01T06:19:32Z"
+          }
+        }
+      }
+    ],
+    "deleting": false,
+    "metadata": {
+      "creationTimestamp": "2026-10-01T06:19:00Z",
+      "generation": 1,
+      "name": "cat9k-live-vk-f6448cd6-srbhk",
+      "namespace": "cvk-live",
+      "resourceVersion": "9487999",
+      "uid": "f7b5e1e9-13ef-4ec2-add4-3a2c882b2fc0"
+    },
+    "phase": "Running",
+    "ready": true,
+    "requestedImages": [
+      "cvk-tas-extentions:665a7954-settled2"
+    ]
+  }
+]

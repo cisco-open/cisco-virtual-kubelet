@@ -179,6 +179,10 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		Recorder:        recorder,
 		SubscribeNotify: notify,
 		RuntimeID:       os.Getenv("POD_UID"),
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodName:   opts.WorkerPodName,
+		WorkerPodUID:    opts.WorkerPodUID,
 	}
 	if notify != nil {
 		subscribeEvents = make(chan event.GenericEvent, 1)
@@ -218,6 +222,9 @@ func startNXOSConfigReconciler(ctx context.Context, cfg *rest.Config, deviceName
 		Scheme:          mgr.GetScheme(),
 		DeviceName:      deviceName,
 		DeviceNamespace: operationNamespace(),
+		ManagedTopology: opts.ManagedTopology,
+		DeviceUID:       opts.DeviceUID,
+		WorkerPodUID:    opts.WorkerPodUID,
 		Platform:        diagnostic.CommandPlatformNXOS,
 		TP:              r,
 	}

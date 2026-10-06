@@ -148,3 +148,35 @@ func (d *dynamicSoftwareLifecycle) ObserveDeviceFile(ctx context.Context, operat
 	}
 	return backend.ObserveDeviceFile(ctx, operationID, targetVersion)
 }
+
+func (d *dynamicSoftwareLifecycle) ObserveInterruptedInstall(
+	ctx context.Context,
+	request softwarelifecycle.InterruptedInstallRequest,
+) (softwarelifecycle.InterruptedInstallObservation, error) {
+	backend, err := d.backend()
+	if err != nil {
+		return softwarelifecycle.InterruptedInstallObservation{}, err
+	}
+	observer, ok := backend.(softwarelifecycle.InterruptedInstallObserver)
+	if !ok {
+		return softwarelifecycle.InterruptedInstallObservation{}, softwarelifecycle.ErrUnsupported
+	}
+	return observer.ObserveInterruptedInstall(ctx, request)
+}
+
+// Forward optional recovery evidence through the same current-transport path
+// as install observation. Unsupported adapters remain fail-closed.
+func (d *dynamicSoftwareLifecycle) ObservePreparationRetirement(
+	ctx context.Context,
+	request softwarelifecycle.PreparationRetirementRequest,
+) (softwarelifecycle.PreparationRetirementObservation, error) {
+	backend, err := d.backend()
+	if err != nil {
+		return softwarelifecycle.PreparationRetirementObservation{}, err
+	}
+	observer, ok := backend.(softwarelifecycle.PreparationRetirementObserver)
+	if !ok {
+		return softwarelifecycle.PreparationRetirementObservation{}, softwarelifecycle.ErrUnsupported
+	}
+	return observer.ObservePreparationRetirement(ctx, request)
+}

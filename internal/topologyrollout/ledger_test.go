@@ -405,6 +405,92 @@ func TestAdministratorLimitsCountReservationsAcrossCampaigns(t *testing.T) {
 	}
 }
 
+func TestOverlappingRiskGroupsCountNonTargetHealthAndAllCampaigns(t *testing.T) {
+	policy := testPolicy()
+	policy.GlobalMaxConcurrentTransfers = 10
+	policy.GlobalMaxUnavailable = 10
+	policy.DomainTransferBudgets["topology.cisco.vk/site"] = 10
+	policy.DomainBudgets["topology.cisco.vk/site"] = 10
+	policy.DomainTransferBudgets["topology.cisco.vk/redundancy-group"] = 10
+	policy.DomainBudgets["topology.cisco.vk/redundancy-group"] = 10
+	policy.RiskGroupBudgets = map[string]RiskGroupBudget{
+		"customer-a": {MaxConcurrentTransfers: 1, MaxUnavailable: 2},
+		"path-east":  {MaxConcurrentTransfers: 2, MaxUnavailable: 1},
+	}
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	target.RiskGroups = []string{"customer-a", "path-east"}
+	nonTarget := testMember("serial-b", "device-b", "node-b", "site-b", "pair-b", false)
+	nonTarget.RiskGroups = []string{"path-east"}
+	request := testRequest("reservation-a", target)
+	request.RiskGroups = append([]string(nil), target.RiskGroups...)
+	if err := Reserve(testLedger(t), policy, []Member{target, nonTarget}, request); !errors.Is(err, ErrBudgetExceeded) {
+		t.Fatalf("non-target unhealthy overlapping peer error = %v, want ErrBudgetExceeded", err)
+	}
+
+	nonTarget.Healthy = true
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target, nonTarget}, request); err != nil {
+		t.Fatalf("Reserve(first risk-group member) error = %v", err)
+	}
+	other := testMember("serial-c", "device-c", "node-c", "site-c", "pair-c", true)
+	other.RiskGroups = []string{"customer-a"}
+	second := testRequest("reservation-c", other)
+	second.CampaignUID = "other-campaign"
+	second.RiskGroups = append([]string(nil), other.RiskGroups...)
+	if err := Reserve(ledger, policy, []Member{target, nonTarget, other}, second); !errors.Is(err, ErrBudgetExceeded) {
+		t.Fatalf("cross-campaign overlapping transfer error = %v, want ErrBudgetExceeded", err)
+	}
+}
+
+func TestMalformedRiskGroupPolicyFailsBeforeLedgerMutation(t *testing.T) {
+	policy := testPolicy()
+	policy.RiskGroupBudgets = map[string]RiskGroupBudget{
+		"path-east": {MaxConcurrentTransfers: 0, MaxUnavailable: 1},
+	}
+	target := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	target.RiskGroups = []string{"path-east"}
+	request := testRequest("reservation-a", target)
+	request.RiskGroups = append([]string(nil), target.RiskGroups...)
+	ledger := testLedger(t)
+	if err := Reserve(ledger, policy, []Member{target}, request); err == nil {
+		t.Fatal("malformed risk-group policy was accepted")
+	}
+	if len(ledger.Reservations) != 0 {
+		t.Fatalf("malformed policy mutated ledger: %#v", ledger.Reservations)
+	}
+}
+
+func TestRiskGroupMembershipHashIsOrderStableAndMembershipSensitive(t *testing.T) {
+	a := testMember("serial-a", "device-a", "node-a", "site-a", "pair-a", true)
+	a.RiskGroups = []string{"customer-a", "path-east"}
+	b := testMember("serial-b", "device-b", "node-b", "site-b", "pair-b", true)
+	b.RiskGroups = []string{"customer-a"}
+	first, err := RiskGroupMembershipHash([]Member{a, b})
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := RiskGroupMembershipHash([]Member{b, a})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first != second {
+		t.Fatalf("order changed membership hash: %s != %s", first, second)
+	}
+	b.RiskGroups = []string{"path-east"}
+	changed, err := RiskGroupMembershipHash([]Member{a, b})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed == first {
+		t.Fatal("membership change did not change frozen hash")
+	}
+	conflict := a
+	conflict.DeviceUID = "different-device"
+	if _, err := RiskGroupMembershipHash([]Member{a, conflict}); err == nil || !strings.Contains(err.Error(), "conflicting membership") {
+		t.Fatalf("duplicate physical identity error = %v", err)
+	}
+}
+
 func TestReservationTransitionsBindUIDAndUseMonotonicControl(t *testing.T) {
 	policy := testPolicy()
 	policy.DomainBudgets["topology.cisco.vk/redundancy-group"] = 2

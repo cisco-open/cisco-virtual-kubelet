@@ -1,0 +1,188 @@
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareRollout
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"ops.cisco.vk/v1alpha1","kind":"IOSXESoftwareRollout","metadata":{"annotations":{},"name":"roadmap-pacing-downgrade-20261002-103","namespace":"cvk-live"},"spec":{"control":{"revision":0},"plan":{"budgets":{"domains":[{"maxConcurrentTransfers":1,"topologyKey":"distribution.cisco.vk/cache-domain"},{"maxUnavailable":1,"topologyKey":"operations.cisco.vk/redundancy-domain"}],"maxConcurrentTransfers":1,"maxUnavailable":1},"canaries":[{"devices":["cat9k-lab-103"],"name":"c9300-24p"}],"health":{"canarySoakSeconds":30,"maxObservationAgeSeconds":300,"network":{"enabled":true,"requireCompleteEvidence":true},"waveSoakSeconds":30},"image":{"imageFamily":"cat9k","sha256":"c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355","sources":[{"name":"ubuntu16-qualified-source","priority":10,"url":"sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.02.SPA.bin","urlSecretRef":{"name":"pr194-iosxe-image-source"}}]},"installTimeoutSeconds":7200,"pauseAfterCanary":false,"rebootTimeoutSeconds":3600,"requestedAt":"2026-10-01T22:31:03Z","requestedBy":"system:admin","rollbackOnFailure":true,"strategy":"Reload","targetVersion":"17.18.02","targets":{"allowAll":false,"maxTargets":1,"selector":{"matchLabels":{"topology.cisco.vk/lab-node":"cat9k-lab-103","topology.cisco.vk/managed":"true"}}},"workloads":{"policy":"BlockIfRunning"}}}}
+  creationTimestamp: "2026-10-01T22:32:43Z"
+  finalizers:
+  - ops.cisco.vk/iosxesoftwarerollout-safety
+  generation: 1
+  name: roadmap-pacing-downgrade-20261002-103
+  namespace: cvk-live
+  resourceVersion: "9694483"
+  uid: b57d4bf9-3c3c-4998-8a79-954cfd2ff51e
+spec:
+  control:
+    revision: 0
+  plan:
+    budgets:
+      domains:
+      - maxConcurrentTransfers: 1
+        topologyKey: distribution.cisco.vk/cache-domain
+      - maxUnavailable: 1
+        topologyKey: operations.cisco.vk/redundancy-domain
+      maxConcurrentTransfers: 1
+      maxUnavailable: 1
+    canaries:
+    - devices:
+      - cat9k-lab-103
+      name: c9300-24p
+    health:
+      canarySoakSeconds: 30
+      maxObservationAgeSeconds: 300
+      network:
+        enabled: true
+        requireCompleteEvidence: true
+      waveSoakSeconds: 30
+    image:
+      imageFamily: cat9k
+      sha256: c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+      sources:
+      - name: ubuntu16-qualified-source
+        priority: 10
+        url: sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.02.SPA.bin
+        urlSecretRef:
+          name: pr194-iosxe-image-source
+    installTimeoutSeconds: 7200
+    pauseAfterCanary: false
+    rebootTimeoutSeconds: 3600
+    requestedAt: "2026-10-01T22:31:03Z"
+    requestedBy: system:admin
+    rollbackOnFailure: true
+    strategy: Reload
+    targetVersion: 17.18.02
+    targets:
+      allowAll: false
+      maxTargets: 1
+      selector:
+        matchLabels:
+          topology.cisco.vk/lab-node: cat9k-lab-103
+          topology.cisco.vk/managed: "true"
+    workloads:
+      policy: BlockIfRunning
+status:
+  conditions:
+  - lastTransitionTime: "2026-10-01T22:32:43Z"
+    message: frozen plan created; approval of the exact plan hash is required
+    observedGeneration: 1
+    reason: PlanFrozen
+    status: "True"
+    type: Planned
+  - lastTransitionTime: "2026-10-01T22:32:43Z"
+    message: frozen plan created; approval of the exact plan hash is required
+    observedGeneration: 1
+    reason: ApprovalRequired
+    status: "False"
+    type: Approved
+  counts:
+    planned: 1
+    total: 1
+  effectivePolicy:
+    epoch: 1
+    policy:
+      domains:
+      - maxConcurrentTransfers: 1
+        topologyKey: distribution.cisco.vk/cache-domain
+      - maxUnavailable: 1
+        topologyKey: operations.cisco.vk/redundancy-domain
+      - maxConcurrentTransfers: 1
+        topologyKey: topology.kubernetes.io/region
+      - maxUnavailable: 1
+        topologyKey: topology.kubernetes.io/zone
+      healthFreshnessSeconds: 300
+      ledgerName: cisco-vk-cisco-virtual-kubelet-topology-ledger
+      ledgerNamespace: cisco-vk-system
+      ledgerUID: 8587a09e-451e-43a1-b638-0b2c11af78b6
+      maxActiveReservations: 3
+      maxConcurrentTransfers: 1
+      maxLedgerSizeBytes: 262144
+      maxTargets: 3
+      maxUnavailable: 1
+      name: cisco-vk-cisco-virtual-kubelet-topology-policy
+      namespace: cisco-vk-system
+      resourceVersion: "9694052"
+      semanticHash: sha256:4af003a1f88f5edd64e5ca1b71063ee6ac1ae5c51bce8c31999b8d11cc46c800
+      structuralHash: sha256:b4c49ffaac4c3540a38fef3adc15c8dc4b48760d3034cf1721cd1c3ed41cca01
+      uid: 525ff87f-b74a-44c4-b54e-408e63a3a2e7
+    updatedAt: "2026-10-01T22:32:43Z"
+  frozenPlan:
+    campaignGeneration: 1
+    createdAt: "2026-10-01T22:32:43Z"
+    encodedSizeBytes: 3624
+    hash: sha256:69887ad50f58fbe51a014b53559be34869331be35cbd384ced02a31771fced53
+    policy:
+      domains:
+      - maxConcurrentTransfers: 1
+        topologyKey: distribution.cisco.vk/cache-domain
+      - maxUnavailable: 1
+        topologyKey: operations.cisco.vk/redundancy-domain
+      - maxConcurrentTransfers: 1
+        topologyKey: topology.kubernetes.io/region
+      - maxUnavailable: 1
+        topologyKey: topology.kubernetes.io/zone
+      healthFreshnessSeconds: 300
+      ledgerName: cisco-vk-cisco-virtual-kubelet-topology-ledger
+      ledgerNamespace: cisco-vk-system
+      ledgerUID: 8587a09e-451e-43a1-b638-0b2c11af78b6
+      maxActiveReservations: 3
+      maxConcurrentTransfers: 1
+      maxLedgerSizeBytes: 262144
+      maxTargets: 3
+      maxUnavailable: 1
+      name: cisco-vk-cisco-virtual-kubelet-topology-policy
+      namespace: cisco-vk-system
+      resourceVersion: "9694052"
+      semanticHash: sha256:4af003a1f88f5edd64e5ca1b71063ee6ac1ae5c51bce8c31999b8d11cc46c800
+      structuralHash: sha256:b4c49ffaac4c3540a38fef3adc15c8dc4b48760d3034cf1721cd1c3ed41cca01
+      uid: 525ff87f-b74a-44c4-b54e-408e63a3a2e7
+    riskGroupMembershipHash: sha256:17569b19e0d3ae1ce98c191c8d8977408cee00bcc7f3951d63265b54d11d5982
+    targets:
+    - canaryCohort: c9300-24p
+      childName: roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98
+      deviceGeneration: 7
+      deviceName: cat9k-lab-103
+      deviceUID: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+      driver: XE
+      imageFamily: cat9k
+      maxTransferBytesPerSecond: 25000000
+      nodeName: cat9k-lab-103
+      nodeUID: 404b46d4-fcb4-4fd1-bdda-b499d0fe3d83
+      physicalIdentity: foc2416u0mv
+      projectionHash: sha256:d275f403dab2101e862b0dbd5de7c90baaf45b680d250ee93736313adc3429a2
+      qualificationCohort: c9300-24p
+      riskGroups:
+      - cat9k-103-path
+      source:
+        name: ubuntu16-qualified-source
+        priority: 10
+        secretName: pr194-iosxe-image-source
+        secretUID: 05d5617d-d807-4388-902f-9148c667fcc3
+        sha256: c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355
+        url: sftp://10.0.2.2/home/cisco/cvk-gnoi-images/cat9k_iosxe.17.18.02.SPA.bin
+      topology:
+      - key: distribution.cisco.vk/cache-domain
+        value: ubuntu16
+      - key: operations.cisco.vk/redundancy-domain
+        value: physical-c9k-lab
+      - key: topology.cisco.vk/lab-node
+        value: cat9k-lab-103
+      - key: topology.cisco.vk/lab-set
+        value: pr194-physical-c9k
+      - key: topology.cisco.vk/site
+        value: ubuntu16-physical
+      - key: topology.kubernetes.io/region
+        value: lab
+      - key: topology.kubernetes.io/zone
+        value: physical-c9k-lab
+      wave: 0
+      workerProtocolVersion: rollout-v1
+  message: frozen plan created; approval of the exact plan hash is required
+  observedGeneration: 1
+  phase: AwaitingApproval
+  targets:
+  - deviceName: cat9k-lab-103
+    deviceUID: 782dc4b2-7e43-4188-8436-87633f0bf4fb
+    lastTransitionTime: "2026-10-01T22:32:43Z"
+    leafName: roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98
+    phase: Planned

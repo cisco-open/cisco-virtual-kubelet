@@ -1,0 +1,226 @@
+{
+  "complete": false,
+  "evidenceHash": "sha256:541d679caaf047c8be7cbdd5d5e302e137cf8afa53d31f2b37454c1571c23a38",
+  "provenanceHash": "sha256:efd0fbce42f311f637ef22e9f818271857e34496b329e3b79f2da391d9e2c934",
+  "observations": [
+    {
+      "device": "cvk-live/cat9k-lab-103",
+      "deviceUID": "782dc4b2-7e43-4188-8436-87633f0bf4fb",
+      "physicalID": "foc2416u0mv",
+      "accepted": true,
+      "workerPodUID": "7a6836e0-2daf-4409-bc44-633ab2bb20b7",
+      "producerRevision": "sha256:997645683a44b971784d3a3d7c40a71fd4cf1279db68ef6d051ffe18ebe1710d",
+      "sampleSequence": 5,
+      "collectionStartedAt": "2026-10-02T00:28:58Z",
+      "collectionEndedAt": "2026-10-02T00:29:00Z",
+      "deviceIdentityHash": "sha256:6bfed42aecb52b5da0e8cf98c10f1bfc3b36e327fafb61c672e159b805b712e7"
+    },
+    {
+      "device": "cvk-live/cat9k-live",
+      "deviceUID": "6afd6bd0-284d-4ee2-a6e4-638ca07976b4",
+      "physicalID": "foc2520l6e8",
+      "accepted": true,
+      "workerPodUID": "ca5e1070-f0ff-4e2e-a2b9-701868f72c55",
+      "producerRevision": "sha256:35db977f4e08914fd651bc81a847445181fd15715f139b1f11c44f2ab9509f1e",
+      "sampleSequence": 4,
+      "collectionStartedAt": "2026-10-02T00:28:58Z",
+      "collectionEndedAt": "2026-10-02T00:28:59Z",
+      "deviceIdentityHash": "sha256:f2f616b2b7d0595d59681a9ccbcc3dfd5117057b3728149822e5d692716d7f6e"
+    },
+    {
+      "device": "cvk-live/cat9k-lab-101",
+      "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+      "physicalID": "foc2520l6h1",
+      "accepted": true,
+      "workerPodUID": "cfa19f0d-f8c2-4ee5-a384-b5789e06ff21",
+      "producerRevision": "sha256:a84421fd25673c20a68c574923053c2d10c367c89936e971e9843beebdc45d4d",
+      "sampleSequence": 5,
+      "collectionStartedAt": "2026-10-02T00:28:28Z",
+      "collectionEndedAt": "2026-10-02T00:28:30Z",
+      "deviceIdentityHash": "sha256:dac037030871a1337647598d725235d4c94cbdb200cecf271309b46af0a1eaa2"
+    },
+    {
+      "device": "cvk-live/nexus9300v-live",
+      "deviceUID": "a12419cf-7d6b-4e2a-938f-5d02956c99ee",
+      "physicalID": "unbound:cvk-live/nexus9300v-live",
+      "accepted": false
+    }
+  ],
+  "nodes": [
+    "foc2416u0mv",
+    "foc2520l6e8",
+    "foc2520l6h1",
+    "unbound:cvk-live/nexus9300v-live"
+  ],
+  "edges": [
+    {
+      "Local": "foc2416u0mv",
+      "Peer": "C9K-1",
+      "Identity": "cdp|C9K-1|GigabitEthernet1/0/23|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet1/0/23",
+      "RemoteInterface": "GigabitEthernet1/0/23",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2416u0mv",
+      "Peer": "MaC_Outside_Switch",
+      "Identity": "cdp|MaC_Outside_Switch|GigabitEthernet0/0|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet0/0",
+      "RemoteInterface": "GigabitEthernet1/0/16",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2520l6e8",
+      "Peer": "C9K-2",
+      "Identity": "cdp|C9K-2|GigabitEthernet1/0/1|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet1/0/1",
+      "RemoteInterface": "GigabitEthernet1/0/1",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2520l6e8",
+      "Peer": "C9K-4.dmz.cisco.com",
+      "Identity": "cdp|C9K-4.dmz.cisco.com|GigabitEthernet1/0/23|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet1/0/23",
+      "RemoteInterface": "GigabitEthernet1/0/23",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2520l6e8",
+      "Peer": "MaC_Outside_Switch",
+      "Identity": "cdp|MaC_Outside_Switch|GigabitEthernet0/0|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet0/0",
+      "RemoteInterface": "GigabitEthernet1/0/11",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2520l6e8",
+      "Peer": "MaC_Outside_Switch",
+      "Identity": "cdp|MaC_Outside_Switch|GigabitEthernet1/0/22|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet1/0/22",
+      "RemoteInterface": "GigabitEthernet1/0/2",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2520l6e8",
+      "Peer": "Outside-Segment.cx-emea-cto-cloud-de.com",
+      "Identity": "cdp|Outside-Segment.cx-emea-cto-cloud-de.com|GigabitEthernet1/0/2|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet1/0/2",
+      "RemoteInterface": "GigabitEthernet1/0/11",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2520l6h1",
+      "Peer": "C9K-1",
+      "Identity": "cdp|C9K-1|GigabitEthernet1/0/1|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet1/0/1",
+      "RemoteInterface": "GigabitEthernet1/0/1",
+      "RoutingDomain": "",
+      "State": "discovered"
+    },
+    {
+      "Local": "foc2520l6h1",
+      "Peer": "MaC_Outside_Switch",
+      "Identity": "cdp|MaC_Outside_Switch|GigabitEthernet0/0|",
+      "Source": "cdp",
+      "Interface": "GigabitEthernet0/0",
+      "RemoteInterface": "GigabitEthernet1/0/15",
+      "RoutingDomain": "",
+      "State": "discovered"
+    }
+  ],
+  "diagnostics": [
+    {
+      "Code": "IncompleteObservation",
+      "Severity": "Error",
+      "Local": "unbound:cvk-live/nexus9300v-live",
+      "Peer": "",
+      "Message": "CiscoDevice has no manager-bound physical identity"
+    },
+    {
+      "Code": "ObservationTimeMissing",
+      "Severity": "Error",
+      "Local": "unbound:cvk-live/nexus9300v-live",
+      "Peer": "",
+      "Message": "observation has no authenticated collection time"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2416u0mv",
+      "Peer": "C9K-1",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2416u0mv",
+      "Peer": "MaC_Outside_Switch",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2520l6e8",
+      "Peer": "C9K-2",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2520l6e8",
+      "Peer": "C9K-4.dmz.cisco.com",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2520l6e8",
+      "Peer": "MaC_Outside_Switch",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2520l6e8",
+      "Peer": "MaC_Outside_Switch",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2520l6e8",
+      "Peer": "Outside-Segment.cx-emea-cto-cloud-de.com",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2520l6h1",
+      "Peer": "C9K-1",
+      "Message": "peer is not present in the supplied observation set"
+    },
+    {
+      "Code": "UnknownPeer",
+      "Severity": "Warning",
+      "Local": "foc2520l6h1",
+      "Peer": "MaC_Outside_Switch",
+      "Message": "peer is not present in the supplied observation set"
+    }
+  ]
+}

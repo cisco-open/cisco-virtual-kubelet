@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ValidateTargetVersion enforces the shared version syntax accepted by the
@@ -142,6 +143,57 @@ type DeviceFileObservation struct {
 	OperationID string
 	State       OperationState
 	Image       *InventoryImage
+}
+
+// InterruptedInstallRequest identifies a gNOI byte-stream install whose
+// response was lost after this process observed transfer progress. Native
+// adapters may use stronger platform evidence to prove that exact attempt
+// completed without replaying it.
+type InterruptedInstallRequest struct {
+	TargetVersion    string
+	SourceSize       int64
+	NotBefore        time.Time
+	ObservedAt       time.Time
+	DeviceNotBefore  time.Time
+	DeviceObservedAt time.Time
+}
+
+// InterruptedInstallObservation is positive, platform-native proof that the
+// interrupted install produced one exact activatable image.
+type InterruptedInstallObservation struct {
+	Image       InventoryImage
+	CompletedAt time.Time
+}
+
+// InterruptedInstallObserver is an optional strengthening of Backend. A
+// provider must continue to fail closed when the selected backend does not
+// implement it or cannot correlate the interrupted attempt precisely.
+type InterruptedInstallObserver interface {
+	ObserveInterruptedInstall(context.Context, InterruptedInstallRequest) (InterruptedInstallObservation, error)
+}
+
+// PreparationRetirementObserver is optional, read-only recovery evidence.
+// Implementations must prove every native install location is quiescent, the
+// original running image remains committed, and the exact target is inactive
+// or absent. Empty/malformed inventory and unknown operations are not absence.
+type PreparationRetirementObserver interface {
+	ObservePreparationRetirement(context.Context, PreparationRetirementRequest) (PreparationRetirementObservation, error)
+}
+
+// PreparationRetirementRequest carries immutable receipt evidence, not a new
+// install authorization. Adapters must not infer completion from age or idle
+// state alone when native inventory still reports an in-progress operation.
+type PreparationRetirementRequest struct {
+	TargetVersion    string
+	RunningVersion   string
+	SourceSize       int64
+	InstallStartedAt time.Time
+	PreparedAt       time.Time
+}
+
+type PreparationRetirementObservation struct {
+	TargetState  InventoryState
+	EvidenceHash string
 }
 
 // Backend is an optional platform capability. Generic gNOI byte transfer and

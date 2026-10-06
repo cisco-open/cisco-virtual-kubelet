@@ -22,7 +22,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
 	lifecycle "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle"
@@ -36,6 +39,14 @@ const (
 
 type rpcInvoker interface {
 	InvokeRPC(ctx context.Context, path string, payload []byte) ([]byte, error)
+}
+
+// deviceTimeFetcher is implemented by the IOS XE RESTCONF transport. Its
+// device and local timestamps describe the same authenticated response, so an
+// interrupted install can be correlated in the clock domain used by IOS XE's
+// native operation history when gNOI System.Time is unavailable.
+type deviceTimeFetcher interface {
+	FetchWithDeviceTime(ctx context.Context, path string) ([]byte, time.Time, time.Time, error)
 }
 
 // Adapter maps IOS XE install-oper and install-rpc YANG surfaces into the
@@ -69,6 +80,54 @@ func (a *Adapter) Inspect(ctx context.Context, targetVersion string) (lifecycle.
 		return lifecycle.InventoryImage{}, fmt.Errorf("fetch IOS XE install inventory: %w", err)
 	}
 	return inventoryImageFromJSON(raw, targetVersion)
+}
+
+// ObserveInterruptedInstall correlates an interrupted gNOI byte stream with
+// IOS XE's completed install-add operation, verified source package, quiescent
+// installer, and exact per-location image inventory. IOS XE 17.18 can leave
+// install-version-info at in-progress after the add operation has completed;
+// none of those signals is sufficient on its own.
+func (a *Adapter) ObserveInterruptedInstall(
+	ctx context.Context,
+	request lifecycle.InterruptedInstallRequest,
+) (lifecycle.InterruptedInstallObservation, error) {
+	if err := lifecycle.ValidateTargetVersion(request.TargetVersion); err != nil {
+		return lifecycle.InterruptedInstallObservation{}, err
+	}
+	if request.SourceSize <= 0 || request.NotBefore.IsZero() || request.ObservedAt.IsZero() ||
+		request.ObservedAt.Before(request.NotBefore) {
+		return lifecycle.InterruptedInstallObservation{}, fmt.Errorf("interrupted install requires positive source size and a valid observation interval")
+	}
+	var raw []byte
+	var err error
+	if timed, ok := a.transport.(deviceTimeFetcher); ok {
+		var deviceObservedAt, localObservedAt time.Time
+		raw, deviceObservedAt, localObservedAt, err = timed.FetchWithDeviceTime(ctx, installOperDataPath)
+		if err == nil && request.DeviceNotBefore.IsZero() && request.DeviceObservedAt.IsZero() &&
+			!deviceObservedAt.IsZero() && !localObservedAt.IsZero() {
+			request.DeviceNotBefore = deviceObservedAt.Add(request.NotBefore.Sub(localObservedAt))
+			request.DeviceObservedAt = deviceObservedAt.Add(request.ObservedAt.Sub(localObservedAt))
+		}
+	} else {
+		raw, err = a.transport.Fetch(ctx, installOperDataPath)
+	}
+	if err != nil {
+		return lifecycle.InterruptedInstallObservation{}, fmt.Errorf("fetch IOS XE interrupted install evidence: %w", err)
+	}
+	root, err := decodeObject(raw)
+	if err != nil {
+		return lifecycle.InterruptedInstallObservation{}, fmt.Errorf("decode IOS XE interrupted install evidence: %w", err)
+	}
+	image, err := inventoryImageFromNode(root, request.TargetVersion)
+	if err != nil {
+		return lifecycle.InterruptedInstallObservation{}, err
+	}
+	completedAt, err := correlateInterruptedInstall(root, image, request)
+	if err != nil {
+		return lifecycle.InterruptedInstallObservation{}, err
+	}
+	image.State = lifecycle.InventoryStateInstalled
+	return lifecycle.InterruptedInstallObservation{Image: image, CompletedAt: completedAt}, nil
 }
 
 // RegisterDeviceFile submits IOS XE's install-by-path RPC. The RPC is always
@@ -350,6 +409,209 @@ func inventoryImageFromNode(root map[string]any, target string) (lifecycle.Inven
 	panic("unreachable")
 }
 
+const (
+	interruptedInstallClockSkew   = 5 * time.Minute
+	interruptedInstallClockJitter = 30 * time.Second
+)
+
+func correlateInterruptedInstall(
+	root map[string]any,
+	image lifecycle.InventoryImage,
+	request lifecycle.InterruptedInstallRequest,
+) (time.Time, error) {
+	if image.State != lifecycle.InventoryStateInProgress && !image.State.Activatable() {
+		return time.Time{}, fmt.Errorf("target %s inventory state %s is not an interrupted install candidate",
+			image.Version, image.State)
+	}
+	sourceName := installSourceName(image.SourcePath)
+	if sourceName == "" {
+		return time.Time{}, fmt.Errorf("target %s has no source filename", image.Version)
+	}
+	locations, found, err := collectNamedList(root, "install-location-information")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("decode IOS XE interrupted install locations: %w", err)
+	}
+	if !found || len(locations) == 0 {
+		return time.Time{}, fmt.Errorf("IOS XE interrupted install locations are absent")
+	}
+	if sourceName == "gNOI_iosxe_.bin" {
+		// Repeated gNOI adds can leave this exact placeholder in IOS XE's
+		// version record. Resolve it only through that version's unique IMG
+		// package at every location; ordinary source mismatches stay rejected.
+		if image.State != lifecycle.InventoryStateInProgress || request.DeviceNotBefore.IsZero() || request.DeviceObservedAt.IsZero() {
+			return time.Time{}, fmt.Errorf("placeholder source requires in-progress inventory and native response clock")
+		}
+		sourceName, err = repeatedInstallSourceName(locations, image)
+		if err != nil {
+			return time.Time{}, err
+		}
+	}
+	for _, location := range locations {
+		if err := validateInterruptedInstallLocation(location, image.Version, sourceName, request.SourceSize); err != nil {
+			return time.Time{}, err
+		}
+	}
+
+	active, _, err := collectNamedList(root, "install-oper")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("decode IOS XE active install operations: %w", err)
+	}
+	history, _, err := collectNamedList(root, "install-oper-hist")
+	if err != nil {
+		return time.Time{}, fmt.Errorf("decode IOS XE install operation history: %w", err)
+	}
+	var matched []time.Time
+	notBefore := request.NotBefore.Add(-interruptedInstallClockSkew)
+	observedAt := request.ObservedAt.Add(interruptedInstallClockSkew)
+	if !request.DeviceNotBefore.IsZero() || !request.DeviceObservedAt.IsZero() {
+		if request.DeviceNotBefore.IsZero() || request.DeviceObservedAt.IsZero() ||
+			request.DeviceObservedAt.Before(request.DeviceNotBefore) {
+			return time.Time{}, fmt.Errorf("interrupted install device-clock interval is incomplete or invalid")
+		}
+		notBefore = request.DeviceNotBefore.Add(-interruptedInstallClockJitter)
+		observedAt = request.DeviceObservedAt.Add(interruptedInstallClockJitter)
+	}
+	for _, operations := range [][]map[string]any{active, history} {
+		for _, operation := range operations {
+			add, ok := objectField(operation, "add-param")
+			if !ok || installSourceName(stringField(add, "dest-filename")) != sourceName ||
+				normalizeOperationState(stringField(operation, "op-status"), stringField(operation, "op-done")) != lifecycle.OperationStateSucceeded {
+				continue
+			}
+			started, startErr := time.Parse(time.RFC3339Nano, stringField(operation, "start-time"))
+			completed, endErr := time.Parse(time.RFC3339Nano, stringField(operation, "end-time"))
+			if startErr != nil || endErr != nil || completed.Before(started) ||
+				started.Before(notBefore) || started.After(observedAt) ||
+				completed.After(observedAt) {
+				continue
+			}
+			operationID := stringField(operation, "op-uuid")
+			if operationID == "" {
+				continue
+			}
+			matched = append(matched, completed)
+		}
+	}
+	if len(matched) == 0 {
+		return time.Time{}, fmt.Errorf("target %s has no recent completed install-add operation: %w",
+			image.Version, lifecycle.ErrOperationNotFound)
+	}
+	if len(matched) != 1 {
+		return time.Time{}, fmt.Errorf("target %s matched %d recent completed install-add operations: %w",
+			image.Version, len(matched), lifecycle.ErrAmbiguousOperation)
+	}
+	return matched[0], nil
+}
+
+// This does not repair or rewrite inventory. The resolved name still has to
+// pass verified size, package-state and exact recent-add correlation below.
+func repeatedInstallSourceName(locations []map[string]any, image lifecycle.InventoryImage) (string, error) {
+	if !path.IsAbs(image.SourcePath) || path.Clean(image.SourcePath) != image.SourcePath {
+		return "", fmt.Errorf("placeholder source has no canonical native directory")
+	}
+	want := "gNOI_iosxe_" + image.Version + ".bin"
+	for _, location := range locations {
+		versions, _, err := directNamedList(location, "install-version-info")
+		if err != nil {
+			return "", err
+		}
+		matches, images := 0, 0
+		for _, version := range versions {
+			entry := inventoryVersion{Version: stringField(version, "version"), VersionExtension: stringField(version, "version-extension")}
+			if entry.identity() != image.Version {
+				continue
+			}
+			matches++
+			packages, _, err := directNamedList(version, "install-package-state-info")
+			if err != nil {
+				return "", err
+			}
+			for _, pkg := range packages {
+				if stringField(pkg, "package-type") != "install-pkg-img" {
+					continue
+				}
+				images++
+				if stringField(pkg, "pkg-name") != want || stringField(pkg, "pkg-dir") != path.Dir(image.SourcePath) || stringField(pkg, "package-state") != "install-state-added" {
+					return "", fmt.Errorf("placeholder source does not bind the exact added IMG package")
+				}
+			}
+		}
+		if matches != 1 || images != 1 {
+			return "", fmt.Errorf("placeholder source requires one exact version and IMG package per location")
+		}
+	}
+	return want, nil
+}
+
+func validateInterruptedInstallLocation(location map[string]any, version, sourceName string, sourceSize int64) error {
+	operState, ok := objectField(location, "oper-state")
+	if !ok || stringField(operState, "sys-activity") != "install-no-activity" {
+		return fmt.Errorf("target %s installer is not quiescent", version)
+	}
+	versions, _, err := directNamedList(location, "install-version-info")
+	if err != nil {
+		return fmt.Errorf("decode target %s version inventory: %w", version, err)
+	}
+	matchingVersions := 0
+	for _, candidate := range versions {
+		entry := inventoryVersion{
+			Version:          stringField(candidate, "version"),
+			VersionExtension: stringField(candidate, "version-extension"),
+		}
+		if entry.identity() != version {
+			continue
+		}
+		matchingVersions++
+		states, found, stateErr := directNamedList(candidate, "install-package-state-info")
+		if stateErr != nil || !found || len(states) == 0 {
+			return fmt.Errorf("target %s has no complete package-state evidence", version)
+		}
+		for _, state := range states {
+			if stringField(state, "package-state") != "install-state-added" {
+				return fmt.Errorf("target %s package %q is not in added state", version, stringField(state, "pkg-name"))
+			}
+		}
+	}
+	if matchingVersions != 1 {
+		return fmt.Errorf("target %s matched %d version records in one install location", version, matchingVersions)
+	}
+
+	packages, _, err := directNamedList(location, "install-packages")
+	if err != nil {
+		return fmt.Errorf("decode target %s source package: %w", version, err)
+	}
+	matchingPackages := 0
+	for _, pkg := range packages {
+		if stringField(pkg, "pkg-name") != sourceName {
+			continue
+		}
+		matchingPackages++
+		data, ok := objectField(pkg, "pkg-data")
+		if !ok || stringField(data, "verify-status") != "install-package-verify-ok" {
+			return fmt.Errorf("target %s source package is not verified", version)
+		}
+		size, sizeErr := strconv.ParseInt(stringField(data, "pkg-size"), 10, 64)
+		if sizeErr != nil || size != sourceSize {
+			return fmt.Errorf("target %s source package size does not match pinned size", version)
+		}
+	}
+	if matchingPackages != 1 {
+		return fmt.Errorf("target %s matched %d verified source packages in one install location", version, matchingPackages)
+	}
+	return nil
+}
+
+func installSourceName(source string) string {
+	name := path.Base(strings.TrimSpace(source))
+	if index := strings.LastIndexByte(name, ':'); index >= 0 {
+		name = name[index+1:]
+	}
+	if name == "." || name == "/" {
+		return ""
+	}
+	return name
+}
+
 func versionMatches(identity, base, target string) bool {
 	return identity == target || base == target || strings.HasPrefix(identity, target+".")
 }
@@ -535,6 +797,17 @@ func stringField(object map[string]any, name string) string {
 		return text
 	}
 	return ""
+}
+
+func objectField(object map[string]any, name string) (map[string]any, bool) {
+	for key, value := range object {
+		if localName(key) != name {
+			continue
+		}
+		result, ok := value.(map[string]any)
+		return result, ok
+	}
+	return nil, false
 }
 
 func localName(name string) string {

@@ -1,0 +1,22 @@
+{
+  "analysisDateUTC": "2026-10-01",
+  "appLog": "settled5-lab101-downgrade/cycle-20261001080450-64cad6-cat9k-lab-101-downgrade-rollout.app-worker.cat9k-lab-101-vk-7d4dd64c4d-5d8kp.log",
+  "appLogSha256": "dd08aeffe5d667e4597006cf9a362a6c17d627020156e8922889b5c2402a10bf",
+  "harnessSha256": "9684a6f22ff7fc6f714a76b147855a6c87f51d4d7f7d8c8ab68b7017a95e4f01",
+  "leaf": "settled5-lab101-downgrade/cycle-20261001080450-64cad6-cat9k-lab-101-downgrade-rollout.leaf.json",
+  "leafSha256": "bd1cfdde4a05a0693aa2ab3910f2076bcd0db374c831180e13b5794051302bf1",
+  "notProven": [
+    "complete manager/network logs",
+    "service/forwarding continuity",
+    "complete ledger/Lease release",
+    "fresh physical run with patched harness",
+    "clean image build provenance",
+    "E07 completion"
+  ],
+  "originalCollectorResult": "STOPPED; unchanged",
+  "podUIDs": [
+    "e717875d-14f8-4355-bbfd-c4fded105336",
+    "560bc776-9e4b-47f9-b908-fce5e1018594"
+  ],
+  "result": "PASS: preceding exact namespace/name/UID log correlation and ordered leaf timestamps/inventory revisions for the two recorded drained Pods"
+}

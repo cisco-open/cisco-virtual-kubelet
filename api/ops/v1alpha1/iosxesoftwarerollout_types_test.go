@@ -169,6 +169,17 @@ func TestIOSXESoftwareRolloutSchemeRegistration(t *testing.T) {
 
 func TestIOSXESoftwareRolloutDeepCopyDoesNotAlias(t *testing.T) {
 	original := rolloutFixture()
+	original.Spec.Plan.Strategy = IOSXESoftwareRolloutStrategyPrepareOnly
+	original.Spec.ActivationApproval = &IOSXESoftwareRolloutActivationApproval{
+		PlanHash: original.Spec.Approval.PlanHash,
+		Receipts: []IOSXESoftwareRolloutActivationReceipt{{
+			DeviceUID: "device-uid", UpgradeUID: "upgrade-uid",
+			ReceiptHash: "sha256:" + strings.Repeat("c", 64),
+		}},
+		NotBefore:  original.Spec.Plan.RequestedAt,
+		NotAfter:   metav1.NewTime(original.Spec.Plan.RequestedAt.Add(time.Hour)),
+		ApprovedBy: "carol@example.test", ApprovedAt: original.Spec.Plan.RequestedAt,
+	}
 	copy := original.DeepCopy()
 
 	copy.Spec.Plan.Targets.Selector.MatchLabels["role"] = "distribution"
@@ -179,6 +190,7 @@ func TestIOSXESoftwareRolloutDeepCopyDoesNotAlias(t *testing.T) {
 	copy.Status.FrozenPlan.Targets[0].Topology[0].Value = "munich"
 	*copy.Status.FrozenPlan.Policy.Domains[0].MaxUnavailable = 2
 	copy.Status.Targets[0].Message = "changed"
+	copy.Spec.ActivationApproval.Receipts[0].ReceiptHash = "sha256:" + strings.Repeat("d", 64)
 
 	if original.Spec.Plan.Targets.Selector.MatchLabels["role"] != "access" {
 		t.Fatal("DeepCopy() aliased target selector")
@@ -200,6 +212,9 @@ func TestIOSXESoftwareRolloutDeepCopyDoesNotAlias(t *testing.T) {
 	}
 	if *original.Status.FrozenPlan.Policy.Domains[0].MaxUnavailable != 1 {
 		t.Fatal("DeepCopy() aliased frozen policy domain budget")
+	}
+	if got := original.Spec.ActivationApproval.Receipts[0].ReceiptHash; got != "sha256:"+strings.Repeat("c", 64) {
+		t.Fatalf("DeepCopy() aliased activation receipt: %q", got)
 	}
 }
 

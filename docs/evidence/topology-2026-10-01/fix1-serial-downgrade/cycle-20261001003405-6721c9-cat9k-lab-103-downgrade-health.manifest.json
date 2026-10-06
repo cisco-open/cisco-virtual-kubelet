@@ -1,0 +1,23 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "DeviceOperation",
+  "metadata": {
+    "name": "cycle-20261001003405-6721c9-cat9k-lab-103-downgrade-health",
+    "namespace": "cvk-live"
+  },
+  "spec": {
+    "deviceRef": {
+      "name": "cat9k-lab-103"
+    },
+    "operation": {
+      "commands": [
+        "show version",
+        "show install summary",
+        "show gnxi state detail",
+        "show platform software status control-processor brief",
+        "show app-hosting list"
+      ],
+      "kind": "ShowCommand"
+    }
+  }
+}

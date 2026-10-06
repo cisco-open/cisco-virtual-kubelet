@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -106,6 +107,11 @@ type Reconciler struct {
 	// WorkerRevision is the manager-rendered PodTemplate content address loaded
 	// by this process. Managed admission and every new claim bind to it.
 	WorkerRevision string
+	// WorkerPodName is this process's downward-API Pod name. Managed admission
+	// binds every status mutation to this exact Pod incarnation, so the worker
+	// must verify that manager-owned leaf annotations have converged before it
+	// attempts a write.
+	WorkerPodName string
 	// WorkerPodUID is this process's downward-API Pod UID. Managed admission
 	// requires it to match the exact Pod authenticated in CiscoDevice status so
 	// an overlapping predecessor cannot reuse a replacement Pod's proof.
@@ -115,6 +121,7 @@ type Reconciler struct {
 	// into the immutable PodTemplate alongside WorkerRevision.
 	CredentialSecretRevision string
 	GNOITLSSecretRevision    string
+	DeviceTLSCARevision      string
 	GNOIProvisioningRevision string
 	GNOI                     gnoi.Provider
 	Lifecycle                softwarelifecycle.Backend
@@ -240,9 +247,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		}
 		return reconcile.Result{RequeueAfter: managedAdmissionPoll}, nil
 	}
+	if up.Status.Phase == opsv1alpha1.UpgradePhasePrepared && up.Status.ManagerInvalidation != nil {
+		return r.reconcilePreparedInvalidation(ctx, &up)
+	}
 	unsupportedModel := unsupportedExecutionModel(&up)
 	terminalLegacyRisk := !unsupportedModel && terminalUpgradePhase(up.Status.Phase) &&
 		mutationguard.UpgradeRequiresQuarantineAt(&up, now)
+	terminalUnsettled := !unsupportedModel && terminalUpgradePhase(up.Status.Phase) &&
+		retainMutationLeaseUntilExpiry(&up)
+	if terminalUnsettled && up.Status.FailureReason == "ActivationOutcomeUnknown" {
+		return r.observeTerminalActivationOutcome(ctx, &up, now)
+	}
 	if !unsupportedModel && terminalUpgradePhase(up.Status.Phase) && !terminalLegacyRisk {
 		if !retainMutationLeaseUntilExpiry(&up) {
 			if err := r.releaseMutationLease(ctx, &up); err != nil {
@@ -304,6 +319,113 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 	}
 }
 
+// observeTerminalActivationOutcome is the only recovery path from a lost
+// NoReboot Activate response. It is observation-only: the activation request
+// is never replayed. A fresh OS.Verify may settle the quarantine only when the
+// exact target is now running and no activation failure or unsupported
+// supervisor requirement is reported. Every other result preserves the
+// terminal leaf, maintenance guard, mutation Lease, and manager reservation.
+func (r *Reconciler) observeTerminalActivationOutcome(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	now time.Time,
+) (reconcile.Result, error) {
+	if up.Spec.Strategy != opsv1alpha1.UpgradeStrategyNoReboot ||
+		!up.Status.PrimarySupervisorActivationRequested || up.Status.ActivationStartTime == nil ||
+		strings.TrimSpace(up.Status.ValidatedVersion) == "" {
+		return r.holdLegacyTerminalQuarantine(ctx, up, now)
+	}
+	if up.Annotations[managedprotocol.AnnotationManaged] == "true" {
+		if up.Status.ManagerControl == nil ||
+			validateManagedClaimCoverage(up, up.Status.ManagerControl.Revision) != nil {
+			return r.holdLegacyTerminalQuarantine(ctx, up, now)
+		}
+	}
+	client, err := r.gnoiClient(ctx)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return reconcile.Result{RequeueAfter: awaitingReachabilityPoll}, nil
+	}
+	verify, err := verifyOS(ctx, client)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return reconcile.Result{RequeueAfter: awaitingReachabilityPoll}, nil
+	}
+	if strings.TrimSpace(verify.ActivationFailMessage) != "" || verify.IndividualSupervisorInstall ||
+		!versionMatches(verify.Version, up.Spec.TargetVersion) ||
+		!versionMatches(verify.Version, up.Status.ValidatedVersion) {
+		return reconcile.Result{RequeueAfter: awaitingReachabilityPoll}, nil
+	}
+	message := fmt.Sprintf("recovered lost NoReboot activation outcome: fresh OS.Verify reports exact target version %s; no activation was replayed", verify.Version)
+	return r.recoverTerminalActivationOutcome(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
+		cur.Status.RunningVersion = verify.Version
+		cur.Status.FailureReason = ""
+		cur.Status.Message = message
+		cur.Status.CompletionTime = &metav1.Time{Time: now}
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionTrue, "ActivationOutcomeRecovered", message, now)
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "DeviceReachable", message, now)
+		r.setCondition(cur, conditionTypeVerified, metav1.ConditionTrue, "Verified", message, now)
+		r.setReady(cur, metav1.ConditionTrue, "Succeeded", message, now)
+	}, reconcile.Result{})
+}
+
+// recoverTerminalActivationOutcome is deliberately narrower than updateStatus:
+// the ordinary compare-and-swap path rejects every write to a terminal record.
+// The only exception permitted here is correction of a retained
+// Failed/ActivationOutcomeUnknown record after observeTerminalActivationOutcome
+// has obtained definitive, read-only evidence that the exact target is running.
+func (r *Reconciler) recoverTerminalActivationOutcome(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	mutate func(*opsv1alpha1.IOSXESoftwareUpgrade),
+	result reconcile.Result,
+) (reconcile.Result, error) {
+	updated := false
+	err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		var cur opsv1alpha1.IOSXESoftwareUpgrade
+		reader := r.Reader
+		if reader == nil {
+			reader = r.Client
+		}
+		if err := reader.Get(ctx, client.ObjectKeyFromObject(up), &cur); err != nil {
+			return err
+		}
+		if !upgradeStatusCASMatches(up, &cur) ||
+			cur.Status.Phase != opsv1alpha1.UpgradePhaseFailed ||
+			cur.Status.FailureReason != "ActivationOutcomeUnknown" ||
+			!retainMutationLeaseUntilExpiry(&cur) {
+			return nil
+		}
+		mutate(&cur)
+		cur.Status.ObservedGeneration = cur.Generation
+		if cur.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded ||
+			!apimeta.IsStatusConditionTrue(cur.Status.Conditions, conditionTypeVerified) {
+			return fmt.Errorf("activation outcome recovery did not produce a verified success")
+		}
+		r.setCondition(&cur, conditionTypeMutationSettled, metav1.ConditionTrue, "OutcomeVerified", cur.Status.Message, r.now())
+		if err := r.Client.Status().Update(ctx, &cur); err != nil {
+			return err
+		}
+		updated = true
+		return nil
+	})
+	if err != nil {
+		return result, fmt.Errorf("recover terminal activation outcome: %w", err)
+	}
+	if !updated {
+		return reconcile.Result{RequeueAfter: time.Second}, nil
+	}
+	setSoftwareUpgradeSpanOutcome(oteltrace.SpanFromContext(ctx), opsv1alpha1.UpgradePhaseSucceeded, "ActivationOutcomeRecovered", "")
+	recordPhaseTransition(r.DeviceName, up.Spec.TargetVersion, string(opsv1alpha1.UpgradePhaseFailed), string(opsv1alpha1.UpgradePhaseSucceeded), "ActivationOutcomeRecovered")
+	r.emitEvent(up, corev1.EventTypeNormal, "ActivationOutcomeRecovered",
+		fmt.Sprintf("fresh OS.Verify confirmed target version %s after a lost NoReboot activation response; no activation was replayed", up.Status.ValidatedVersion))
+	if err := r.releaseMutationLease(ctx, up); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 func softwareUpgradeEntityID(up *opsv1alpha1.IOSXESoftwareUpgrade) string {
 	if up == nil {
 		return ""
@@ -334,7 +456,7 @@ func setSoftwareUpgradeSpanOutcome(span oteltrace.Span, phase opsv1alpha1.Upgrad
 			description = string(phase)
 		}
 		span.SetStatus(otelcodes.Error, description)
-	} else if phase == opsv1alpha1.UpgradePhaseSucceeded || phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
+	} else if phase == opsv1alpha1.UpgradePhaseSucceeded || phase == opsv1alpha1.UpgradePhasePrepared || phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
 		span.SetStatus(otelcodes.Ok, "")
 	}
 }
@@ -362,15 +484,43 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 	// Admission normally enforces these invariants. Keep runtime validation
 	// for objects created before the CRD was upgraded and for unit-test/fake
 	// clients that do not execute CEL.
+	if up.Spec.RequireNetworkEvidence && up.Annotations[managedprotocol.AnnotationManaged] != "true" {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "ManagedNetworkEvidenceRequired",
+			"network evidence requires a manager-created identity-bound upgrade", now)
+	}
 	if err := validateImageSource(up.Spec.ImageSource); err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "InvalidImageSource", err.Error(), now)
 	}
 	if err := softwarelifecycle.ValidateTargetVersion(up.Spec.TargetVersion); err != nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "InvalidTargetVersion", err.Error(), now)
 	}
-	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyISSU {
+	switch up.Spec.Strategy {
+	case "", opsv1alpha1.UpgradeStrategyReload, opsv1alpha1.UpgradeStrategyNoReboot, opsv1alpha1.UpgradeStrategyPrepareOnly:
+	case opsv1alpha1.UpgradeStrategyISSU:
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "ISSUVerificationUnsupported",
 			"strategy ISSU is not available until the platform lifecycle backend can verify that IOS XE selected the ISSU activation path", now)
+	default:
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "UnsupportedUpgradeStrategy",
+			fmt.Sprintf("unsupported upgrade strategy %q; refusing implicit reload", up.Spec.Strategy), now)
+	}
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		if r.Lifecycle == nil {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "SoftwareLifecycleUnsupported",
+				"PrepareOnly requires native install inventory to prove a durable inactive image", now)
+		}
+		if !imageSourceStreamsBytes(up.Spec.ImageSource) && up.Spec.ImageSource.DeviceFile == nil {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "PrepareSourceUnsupported",
+				"PrepareOnly requires a URL, ConfigMap, or authenticated device-file source", now)
+		}
+	}
+	// A retained Prepared leaf intentionally continues to own the device queue.
+	// Before allowing its separately authorized activation child to yield that
+	// queue position, revalidate the exact receipt, leaf incarnation, and current
+	// device-trust revisions. Resolving and the activation claim boundary repeat
+	// these checks to close deletion, replacement, and inventory races.
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
 	}
 	owner, err := r.deviceUpgradeOwner(ctx, up, now)
 	if err != nil {
@@ -398,6 +548,10 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 }
 
 func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, now time.Time) (reconcile.Result, error) {
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
+	}
 	if r.GNOI == nil {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "NoGNOIProvider",
 			"gNOI provider is required for IOS XE software lifecycle operations", now)
@@ -561,6 +715,18 @@ func (r *Reconciler) runResolving(ctx context.Context, up *opsv1alpha1.IOSXESoft
 		(image.State.Activatable() || image.State == softwarelifecycle.InventoryStateInProgress) {
 		return r.rejectUncorrelatedDeviceFileInventory(ctx, up, image, now)
 	}
+	if image.State == softwarelifecycle.InventoryStateInProgress {
+		corroborated, err := r.corroboratedPreparedActivationInventory(ctx, up, image)
+		if err != nil {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed,
+				"ActivationReceiptBindingInvalid", err.Error(), now)
+		}
+		if corroborated {
+			image.State = softwarelifecycle.InventoryStateInstalled
+			return r.targetReadyForActivation(ctx, up, image, previousVersion, requiresIndividual, now,
+				"PreparedNativeInstallCorroborated")
+		}
+	}
 	if !image.State.Activatable() {
 		if image.State == softwarelifecycle.InventoryStateInProgress && !installTimedOut(up, now) {
 			return r.waitForInventory(ctx, up, "InstallInProgress",
@@ -706,6 +872,9 @@ func (r *Reconciler) runValidating(ctx context.Context, up *opsv1alpha1.IOSXESof
 			fmt.Sprintf("target %s did not become activatable within %s", up.Spec.TargetVersion, installTimeout(up)), now)
 	}
 
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly && up.Status.StagingOperationID == "" {
+		return r.validatePreparedInstall(ctx, up, now)
+	}
 	if up.Status.StagingOperationID == "" {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "StagingOperationMissing",
 			"native install validation requires a durable device-file staging operation ID", now)
@@ -811,6 +980,9 @@ func (r *Reconciler) targetReadyForActivation(
 				fmt.Sprintf("inventory version %s came from %q, not verified device file %q", image.Version, image.SourcePath, boundSourcePath), now)
 		}
 	}
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		return r.completePreparation(ctx, up, image, previousVersion, requiresIndividual, now)
+	}
 	message := fmt.Sprintf("device install inventory resolved exact activatable version %s", image.Version)
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		if cur.Status.StartTime == nil {
@@ -832,6 +1004,259 @@ func (r *Reconciler) targetReadyForActivation(
 			"waiting to submit gNOI OS.Activate", now)
 		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
+}
+
+func (r *Reconciler) validatePreparedInstall(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	now time.Time,
+) (reconcile.Result, error) {
+	if strings.TrimSpace(up.Status.ValidatedVersion) == "" {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedVersionMissing", "PrepareOnly reached inventory validation without an exact installed version", now)
+	}
+	image, err := r.inspectTarget(ctx, up.Spec.TargetVersion)
+	if err != nil {
+		switch {
+		case errors.Is(err, softwarelifecycle.ErrTargetNotFound):
+			return r.waitForValidation(ctx, up, "PreparedInventoryPending",
+				fmt.Sprintf("waiting for native inventory to expose prepared version %s", up.Status.ValidatedVersion), now)
+		case errors.Is(err, softwarelifecycle.ErrAmbiguousTarget):
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"AmbiguousTargetVersion", err.Error(), now)
+		case errors.Is(err, softwarelifecycle.ErrUnsupported):
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"SoftwareLifecycleUnsupported", err.Error(), now)
+		default:
+			return r.waitForValidation(ctx, up, "PreparedInventoryUnavailable", err.Error(), now)
+		}
+	}
+	if image.Version != up.Status.ValidatedVersion || !image.State.Activatable() {
+		if preparedNativeInstallCorroborated(up, image) {
+			// IOS XE 17.18 can continue to expose an inactive, successfully
+			// added image as install-version-state-in-progress. Preserve the
+			// stronger, durable proof already obtained from the full native
+			// install-oper-data response: quiescent installer, verified pinned
+			// package, exact per-location version and one completed install-add
+			// operation. A plain InProgress observation never reaches here.
+			image.State = softwarelifecycle.InventoryStateInstalled
+			return r.completePreparation(ctx, up, image, up.Status.PreviousVersion,
+				up.Status.IndividualSupervisorInstall, now)
+		}
+		if image.State == softwarelifecycle.InventoryStateInProgress {
+			return r.waitForValidation(ctx, up, "PreparedInventoryPending",
+				fmt.Sprintf("native inventory still reports %s in state %s", image.Version, image.State), now)
+		}
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedInventoryMismatch",
+			fmt.Sprintf("native inventory returned version %q in state %s; expected exact installed version %q",
+				image.Version, image.State, up.Status.ValidatedVersion), now)
+	}
+	return r.completePreparation(ctx, up, image, up.Status.PreviousVersion,
+		up.Status.IndividualSupervisorInstall, now)
+}
+
+func preparedNativeInstallCorroborated(
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	image softwarelifecycle.InventoryImage,
+) bool {
+	if up == nil || image.State != softwarelifecycle.InventoryStateInProgress ||
+		image.Version != up.Status.ValidatedVersion ||
+		up.Status.InventoryState != opsv1alpha1.UpgradeInventoryStateInstalled ||
+		!up.Status.PrimarySupervisorInstalled {
+		return false
+	}
+	condition := apimeta.FindStatusCondition(up.Status.Conditions, conditionTypeMutationSettled)
+	return condition != nil && condition.Status == metav1.ConditionTrue &&
+		condition.Reason == "NativeInstallCorroborated" &&
+		condition.ObservedGeneration == up.Generation
+}
+
+// corroboratedPreparedActivationInventory handles IOS XE 17.18's persistent
+// install-version-state-in-progress report for an inactive image. It is safe
+// only when the exact retained Prepared parent already recorded stronger native
+// evidence: a quiescent completed install-add operation, exact version, and an
+// installed state bound into the immutable receipt. A plain InProgress sample
+// or any receipt/leaf drift remains non-activatable.
+func (r *Reconciler) corroboratedPreparedActivationInventory(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	image softwarelifecycle.InventoryImage,
+) (bool, error) {
+	if image.State != softwarelifecycle.InventoryStateInProgress || up == nil ||
+		up.Annotations[managedprotocol.AnnotationManaged] != "true" || up.Spec.ImageSource.Preinstalled == nil {
+		return false, nil
+	}
+	prepared, err := r.validatedPreparedActivationParent(ctx, up)
+	if err != nil || prepared == nil {
+		return false, err
+	}
+	receipt := prepared.Status.PreparedReceipt
+	if receipt == nil || image.Version != receipt.ValidatedVersion ||
+		prepared.Status.InventoryState != opsv1alpha1.UpgradeInventoryStateInstalled ||
+		!receipt.PrimarySupervisorInstalled {
+		return false, nil
+	}
+	condition := apimeta.FindStatusCondition(prepared.Status.Conditions, conditionTypeTransferred)
+	return condition != nil && condition.Status == metav1.ConditionTrue &&
+		condition.Reason == "NativeInstallCorroborated" &&
+		condition.ObservedGeneration == prepared.Generation, nil
+}
+
+func (r *Reconciler) completePreparation(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	image softwarelifecycle.InventoryImage,
+	previousVersion string,
+	requiresIndividual bool,
+	now time.Time,
+) (reconcile.Result, error) {
+	if up.Spec.Strategy != opsv1alpha1.UpgradeStrategyPrepareOnly {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"InvalidPreparationState", "prepared receipt generation requires strategy PrepareOnly", now)
+	}
+	if strings.TrimSpace(string(up.UID)) == "" || strings.TrimSpace(r.DeviceUID) == "" ||
+		!validContentDigest(up.Status.SourceDigest) || strings.TrimSpace(previousVersion) == "" ||
+		strings.TrimSpace(image.Version) == "" || !image.State.Activatable() {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedIdentityIncomplete", "prepared receipt identity or native inventory proof is incomplete", now)
+	}
+	if image.Version != up.Status.ValidatedVersion || !versionMatches(image.Version, up.Spec.TargetVersion) {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedInventoryMismatch", fmt.Sprintf("prepared inventory version %q does not match validated version %q and target %q",
+				image.Version, up.Status.ValidatedVersion, up.Spec.TargetVersion), now)
+	}
+	hasPrimaryInstallProof := up.Status.PrimarySupervisorInstalled ||
+		(up.Status.StagingRequested && up.Status.StagingOperationID != "")
+	if !hasPrimaryInstallProof || (requiresIndividual && !up.Status.StandbySupervisorInstalled) {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedSupervisorProofIncomplete", "not every required supervisor has a completed install claim", now)
+	}
+	if r.GNOI == nil {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"NoGNOIProvider", "gNOI OS.Verify is required before issuing a prepared receipt", now)
+	}
+	gnoiClient, err := r.gnoiClient(ctx)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return r.waitForValidation(ctx, up, "PreparedVerifyPending", err.Error(), now)
+	}
+	verify, err := verifyOS(ctx, gnoiClient)
+	if err != nil {
+		r.resetGNOIClientIfTransient(ctx, err)
+		return r.waitForValidation(ctx, up, "PreparedVerifyPending", err.Error(), now)
+	}
+	now = r.now()
+	if !versionMatches(verify.Version, previousVersion) {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedRunningVersionChanged",
+			fmt.Sprintf("OS.Verify reports running version %q after PrepareOnly; expected unchanged version %q",
+				verify.Version, previousVersion), now)
+	}
+	if requiresIndividual {
+		if verify.Standby.State == gnoi.StandbyStateUnavailable {
+			return r.waitForValidation(ctx, up, "PreparedStandbyVerifyPending",
+				"standby supervisor is temporarily unavailable during preparation verification", now)
+		}
+		if verify.Standby.State != gnoi.StandbyStateReady || strings.TrimSpace(verify.Standby.ID) == "" ||
+			strings.TrimSpace(verify.Standby.ActivationFailMessage) != "" ||
+			!versionMatches(verify.Standby.Version, previousVersion) {
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedStandbyMismatch", fmt.Sprintf("standby supervisor evidence is incomplete or no longer running %q: state=%s id=%q version=%q failure=%q",
+					previousVersion, verify.Standby.State, verify.Standby.ID, verify.Standby.Version,
+					verify.Standby.ActivationFailMessage), now)
+		}
+	}
+	if up.Status.InstallStartTime == nil {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedInstallClaimMissing", "prepared receipt has no durable install-start claim", now)
+	}
+	sourceIdentityHash, err := PreparedSourceIdentityHash(up.Spec.ImageSource)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	trustIdentityHash := ""
+	if r.CredentialSecretRevision != "" || r.GNOITLSSecretRevision != "" || r.GNOIProvisioningRevision != "" || r.DeviceTLSCARevision != "" {
+		trustIdentityHash, err = PreparedTrustIdentityHash(
+			r.CredentialSecretRevision, r.GNOITLSSecretRevision, r.GNOIProvisioningRevision, r.DeviceTLSCARevision)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	receipt := opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion:             preparedReceiptProtocolV1,
+		UpgradeUID:                  string(up.UID),
+		DeviceUID:                   r.DeviceUID,
+		SourceDigest:                up.Status.SourceDigest,
+		SourceSize:                  up.Status.SourceSize,
+		SourceIdentityHash:          sourceIdentityHash,
+		TrustIdentityHash:           trustIdentityHash,
+		ContentBinding:              preparedContentBindingV1,
+		TargetVersion:               up.Spec.TargetVersion,
+		ValidatedVersion:            image.Version,
+		RunningVersion:              verify.Version,
+		IndividualSupervisorInstall: requiresIndividual,
+		PrimarySupervisorInstalled:  hasPrimaryInstallProof,
+		StandbySupervisorInstalled:  up.Status.StandbySupervisorInstalled,
+		InstallStartedAt:            *up.Status.InstallStartTime.DeepCopy(),
+		StagingOperationID:          up.Status.StagingOperationID,
+		ManagedMutationClaims:       append([]opsv1alpha1.UpgradeManagedMutationClaimStatus(nil), up.Status.ManagedMutationClaims...),
+		PreparedAt:                  metav1.Time{Time: now},
+	}
+	if requiresIndividual {
+		receipt.StandbySupervisorID = verify.Standby.ID
+		receipt.StandbyRunningVersion = verify.Standby.Version
+	}
+	if up.Status.ManagerAdmission != nil {
+		admission := up.Status.ManagerAdmission
+		receipt.CampaignUID = admission.CampaignUID
+		receipt.PlanHash = admission.PlanHash
+		receipt.NodeUID = admission.NodeUID
+		receipt.PhysicalIdentity = admission.PhysicalIdentity
+		receipt.DeviceGeneration = admission.DeviceGeneration
+		receipt.ManagedProtocolVersion = admission.ProtocolVersion
+		receipt.PolicyUID = admission.PolicyUID
+		receipt.PolicyResourceVersion = admission.PolicyResourceVersion
+		receipt.PolicyEpoch = admission.PolicyEpoch
+		receipt.WorkerRevision = r.WorkerRevision
+		receipt.SourceSecretUID = up.Annotations[managedprotocol.AnnotationSourceSecretUID]
+		if admission.DeviceUID != "" && admission.DeviceUID != receipt.DeviceUID {
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedDeviceIdentityMismatch", "manager admission and worker device identities differ", now)
+		}
+		if up.Spec.ImageSource.URLSecretRef != nil && receipt.SourceSecretUID == "" {
+			return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedSourceIdentityIncomplete", "managed credential-bearing source has no immutable Secret UID binding", now)
+		}
+	}
+	receipt.ReceiptHash, err = PreparedReceiptHash(receipt)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err := ValidatePreparedReceipt(&receipt); err != nil {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"PreparedReceiptInvalid", err.Error(), now)
+	}
+	message := fmt.Sprintf("prepared exact installed version %s while running version remained %s; activation is not authorized",
+		image.Version, verify.Version)
+	return r.updateTerminalStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+		cur.Status.InventoryState = upgradeInventoryState(image.State)
+		cur.Status.RunningVersion = verify.Version
+		cur.Status.PreparedReceipt = &receipt
+		cur.Status.CompletionTime = &metav1.Time{Time: now}
+		cur.Status.Message = message
+		cur.Status.FailureReason = ""
+		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "PreparationCompleted", message, now)
+		r.setCondition(cur, conditionTypeStaged, metav1.ConditionTrue, "Prepared", message, now)
+		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "Prepared", message, now)
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationNotAuthorized",
+			"PrepareOnly never submits OS.Activate; a separate activation approval is required", now)
+		r.setCondition(cur, conditionTypeDeviceReachable, metav1.ConditionTrue, "Prepared",
+			fmt.Sprintf("OS.Verify confirms the device remains reachable on %s", verify.Version), now)
+		r.setReady(cur, metav1.ConditionTrue, "Prepared", message, now)
+	}, reconcile.Result{})
 }
 
 func (r *Reconciler) advanceStagingValidation(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time) (reconcile.Result, error) {
@@ -1323,6 +1748,35 @@ func (r *Reconciler) observeUncertainInstall(
 	if standby {
 		supervisor = "standby"
 	}
+	if !standby && interruptedInstallHasCurrentTransferProof(up) {
+		if observer, ok := r.Lifecycle.(softwarelifecycle.InterruptedInstallObserver); ok {
+			request := softwarelifecycle.InterruptedInstallRequest{
+				TargetVersion: up.Spec.TargetVersion,
+				SourceSize:    up.Status.SourceSize,
+				NotBefore:     up.Status.InstallStartTime.Time,
+				ObservedAt:    now,
+			}
+			// IOS XE native operation timestamps use the device clock. Prefer a
+			// read-only gNOI System.Time sample so correlation stays narrow even
+			// when cluster and device clocks differ by more than the fallback
+			// allowance. Unsupported System service leaves the conservative local
+			// time window in place; it never weakens the remaining exact evidence.
+			if r.GNOI != nil {
+				if gnoiClient, clientErr := r.gnoiClient(ctx); clientErr == nil {
+					if deviceObservedAt, timeErr := deviceTime(ctx, gnoiClient); timeErr == nil {
+						request.DeviceObservedAt = deviceObservedAt
+						request.DeviceNotBefore = deviceObservedAt.Add(up.Status.InstallStartTime.Time.Sub(now))
+					}
+				}
+			}
+			callCtx, cancel := context.WithTimeout(ctx, controlRPCTimeout)
+			observation, err := observer.ObserveInterruptedInstall(callCtx, request)
+			cancel()
+			if err == nil {
+				return r.acceptObservedInstall(ctx, up, observation, now)
+			}
+		}
+	}
 	reason := "InstallObservationPending"
 	message := fmt.Sprintf("the %s supervisor gNOI OS.Install outcome is unknown; observing without replay until the install deadline", supervisor)
 	inventoryState := up.Status.InventoryState
@@ -1353,6 +1807,66 @@ func (r *Reconciler) observeUncertainInstall(
 		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionFalse, reason, message, now)
 		r.setReady(cur, metav1.ConditionFalse, reason, message, now)
 	}, reconcile.Result{RequeueAfter: installInventoryPoll})
+}
+
+func interruptedInstallHasCurrentTransferProof(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return up != nil && up.Status.InstallStartTime != nil && up.Status.SourceSize > 0 &&
+		up.Status.TransferProgress != nil && up.Status.TransferProgress.BytesTransferred > 0 &&
+		up.Status.TransferProgress.TotalBytes == up.Status.SourceSize &&
+		up.Status.TransferProgress.BytesTransferred <= up.Status.TransferProgress.TotalBytes
+}
+
+func (r *Reconciler) acceptObservedInstall(
+	ctx context.Context,
+	up *opsv1alpha1.IOSXESoftwareUpgrade,
+	observation softwarelifecycle.InterruptedInstallObservation,
+	now time.Time,
+) (reconcile.Result, error) {
+	if !observation.Image.State.Activatable() ||
+		!versionMatches(observation.Image.Version, up.Spec.TargetVersion) || observation.CompletedAt.IsZero() {
+		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "InvalidNativeInstallProof",
+			"native interrupted-install observer returned incomplete or mismatched completion evidence", now)
+	}
+	message := fmt.Sprintf("IOS XE native inventory and completed install-add operation prove %s was installed after the gNOI stream response was lost", observation.Image.Version)
+	if up.Status.IndividualSupervisorInstall {
+		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+			cur.Status.PrimarySupervisorInstalled = true
+			cur.Status.ValidatedVersion = observation.Image.Version
+			cur.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
+			cur.Status.Message = message + "; installing standby supervisor"
+			cur.Status.FailureReason = ""
+			r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "NativeInstallCorroborated", cur.Status.Message, now)
+			r.setCondition(cur, conditionTypeValidated, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
+			r.setReady(cur, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
+		}, reconcile.Result{RequeueAfter: time.Second})
+	}
+	nextPhase := opsv1alpha1.UpgradePhaseActivating
+	nextMessage := message + "; activating"
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		nextPhase = opsv1alpha1.UpgradePhaseValidating
+		nextMessage = message + "; validating durable preparation without activation"
+	}
+	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
+		cur.Status.Phase = nextPhase
+		cur.Status.PrimarySupervisorInstalled = true
+		cur.Status.ValidatedVersion = observation.Image.Version
+		cur.Status.InventoryState = opsv1alpha1.UpgradeInventoryStateInstalled
+		cur.Status.Message = nextMessage
+		cur.Status.FailureReason = ""
+		markTransferComplete(cur)
+		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "NativeInstallCorroborated", message, now)
+		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, "NativeInstallCorroborated",
+			"pinned bytes were transferred and IOS XE recorded a verified, quiescent, completed install-add operation", now)
+		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "NativeInstallCorroborated", message, now)
+		activationReason := "ActivationPending"
+		activationMessage := "waiting to submit gNOI OS.Activate"
+		if cur.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+			activationReason = "ActivationNotAuthorized"
+			activationMessage = "PrepareOnly does not authorize OS.Activate"
+		}
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, activationReason, activationMessage, now)
+		r.setReady(cur, metav1.ConditionFalse, "NativeInstallCorroborated", cur.Status.Message, now)
+	}, reconcile.Result{RequeueAfter: time.Second})
 }
 
 func permanentGNOIError(err error) (string, bool) {
@@ -1398,8 +1912,42 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 	var candidates []candidate
 	for i := range upgrades.Items {
 		item := &upgrades.Items[i]
-		if item.Spec.DeviceRef.Name != up.Spec.DeviceRef.Name || !item.DeletionTimestamp.IsZero() ||
-			terminalUpgradePhase(item.Status.Phase) || inertManagedCancellationTombstone(item) ||
+		if item.Spec.DeviceRef.Name != up.Spec.DeviceRef.Name {
+			continue
+		}
+		// Prepared is terminal for execution but not for ownership. Preserve this
+		// record in the per-device queue for both standalone and manager-created
+		// upgrades; otherwise a direct leaf could bypass the manager's retained
+		// receipt check. Malformed or partially migrated records fail closed.
+		if item.Status.Phase == opsv1alpha1.UpgradePhasePrepared || item.Status.PreparedReceipt != nil {
+			if PreparedReceiptInvalidated(item) {
+				continue
+			}
+			if item.Status.Phase != opsv1alpha1.UpgradePhasePrepared || item.Status.PreparedReceipt == nil {
+				return "", fmt.Errorf("prepared upgrade %s/%s has inconsistent phase or receipt", item.Namespace, item.Name)
+			}
+			if err := ValidatePreparedReceipt(item.Status.PreparedReceipt); err != nil {
+				return "", fmt.Errorf("prepared upgrade %s/%s has invalid retained receipt: %w", item.Namespace, item.Name, err)
+			}
+			// A successful activation consumes queue ownership without deleting
+			// the Prepared audit record. Use the same exact terminal predicate as
+			// the rollout manager so later campaigns cannot be blocked by history.
+			if PreparedReceiptConsumed(item, upgrades.Items) {
+				continue
+			}
+			// The exact activation child is the sole operation to which a
+			// Prepared owner may yield. Every identity and content binding is
+			// checked here; runPending has already revalidated current trust.
+			if validatePreparedActivationParent(up, item) == nil {
+				continue
+			}
+			candidates = append(candidates, candidate{
+				name: item.Name, started: true, at: item.Status.PreparedReceipt.PreparedAt.Time,
+			})
+			continue
+		}
+		if !item.DeletionTimestamp.IsZero() ||
+			terminalUpgradePhase(item.Status.Phase) || inertManagedSettledTombstone(item) ||
 			settledManagedCancellationAuditRecord(item) {
 			continue
 		}
@@ -1438,21 +1986,46 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 	return candidates[0].name, nil
 }
 
-// inertManagedCancellationTombstone recognizes the one non-terminal API shape
-// that can no longer own the legacy per-device upgrade queue. Managed rollout
-// cancellation retains an empty-phase leaf as a delayed-Create tombstone, but
-// Settled admission proves that the manager released its reservation and will
-// never grant this leaf. Keep every other shape fail-closed: a started phase,
-// drain session, claim, mutation marker, protocol mismatch, or control mismatch
-// remains a queue contender until its physical outcome is unambiguous.
-func inertManagedCancellationTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+// inertManagedSettledTombstone recognizes the one empty-phase API shape that
+// can no longer own the legacy per-device upgrade queue. Cancellation and
+// pre-dispatch policy replan both retain audit leaves; immutable Settled
+// admission proves the manager released their reservation and can never grant
+// them. Every started phase, drain, claim, marker, or binding mismatch remains
+// fail-closed until its physical outcome is unambiguous.
+func inertManagedSettledTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if up == nil || up.UID == "" || up.Status.Phase != "" ||
 		up.Status.ManagerDrain != nil || up.Status.WorkerDrain != nil ||
 		len(up.Status.ManagedMutationClaims) != 0 ||
 		mutationguard.UpgradeMutationSubmitted(up) {
 		return false
 	}
-	return settledManagedCancellationBinding(up)
+	if settledManagedLeafBinding(up) {
+		return true
+	}
+	// Before staged-activation-v1, a manager could cancel a PrepareOnly
+	// target before any worker saw it. That immutable, entirely empty worker
+	// status is historical audit, not an outstanding staging operation. Keep
+	// this exception out of live protocol validation and reject every worker
+	// field (including future additions), rather than trusting phase alone.
+	admission, control := up.Status.ManagerAdmission, up.Status.ManagerControl
+	if up.Spec.Strategy != opsv1alpha1.UpgradeStrategyPrepareOnly || up.Spec.RequireNetworkEvidence ||
+		up.Spec.MaxTransferBytesPerSecond != 0 || up.Spec.ImageSource.Preinstalled != nil ||
+		admission == nil || admission.ProtocolVersion != opsv1alpha1.ManagedUpgradeProtocolRolloutV1 ||
+		control == nil || !control.Cancel || control.Pause {
+		return false
+	}
+	workerStatus := *up.Status.DeepCopy()
+	workerStatus.ManagerAdmission, workerStatus.ManagerControl = nil, nil
+	return reflect.DeepEqual(workerStatus, opsv1alpha1.IOSXESoftwareUpgradeStatus{}) && settledManagedLeafIdentity(up)
+}
+
+// SettledUnclaimedManagedOperation reports whether a retained managed leaf is
+// durable audit evidence for an operation that cannot have reached the device.
+// This is the single cross-controller quiescence predicate: both the software
+// queue and topology handoff interpret the same immutable acknowledgements and
+// mutation markers.
+func SettledUnclaimedManagedOperation(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return inertManagedSettledTombstone(up) || settledManagedCancellationAuditRecord(up)
 }
 
 // settledManagedCancellationAuditRecord recognizes a manager-settled retained
@@ -1538,12 +2111,20 @@ func settledManagedDrainAuditBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool 
 }
 
 func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return settledManagedLeafBinding(up) && up.Status.ManagerControl.Cancel && !up.Status.ManagerControl.Pause
+}
+
+func settledManagedLeafBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	return opsv1alpha1.ManagedUpgradeProtocolMatches(up) && settledManagedLeafIdentity(up)
+}
+
+func settledManagedLeafIdentity(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if up == nil || up.UID == "" || up.Annotations[managedprotocol.AnnotationManaged] != "true" {
 		return false
 	}
 	admission := up.Status.ManagerAdmission
 	control := up.Status.ManagerControl
-	return admission != nil && admission.ProtocolVersion == opsv1alpha1.ManagedUpgradeProtocolRolloutV1 &&
+	return admission != nil &&
 		admission.State == opsv1alpha1.UpgradeManagerAdmissionSettled &&
 		admission.RevocationReason == "" && admission.LeafUID == string(up.UID) &&
 		admission.CampaignUID != "" && admission.CampaignUID == up.Annotations[managedprotocol.AnnotationCampaignUID] &&
@@ -1554,8 +2135,8 @@ func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) boo
 		admission.NodeUID != "" && admission.NodeUID == up.Annotations[managedprotocol.AnnotationNodeUID] &&
 		admission.PolicyUID != "" && admission.PolicyResourceVersion != "" && admission.PolicyEpoch > 0 &&
 		admission.PhysicalIdentity != "" &&
-		admission.ControlRevision != nil && control != nil && control.Cancel &&
-		!control.Pause && control.Revision > 0 && control.Revision == *admission.ControlRevision
+		admission.ControlRevision != nil && control != nil &&
+		control.Revision >= 0 && control.Revision == *admission.ControlRevision
 }
 
 func (r *Reconciler) ensureMutationLease(
@@ -1799,6 +2380,8 @@ func upgradeStateRequiresQuarantine(up *opsv1alpha1.IOSXESoftwareUpgrade, now ti
 
 func terminalUpgradePhase(phase opsv1alpha1.UpgradePhase) bool {
 	return phase == opsv1alpha1.UpgradePhaseSucceeded ||
+		phase == opsv1alpha1.UpgradePhasePrepared ||
+		phase == opsv1alpha1.UpgradePhasePreparedInvalidated ||
 		phase == opsv1alpha1.UpgradePhaseStagedForNextBoot ||
 		isTerminalFailurePhase(phase)
 }
@@ -1865,7 +2448,20 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			)
 		}
 	}
-	resolved, err := r.ImageResolver.Resolve(resolveCtx, up.Namespace, up.Spec.ImageSource)
+	var resolved *ResolvedImage
+	if up.Spec.MaxTransferBytesPerSecond > 0 {
+		resolver, supportsRateLimit := r.ImageResolver.(RateLimitedImageResolver)
+		if !supportsRateLimit {
+			cancelResolve()
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "TransferPacingUnsupported",
+				"configured image resolver cannot enforce the required source transfer rate", r.now())
+		}
+		resolved, err = resolver.ResolveWithOptions(resolveCtx, up.Namespace, up.Spec.ImageSource, ImageResolveOptions{
+			MaxTransferBytesPerSecond: up.Spec.MaxTransferBytesPerSecond,
+		})
+	} else {
+		resolved, err = r.ImageResolver.Resolve(resolveCtx, up.Namespace, up.Spec.ImageSource)
+	}
 	resolveDeadlineExceeded := errors.Is(resolveCtx.Err(), context.DeadlineExceeded)
 	cancelResolve()
 	// Resolution may download and hash a multi-gigabyte image. Refresh the
@@ -1961,7 +2557,33 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		Warn("dispatching gNOI OS.Install")
 	installCtx, cancel := context.WithTimeout(ctx, remainingInstallTime(up, now))
 	defer cancel()
-	progress, err := gnoiClient.Install(installCtx, resolved.Reader, gnoi.InstallOpts{
+	deviceTransferStarted := time.Now()
+	deviceTransferredBytes := int64(0)
+	deviceTransferRecorded := false
+	recordDeviceTransfer := func(result string) {
+		if deviceTransferRecorded {
+			return
+		}
+		deviceTransferRecorded = true
+		cacheResult := "not_applicable"
+		if up.Spec.ImageSource.URL != "" {
+			cacheResult = "miss"
+			if resolved.CacheHit {
+				cacheResult = "hit"
+			}
+		}
+		recordImageTransfer("worker_to_device", imageSourceMetricKind(up.Spec.ImageSource), cacheResult,
+			result, deviceTransferredBytes, time.Since(deviceTransferStarted))
+	}
+	defer func() { recordDeviceTransfer("error") }()
+	installReader := resolved.Reader
+	if up.Spec.MaxTransferBytesPerSecond > 0 {
+		installReader, err = NewPacedReader(installCtx, installReader, up.Spec.MaxTransferBytesPerSecond)
+		if err != nil {
+			return r.handleInstallErr(ctx, up, fmt.Errorf("configure gNOI transfer pacing: %w", err), r.now())
+		}
+	}
+	progress, err := gnoiClient.Install(installCtx, installReader, gnoi.InstallOpts{
 		// An empty version forces the target to consume the digest-verified
 		// bytes instead of satisfying this content source from a same-version
 		// package that was already present on the device.
@@ -1970,27 +2592,39 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		StandbySupervisor: standby,
 	})
 	if err != nil {
+		recordDeviceTransfer(transferMetricResult(err))
 		now = r.now()
 		r.resetGNOIClientIfTransient(ctx, err)
 		return r.handleInstallErr(ctx, up, err, now)
 	}
 	var validated *gnoi.InstallValidated
-	transferred := false
+	sentContent := false
+	transferObserved := false
 	contentProven := false
 	for ev := range progress {
 		switch {
 		case ev.Err != nil:
+			recordDeviceTransfer(transferMetricResult(ev.Err))
 			now = r.now()
 			r.resetGNOIClientIfTransient(ctx, ev.Err)
 			return r.handleInstallErr(ctx, up, ev.Err, now)
 		case ev.TransferReady:
-			transferred = true
+			sentContent = true
+			transferObserved = true
 			contentProven = true
 		case ev.TransferProgress != nil:
-			transferred = true
+			sentContent = true
+			transferObserved = true
+			received := resolved.Size
+			if ev.TransferProgress.BytesReceived <= uint64(resolved.Size) {
+				received = int64(ev.TransferProgress.BytesReceived)
+			}
+			if received > deviceTransferredBytes {
+				deviceTransferredBytes = received
+			}
 			r.updateTransferProgress(ctx, up, ev.TransferProgress.BytesReceived, resolved.Size, now)
 		case ev.SyncProgress != nil:
-			transferred = true
+			transferObserved = true
 			// The standby may safely synchronize from the primary only after
 			// this operation durably installed the pinned content there.
 			contentProven = standby && up.Status.PrimarySupervisorInstalled
@@ -2003,25 +2637,37 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 	// validation, conditions, and the subsequent activation transition.
 	now = r.now()
 	if validated == nil {
+		recordDeviceTransfer("error")
 		return r.handleInstallErr(ctx, up, errors.New("gnoi Install: stream ended without Validated"), now)
 	}
 	if !contentProven {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "ImageContentNotTransferred",
 			"device validated a version without consuming the pinned image content; refusing to activate unproven same-version bytes", now)
 	}
 	if strings.TrimSpace(validated.Version) == "" {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "EmptyValidatedVersion",
 			"device returned an empty version from gNOI OS.Install", now)
 	}
 	if !versionMatches(validated.Version, up.Spec.TargetVersion) {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "VersionMismatch",
 			fmt.Sprintf("device validated version %q but spec targets %q", validated.Version, up.Spec.TargetVersion), now)
 	}
 	if standby && up.Status.ValidatedVersion != "" && validated.Version != up.Status.ValidatedVersion {
+		recordDeviceTransfer("error")
 		return r.terminalAfterMutation(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed, "SupervisorValidatedVersionMismatch",
 			fmt.Sprintf("standby supervisor validated exact version %q, but the primary supervisor validated %q",
 				validated.Version, up.Status.ValidatedVersion), now)
 	}
+	// Validated is emitted only after the gNOI client has joined the content
+	// sender. A successful primary transfer therefore consumed the complete
+	// verified source even when IOS XE's last TransferProgress sample stopped
+	// just short of EOF. Conversely, supervisor SyncProgress sends no bytes
+	// from this worker and must remain zero.
+	deviceTransferredBytes = successfulDeviceTransferBytes(sentContent, resolved.Size)
+	recordDeviceTransfer("success")
 	if requiresIndividualInstall && !standby {
 		return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 			cur.Status.IndividualSupervisorInstall = true
@@ -2034,11 +2680,17 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 			r.setReady(cur, metav1.ConditionFalse, "StandbyInstallPending", cur.Status.Message, now)
 		}, reconcile.Result{RequeueAfter: time.Second})
 	}
+	nextPhase := opsv1alpha1.UpgradePhaseActivating
+	nextMessage := fmt.Sprintf("device validated %s, activating", validated.Version)
+	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+		nextPhase = opsv1alpha1.UpgradePhaseValidating
+		nextMessage = fmt.Sprintf("device validated %s; validating durable preparation without activation", validated.Version)
+	}
 	return r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
 		if cur.Status.StartTime == nil {
 			cur.Status.StartTime = &metav1.Time{Time: now}
 		}
-		cur.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+		cur.Status.Phase = nextPhase
 		cur.Status.ValidatedVersion = validated.Version
 		cur.Status.IndividualSupervisorInstall = requiresIndividualInstall
 		if standby {
@@ -2046,23 +2698,35 @@ func (r *Reconciler) runTransferring(ctx context.Context, up *opsv1alpha1.IOSXES
 		} else {
 			cur.Status.PrimarySupervisorInstalled = true
 		}
-		cur.Status.Message = fmt.Sprintf("device validated %s, activating", validated.Version)
+		cur.Status.Message = nextMessage
 		cur.Status.FailureReason = ""
 		r.setCondition(cur, conditionTypeMutationSettled, metav1.ConditionTrue, "InstallCompleted", cur.Status.Message, now)
 		markTransferComplete(cur)
 		transferReason := "AlreadyInstalled"
 		transferMessage := "gNOI OS.Install reported that the content was already installed"
-		if transferred {
+		if transferObserved {
 			transferReason = "Transferred"
 			transferMessage = "image transfer or supervisor synchronization completed and the install stream closed cleanly"
 		}
 		r.setCondition(cur, conditionTypeTransferred, metav1.ConditionTrue, transferReason, transferMessage, now)
 		r.setCondition(cur, conditionTypeValidated, metav1.ConditionTrue, "Validated",
 			fmt.Sprintf("device validated image version %s", validated.Version), now)
-		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, "ActivationPending",
-			"waiting to submit gNOI OS.Activate", now)
+		activationReason := "ActivationPending"
+		activationMessage := "waiting to submit gNOI OS.Activate"
+		if cur.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
+			activationReason = "ActivationNotAuthorized"
+			activationMessage = "PrepareOnly does not authorize OS.Activate"
+		}
+		r.setCondition(cur, conditionTypeActivated, metav1.ConditionFalse, activationReason, activationMessage, now)
 		r.setReady(cur, metav1.ConditionFalse, "Validated", cur.Status.Message, now)
 	}, reconcile.Result{RequeueAfter: time.Second})
+}
+
+func successfulDeviceTransferBytes(sentContent bool, verifiedSize int64) int64 {
+	if !sentContent || verifiedSize < 0 {
+		return 0
+	}
+	return verifiedSize
 }
 
 func (r *Reconciler) waitForTransferPreflight(ctx context.Context, up *opsv1alpha1.IOSXESoftwareUpgrade, reason, message string, now time.Time) (reconcile.Result, error) {
@@ -2178,6 +2842,14 @@ func (r *Reconciler) submitActivation(
 	noReboot bool,
 	now time.Time,
 ) (reconcile.Result, error) {
+	// Revalidate the receipt/trust binding at the last pre-claim boundary. A
+	// Secret revision can change after inventory resolution; that must prevent
+	// a new Activate claim while never interrupting observation of an Activate
+	// request already recorded above this call site.
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
+	}
 	if maintenanceWindowExpired(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "MaintenanceWindowExpired",
 			"maintenance window closed before gNOI OS.Activate could be submitted", now)
@@ -2210,6 +2882,39 @@ func (r *Reconciler) submitActivation(
 	if upgradeWaitStart(up) != nil && upgradeTimedOut(up, now) {
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseFailed, "ActivationControlTimeout",
 			fmt.Sprintf("activation sequence did not complete within %s; refusing to submit another activation", rebootTimeout(up)), now)
+	}
+	if err := r.validateManagedActivationReceipt(ctx, up); err != nil {
+		return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+			"ActivationReceiptBindingInvalid", err.Error(), now)
+	}
+	if up.Annotations[managedprotocol.AnnotationManaged] == "true" && up.Spec.ImageSource.Preinstalled != nil {
+		image, inspectErr := r.inspectTarget(ctx, up.Spec.TargetVersion)
+		if inspectErr != nil {
+			switch {
+			case errors.Is(inspectErr, softwarelifecycle.ErrTargetNotFound),
+				errors.Is(inspectErr, softwarelifecycle.ErrAmbiguousTarget),
+				errors.Is(inspectErr, softwarelifecycle.ErrUnsupported):
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+					"PreparedInventoryChanged", inspectErr.Error(), now)
+			default:
+				return r.waitForActivationControl(ctx, up,
+					"waiting to revalidate prepared native inventory before activation: "+inspectErr.Error(), now)
+			}
+		}
+		inventoryReady := image.State.Activatable()
+		if image.State == softwarelifecycle.InventoryStateInProgress {
+			inventoryReady, err = r.corroboratedPreparedActivationInventory(ctx, up, image)
+			if err != nil {
+				return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+					"ActivationReceiptBindingInvalid", err.Error(), now)
+			}
+		}
+		if image.Version != up.Status.ValidatedVersion || !inventoryReady {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhaseValidationFailed,
+				"PreparedInventoryChanged",
+				fmt.Sprintf("native inventory returned version %q in state %s immediately before activation; authorized prepared version is %q",
+					image.Version, image.State, up.Status.ValidatedVersion), now)
+		}
 	}
 	activateVersion := up.Status.ValidatedVersion
 	if strings.TrimSpace(activateVersion) == "" {
@@ -3341,6 +4046,7 @@ func retainMutationLeaseUntilExpiry(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 
 func successfulUpgradeOutcome(phase opsv1alpha1.UpgradePhase) bool {
 	return phase == opsv1alpha1.UpgradePhaseSucceeded ||
+		phase == opsv1alpha1.UpgradePhasePrepared ||
 		phase == opsv1alpha1.UpgradePhaseStagedForNextBoot ||
 		phase == opsv1alpha1.UpgradePhaseRolledBack
 }
@@ -3465,6 +4171,9 @@ func upgradeStatusCASMatches(expected, current *opsv1alpha1.IOSXESoftwareUpgrade
 	e, c := expected.Status, current.Status
 	return e.SourceDigest == c.SourceDigest &&
 		e.SourceSize == c.SourceSize &&
+		reflect.DeepEqual(e.PreparedReceipt, c.PreparedReceipt) &&
+		reflect.DeepEqual(e.ManagerInvalidation, c.ManagerInvalidation) &&
+		reflect.DeepEqual(e.PreparedInvalidation, c.PreparedInvalidation) &&
 		e.StagingOperationID == c.StagingOperationID &&
 		e.StagingRequested == c.StagingRequested &&
 		e.PreviousVersion == c.PreviousVersion &&

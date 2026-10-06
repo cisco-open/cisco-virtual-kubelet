@@ -218,3 +218,40 @@ func TestCiscoDeviceNodeNameCRDBoundaryMatchesHostnameLabel(t *testing.T) {
 		t.Fatalf("boundary fixture length = %d, want over maxLength", len(tooLong))
 	}
 }
+
+func TestNetworkObservationRateCRDBoundsAreJSONSafe(t *testing.T) {
+	path := filepath.Join("..", "..", "config", "crd", "cisco.vk_ciscodevices.yaml")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read generated CiscoDevice CRD: %v", err)
+	}
+	var crd apiextensionsv1.CustomResourceDefinition
+	if err := yaml.Unmarshal(raw, &crd); err != nil {
+		t.Fatalf("parse generated CiscoDevice CRD: %v", err)
+	}
+	if len(crd.Spec.Versions) != 1 || crd.Spec.Versions[0].Schema == nil || crd.Spec.Versions[0].Schema.OpenAPIV3Schema == nil {
+		t.Fatal("CiscoDevice CRD has no v1alpha1 OpenAPI schema")
+	}
+	status := crd.Spec.Versions[0].Schema.OpenAPIV3Schema.Properties["status"]
+	health := status.Properties["healthObservation"]
+	const wantMaximum = float64(1<<53 - 1)
+	for _, observationName := range []string{"network", "acceptedNetwork"} {
+		observation, ok := health.Properties[observationName]
+		if !ok {
+			t.Fatalf("healthObservation has no %s schema", observationName)
+		}
+		interfaces := observation.Properties["interfaces"]
+		if interfaces.Items == nil || interfaces.Items.Schema == nil {
+			t.Fatalf("healthObservation.%s.interfaces has no item schema", observationName)
+		}
+		for _, field := range []string{"capacityBitsPerSecond", "ingressBitsPerSecond", "egressBitsPerSecond"} {
+			rate, ok := interfaces.Items.Schema.Properties[field]
+			if !ok || rate.Maximum == nil {
+				t.Fatalf("healthObservation.%s.interfaces.%s has no maximum", observationName, field)
+			}
+			if *rate.Maximum != wantMaximum {
+				t.Fatalf("healthObservation.%s.interfaces.%s maximum = %.0f, want %.0f", observationName, field, *rate.Maximum, wantMaximum)
+			}
+		}
+	}
+}

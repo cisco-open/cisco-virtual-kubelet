@@ -67,6 +67,10 @@ type NXOSConfigReconciler struct {
 	Recorder                record.EventRecorder
 	Interval                time.Duration
 	RuntimeID               string
+	ManagedTopology         bool
+	DeviceUID               string
+	WorkerPodName           string
+	WorkerPodUID            string
 
 	SubscribeNotify <-chan struct{}
 	SubscribeEvents <-chan event.GenericEvent
@@ -132,6 +136,10 @@ func (r *NXOSConfigReconciler) common() *CommonConfigReconciler {
 			Recorder:                r.Recorder,
 			Interval:                r.Interval,
 			RuntimeID:               r.RuntimeID,
+			ManagedTopology:         r.ManagedTopology,
+			DeviceUID:               r.DeviceUID,
+			WorkerPodName:           r.WorkerPodName,
+			WorkerPodUID:            r.WorkerPodUID,
 			SubscribeNotify:         r.SubscribeNotify,
 			SubscribeEvents:         r.SubscribeEvents,
 			Platform:                NXOSCommonConfigPlatform(),

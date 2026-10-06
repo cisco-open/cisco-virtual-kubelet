@@ -1,0 +1,19 @@
+candidateCommit: ddc02b82
+rollout: cvk-live/roadmap-prepare-conflict-fixed-20261002-101
+phaseBeforeCleanup: Executing
+counts:
+  blocked: 1
+target:
+  deviceName: cat9k-lab-101
+  phase: Blocked
+  reason: PreparedOwnershipRetained
+owner:
+  deviceName: cat9k-lab-101
+  phaseAfterTest: Prepared
+  receiptHash: sha256:42bf1fb56e7cc0e8247fb2e866a637a96342e2971046ecb66f1477c6eb2f1a68
+childExists: false
+controllerReconcileErrorCount: 0
+cleanup:
+  controlRevision: 1
+  finalPhase: Cancelled
+capturedAt: "2026-10-02T02:49:22Z"

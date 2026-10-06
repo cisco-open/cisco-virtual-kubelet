@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -38,6 +39,7 @@ import (
 	configengine "github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
 
 const podNodeNameIndex = "spec.nodeName"
@@ -363,25 +365,168 @@ func (r *CiscoDeviceReconciler) updateManagedWorkerStatuses(ctx context.Context,
 		condition.Message = "validated gNOI configuration is waiting for the exact network worker revision and bound Pod identity"
 	}
 
-	before := device.DeepCopy()
-	if appStatus != nil && workerRevisionEvidenceEqual(device.Status.WorkerRevision, appStatus) {
-		appStatus.ObservedAt = device.Status.WorkerRevision.ObservedAt
-	}
-	if networkStatus != nil && networkWorkerRevisionEvidenceEqual(device.Status.NetworkWorkerRevision, networkStatus) {
-		networkStatus.ObservedAt = device.Status.NetworkWorkerRevision.ObservedAt
-	}
-	device.Status.WorkerRevision = appStatus
-	device.Status.NetworkWorkerRevision = networkStatus
-	if err := r.applyCiscoDeviceConditionObserved(device, condition); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		if appStatus != nil && workerRevisionEvidenceEqual(current.Status.WorkerRevision, appStatus) {
+			appStatus = appStatus.DeepCopy()
+			appStatus.ObservedAt = current.Status.WorkerRevision.ObservedAt
+		}
+		if networkStatus != nil && networkWorkerRevisionEvidenceEqual(current.Status.NetworkWorkerRevision, networkStatus) {
+			networkStatus = networkStatus.DeepCopy()
+			networkStatus.ObservedAt = current.Status.NetworkWorkerRevision.ObservedAt
+		}
+		current.Status.WorkerRevision = appStatus
+		current.Status.NetworkWorkerRevision = networkStatus
+		acceptManagedNetworkObservation(current)
+		return r.applyCiscoDeviceConditionObserved(current, condition)
+	}); err != nil {
 		return fmt.Errorf("update managed functional worker status: %w", err)
 	}
 	return nil
+}
+
+// acceptManagedNetworkObservation promotes only a sample whose immutable
+// producer provenance matches the manager's current device and worker proof.
+// Invalid or superseded producer input clears the accepted copy, failing the
+// rollout gate closed without modifying the worker-owned raw sample.
+func acceptManagedNetworkObservation(device *ciskov1.CiscoDevice) {
+	if device == nil || device.Status.HealthObservation == nil {
+		return
+	}
+	health := device.Status.HealthObservation
+	sample := health.Network
+	binding := device.Status.NetworkWorkerRevision
+	identity := device.Status.NodeIdentity
+	if sample == nil || binding == nil || identity == nil ||
+		identity.DeviceUID != string(device.UID) ||
+		binding.DesiredRevision == "" || binding.ObservedRevision == "" ||
+		binding.DesiredRevision != binding.ObservedRevision || binding.PodUID == "" ||
+		binding.PodStartTime == nil || binding.PodReadyTime == nil ||
+		binding.PodReadyTime.Before(binding.PodStartTime) ||
+		sample.ProducerRevision != binding.ObservedRevision ||
+		sample.WorkerPodUID != binding.PodUID || sample.SampleSequence == 0 ||
+		sample.CollectionStartedAt.IsZero() || sample.CollectionEndedAt.IsZero() ||
+		sample.CollectionEndedAt.Before(&sample.CollectionStartedAt) ||
+		sample.CollectionStartedAt.Before(binding.PodStartTime) ||
+		sample.ObservedAt.IsZero() || sample.ObservedAt.Before(&sample.CollectionStartedAt) ||
+		sample.ObservedAt.After(sample.CollectionEndedAt.Time) {
+		health.AcceptedNetwork = nil
+		return
+	}
+	physicalIdentity, err := topology.CanonicalPhysicalIdentity(identity.PhysicalIdentity)
+	if err != nil || sample.DeviceIdentityHash != identityHashForPhysicalID(physicalIdentity) ||
+		!validAcceptedNetworkIdentities(sample) ||
+		!validAcceptedNetworkProgression(sample, health.AcceptedNetwork) {
+		health.AcceptedNetwork = nil
+		return
+	}
+	health.AcceptedNetwork = sample.DeepCopy()
+}
+
+// validAcceptedNetworkProgression prevents a stale or conflicting raw sample
+// from moving the manager-owned high-water mark backwards. A replacement Pod
+// is a new producer epoch and may restart at sequence one; within one exact
+// Pod/revision epoch, sequence and collection-end time must both advance. An
+// identical already-accepted sample is idempotent across manager reconciles.
+func validAcceptedNetworkProgression(sample, accepted *ciskov1.DeviceNetworkObservationStatus) bool {
+	if sample == nil || accepted == nil {
+		return sample != nil
+	}
+	if sample.WorkerPodUID != accepted.WorkerPodUID || sample.ProducerRevision != accepted.ProducerRevision {
+		return true
+	}
+	if sample.SampleSequence == accepted.SampleSequence {
+		return reflect.DeepEqual(sample, accepted)
+	}
+	return sample.SampleSequence > accepted.SampleSequence &&
+		sample.CollectionEndedAt.After(accepted.CollectionEndedAt.Time)
+}
+
+func validAcceptedNetworkIdentities(sample *ciskov1.DeviceNetworkObservationStatus) bool {
+	interfaces := make(map[string]struct{}, len(sample.Interfaces))
+	for i := range sample.Interfaces {
+		item := sample.Interfaces[i]
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			return false
+		}
+		if _, duplicate := interfaces[name]; duplicate {
+			return false
+		}
+		interfaces[name] = struct{}{}
+		if !validAcceptedInterfaceRateEvidence(item) {
+			return false
+		}
+	}
+	neighbors := make(map[string]struct{}, len(sample.Neighbors))
+	for i := range sample.Neighbors {
+		identity := strings.TrimSpace(sample.Neighbors[i].Identity)
+		if identity == "" {
+			return false
+		}
+		if _, duplicate := neighbors[identity]; duplicate {
+			return false
+		}
+		neighbors[identity] = struct{}{}
+	}
+	return true
+}
+
+func validAcceptedInterfaceRateEvidence(item ciskov1.DeviceNetworkInterfaceObservation) bool {
+	if item.HeadroomPercent == nil {
+		return true
+	}
+	if item.CapacityBitsPerSecond == nil || *item.CapacityBitsPerSecond == 0 ||
+		item.IngressBitsPerSecond == nil || item.EgressBitsPerSecond == nil ||
+		strings.TrimSpace(item.RateSource) == "" {
+		return false
+	}
+	utilization := *item.IngressBitsPerSecond
+	if *item.EgressBitsPerSecond > utilization {
+		utilization = *item.EgressBitsPerSecond
+	}
+	want := int32(0)
+	if utilization < *item.CapacityBitsPerSecond {
+		want = int32(float64(*item.CapacityBitsPerSecond-utilization) * 100 / float64(*item.CapacityBitsPerSecond))
+		if want > 100 {
+			want = 100
+		}
+	}
+	return *item.HeadroomPercent == want
+}
+
+// updateManagedDeviceStatusWithRetry serializes controller-owned status changes
+// with other status writers. The cached object passed to a reconcile can be
+// stale while a worker, topology probe, or another controller updates status;
+// re-reading on conflict avoids a hot error loop and preserves fields owned by
+// those other writers.
+func (r *CiscoDeviceReconciler) updateManagedDeviceStatusWithRetry(
+	ctx context.Context,
+	device *ciskov1.CiscoDevice,
+	mutate func(*ciskov1.CiscoDevice) error,
+) error {
+	if device == nil {
+		return fmt.Errorf("cannot update status for nil CiscoDevice")
+	}
+	key := client.ObjectKeyFromObject(device)
+	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+		current := &ciskov1.CiscoDevice{}
+		if err := r.reader().Get(ctx, key, current); err != nil {
+			return err
+		}
+		before := current.DeepCopy()
+		if err := mutate(current); err != nil {
+			return err
+		}
+		if statusesEqual(before.Status, current.Status) {
+			*device = *current
+			return nil
+		}
+		if err := r.Status().Update(ctx, current); err != nil {
+			return err
+		}
+		*device = *current
+		return nil
+	})
 }
 
 func (r *CiscoDeviceReconciler) reconcileManagedWorkerObjectBindings(ctx context.Context,

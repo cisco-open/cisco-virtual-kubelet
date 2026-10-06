@@ -136,6 +136,10 @@ type CommonConfigReconciler struct {
 	Recorder                record.EventRecorder
 	Interval                time.Duration
 	RuntimeID               string
+	ManagedTopology         bool
+	DeviceUID               string
+	WorkerPodName           string
+	WorkerPodUID            string
 	Platform                CommonConfigPlatform
 
 	// SubscribeNotify is the polling-loop fast path for transports that
@@ -387,6 +391,10 @@ func (r *CommonConfigReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	spec := r.Platform.Spec(cr)
 	if spec == nil || spec.DeviceRef.Name != r.DeviceName || !r.inDeviceNamespace(cr) {
 		return reconcile.Result{}, nil
+	}
+	if r.ManagedTopology && !managedNetworkObjectBindingReady(cr, r.DeviceNamespace,
+		r.DeviceName, r.DeviceUID, r.WorkerPodName, r.WorkerPodUID) {
+		return reconcile.Result{RequeueAfter: managedConfigBindingPoll}, nil
 	}
 	ctx, span := r.startReconcileSpan(ctx, cr)
 	defer span.End()

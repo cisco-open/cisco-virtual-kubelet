@@ -200,6 +200,91 @@ func TestReconcileShowCommand(t *testing.T) {
 	}
 }
 
+func TestManagedReconcileWaitsForExactManagerBindingBeforeStatusOrDispatch(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name        string
+		annotations map[string]string
+	}{
+		{name: "unstamped"},
+		{name: "incomplete", annotations: map[string]string{
+			managedprotocol.AnnotationManaged:    "true",
+			managedprotocol.AnnotationDeviceName: "dev1",
+		}},
+		{name: "peer pod", annotations: managedNetworkBinding("dev1", "device-uid")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := newScheme(t)
+			op := newOperation("managed-binding", func(op *opsv1alpha1.DeviceOperation) {
+				op.Spec.Operation.Commands = []string{"show version"}
+				op.Annotations = tc.annotations
+			})
+			if tc.name == "peer pod" {
+				op.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] = "peer-pod-uid"
+			}
+			tr := &fakeTransport{caps: transport.Capabilities{
+				Kind: transport.KindNETCONF, SupportsDiagnosticExec: true,
+			}}
+			kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(op).
+				WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).Build()
+			r := &Reconciler{
+				Client: kubeClient, Reader: kubeClient, DeviceName: "dev1", DeviceNamespace: "default",
+				ManagedTopology: true, DeviceUID: "device-uid", WorkerPodUID: "device-uid-pod",
+				TP: &staticTP{tr: tr},
+			}
+			result, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(op)})
+			if err != nil {
+				t.Fatalf("Reconcile() error = %v", err)
+			}
+			if result.RequeueAfter != managedBindingPoll {
+				t.Fatalf("RequeueAfter = %s, want %s", result.RequeueAfter, managedBindingPoll)
+			}
+			if tr.calls != 0 {
+				t.Fatalf("device dispatch calls = %d, want zero", tr.calls)
+			}
+			var got opsv1alpha1.DeviceOperation
+			if err := kubeClient.Get(ctx, client.ObjectKeyFromObject(op), &got); err != nil {
+				t.Fatal(err)
+			}
+			if got.Status.Phase != "" || got.Status.ObservedGeneration != 0 {
+				t.Fatalf("unbound object received status: %#v", got.Status)
+			}
+		})
+	}
+}
+
+func TestManagedReconcileExecutesAfterExactManagerBinding(t *testing.T) {
+	ctx := context.Background()
+	scheme := newScheme(t)
+	op := newOperation("managed-ready", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Commands = []string{"show version"}
+		op.Annotations = managedNetworkBinding("dev1", "device-uid")
+	})
+	tr := &fakeTransport{caps: transport.Capabilities{
+		Kind: transport.KindNETCONF, SupportsDiagnosticExec: true,
+	}}
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).Build()
+	r := &Reconciler{
+		Client: kubeClient, Reader: kubeClient, DeviceName: "dev1", DeviceNamespace: "default",
+		ManagedTopology: true, DeviceUID: "device-uid", WorkerPodUID: "device-uid-pod",
+		TP: &staticTP{tr: tr},
+	}
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(op)}); err != nil {
+		t.Fatalf("Reconcile() error = %v", err)
+	}
+	if tr.calls != 1 {
+		t.Fatalf("device dispatch calls = %d, want one", tr.calls)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := kubeClient.Get(ctx, client.ObjectKeyFromObject(op), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseSucceeded {
+		t.Fatalf("phase = %q, want Succeeded: %#v", got.Status.Phase, got.Status)
+	}
+}
+
 func TestReconcileStatusWriteFailureMarksRootSpanError(t *testing.T) {
 	scheme := newScheme(t)
 	op := newOperation("status-failure", func(op *opsv1alpha1.DeviceOperation) {
@@ -547,6 +632,37 @@ func TestReconcileShowVersionFailsOnEmptyOutput(t *testing.T) {
 	}
 	if !strings.Contains(got.Status.Message, "empty output") {
 		t.Fatalf("message=%q want empty output reason", got.Status.Message)
+	}
+}
+
+func TestReconcileDiagnosticRejectionIsFailedWithEvidence(t *testing.T) {
+	ctx := context.Background()
+	const command = "verify /sha256 flash:nginx.tar"
+	const output = "% Invalid input detected at '^' marker."
+	op := newOperation("rejected-diagnostic", func(op *opsv1alpha1.DeviceOperation) {
+		op.Spec.Operation.Commands = []string{command}
+	})
+	tr := &fakeTransport{
+		caps: transport.Capabilities{Kind: transport.KindRESTCONF, SupportsDiagnosticExec: true},
+		results: []transport.CommandResult{{Command: command, Output: output,
+			Err: "IOS XE rejected diagnostic command syntax"}},
+	}
+	c := fake.NewClientBuilder().WithScheme(newScheme(t)).WithObjects(op).
+		WithStatusSubresource(&opsv1alpha1.DeviceOperation{}).Build()
+	r := &Reconciler{Client: c, DeviceName: "dev1", TP: &staticTP{tr: tr},
+		Now: func() time.Time { return time.Unix(100, 0).UTC() }}
+	if _, err := r.Reconcile(ctx, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(op)}); err != nil {
+		t.Fatal(err)
+	}
+	var got opsv1alpha1.DeviceOperation
+	if err := c.Get(ctx, client.ObjectKeyFromObject(op), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Status.Phase != opsv1alpha1.OperationPhaseFailed || tr.calls != 1 {
+		t.Fatalf("phase=%s calls=%d", got.Status.Phase, tr.calls)
+	}
+	if len(got.Status.Outputs) != 1 || got.Status.Outputs[0].Output != output || got.Status.Outputs[0].Err == "" {
+		t.Fatal("failed diagnostic lost its evidence")
 	}
 }
 

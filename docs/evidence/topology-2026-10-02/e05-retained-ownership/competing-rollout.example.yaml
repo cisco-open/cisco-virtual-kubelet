@@ -1,0 +1,53 @@
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareRollout
+metadata:
+  name: retained-receipt-conflict-example
+  namespace: cvk-live
+spec:
+  plan:
+    requestedBy: REPLACE_WITH_AUTHENTICATED_REQUESTER
+    requestedAt: "2026-10-02T02:49:00Z"
+    targets:
+      selector:
+        matchLabels:
+          topology.cisco.vk/lab-node: cat9k-lab-101
+          topology.cisco.vk/managed: "true"
+      allowAll: false
+      maxTargets: 1
+    image:
+      sha256: df6055e4e1e88135b311998d721ff6d20a94a475113c1ff678fb65d14dc11049
+      imageFamily: cat9k
+      sources:
+        - name: qualified-source
+          priority: 10
+          url: sftp://image-source.example.invalid/images/cat9k-iosxe.bin
+          urlSecretRef:
+            name: REPLACE_WITH_IMAGE_SOURCE_SECRET
+    targetVersion: "17.18.03"
+    strategy: PrepareOnly
+    rollbackOnFailure: true
+    installTimeoutSeconds: 7200
+    rebootTimeoutSeconds: 3600
+    canaries:
+      - name: c9300-24p
+        devices: [cat9k-lab-101]
+    pauseAfterCanary: false
+    budgets:
+      maxConcurrentTransfers: 1
+      maxUnavailable: 1
+      domains:
+        - topologyKey: distribution.cisco.vk/cache-domain
+          maxConcurrentTransfers: 1
+        - topologyKey: operations.cisco.vk/redundancy-domain
+          maxUnavailable: 1
+    workloads:
+      policy: BlockIfRunning
+    health:
+      maxObservationAgeSeconds: 300
+      canarySoakSeconds: 30
+      waveSoakSeconds: 30
+      network:
+        enabled: true
+        requireCompleteEvidence: true
+  control:
+    revision: 0

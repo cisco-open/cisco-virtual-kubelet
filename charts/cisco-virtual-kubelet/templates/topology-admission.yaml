@@ -126,11 +126,11 @@ spec:
          'ops.cisco.vk/drain-taint-owner',
          'topology.cisco.vk/app-hosting-cordon-device-uid'].all(k,
          !(k in object.metadata.annotations))
-    - name: managerReleasedLegacyNodeUpdate
+    - name: managerUIDBoundLegacyNodeUpdate
       expression: >-
         variables.manager && request.operation == 'UPDATE' &&
         (!has(request.subResource) || request.subResource == '') &&
-        !variables.oldManaged && object != null &&
+        object != null &&
         object.metadata.name == oldObject.metadata.name &&
         object.metadata.uid == oldObject.metadata.uid &&
         has(oldObject.metadata.annotations) &&
@@ -140,8 +140,7 @@ spec:
         has(object.metadata.annotations) &&
         'topology.cisco.vk/legacy-handoff' in object.metadata.annotations &&
         object.metadata.annotations['topology.cisco.vk/legacy-handoff'] ==
-          oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff'] &&
-        !('topology.cisco.vk/managed' in object.metadata.annotations)
+          oldObject.metadata.annotations['topology.cisco.vk/legacy-handoff']
     - name: legacyHandoffMarkerPreserved
       expression: >-
         request.operation == 'CREATE' ?
@@ -227,7 +226,7 @@ spec:
       message: managed Nodes are manager/bound-worker owned; a legacy worker may mutate only its exact unmarked Node and must preserve its handoff marker
     - expression: >-
         variables.nativeNodeLifecycle || variables.managerLegacyHandoff ||
-        variables.managerReleasedLegacyNodeUpdate ||
+        variables.managerUIDBoundLegacyNodeUpdate ||
         (request.userInfo.username.matches(
           '^system:serviceaccount:[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?:cisco-vk-legacy-[a-z0-9]([-a-z0-9.]{0,61}[a-z0-9])?-[a-f0-9]{8}$') ?
         ((oldObject == null || !has(oldObject.metadata.annotations) ||
@@ -309,7 +308,7 @@ spec:
            t.key == 'topology.cisco.vk/uninitialized') ==
          object.spec.taints.filter(t,
            t.key == 'topology.cisco.vk/uninitialized')) ||
-        variables.managerReleasedLegacyNodeUpdate
+        variables.managerUIDBoundLegacyNodeUpdate
       message: only the manager may remove or change a released Node initialization fence while preserving the exact UID-bound handoff marker
     - expression: >-
         object == null ||
@@ -682,6 +681,62 @@ spec:
   variables:
     - name: manager
       expression: request.userInfo.username == {{ $manager | quote }}
+    - name: networkWorker
+      expression: >-
+        request.userInfo.username == ('system:serviceaccount:' + request.namespace + ':{{ $networkServiceAccount }}')
+    # The network worker may publish only the healthObservation.network
+    # subtree on the status subresource. Every manager-owned field must remain
+    # byte-for-byte unchanged; this keeps telemetry publication separate from
+    # all device identity, topology, rollout, and lifecycle state.
+    - name: networkObservationOnly
+      expression: >-
+        has(request.subResource) && request.subResource == 'status' &&
+        variables.networkWorker && oldObject != null && has(oldObject.status) &&
+        has(oldObject.status.nodeIdentity) && object != null && has(object.status) &&
+        ((has(object.status.nodeIdentity) == has(oldObject.status.nodeIdentity)) &&
+         (!has(object.status.nodeIdentity) || object.status.nodeIdentity == oldObject.status.nodeIdentity) &&
+         ((has(object.status.topologyProjection) == has(oldObject.status.topologyProjection)) &&
+          (!has(object.status.topologyProjection) || object.status.topologyProjection == oldObject.status.topologyProjection)) &&
+         ((has(object.status.workerRevision) == has(oldObject.status.workerRevision)) &&
+          (!has(object.status.workerRevision) || object.status.workerRevision == oldObject.status.workerRevision)) &&
+         ((has(object.status.networkWorkerRevision) == has(oldObject.status.networkWorkerRevision)) &&
+          (!has(object.status.networkWorkerRevision) || object.status.networkWorkerRevision == oldObject.status.networkWorkerRevision)) &&
+         ((has(object.status.legacyHandoff) == has(oldObject.status.legacyHandoff)) &&
+          (!has(object.status.legacyHandoff) || object.status.legacyHandoff == oldObject.status.legacyHandoff)) &&
+         ((has(object.status.topologyLock) == has(oldObject.status.topologyLock)) &&
+          (!has(object.status.topologyLock) || object.status.topologyLock == oldObject.status.topologyLock)) &&
+         ((has(object.status.maintenanceSession) == has(oldObject.status.maintenanceSession)) &&
+          (!has(object.status.maintenanceSession) || object.status.maintenanceSession == oldObject.status.maintenanceSession)) &&
+         ((has(object.status.conditions) == has(oldObject.status.conditions)) &&
+          (!has(object.status.conditions) || object.status.conditions == oldObject.status.conditions)) &&
+         ((has(object.status.workerCapabilities) == has(oldObject.status.workerCapabilities)) &&
+          (!has(object.status.workerCapabilities) || object.status.workerCapabilities == oldObject.status.workerCapabilities)) &&
+         ((has(object.status.netAsCode) == has(oldObject.status.netAsCode)) &&
+          (!has(object.status.netAsCode) || object.status.netAsCode == oldObject.status.netAsCode)) &&
+         ((has(object.status.healthObservation) == has(oldObject.status.healthObservation)) &&
+          (!has(object.status.healthObservation) ||
+           (object.status.healthObservation.observedAt == oldObject.status.healthObservation.observedAt &&
+            object.status.healthObservation.nodeReadyHeartbeatTime == oldObject.status.healthObservation.nodeReadyHeartbeatTime &&
+            object.status.healthObservation.deviceConditionsHash == oldObject.status.healthObservation.deviceConditionsHash &&
+            (has(object.status.healthObservation.conditionObservations) ==
+             has(oldObject.status.healthObservation.conditionObservations)) &&
+            (!has(object.status.healthObservation.conditionObservations) ||
+             object.status.healthObservation.conditionObservations ==
+               oldObject.status.healthObservation.conditionObservations) &&
+            (has(object.status.healthObservation.acceptedNetwork) ==
+             has(oldObject.status.healthObservation.acceptedNetwork)) &&
+            (!has(object.status.healthObservation.acceptedNetwork) ||
+             object.status.healthObservation.acceptedNetwork ==
+               oldObject.status.healthObservation.acceptedNetwork)))) &&
+         (has(object.status.phase) == has(oldObject.status.phase)) &&
+         (!has(object.status.phase) || object.status.phase == oldObject.status.phase) &&
+         (has(object.status.workerTopology) == has(oldObject.status.workerTopology)) &&
+         (!has(object.status.workerTopology) ||
+          object.status.workerTopology == oldObject.status.workerTopology))
+    - name: networkObservationPodUIDs
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra ?
+          request.userInfo.extra['authentication.kubernetes.io/pod-uid'] : []
     - name: newProtectedLabels
       expression: >-
         object != null && has(object.metadata.labels) ?
@@ -896,6 +951,7 @@ spec:
     - expression: >-
         !has(request.subResource) || request.subResource != 'status' ||
         variables.manager ||
+        variables.networkObservationOnly ||
         (((has(object.status) && has(object.status.nodeIdentity)) ==
           (has(oldObject.status) && has(oldObject.status.nodeIdentity))) &&
          (!has(object.status) || !has(object.status.nodeIdentity) ||
@@ -930,12 +986,57 @@ spec:
           object.status.maintenanceSession == oldObject.status.maintenanceSession))
       message: manager-owned CiscoDevice identity, topology, health, app/network worker revisions, handoff, lock, and maintenance status cannot be forged
     - expression: >-
+        variables.manager || !variables.networkObservationOnly ||
+        (has(object.status.networkWorkerRevision) &&
+         has(object.status.healthObservation) &&
+         has(object.status.healthObservation.network) &&
+         has(object.status.networkWorkerRevision.podUID) &&
+         has(object.status.healthObservation.network.workerPodUID) &&
+         variables.networkObservationPodUIDs.size() == 1 &&
+         object.status.networkWorkerRevision.podUID == variables.networkObservationPodUIDs[0] &&
+         object.status.healthObservation.network.workerPodUID == variables.networkObservationPodUIDs[0])
+      message: network observation status requires the authenticated bound network-worker Pod UID
+    - expression: >-
+        variables.manager || !variables.networkObservationOnly ||
+        (has(object.status.networkWorkerRevision) &&
+         has(object.status.healthObservation) &&
+         has(object.status.healthObservation.network) &&
+         has(object.status.networkWorkerRevision.desiredRevision) &&
+         has(object.status.networkWorkerRevision.observedRevision) &&
+         has(object.status.networkWorkerRevision.podStartTime) &&
+         has(object.status.networkWorkerRevision.podReadyTime) &&
+         object.status.networkWorkerRevision.observedRevision ==
+           object.status.networkWorkerRevision.desiredRevision &&
+         object.status.networkWorkerRevision.podReadyTime >=
+           object.status.networkWorkerRevision.podStartTime &&
+         has(object.status.healthObservation.network.collectionStartedAt) &&
+         has(object.status.healthObservation.network.collectionEndedAt) &&
+         has(object.status.healthObservation.network.observedAt) &&
+         object.status.healthObservation.network.producerRevision ==
+           object.status.networkWorkerRevision.observedRevision &&
+         object.status.healthObservation.network.sampleSequence > 0 &&
+         object.status.healthObservation.network.collectionEndedAt >=
+           object.status.healthObservation.network.collectionStartedAt &&
+         object.status.healthObservation.network.observedAt >=
+           object.status.healthObservation.network.collectionStartedAt &&
+         object.status.healthObservation.network.observedAt <=
+           object.status.healthObservation.network.collectionEndedAt &&
+         (!has(oldObject.status.healthObservation) ||
+          !has(oldObject.status.healthObservation.network) ||
+          oldObject.status.healthObservation.network.workerPodUID !=
+            object.status.healthObservation.network.workerPodUID ||
+          (object.status.healthObservation.network.sampleSequence >
+             oldObject.status.healthObservation.network.sampleSequence &&
+           object.status.healthObservation.network.collectionEndedAt >
+             oldObject.status.healthObservation.network.collectionEndedAt)))
+      message: network observation requires the bound revision and strictly newer collection provenance
+    - expression: >-
         !has(request.subResource) || request.subResource != 'status' ||
         ((!has(oldObject.status) ||
           (!has(oldObject.status.nodeIdentity) && !has(oldObject.status.legacyHandoff))) &&
          (!has(object.status) ||
           (!has(object.status.nodeIdentity) && !has(object.status.legacyHandoff)))) ||
-        variables.manager
+        variables.manager || variables.networkObservationOnly
       message: all CiscoDevice status is manager-owned once managed Node identity or legacy handoff state exists
     - expression: >-
         request.operation != 'UPDATE' || variables.manager ||
@@ -974,8 +1075,9 @@ spec:
   matchResources: {}
 ---
 # Campaign creation and mutable controls bind their asserted identities to the
-# authenticated caller. Approval is append-only in the CRD and additionally
-# requires the custom `approve` verb for this exact namespaced rollout.
+# authenticated caller. Plan approval and later prepared-image activation are
+# independently append-only and require distinct custom verbs for this exact
+# namespaced rollout.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -1014,6 +1116,37 @@ spec:
         object.spec.approval.planHash == oldObject.status.frozenPlan.hash &&
         authorizer.group('ops.cisco.vk').resource('iosxesoftwarerollouts').namespace(request.namespace).name(request.name).check('approve').allowed())
       message: adding approval requires an authorized caller identity and the exact frozen-plan hash
+    - expression: >-
+        (has(request.subResource) && request.subResource != '') || request.operation != 'UPDATE' ||
+        has(oldObject.spec.activationApproval) || !has(object.spec.activationApproval) ||
+        (object.spec.activationApproval.approvedBy == request.userInfo.username &&
+        oldObject.spec.plan.strategy == 'PrepareOnly' &&
+        has(oldObject.status.frozenPlan) &&
+        oldObject.status.phase == 'Succeeded' &&
+        oldObject.status.targets.size() == oldObject.status.frozenPlan.targets.size() &&
+        oldObject.status.targets.all(t, t.phase == 'Succeeded') &&
+        object.spec.activationApproval.planHash == oldObject.status.frozenPlan.hash &&
+        object.spec.activationApproval.receipts.size() == oldObject.status.frozenPlan.targets.size() &&
+        object.spec.activationApproval.receipts.all(r,
+          oldObject.status.frozenPlan.targets.exists(t, t.deviceUID == r.deviceUID)) &&
+        authorizer.group('ops.cisco.vk').resource('iosxesoftwarerollouts').namespace(request.namespace).name(request.name).check('activate').allowed())
+      message: adding activationApproval requires completed PrepareOnly targets, one exact receipt per frozen target, the frozen-plan hash, and distinct activate permission
+    - expression: >-
+        request.operation != 'CREATE' || !has(object.spec.preparationInvalidation)
+      message: preparation invalidation cannot be requested at campaign creation
+    - expression: >-
+        (has(request.subResource) && request.subResource != '') || request.operation != 'UPDATE' ||
+        has(oldObject.spec.preparationInvalidation) || !has(object.spec.preparationInvalidation) ||
+        (object.spec.preparationInvalidation.requestedBy == request.userInfo.username &&
+         oldObject.spec.plan.strategy == 'PrepareOnly' &&
+         has(oldObject.spec.control.cancel) && oldObject.spec.control.cancel &&
+         !has(oldObject.spec.activationApproval) && has(oldObject.status.frozenPlan) &&
+         oldObject.status.phase == 'Cancelled' &&
+         object.spec.preparationInvalidation.planHash == oldObject.status.frozenPlan.hash &&
+         object.spec.preparationInvalidation.receipts.all(r,
+           oldObject.status.frozenPlan.targets.exists(t, t.deviceUID == r.deviceUID)) &&
+         authorizer.group('ops.cisco.vk').resource('iosxesoftwarerollouts').namespace(request.namespace).name(request.name).check('recover').allowed())
+      message: preparation invalidation requires settled cancellation, exact frozen intent, caller identity, and distinct recover permission
     - expression: >-
         (has(request.subResource) && request.subResource != '') || request.operation != 'UPDATE' ||
         object.spec.control == oldObject.spec.control ||
@@ -1282,8 +1415,10 @@ spec:
         (has(object.status.managerControl) == has(oldObject.status.managerControl)) &&
         (!has(object.status.managerControl) || object.status.managerControl == oldObject.status.managerControl) &&
         (has(object.status.managerDrain) == has(oldObject.status.managerDrain)) &&
-        (!has(object.status.managerDrain) || object.status.managerDrain == oldObject.status.managerDrain))))
-      message: managed upgrade managerAdmission, managerControl, and managerDrain status are manager-owned
+        (!has(object.status.managerDrain) || object.status.managerDrain == oldObject.status.managerDrain) &&
+        (has(object.status.managerInvalidation) == has(oldObject.status.managerInvalidation)) &&
+        (!has(object.status.managerInvalidation) || object.status.managerInvalidation == oldObject.status.managerInvalidation))))
+      message: managed upgrade managerAdmission, managerControl, managerDrain, and managerInvalidation status are manager-owned
     - expression: >-
         !has(request.subResource) || request.subResource != 'status' ||
         variables.manager || variables.appDrainWriter ||
@@ -1309,6 +1444,8 @@ spec:
            !has(object.status.noRebootActivationAccepted) &&
            !has(object.status.observedGeneration) &&
            !has(object.status.phase) &&
+           !has(object.status.preparedReceipt) &&
+           !has(object.status.preparedInvalidation) &&
            !has(object.status.previousVersion) &&
            !has(object.status.primarySupervisorActivationRequested) &&
            !has(object.status.primarySupervisorInstallRequested) &&
@@ -1358,6 +1495,10 @@ spec:
            (!has(object.status.observedGeneration) || object.status.observedGeneration == oldObject.status.observedGeneration) &&
            (has(object.status.phase) == has(oldObject.status.phase)) &&
            (!has(object.status.phase) || object.status.phase == oldObject.status.phase) &&
+           (has(object.status.preparedReceipt) == has(oldObject.status.preparedReceipt)) &&
+           (!has(object.status.preparedReceipt) || object.status.preparedReceipt == oldObject.status.preparedReceipt) &&
+           (has(object.status.preparedInvalidation) == has(oldObject.status.preparedInvalidation)) &&
+           (!has(object.status.preparedInvalidation) || object.status.preparedInvalidation == oldObject.status.preparedInvalidation) &&
            (has(object.status.previousVersion) == has(oldObject.status.previousVersion)) &&
            (!has(object.status.previousVersion) || object.status.previousVersion == oldObject.status.previousVersion) &&
            (has(object.status.primarySupervisorActivationRequested) == has(oldObject.status.primarySupervisorActivationRequested)) &&

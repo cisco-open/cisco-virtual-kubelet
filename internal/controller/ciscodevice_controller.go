@@ -65,6 +65,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/platforms"
 	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
@@ -509,13 +510,26 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// passes through this controller path.
 	configDriverRegistered := drivers.ConfigDriverRegistered(device.Spec.Driver)
 	perDeviceWorkerExpected := !(r.AggregatorEnabled && configDriverRegistered)
+	if !perDeviceWorkerExpected && device.Spec.TLS != nil && device.Spec.TLS.CASecretRef != nil {
+		return ctrl.Result{}, fmt.Errorf("device TLS caSecretRef requires per-device workers; aggregator mode uses caFile")
+	}
+	deviceTLSCA, deviceTLSCAErr := r.inspectDeviceTLSCA(ctx, &device)
+	if deviceTLSCAErr != nil {
+		var readErr *projectedSecretReadError
+		if stderrors.As(deviceTLSCAErr, &readErr) || deviceTLSCA.revision == "" {
+			return ctrl.Result{}, deviceTLSCAErr
+		}
+		if r.Recorder != nil {
+			r.Recorder.Eventf(&device, corev1.EventTypeWarning, "DeviceTLSCAInvalid", "%v", deviceTLSCAErr)
+		}
+	}
 	var gnoiTLSState gnoiTLSProjectionState
 	var gnoiConfigurationErr error
 	if perDeviceWorkerExpected && gnoiTLSSecretRef(&device.Spec) != nil && !gNOIDisabled() {
 		var inspectErr error
 		gnoiTLSState, inspectErr = r.inspectGNOITLSSecret(ctx, &device)
 		if inspectErr != nil {
-			var readErr *gnoiSecretReadError
+			var readErr *projectedSecretReadError
 			if stderrors.As(inspectErr, &readErr) {
 				return ctrl.Result{}, inspectErr
 			}
@@ -542,6 +556,12 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		cm.Annotations = propagatedCorrelationAnnotations(cm.Annotations, device.Annotations, r.now())
 		cm.Data = map[string]string{
 			configFileName: configData,
+		}
+		if deviceTLSCA.valid {
+			// Public certificates only; credentials and signer keys remain in
+			// Secrets. The validated snapshot prevents kubelet refreshing a raw
+			// source Secret into either worker after inspection.
+			cm.Data[deviceTLSCAConfigKey] = deviceTLSCA.publicPEM
 		}
 		return controllerutil.SetControllerReference(&device, cm, r.Scheme)
 	})
@@ -737,7 +757,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			writeClassGNOIEnabled(),
 		)
 		if err != nil {
-			var readErr *gnoiSecretReadError
+			var readErr *projectedSecretReadError
 			if stderrors.As(err, &readErr) {
 				return ctrl.Result{}, err
 			}
@@ -793,7 +813,8 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			!templateMutationsEnabled && deploymentRolloutComplete(deploy)
 		mutationWorkerMayBeRunning := gnoiMutationsEnabled || templateMutationsEnabled ||
 			(mutationLifecyclePending && !mutationCleanupComplete)
-		if r.ManagedTopology || managed.Managed || managed.LegacyWorker || signerMayBeResident || mutationWorkerMayBeRunning {
+		deviceTrustWasMounted := slices.ContainsFunc(deploy.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool { return v.Name == deviceTLSCAVolume })
+		if r.ManagedTopology || managed.Managed || managed.LegacyWorker || signerMayBeResident || mutationWorkerMayBeRunning || deviceTLSCA.name != "" || deviceTrustWasMounted {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}
 		} else {
 			deploy.Spec.Strategy = appsv1.DeploymentStrategy{
@@ -1052,6 +1073,7 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				}},
 			})
 		}
+		deviceTLSCA.project(&deploy.Spec.Template, cm.Name)
 		// Deployment PodTemplates are defaulted by the API server on write. Keep
 		// the desired object in that same explicit form before CreateOrUpdate
 		// compares it and before managed mode content-addresses it. Otherwise the
@@ -1263,6 +1285,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else if err := r.updateGNOIConfigurationCondition(ctx, &device, deploy, desiredWorkerRevision, gnoiConfigurationErr); err != nil {
 		return ctrl.Result{}, err
 	}
+	if deviceTLSCAErr != nil {
+		return ctrl.Result{}, deviceTLSCAErr
+	}
 	if maintenanceRecovery {
 		// The guarded recovery lane ends here. In particular, do not reconcile
 		// device-side config prerequisites, retire any worker authority, or report
@@ -1469,6 +1494,11 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 			sa.Annotations[managedprotocol.AnnotationWorkerServiceAccountPolicy] = r.WorkerServiceAccountPolicyEpoch
 			return controllerutil.SetControllerReference(device, sa, r.Scheme)
 		}
+		if sharedCompatibility {
+			if err := releaseExactLegacySharedOwner(&sa.ObjectMeta, device); err != nil {
+				return fmt.Errorf("migrate shared compatibility ServiceAccount ownership: %w", err)
+			}
+		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("ServiceAccount %s/%s: %w", sa.Namespace, sa.Name, err)
@@ -1517,6 +1547,10 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 		if generated {
 			if err := applyGeneratedWorkerBindingMetadata(rb, device, managed, r.Scheme); err != nil {
 				return err
+			}
+		} else if sharedCompatibility {
+			if err := releaseExactLegacySharedOwner(&rb.ObjectMeta, device); err != nil {
+				return fmt.Errorf("migrate shared compatibility RoleBinding ownership: %w", err)
 			}
 		}
 		return nil
@@ -1567,6 +1601,24 @@ func (r *CiscoDeviceReconciler) ensureVKAccess(
 			return err
 		}
 	}
+	return nil
+}
+
+// releaseExactLegacySharedOwner migrates the historical per-device owner from
+// an object whose name is now namespace-shared. It removes no ambiguous or
+// foreign ownership: only a sole controller reference to this exact
+// CiscoDevice incarnation is safe to release.
+func releaseExactLegacySharedOwner(objectMeta *metav1.ObjectMeta, device *ciskov1.CiscoDevice) error {
+	if objectMeta != nil && len(objectMeta.OwnerReferences) == 0 {
+		return nil
+	}
+	if objectMeta == nil || device == nil || device.UID == "" {
+		return fmt.Errorf("object metadata or CiscoDevice identity is incomplete")
+	}
+	if len(objectMeta.OwnerReferences) != 1 || !managedServiceAccountOwnedByDeviceMeta(objectMeta, device) {
+		return fmt.Errorf("object has non-canonical or foreign ownership")
+	}
+	objectMeta.OwnerReferences = nil
 	return nil
 }
 
@@ -2370,6 +2422,10 @@ func renderDeviceConfigForWorker(spec *ciskov1.DeviceSpec, gnoiTLSClientCertific
 	sanitized.CredentialSecretRef = nil
 	sanitized.ConfigPrereqs = nil
 	sanitized.Worker = nil
+	if sanitized.TLS != nil && sanitized.TLS.CASecretRef != nil {
+		sanitized.TLS.CASecretRef = nil
+		sanitized.TLS.CAFile = deviceTLSCAMount + "/ca.crt"
+	}
 	if sanitized.GNOI != nil && sanitized.GNOI.TLS != nil {
 		gnoiTLS := sanitized.GNOI.TLS
 		if gnoiTLS.SecretRef != nil {
@@ -2692,12 +2748,31 @@ func (r *CiscoDeviceReconciler) ensureManagedDeviceAuthoritiesSettledFor(ctx con
 		if !managedBinding {
 			continue
 		}
+		// A successful PrepareOnly leaf deliberately remains terminal Prepared
+		// with a durable receipt even after its disruption reservation settles.
+		// That receipt retains exclusive device/software ownership for a later
+		// exact activation, so generic "settled" admission is not permission to
+		// delete the device or transfer it to another writer. Keep the handoff
+		// fenced until a separate audited receipt-invalidation contract exists;
+		// never copy the receipt or its approval into a new owner implicitly.
+		if (upgrade.Status.Phase == opsv1alpha1.UpgradePhasePrepared || upgrade.Status.PreparedReceipt != nil) &&
+			!softwareupgrade.PreparedReceiptConsumed(upgrade, upgrades.Items) &&
+			!softwareupgrade.PreparedReceiptInvalidated(upgrade) {
+			return fmt.Errorf("%s is blocked by retained prepared software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
+		if upgrade.Status.Phase == opsv1alpha1.UpgradePhaseStagedForNextBoot {
+			return fmt.Errorf("%s is blocked by retained next-boot software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
 		admission := upgrade.Status.ManagerAdmission
 		if admission == nil || admission.DeviceUID != string(device.UID) {
 			return fmt.Errorf("%s is blocked by incomplete software-upgrade admission %s/%s", operation, upgrade.Namespace, upgrade.Name)
 		}
 		if admission.State != opsv1alpha1.UpgradeManagerAdmissionSettled {
 			return fmt.Errorf("%s is blocked by unsettled software upgrade %s/%s", operation, upgrade.Namespace, upgrade.Name)
+		}
+		if !terminalManagedLeaf(upgrade.Status.Phase) &&
+			!softwareupgrade.SettledUnclaimedManagedOperation(upgrade) {
+			return fmt.Errorf("%s is blocked by non-terminal software upgrade %s/%s in phase %q", operation, upgrade.Namespace, upgrade.Name, upgrade.Status.Phase)
 		}
 	}
 
@@ -3419,7 +3494,7 @@ func (r *CiscoDeviceReconciler) emitPrereqsSkipped(device *ciskov1.CiscoDevice, 
 }
 
 // mapSecretToCiscoDevices fans a Secret event out to CiscoDevices in the same
-// namespace that reference it through device credentials, generic gNOI TLS,
+// namespace that reference it through device credentials, device HTTPS CA, generic gNOI TLS,
 // or the IOS-XE-only gNOI certificate-provisioning block. A legacy token
 // Secret for either reserved shared account fans out to every device so the
 // controller revokes its grants immediately rather than waiting for polling.
@@ -3441,11 +3516,12 @@ func (r *CiscoDeviceReconciler) mapSecretToCiscoDevices(ctx context.Context, obj
 	for i := range devices.Items {
 		dev := &devices.Items[i]
 		credentialMatch := dev.Spec.CredentialSecretRef != nil && dev.Spec.CredentialSecretRef.Name == secret.Name
+		deviceCAMatch := dev.Spec.TLS != nil && dev.Spec.TLS.CASecretRef != nil && dev.Spec.TLS.CASecretRef.Name == secret.Name
 		gnoiTLSRef := gnoiTLSSecretRef(&dev.Spec)
 		gnoiTLSMatch := gnoiTLSRef != nil && gnoiTLSRef.Name == secret.Name
 		provisioning := xeGNOICertificateProvisioning(&dev.Spec)
 		provisioningMatch := provisioning != nil && provisioning.SecretRef.Name == secret.Name
-		if !legacySharedToken && !credentialMatch && !gnoiTLSMatch && !provisioningMatch {
+		if !legacySharedToken && !credentialMatch && !deviceCAMatch && !gnoiTLSMatch && !provisioningMatch {
 			continue
 		}
 		requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{
@@ -3464,10 +3540,10 @@ type gnoiTLSProjectionState struct {
 }
 
 // Unexpected API failures are retryable without changing a working Deployment.
-// Missing or invalid Secret material instead disables only this worker's gNOI.
-type gnoiSecretReadError struct{ error }
+// Missing or invalid material follows the affected projection's fail-closed path.
+type projectedSecretReadError struct{ error }
 
-func (e *gnoiSecretReadError) Unwrap() error { return e.error }
+func (e *projectedSecretReadError) Unwrap() error { return e.error }
 
 type managedWorkerRevisionFence struct {
 	desiredRevision string
@@ -3507,24 +3583,19 @@ func (r *CiscoDeviceReconciler) fenceManagedWorkerRevision(
 	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, true, false); err != nil {
 		return fmt.Errorf("clear prior app worker Pod binding before rollout: %w", err)
 	}
-	before := device.DeepCopy()
-	device.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
-		DesiredRevision: desiredRevision,
-		ObservedAt:      metav1.NewTime(r.now()),
-	}
-	if err := r.applyCiscoDeviceConditionObserved(device, metav1.Condition{
-		Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             "WorkerRolloutPending",
-		Message:            "managed worker configuration changed; the old worker is fenced before Deployment rollout",
-		ObservedGeneration: device.Generation,
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		current.Status.WorkerRevision = &ciskov1.DeviceWorkerRevisionStatus{
+			DesiredRevision: desiredRevision,
+			ObservedAt:      metav1.NewTime(r.now()),
+		}
+		return r.applyCiscoDeviceConditionObserved(current, metav1.Condition{
+			Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "WorkerRolloutPending",
+			Message:            "managed worker configuration changed; the old worker is fenced before Deployment rollout",
+			ObservedGeneration: current.Generation,
+		})
 	}); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
 		return fmt.Errorf("persist managed worker revision pre-rollout fence: %w", err)
 	}
 	return nil
@@ -3541,24 +3612,19 @@ func (r *CiscoDeviceReconciler) fenceManagedNetworkWorkerRevision(
 	if err := r.reconcileManagedWorkerObjectBindings(ctx, device, nil, nil, false, true); err != nil {
 		return fmt.Errorf("clear prior network worker Pod binding before rollout: %w", err)
 	}
-	before := device.DeepCopy()
-	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
-		DesiredRevision: desiredRevision,
-		ObservedAt:      metav1.NewTime(r.now()),
-	}
-	if err := r.applyCiscoDeviceConditionObserved(device, metav1.Condition{
-		Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
-		Status:             metav1.ConditionFalse,
-		Reason:             "NetworkWorkerRolloutPending",
-		Message:            "managed network worker configuration changed; the old mutation worker is fenced before Deployment rollout",
-		ObservedGeneration: device.Generation,
+	if err := r.updateManagedDeviceStatusWithRetry(ctx, device, func(current *ciskov1.CiscoDevice) error {
+		current.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+			DesiredRevision: desiredRevision,
+			ObservedAt:      metav1.NewTime(r.now()),
+		}
+		return r.applyCiscoDeviceConditionObserved(current, metav1.Condition{
+			Type:               ciskov1.CiscoDeviceConditionGNOIConfigurationReady,
+			Status:             metav1.ConditionFalse,
+			Reason:             "NetworkWorkerRolloutPending",
+			Message:            "managed network worker configuration changed; the old mutation worker is fenced before Deployment rollout",
+			ObservedGeneration: current.Generation,
+		})
 	}); err != nil {
-		return err
-	}
-	if statusesEqual(before.Status, device.Status) {
-		return nil
-	}
-	if err := r.Status().Update(ctx, device); err != nil {
 		return fmt.Errorf("persist managed network worker revision pre-rollout fence: %w", err)
 	}
 	return nil
@@ -3878,7 +3944,7 @@ func (r *CiscoDeviceReconciler) inspectGNOITLSSecret(ctx context.Context, device
 		if errors.IsNotFound(err) {
 			return gnoiTLSProjectionState{}, fmt.Errorf("gNOI TLS Secret %s/%s was not found", key.Namespace, key.Name)
 		}
-		return gnoiTLSProjectionState{}, &gnoiSecretReadError{fmt.Errorf("read gNOI TLS Secret %s/%s: %w", key.Namespace, key.Name, err)}
+		return gnoiTLSProjectionState{}, &projectedSecretReadError{fmt.Errorf("read gNOI TLS Secret %s/%s: %w", key.Namespace, key.Name, err)}
 	}
 	caPEM := secret.Data["ca.crt"]
 	if len(caPEM) == 0 {
@@ -4052,7 +4118,7 @@ func (r *CiscoDeviceReconciler) gnoiProvisioningSecretState(
 		if errors.IsNotFound(err) {
 			return "", false, fmt.Errorf("gNOI provisioning Secret %s/%s was not found", namespace, name)
 		}
-		return "", false, &gnoiSecretReadError{fmt.Errorf("read gNOI provisioning Secret %s/%s: %w", namespace, name, err)}
+		return "", false, &projectedSecretReadError{fmt.Errorf("read gNOI provisioning Secret %s/%s: %w", namespace, name, err)}
 	}
 	for _, requiredKey := range []string{"tls.crt", "ca.crt"} {
 		if len(secret.Data[requiredKey]) == 0 {

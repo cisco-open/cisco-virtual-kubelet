@@ -1,0 +1,40 @@
+{
+  "Cisco-IOS-XE-install-oper:install-oper-data": {
+    "install-location-information": [{
+      "oper-state": {"sys-activity": "install-no-activity"},
+      "install-version-info": [{
+        "version": "17.18.02.0.4112",
+        "version-extension": "1766116039",
+        "current": "install-version-state-in-progress",
+        "src-filename": "/mnt/sd3/user/gNOI_iosxe_.bin",
+        "install-package-state-info": [
+          {"package-type":"install-pkg-img","pkg-dir":"/mnt/sd3/user","pkg-name":"gNOI_iosxe_17.18.02.0.4112.1766116039.bin","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-lni.17.18.02.SPA.pkg","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-wlc.17.18.02.SPA.pkg","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-webui.17.18.02.SPA.pkg","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-rpbase.17.18.02.SPA.pkg","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-rpboot.17.18.02.SPA.pkg","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-srdriver.17.18.02.SPA.pkg","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-guestshell.17.18.02.SPA.pkg","package-state":"install-state-added"},
+          {"package-type":"install-pkg-pkg","pkg-dir":"/mnt/sd3/user","pkg-name":"cat9k-cc_srdriver.17.18.02.SPA.pkg","package-state":"install-state-added"}
+        ]
+      }, {
+        "version": "17.18.03.0.5496",
+        "version-extension": "1776157760",
+        "current": "install-version-state-provisioned-committed"
+      }],
+      "install-packages": [{
+        "pkg-name": "gNOI_iosxe_17.18.02.0.4112.1766116039.bin",
+        "pkg-data": {"verify-status":"install-package-verify-ok","pkg-size":"1247897709"}
+      }]
+    }],
+    "install-oper-hist": [
+      {"op-uuid":"bb6e7841-cb77-413b-93dd-5c3a8c7062d2","op-status":"install-op-succ","op-done":"op-complete","start-time":"2026-10-05T06:24:41.680692+00:00","end-time":"2026-10-05T06:24:42.015668+00:00"},
+      {"op-uuid":"ea7cb416-c2da-4aaa-b963-9a959be2b712","op-status":"install-op-succ","op-done":"op-complete","start-time":"2026-10-05T06:25:31.571595+00:00","end-time":"2026-10-05T06:27:24.029427+00:00","add-param":{"dest-filename":"gNOI_iosxe_17.18.02.0.4112.1766116039.bin"}},
+      {"op-uuid":"ea7cb416-c2da-4aaa-b963-9a959be2b712","op-status":"install-op-succ","op-done":"op-complete","start-time":"2026-10-05T06:25:31.572137+00:00","end-time":"2026-10-05T06:25:31.594745+00:00"},
+      {"op-uuid":"db964c98-f7bc-4487-895b-a584b34cafe9","op-status":"install-op-succ","op-done":"op-complete","start-time":"2026-10-05T06:45:50.992522+00:00","end-time":"2026-10-05T06:45:51.299942+00:00"},
+      {"op-uuid":"d6d104e1-bb22-4049-be1e-3ad598ae231d","op-status":"install-op-succ","op-done":"op-complete","start-time":"2026-10-05T06:46:41.214507+00:00","end-time":"2026-10-05T06:47:10.145765+00:00","add-param":{"dest-filename":"gNOI_iosxe_17.18.02.0.4112.1766116039.bin"}},
+      {"op-uuid":"d6d104e1-bb22-4049-be1e-3ad598ae231d","op-status":"install-op-succ","op-done":"op-complete","start-time":"2026-10-05T06:46:41.215075+00:00","end-time":"2026-10-05T06:46:41.217751+00:00"}
+    ]
+  }
+}

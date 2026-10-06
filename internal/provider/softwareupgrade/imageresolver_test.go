@@ -809,7 +809,7 @@ func TestDefaultImageResolverCacheHitRevalidationIsStable(t *testing.T) {
 	resolver := NewDefaultImageResolver(nil, server.Client())
 	resolver.CacheDir = cacheDir
 	src := opsv1alpha1.UpgradeImageSource{URL: server.URL + "/cat9k.bin", SHA256: digest}
-	resolveAndRead := func() {
+	resolveAndRead := func() bool {
 		t.Helper()
 		resolved, err := resolver.Resolve(context.Background(), "default", src)
 		if err != nil {
@@ -825,18 +825,27 @@ func TestDefaultImageResolverCacheHitRevalidationIsStable(t *testing.T) {
 		if !bytes.Equal(got, payload) {
 			t.Fatalf("resolved image = %q, want %q", got, payload)
 		}
+		return resolved.CacheHit
 	}
 
-	resolveAndRead()
-	resolveAndRead()
+	if resolveAndRead() {
+		t.Fatal("first resolution unexpectedly reported a cache hit")
+	}
+	if !resolveAndRead() {
+		t.Fatal("second resolution did not report its verified cache hit")
+	}
 	if got := len(requests); got != 1 {
 		t.Fatalf("remote requests after stable cache hit = %d, want 1", got)
 	}
 	if err := os.WriteFile(filepath.Join(cacheDir, digest+".bin"), []byte("corrupt"), 0o600); err != nil {
 		t.Fatalf("corrupt cache image: %v", err)
 	}
-	resolveAndRead()
-	resolveAndRead()
+	if resolveAndRead() {
+		t.Fatal("corruption replacement unexpectedly reported a cache hit")
+	}
+	if !resolveAndRead() {
+		t.Fatal("post-replacement resolution did not report its verified cache hit")
+	}
 	if got := len(requests); got != 2 {
 		t.Fatalf("remote requests after corruption recovery = %d, want 2", got)
 	}
@@ -852,7 +861,7 @@ func TestDefaultImageResolverCacheHitRevalidationIsStable(t *testing.T) {
 func TestMaterializeRemoteImageCleansTempOnCancellation(t *testing.T) {
 	cacheDir := t.TempDir()
 	payload := []byte("partial image")
-	_, err := materializeRemoteImage("test image", sha256Hex(payload), cacheDir, 1024, func(w io.Writer) (int64, error) {
+	_, err := materializeRemoteImage(context.Background(), "test image", sha256Hex(payload), cacheDir, 1024, func(w io.Writer) (int64, error) {
 		n, writeErr := w.Write(payload[:4])
 		if writeErr != nil {
 			return int64(n), writeErr
@@ -875,7 +884,7 @@ func TestPublishMaterializedImageRejectsHijackedTempPath(t *testing.T) {
 	cacheDir := t.TempDir()
 	payload := []byte("verified image")
 	digest := sha256Hex(payload)
-	materialized, err := materializeRemoteImage("test image", digest, cacheDir, 1024, func(w io.Writer) (int64, error) {
+	materialized, err := materializeRemoteImage(context.Background(), "test image", digest, cacheDir, 1024, func(w io.Writer) (int64, error) {
 		return io.Copy(w, bytes.NewReader(payload))
 	})
 	if err != nil {

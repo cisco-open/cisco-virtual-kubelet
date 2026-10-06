@@ -17,6 +17,7 @@ package iosxe
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/common"
 	"github.com/virtual-kubelet/virtual-kubelet/log"
@@ -110,6 +111,7 @@ func (d *XEDriver) GetOSPFNeighbors(ctx context.Context) ([]common.OSPFNeighbor,
 						n := common.OSPFNeighbor{
 							Interface: intfName,
 							Area:      areaStr,
+							ProcessID: ospfProcessID(instance.ProcessId),
 						}
 						if nbr.NeighborId != nil {
 							n.NeighborID = *nbr.NeighborId
@@ -134,11 +136,59 @@ func (d *XEDriver) GetOSPFNeighbors(ctx context.Context) ([]common.OSPFNeighbor,
 			if instance.RouterId != nil && d.deviceInfo != nil && d.deviceInfo.RouterID == "" {
 				d.deviceInfo.RouterID = uint32ToIPv4(*instance.RouterId)
 			}
+			for areaID, area := range instance.Ospfv2Area {
+				if area == nil {
+					continue
+				}
+				areaStr := fmt.Sprintf("%d", areaID)
+				for interfaceName, intf := range area.Ospfv2Interface {
+					if intf == nil {
+						continue
+					}
+					for _, nbr := range intf.Ospfv2Neighbor {
+						if nbr == nil {
+							continue
+						}
+						n := common.OSPFNeighbor{
+							Interface: interfaceName, Area: areaStr, State: nbrStateToString(nbr.State),
+							VRF: ospfVRF(instance.VrfName), ProcessID: ospfInstanceID(instance.InstanceId),
+						}
+						if nbr.NbrId != nil {
+							n.NeighborID = uint32ToIPv4(*nbr.NbrId)
+						}
+						if nbr.Address != nil {
+							n.Address = *nbr.Address
+						}
+						neighbors = append(neighbors, n)
+					}
+				}
+			}
 		}
 	}
 
 	log.G(ctx).Debugf("Discovered %d OSPF neighbors", len(neighbors))
 	return neighbors, nil
+}
+
+func ospfProcessID(value *uint16) string {
+	if value == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", *value)
+}
+
+func ospfInstanceID(value *uint32) string {
+	if value == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", *value)
+}
+
+func ospfVRF(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 // GetInterfaceStats queries the device for interface operational data via RESTCONF
@@ -170,6 +220,7 @@ func (d *XEDriver) GetInterfaceStats(ctx context.Context) ([]common.InterfaceSta
 		}
 
 		if intf.Statistics != nil {
+			s.RateSource = "cisco-ios-xe-interfaces-oper:statistics-kbps"
 			if intf.Statistics.InOctets != nil {
 				s.InOctets = *intf.Statistics.InOctets
 			}
@@ -179,10 +230,18 @@ func (d *XEDriver) GetInterfaceStats(ctx context.Context) ([]common.InterfaceSta
 				s.OutOctets = uint64(*intf.Statistics.OutOctets)
 			}
 			if intf.Statistics.RxKbps != nil {
-				s.InBitsPerSec = *intf.Statistics.RxKbps * 1000
+				s.InRatePresent = true
+				if *intf.Statistics.RxKbps <= math.MaxUint64/1000 {
+					s.InBitsPerSec = *intf.Statistics.RxKbps * 1000
+					s.InRateValid = true
+				}
 			}
 			if intf.Statistics.TxKbps != nil {
-				s.OutBitsPerSec = *intf.Statistics.TxKbps * 1000
+				s.OutRatePresent = true
+				if *intf.Statistics.TxKbps <= math.MaxUint64/1000 {
+					s.OutBitsPerSec = *intf.Statistics.TxKbps * 1000
+					s.OutRateValid = true
+				}
 			}
 		}
 		stats = append(stats, s)

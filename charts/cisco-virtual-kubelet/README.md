@@ -83,6 +83,19 @@ topology:
     networkManagement:
       serviceAccountName: "" # <release-fullname>-network-management
       accessMode: readOnly
+  graph:
+    enabled: false
+    peerMappings: []
+    # - source: cdp
+    #   observedPeer: C9K-2
+    #   physicalID: FOC2520L6H1
+    #   external: false
+    declaredLinks: []
+    # - local: FOC2520L6E8
+    #   peer: FOC2520L6H1
+    #   source: cdp
+    #   interface: GigabitEthernet1/0/1
+    #   remoteInterface: GigabitEthernet1/0/1
   policy:
     namespace: "" # release namespace
     name: ""      # <fullname>-topology-policy
@@ -102,6 +115,29 @@ topology:
       topology.kubernetes.io/region: 1
     domainMaxUnavailable:
       topology.kubernetes.io/zone: 1
+    disruptionProtections: []
+    # - name: critical-services
+    #   reason: CriticalService # or SingletonPath
+    #   selector:
+    #     matchLabels:
+    #       operations.cisco.vk/service-tier: critical
+    #     matchExpressions: []
+    riskGroups: []
+    # - name: path-east
+    #   selector:
+    #     matchLabels:
+    #       topology.cisco.vk/path: east
+    #     matchExpressions: []
+    #   maxConcurrentTransfers: 1
+    #   maxUnavailable: 1
+    #   maxAggregateTransferBytesPerSecond: 12500000 # optional 100 Mbit/s path ceiling
+    # - name: customer-a
+    #   selector:
+    #     matchLabels:
+    #       operations.cisco.vk/service-group: customer-a
+    #     matchExpressions: []
+    #   maxConcurrentTransfers: 1
+    #   maxUnavailable: 1
     healthFreshnessSeconds: 300
     maxCampaignTargets: 100
     maxActiveReservations: 256
@@ -164,6 +200,56 @@ loosen them. The policy selector must be non-empty and every selector key must
 live under `topology.cisco.vk/*`; those are the enrollment labels protected by
 native admission from ordinary CiscoDevice editors.
 
+`topology.graph` is optional diagnostic input for `kubectl ciscovk topology
+graph`. When enabled, Helm writes a strictly bounded `graph.json` key into the
+same admission-protected topology-policy ConfigMap. It remains separate from
+`policy.json`, the ledger and campaign approval hashes. `peerMappings` binds an
+exact protocol/source/routing-domain peer string to an administrator-verified
+physical identity; discovery never creates this trust. Set `external: true`
+only for a verified endpoint that is intentionally outside CVK management.
+`declaredLinks` compares the accepted local/remote-port evidence with the
+administrator model. The graph can report drift and fail automation closed,
+but it cannot change labels, budgets, plans, approvals or device state.
+
+`disruptionProtections` is an administrator-owned, fail-closed selector list
+for critical-service and singleton-path devices. Every selector key must be in
+`requiredTopologyKeys`, which keeps the decision inside the protected,
+plan-frozen device inventory. A matching rule stops plan creation with
+`CriticalServiceProtected` or `SingletonPathProtected`; the manager evaluates
+it again before granting execution, so a newly tightened policy cannot leave
+an old disruptive target usable. `PrepareOnly` has a distinct, physically
+qualified install boundary, but the current protection rules remain
+conservative and block a matching target's entire software lifecycle. Do not
+use labels alone to claim a path is redundant or relax that policy merely
+because preparation omits activation.
+
+`riskGroups` defines administrator-owned failure or service-risk sets which
+may overlap normal topology domains and each other. Examples include devices
+on one forwarding path, devices serving the same customer, or members of a
+shared network service. Every selector key must be in
+`requiredTopologyKeys`, so ordinary device editors cannot change group
+membership after enrollment. Admission applies every matching group's
+transfer and unavailable ceilings in the same ledger compare-and-swap as the
+global and topology-domain budgets. It counts unhealthy non-target members
+and active reservations from every rollout, not only the current campaign.
+The approved plan freezes both each target's groups and the complete physical
+membership of all configured groups; any later membership or policy change
+requires a new plan and approval. Keep the selectors low-cardinality and use
+these budgets as explicit operator constraints, not as inferred proof that a
+network path is redundant.
+
+An optional `maxAggregateTransferBytesPerSecond` turns a risk group into a
+shared-path bandwidth boundary. The manager divides the aggregate ceiling by
+`maxConcurrentTransfers`, freezes the strictest matching share into each
+approved target, and the worker applies deadline-based pacing to both the remote
+source download and gNOI OS.Install upload. Devices matching multiple groups
+receive the lowest applicable share. Omitting the field preserves unpaced
+legacy behaviour; an opted-in operation fails closed if its resolver cannot
+enforce the source-side ceiling. Paced leaves use a distinct manager/worker
+admission protocol, so an older worker rejects them instead of silently
+ignoring the additive rate field. Size maintenance windows for the paced
+image transfer plus device validation and activation time.
+
 Every software-rollout target must also carry the protected,
 low-cardinality `operations.cisco.vk/qualification-cohort` label describing
 its lab-qualified hardware/capability class. The rollout must provide a
@@ -180,6 +266,15 @@ the concrete source and endpoint-bound Secret UID independently for every
 target. There is no post-approval mirror failover. Transfer and disruption
 reservations remain conservatively coupled until a durable prefetch and
 cache-loss recovery protocol is qualified.
+
+The worker exposes separate `origin_to_worker` and `worker_to_device` transfer
+byte/duration metrics. A successful content-bearing gNOI stream is accounted
+by the verified resolved image size, not by IOS XE's last interim
+`TransferProgress` event; a supervisor synchronization which sends no image
+content records zero bytes. The verified cache is Pod-ephemeral. Physical
+measurements in `docs/evidence/topology-2026-10-02/` did not justify a shared
+PVC cache for the tested local path, so labels and cache-domain budgets do not
+imply persistent artifact availability.
 
 Every selected CiscoDevice must declare a verified, fleet-unique
 `spec.physicalIdentity` such as a chassis serial or hardware UUID. The field is
@@ -663,6 +758,7 @@ The chart creates, but deliberately does not bind, these roles:
 
 | Role suffix | Purpose |
 | --- | --- |
+| `-topology-graph-viewer` | Read CiscoDevice accepted observations and the exact topology-policy ConfigMap for the diagnostic CLI; no mutation verbs |
 | `-topology-author` | Change protected topology/risk labels and explicit Node adoption or reclassification approvals |
 | `-rollout-planner` | Create campaigns and pass the separate `control` authorization check for pause/resume/cancel |
 | `-rollout-approver` | Patch a campaign and pass the separate `approve` authorization check |
@@ -773,6 +869,20 @@ session, or managed writer handoff is active. First pause new campaigns,
 resolve or quarantine every claimed mutation, wait for reservations and
 sessions to settle, export campaign/leaf/ledger evidence, and complete the
 controller's reverse writer handoff for every managed device.
+
+A retained `Prepared` software leaf continues to own its exact device/image
+even after its manager admission settles. It blocks reverse handoff and device
+deletion. Complete the separately approved activation under the current owner
+or retain managed ownership; copying its receipt/approval or deleting the leaf
+is not a supported transfer or invalidation procedure.
+After one exact activation reaches `Succeeded`, is verified against the
+prepared target, and both its device mutation and manager admission settle,
+that activation consumes the receipt's queue ownership. The immutable
+Prepared object remains as audit evidence but no longer blocks a later
+campaign. Nonterminal, mismatched or unsettled activation records remain
+fail-closed owners.
+`StagedForNextBoot` and contradictory settled/non-terminal leaves also block
+handoff until their device-side outcome is conclusively resolved.
 
 Helm keep protection deliberately leaves the policy, ledger, admission
 policies/bindings, functional profile roles, and supplemental manager role/binding

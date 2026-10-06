@@ -3,7 +3,8 @@
 Cisco Virtual Kubelet exposes two command-line surfaces:
 
 - **`kubectl-ciscovk` plugin** — an operator tool for read-only, ad-hoc IOS-XE
-  commands. The current implementation provides `exec`, `version`, and help.
+  commands and manager-accepted topology diagnostics. The current
+  implementation provides `exec`, `topology graph`, `version`, and help.
 - **`cisco-vk` binary** — the backend. Its `manager` subcommand starts the
   controller, `run` starts one per-device Virtual Kubelet provider, and the
   internal `controller-worker` subcommand starts one registered network-
@@ -161,6 +162,87 @@ The active Kubernetes identity needs permission to get/list pods in the
 selected namespace and create `pods/portforward` connections. `exec` requires
 the per-device deployment mode and its localhost diagnostic admin endpoint; it
 is not available in aggregator mode.
+
+### Inspect the accepted topology graph
+
+`topology graph` builds a bounded, deterministic diagnostic from
+`CiscoDevice.status.healthObservation.acceptedNetwork`. It deliberately does
+not consume the worker-owned raw `network` sample. The manager must first bind,
+validate, and accept that evidence. The command is read-only: it does not edit
+labels, risk groups, rollout policy, approvals, or disruption authority.
+
+```bash
+# Read all namespaces so duplicate physical identities cannot be hidden.
+kubectl ciscovk topology graph --max-age 5m
+
+# Inspect one namespace as structured evidence.
+kubectl ciscovk topology graph -n cvk-live -o json
+
+# Emit the graph, then return nonzero when any required evidence is incomplete.
+kubectl ciscovk topology graph -n cvk-live \
+  --max-age 5m --require-complete
+
+# Resolve verified protocol-local names and compare declared links from the
+# existing admission-protected topology-policy ConfigMap.
+kubectl ciscovk topology graph -n cvk-live \
+  -l topology.cisco.vk/managed=true \
+  --policy-configmap cisco-vk-system/cisco-vk-topology-policy \
+  --max-age 5m -o json --require-complete
+```
+
+The graph keys managed devices by the manager-bound physical identity. A
+device without one is retained as `unbound:<namespace>/<name>` and makes the
+graph incomplete instead of disappearing. Missing or stale accepted evidence,
+duplicate physical identities and conflicting adjacencies are errors. Unknown
+CDP/OSPF peers, absent reverse-port identity and asymmetric observations remain
+visible as warnings. A complete graph means only that the supplied accepted
+observations passed these structural checks; it does **not** prove end-to-end
+path health, redundancy, traffic headroom, or permission to disrupt a device.
+
+CDP host names are not authenticated chassis identities. If an accepted peer
+name cannot be resolved to a supplied manager-bound physical identity, the
+command reports `UnknownPeer`; it does not guess. An administrator can enable
+`topology.graph` in the Helm values to place bounded `peerMappings` and
+`declaredLinks` in the `graph.json` key of the existing topology-policy
+ConfigMap. That ConfigMap is protected by the native topology admission
+contract. The plugin requires its explicit namespace/name, rejects unknown
+JSON fields, ambiguous mappings, invalid physical identities and unqualified
+link declarations, and records the ConfigMap UID, resourceVersion and content
+hash in its output. A mapping marked `external: true` can name a verified
+non-CVK endpoint without pretending it has a manager-owned observation.
+
+`graph.json` is deliberately separate from `policy.json`: graph changes do not
+alter rollout policy/approval hashes, grant mutation authority, or rewrite
+discovered topology. Missing declared links are errors; unexpected observed
+links and unused mappings remain visible diagnostics. `evidenceHash` covers only
+the normalized topology content. JSON output also carries bounded accepted
+sample metadata and a separate `provenanceHash` over device UID, worker Pod
+UID, producer revision, sequence, collection interval, physical identity, and
+device-identity hash plus the graph-policy proof when supplied. Neither hash is
+an approval token.
+
+Flags for `topology graph`:
+
+| Flag | Default | Description |
+|---|---|---|
+| `-n`, `--namespace` | all namespaces | Limit collection to one namespace. The default is safer for detecting cross-namespace duplicate physical identities. |
+| `-l`, `--selector` | none | Limit CiscoDevices with a bounded Kubernetes label selector; use an admission-protected managed-fleet selector rather than hiding individual failures by name. |
+| `--max-age` | `5m` | Maximum age of the authenticated collection start time. |
+| `-o`, `--output` | `table` | Output format: `table` or `json`. |
+| `--require-complete` | `false` | Print the result and return nonzero if the graph is incomplete. |
+| `--policy-configmap` | none | Read strictly validated `graph.json` from an admission-protected topology-policy ConfigMap, as `namespace/name`. |
+| `--context` | active context | Kubeconfig context forwarded to `kubectl`. |
+| `--kubeconfig` | `KUBECONFIG`/kubectl default | Kubeconfig path forwarded to `kubectl`. |
+| `--kubectl` | `kubectl` from `PATH` | Alternate path to the `kubectl` executable. |
+
+The Kubernetes identity needs permission to list `CiscoDevice` resources in
+the selected scope and, when `--policy-configmap` is used, get that exact
+ConfigMap. No device credential or direct device session is used.
+The chart creates an unbound `<release>-topology-graph-viewer` ClusterRole for
+these reads. Bind it with RoleBindings in the selected device and policy
+namespaces, or use a deliberately reviewed ClusterRoleBinding for a fleet-wide
+operator. It has no watch, status, topology-authoring, rollout, Secret, Pod, or
+device-session permission.
 
 ### DeviceOperation CR — auditable asynchronous path
 

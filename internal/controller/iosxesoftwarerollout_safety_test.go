@@ -17,6 +17,8 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -35,11 +37,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/telemetry/correlation"
+	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
 )
 
@@ -83,6 +87,195 @@ func TestRolloutLeafAnnotationsPropagateOnlyValidatedCorrelation(t *testing.T) {
 	}
 }
 
+func TestEvaluateNetworkHealthRequiresBoundWorkerIdentity(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	health := &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-2 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-time.Second)),
+		SampleSequence:      1,
+		WorkerPodUID:        "network-pod",
+		ProducerRevision:    "sha256:worker",
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}}
+	policy := &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{Enabled: true, RequireCompleteEvidence: true}
+	decision := evaluateNetworkHealth(health, "serial-a", "", "network-pod", now, time.Minute, policy)
+	if decision.Allowed || decision.Reason != "ExpectedIdentityMissing" {
+		t.Fatalf("missing expected worker revision was accepted: %+v", decision)
+	}
+}
+
+func TestNetworkEvidenceFreshnessUsesPlanningPolicyBeforeStatusExists(t *testing.T) {
+	// The first target is evaluated before Status.EffectivePolicy exists. Its
+	// network freshness must use the parsed administrator policy, while later
+	// admission revalidation uses the current parsed policy through the same
+	// helper.
+	if got := networkEvidenceFreshnessSeconds(120, 300); got != 120 {
+		t.Fatalf("network evidence freshness = %d, want policy ceiling 120", got)
+	}
+	if got := networkEvidenceFreshnessSeconds(300, 90); got != 90 {
+		t.Fatalf("network evidence freshness = %d, want rollout ceiling 90", got)
+	}
+	if got := networkEvidenceFreshnessSeconds(0, 0); got != 300 {
+		t.Fatalf("network evidence freshness = %d, want default 300", got)
+	}
+}
+
+func TestCurrentNetworkGrantEvidenceBindsExactAcceptedSampleAndOriginalExpiry(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "lab", Name: "device-a", UID: types.UID("device-uid"), Generation: 3,
+		},
+		Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, PhysicalIdentity: "SERIAL-A"},
+	}
+	workerObjects := attachReadyManagedNetworkWorkerProof(t, device, now)
+	accepted := &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-20 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-10 * time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-10 * time.Second)),
+		SampleSequence:      9,
+		WorkerPodUID:        device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:    device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}
+	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: accepted}
+	objects := append([]client.Object{device}, workerObjects...)
+	apiClient := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objects...).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	rollout := &opsv1alpha1.IOSXESoftwareRollout{
+		ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace},
+		Spec: opsv1alpha1.IOSXESoftwareRolloutSpec{Plan: opsv1alpha1.IOSXESoftwareRolloutPlan{
+			Health: opsv1alpha1.IOSXESoftwareRolloutHealthSpec{
+				MaxObservationAgeSeconds: 60,
+				Network: &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+					Enabled: true, RequireCompleteEvidence: true,
+				},
+			},
+		}},
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{HealthFreshnessSeconds: 120}}
+	target := opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+		DeviceName: device.Name, DeviceUID: string(device.UID), DeviceGeneration: device.Generation,
+		PhysicalIdentity: "serial-a",
+	}
+	evidence, err := reconciler.currentNetworkGrantEvidence(context.Background(), rollout, policy, target)
+	if err != nil {
+		t.Fatalf("currentNetworkGrantEvidence() error = %v", err)
+	}
+	wantHash, err := topologyhealth.AcceptedNetworkDigest(accepted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantExpiry := accepted.CollectionStartedAt.Add(time.Minute)
+	if evidence == nil || evidence.hash != wantHash || evidence.producerRevision != accepted.ProducerRevision ||
+		evidence.workerPodUID != accepted.WorkerPodUID || evidence.sampleSequence != accepted.SampleSequence ||
+		!evidence.notAfter.Time.Equal(wantExpiry) {
+		t.Fatalf("grant evidence = %#v, want hash %q and expiry %s", evidence, wantHash, wantExpiry)
+	}
+
+	reconciler.Now = func() time.Time { return wantExpiry }
+	if _, err := reconciler.currentNetworkGrantEvidence(context.Background(), rollout, policy, target); err == nil ||
+		!strings.Contains(err.Error(), "expired") {
+		t.Fatalf("expired currentNetworkGrantEvidence() error = %v", err)
+	}
+
+	rollout.Spec.Plan.Health.Network = nil
+	if evidence, err := reconciler.currentNetworkGrantEvidence(context.Background(), rollout, policy, target); err != nil || evidence != nil {
+		t.Fatalf("omitted network policy evidence = %#v, error = %v", evidence, err)
+	}
+}
+
+func TestRefreshNetworkGrantEvidenceAdvancesCompleteAuthorityAtomically(t *testing.T) {
+	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	target := policyFenceTarget("device-a", "device-uid", "leaf-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Spec.Plan.Health.MaxObservationAgeSeconds = 60
+	rollout.Spec.Plan.Health.Network = &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+		Enabled: true, RequireCompleteEvidence: true,
+	}
+	leaf := policyFenceLeaf(rollout, target, "leaf-uid")
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: rollout.Namespace, Name: target.DeviceName, UID: types.UID(target.DeviceUID),
+			Generation: target.DeviceGeneration,
+		},
+		Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, PhysicalIdentity: target.PhysicalIdentity},
+	}
+	workerObjects := attachReadyManagedNetworkWorkerProof(t, device, now)
+	oldSample := &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-50 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-49 * time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-49 * time.Second)), SampleSequence: 4,
+		WorkerPodUID:       device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:   device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash: identityHashForPhysicalID(target.PhysicalIdentity), Complete: true,
+	}
+	oldHash, err := topologyhealth.AcceptedNetworkDigest(oldSample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldSequence := oldSample.SampleSequence
+	leaf.Status.ManagerAdmission.NetworkEvidenceHash = oldHash
+	leaf.Spec.RequireNetworkEvidence = true
+	leaf.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.RequiredManagedUpgradeProtocol(leaf.Spec)
+	leaf.Status.ManagerAdmission.NetworkEvidenceProducerRevision = oldSample.ProducerRevision
+	leaf.Status.ManagerAdmission.NetworkEvidenceWorkerPodUID = oldSample.WorkerPodUID
+	leaf.Status.ManagerAdmission.NetworkEvidenceSampleSequence = &oldSequence
+	leaf.Status.ManagerAdmission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(oldSample.CollectionStartedAt.Add(time.Minute)))
+
+	newSample := oldSample.DeepCopy()
+	newSample.CollectionStartedAt = metav1.NewTime(now.Add(-10 * time.Second))
+	newSample.CollectionEndedAt = metav1.NewTime(now.Add(-9 * time.Second))
+	newSample.ObservedAt = metav1.NewTime(now.Add(-9 * time.Second))
+	newSample.SampleSequence++
+	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: newSample}
+	objects := append([]client.Object{leaf, device}, workerObjects...)
+	scheme := newTestScheme(t)
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	apiClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareUpgrade{}).
+		WithObjects(objects...).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{HealthFreshnessSeconds: 120}}
+	changed, err := reconciler.refreshNetworkGrantEvidence(
+		context.Background(), rollout, policy, target, leaf, now,
+	)
+	if err != nil || !changed {
+		t.Fatalf("refreshNetworkGrantEvidence() = changed %t, error %v", changed, err)
+	}
+	var current opsv1alpha1.IOSXESoftwareUpgrade
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(leaf), &current); err != nil {
+		t.Fatal(err)
+	}
+	wantHash, err := topologyhealth.AcceptedNetworkDigest(newSample)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admission := current.Status.ManagerAdmission
+	if admission.NetworkEvidenceHash != wantHash || admission.NetworkEvidenceSampleSequence == nil ||
+		*admission.NetworkEvidenceSampleSequence != newSample.SampleSequence ||
+		admission.NetworkEvidenceNotAfter == nil ||
+		!admission.NetworkEvidenceNotAfter.Time.Equal(newSample.CollectionStartedAt.Add(time.Minute)) ||
+		!admission.UpdatedAt.Time.Equal(now) {
+		t.Fatalf("renewed manager authority = %#v", admission)
+	}
+	changed, err = reconciler.refreshNetworkGrantEvidence(
+		context.Background(), rollout, policy, target, &current, now.Add(time.Second),
+	)
+	if err != nil || changed {
+		t.Fatalf("idempotent refresh = changed %t, error %v", changed, err)
+	}
+}
+
 func TestExpectedLeafSpecIncludesAPIServerDefaults(t *testing.T) {
 	target := policyFenceTarget("edge-a", "device-uid", "campaign-edge-a")
 	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
@@ -90,6 +283,392 @@ func TestExpectedLeafSpecIncludesAPIServerDefaults(t *testing.T) {
 	got := expectedLeafSpec(rollout, target)
 	if got.ResumePolicy != "Retry" || got.MaxRetries != 3 {
 		t.Fatalf("expected leaf retry defaults = (%q, %d), want (Retry, 3)", got.ResumePolicy, got.MaxRetries)
+	}
+}
+
+func TestExpectedLeafSpecMapsPrepareOnlyWithoutActivation(t *testing.T) {
+	target := policyFenceTarget("edge-a", "device-uid", "campaign-edge-a")
+	rollout := policyFenceRollout([]opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{target})
+	rollout.Spec.Plan.Strategy = opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly
+
+	got := expectedLeafSpec(rollout, target)
+	if got.Strategy != opsv1alpha1.UpgradeStrategyPrepareOnly {
+		t.Fatalf("expected leaf strategy = %q, want PrepareOnly", got.Strategy)
+	}
+}
+
+func TestPreparedReceiptRetainsExclusiveDeviceOwnership(t *testing.T) {
+	receipt := &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: "prepare-v1", UpgradeUID: "prepared-leaf-uid", DeviceUID: "device-uid",
+		SourceDigest:       "sha256:" + strings.Repeat("a", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("b", 64),
+		ContentBinding:     "source-digest-install-claim-v1",
+		TargetVersion:      "17.18.03", ValidatedVersion: "17.18.03.0.123", RunningVersion: "17.18.02",
+		PrimarySupervisorInstalled: true,
+		InstallStartedAt:           metav1.NewTime(time.Unix(100, 0).UTC()),
+		PreparedAt:                 metav1.NewTime(time.Unix(123, 0).UTC()),
+	}
+	var err error
+	receipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "retained-preparation", UID: "prepared-leaf-uid"},
+		Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+			Phase: opsv1alpha1.UpgradePhasePrepared, PreparedReceipt: receipt,
+		},
+	}
+	scheme := runtime.NewScheme()
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(leaf).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{Client: kubeClient, APIReader: kubeClient}
+
+	err = reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "device-uid")
+	if err == nil || !strings.Contains(err.Error(), "separate activation or explicit invalidation") {
+		t.Fatalf("conflicting preparation was not blocked: %v", err)
+	}
+	if !errors.Is(err, errPreparedOwnershipRetained) {
+		t.Fatalf("conflicting preparation error = %v, want retained-ownership classification", err)
+	}
+	if err := reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "another-device"); err != nil {
+		t.Fatalf("unrelated device was blocked: %v", err)
+	}
+
+	leaf.Status.PreparedReceipt.ReceiptHash = "sha256:" + strings.Repeat("f", 64)
+	if err := kubeClient.Update(context.Background(), leaf); err != nil {
+		t.Fatal(err)
+	}
+	err = reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", "device-uid")
+	if err == nil || !strings.Contains(err.Error(), "invalid and must be reconciled") {
+		t.Fatalf("invalid retained receipt did not fail closed: %v", err)
+	}
+	if !errors.Is(err, errPreparedOwnershipRetained) {
+		t.Fatalf("invalid retained receipt error = %v, want retained-ownership classification", err)
+	}
+}
+
+func TestSettledActivationConsumesPreparedOwnership(t *testing.T) {
+	now := time.Date(2026, 10, 2, 8, 0, 0, 0, time.UTC)
+	receipt := &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: "prepare-v1", UpgradeUID: "prepared-leaf-uid", DeviceUID: "device-uid",
+		NodeUID: "node-uid", PhysicalIdentity: "serial-1", CampaignUID: "campaign-uid",
+		DeviceGeneration: 1, PlanHash: "sha256:" + strings.Repeat("a", 64),
+		ManagedProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+		PolicyUID:              "policy-uid", PolicyResourceVersion: "1", PolicyEpoch: 1,
+		WorkerRevision:     "sha256:" + strings.Repeat("f", 64),
+		SourceDigest:       "sha256:" + strings.Repeat("b", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("c", 64),
+		TrustIdentityHash:  "sha256:" + strings.Repeat("d", 64),
+		ContentBinding:     "source-digest-install-claim-v1",
+		TargetVersion:      "17.18.03", ValidatedVersion: "17.18.03.0.123", RunningVersion: "17.18.02",
+		PrimarySupervisorInstalled: true,
+		InstallStartedAt:           metav1.NewTime(now.Add(-time.Hour)), PreparedAt: metav1.NewTime(now.Add(-30 * time.Minute)),
+		ManagedMutationClaims: []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+			Stage: opsv1alpha1.UpgradeManagedMutationPrimaryInstall, ReservationID: "reservation-1",
+			PolicyEpoch: 1, ClaimedAt: metav1.NewTime(now.Add(-time.Hour)),
+		}},
+	}
+	var err error
+	receipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared := &opsv1alpha1.IOSXESoftwareUpgrade{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "retained-preparation", UID: "prepared-leaf-uid"},
+		Spec:       opsv1alpha1.IOSXESoftwareUpgradeSpec{DeviceRef: configv1alpha1.DeviceRef{Name: "edge-a"}},
+		Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+			Phase: opsv1alpha1.UpgradePhasePrepared, PreparedReceipt: receipt,
+		},
+	}
+	completed := metav1.NewTime(now)
+	consumer := &opsv1alpha1.IOSXESoftwareUpgrade{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "retained-preparation-activate", UID: "activation-leaf-uid", Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:                "true",
+			managedprotocol.AnnotationDeviceUID:              receipt.DeviceUID,
+			managedprotocol.AnnotationCampaignUID:            receipt.CampaignUID,
+			managedprotocol.AnnotationPlanHash:               receipt.PlanHash,
+			managedprotocol.AnnotationActivationApprovalHash: "sha256:" + strings.Repeat("e", 64),
+			managedprotocol.AnnotationPreparedUpgradeUID:     string(prepared.UID),
+			managedprotocol.AnnotationPreparedUpgradeName:    prepared.Name,
+			managedprotocol.AnnotationPreparedReceiptHash:    receipt.ReceiptHash,
+			managedprotocol.AnnotationPreparedSourceDigest:   receipt.SourceDigest,
+			managedprotocol.AnnotationPreparedTrustHash:      receipt.TrustIdentityHash,
+		}},
+		Spec: opsv1alpha1.IOSXESoftwareUpgradeSpec{
+			DeviceRef: configv1alpha1.DeviceRef{Name: "edge-a"}, TargetVersion: receipt.TargetVersion,
+			ImageSource: opsv1alpha1.UpgradeImageSource{Preinstalled: &opsv1alpha1.PreinstalledImageSource{}},
+		},
+		Status: opsv1alpha1.IOSXESoftwareUpgradeStatus{
+			Phase: opsv1alpha1.UpgradePhaseSucceeded, CompletionTime: &completed,
+			RunningVersion: receipt.ValidatedVersion,
+			Conditions: []metav1.Condition{
+				{Type: "Verified", Status: metav1.ConditionTrue},
+				{Type: "DeviceMutationSettled", Status: metav1.ConditionTrue},
+			},
+			ManagerAdmission: &opsv1alpha1.UpgradeManagerAdmissionStatus{
+				ProtocolVersion: receipt.ManagedProtocolVersion,
+				State:           opsv1alpha1.UpgradeManagerAdmissionSettled,
+				LeafUID:         "activation-leaf-uid", DeviceUID: receipt.DeviceUID,
+				DeviceGeneration: receipt.DeviceGeneration,
+				NodeUID:          receipt.NodeUID, PhysicalIdentity: receipt.PhysicalIdentity,
+				CampaignUID: receipt.CampaignUID, PlanHash: receipt.PlanHash,
+				PolicyUID: receipt.PolicyUID, PolicyResourceVersion: receipt.PolicyResourceVersion,
+				PolicyEpoch: receipt.PolicyEpoch,
+			},
+		},
+	}
+	if !softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("exact successful activation did not consume retained prepared ownership")
+	}
+	// A new-protocol activation may consume an exact older immutable receipt.
+	// Do not rewrite its hash or strand retained ownership during migration.
+	consumer.Status.ManagerAdmission.ProtocolVersion = opsv1alpha1.ManagedUpgradeProtocolStagedActivationV1
+	if !softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("new staged protocol could not consume an exact legacy receipt")
+	}
+	consumer.Status.ManagerAdmission.ProtocolVersion = "future"
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("unknown consumer protocol released retained ownership")
+	}
+	consumer.Status.ManagerAdmission.ProtocolVersion = receipt.ManagedProtocolVersion
+
+	scheme := runtime.NewScheme()
+	if err := opsv1alpha1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	kubeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(prepared, consumer).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{Client: kubeClient, APIReader: kubeClient}
+	if err := reconciler.ensureNoPreparedOwnershipConflict(context.Background(), "lab", receipt.DeviceUID); err != nil {
+		t.Fatalf("consumed preparation still blocked a later plan: %v", err)
+	}
+
+	// A metadata-only administrator policy update advances resourceVersion but
+	// deliberately remains in the same safety epoch. The exact activation is
+	// still the receipt consumer: policy UID and epoch are the authority fence.
+	consumer.Status.ManagerAdmission.PolicyResourceVersion = "2"
+	if !softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("metadata-only policy resourceVersion churn retained consumed prepared ownership")
+	}
+	consumer.Status.ManagerAdmission.PolicyEpoch++
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("activation from a different policy epoch consumed prepared ownership")
+	}
+	consumer.Status.ManagerAdmission.PolicyEpoch--
+	consumer.Status.ManagerAdmission.PolicyUID = "another-policy-uid"
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("activation from a different policy UID consumed prepared ownership")
+	}
+	consumer.Status.ManagerAdmission.PolicyUID = receipt.PolicyUID
+
+	consumer.Status.Phase = opsv1alpha1.UpgradePhaseVerifying
+	if softwareupgrade.PreparedReceiptConsumed(prepared, []opsv1alpha1.IOSXESoftwareUpgrade{*prepared, *consumer}) {
+		t.Fatal("non-terminal activation consumed prepared ownership")
+	}
+}
+
+func TestActivationApprovalBindsCompleteExactPreparedReceiptSet(t *testing.T) {
+	now := time.Date(2026, 10, 2, 6, 0, 0, 0, time.UTC)
+	targets := []opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+		policyFenceTarget("edge-a", "device-a-uid", "campaign-edge-a"),
+		policyFenceTarget("edge-b", "device-b-uid", "campaign-edge-b"),
+	}
+	rollout := policyFenceRollout(targets)
+	rollout.Spec.Plan.Strategy = opsv1alpha1.IOSXESoftwareRolloutStrategyPrepareOnly
+	rollout.Status.Phase = opsv1alpha1.IOSXESoftwareRolloutPhaseSucceeded
+	leaves := make(map[string]opsv1alpha1.IOSXESoftwareUpgrade, len(targets))
+	references := make([]opsv1alpha1.IOSXESoftwareRolloutActivationReceipt, 0, len(targets))
+	for i, target := range targets {
+		uid := types.UID(fmt.Sprintf("prepared-leaf-%d", i))
+		leaf := policyFenceLeaf(rollout, target, uid)
+		sourceHash, err := softwareupgrade.PreparedSourceIdentityHash(leaf.Spec.ImageSource)
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipt := &opsv1alpha1.UpgradePreparedReceiptStatus{
+			ProtocolVersion: "prepare-v1", UpgradeUID: string(uid), DeviceUID: target.DeviceUID,
+			NodeUID: target.NodeUID, PhysicalIdentity: target.PhysicalIdentity, DeviceGeneration: target.DeviceGeneration,
+			CampaignUID: string(rollout.UID), PlanHash: rollout.Status.FrozenPlan.Hash,
+			ManagedProtocolVersion: opsv1alpha1.ManagedUpgradeProtocolRolloutV1,
+			PolicyUID:              rollout.Status.FrozenPlan.Policy.UID, PolicyResourceVersion: rollout.Status.FrozenPlan.Policy.ResourceVersion,
+			PolicyEpoch: 1, WorkerRevision: "sha256:" + strings.Repeat("e", 64),
+			SourceDigest: "sha256:" + rollout.Spec.Plan.Image.SHA256, SourceSize: 1_249_368_115,
+			SourceIdentityHash: sourceHash, TrustIdentityHash: "sha256:" + strings.Repeat("f", 64),
+			ContentBinding: "source-digest-install-claim-v1",
+			TargetVersion:  rollout.Spec.Plan.TargetVersion, ValidatedVersion: rollout.Spec.Plan.TargetVersion + ".0.1",
+			RunningVersion: "17.18.3", PrimarySupervisorInstalled: true,
+			InstallStartedAt: metav1.NewTime(now.Add(-time.Hour)), PreparedAt: metav1.NewTime(now.Add(-30 * time.Minute)),
+			ManagedMutationClaims: []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+				Stage:         opsv1alpha1.UpgradeManagedMutationPrimaryInstall,
+				ReservationID: leaf.Status.ManagerAdmission.ReservationID, PolicyEpoch: 1,
+				ControlRevision: rollout.Spec.Control.Revision, ClaimedAt: metav1.NewTime(now.Add(-time.Hour)),
+			}},
+		}
+		receipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*receipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		leaf.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+		leaf.Status.PreparedReceipt = receipt
+		leaves[leaf.Name] = *leaf
+		references = append(references, opsv1alpha1.IOSXESoftwareRolloutActivationReceipt{
+			DeviceUID: target.DeviceUID, UpgradeUID: string(uid), ReceiptHash: receipt.ReceiptHash,
+		})
+	}
+	rollout.Spec.ActivationApproval = &opsv1alpha1.IOSXESoftwareRolloutActivationApproval{
+		PlanHash:  rollout.Status.FrozenPlan.Hash,
+		Receipts:  []opsv1alpha1.IOSXESoftwareRolloutActivationReceipt{references[1], references[0]},
+		NotBefore: metav1.NewTime(now.Add(time.Hour)), NotAfter: metav1.NewTime(now.Add(2 * time.Hour)),
+		ApprovedBy: "activator@example.test", ApprovedAt: metav1.NewTime(now),
+	}
+	validated, err := validateActivationApproval(rollout, leaves)
+	if err != nil {
+		t.Fatalf("validateActivationApproval() error = %v", err)
+	}
+	if !validSHA256Identity(validated.Hash) || len(validated.Receipts) != 2 || len(validated.Prepared) != 2 {
+		t.Fatalf("validated activation = %#v", validated)
+	}
+	activationTarget := activationTarget(targets[0])
+	if activationTarget.ChildName == targets[0].ChildName || len(activationTarget.ChildName) > 253 {
+		t.Fatalf("activation child name %q is not distinct and bounded", activationTarget.ChildName)
+	}
+	activationSpec := expectedLeafSpec(rollout, activationTarget)
+	if activationSpec.ImageSource.Preinstalled == nil || activationSpec.Strategy != opsv1alpha1.UpgradeStrategyReload ||
+		activationSpec.MaintenanceWindow == nil || activationSpec.MaintenanceWindow.NotBefore == nil ||
+		!activationSpec.MaintenanceWindow.NotBefore.Equal(&rollout.Spec.ActivationApproval.NotBefore) ||
+		activationSpec.MaintenanceWindow.NotAfter == nil ||
+		!activationSpec.MaintenanceWindow.NotAfter.Equal(&rollout.Spec.ActivationApproval.NotAfter) {
+		t.Fatalf("activation leaf spec does not bind preinstalled Reload to approval window: %#v", activationSpec)
+	}
+	activationAnnotations := map[string]string{}
+	if err := applyActivationLeafAnnotations(activationAnnotations, validated, targets[0].DeviceUID); err != nil {
+		t.Fatal(err)
+	}
+	activationLeaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: rollout.Namespace, Name: activationTarget.ChildName, Annotations: activationAnnotations,
+	}}
+	if err := validateActivationLeafAnnotations(activationLeaf, validated, targets[0].DeviceUID); err != nil {
+		t.Fatalf("activation leaf annotations rejected: %v", err)
+	}
+	activationLeaf.Annotations[managedprotocol.AnnotationPreparedReceiptHash] = "sha256:" + strings.Repeat("0", 64)
+	if err := validateActivationLeafAnnotations(activationLeaf, validated, targets[0].DeviceUID); err == nil {
+		t.Fatal("receipt-substituted activation leaf annotations were accepted")
+	}
+	if !shouldInitializeActivationExecution(rollout, map[string]opsv1alpha1.IOSXESoftwareUpgrade{}) {
+		t.Fatal("completed preparation without activation children did not initialize activation execution")
+	}
+	if shouldInitializeActivationExecution(rollout, map[string]opsv1alpha1.IOSXESoftwareUpgrade{
+		activationTarget.ChildName: *activationLeaf,
+	}) {
+		t.Fatal("completed activation with an existing child regressed to activation initialization")
+	}
+
+	// A future authorization changes the completed preparation campaign into a
+	// bounded waiting state, but creates no activation leaf or reservation.
+	waiting := rollout.DeepCopy()
+	_, parsedPolicy := rolloutPolicyFixture()
+	policySnapshot, err := freezePolicy(parsedPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	waiting.Status.FrozenPlan.Policy = policySnapshot
+	waiting.Status.EffectivePolicy = &opsv1alpha1.IOSXESoftwareRolloutEffectivePolicyStatus{
+		Epoch: 1, Policy: policySnapshot, UpdatedAt: metav1.NewTime(now),
+	}
+	waiting.Status.Targets = make([]opsv1alpha1.IOSXESoftwareRolloutTargetStatus, 0, len(targets))
+	objects := []client.Object{waiting}
+	for _, target := range targets {
+		waiting.Status.Targets = append(waiting.Status.Targets, opsv1alpha1.IOSXESoftwareRolloutTargetStatus{
+			DeviceName: target.DeviceName, DeviceUID: target.DeviceUID, LeafName: target.ChildName,
+			Phase: opsv1alpha1.IOSXESoftwareRolloutTargetSucceeded, LastTransitionTime: metav1.NewTime(now),
+		})
+		preparedLeaf := leaves[target.ChildName]
+		leaf := preparedLeaf.DeepCopy()
+		leaf.Status.PreparedReceipt.PolicyUID = policySnapshot.UID
+		leaf.Status.PreparedReceipt.PolicyResourceVersion = policySnapshot.ResourceVersion
+		leaf.Status.PreparedReceipt.ReceiptHash, err = softwareupgrade.PreparedReceiptHash(*leaf.Status.PreparedReceipt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i := range waiting.Spec.ActivationApproval.Receipts {
+			if waiting.Spec.ActivationApproval.Receipts[i].DeviceUID == target.DeviceUID {
+				waiting.Spec.ActivationApproval.Receipts[i].ReceiptHash = leaf.Status.PreparedReceipt.ReceiptHash
+			}
+		}
+		objects = append(objects, leaf)
+	}
+	waitingScheme := newTestScheme(t)
+	if err := opsv1alpha1.AddToScheme(waitingScheme); err != nil {
+		t.Fatal(err)
+	}
+	waitingClient := fake.NewClientBuilder().WithScheme(waitingScheme).
+		WithStatusSubresource(&opsv1alpha1.IOSXESoftwareRollout{}, &opsv1alpha1.IOSXESoftwareUpgrade{}).
+		WithObjects(objects...).Build()
+	waitingReconciler := &IOSXESoftwareRolloutReconciler{Client: waitingClient, APIReader: waitingClient}
+	result, err := waitingReconciler.reconcileExecution(context.Background(), waiting, parsedPolicy, now)
+	if err != nil {
+		t.Fatalf("future activation window reconciliation failed: %v", err)
+	}
+	if result.RequeueAfter <= 0 {
+		t.Fatalf("future activation window did not schedule a bounded recheck: %#v", result)
+	}
+	var waitingCurrent opsv1alpha1.IOSXESoftwareRollout
+	if err := waitingClient.Get(context.Background(), client.ObjectKeyFromObject(waiting), &waitingCurrent); err != nil {
+		t.Fatal(err)
+	}
+	if waitingCurrent.Status.Phase != opsv1alpha1.IOSXESoftwareRolloutPhasePaused ||
+		waitingCurrent.Status.Message != "prepared receipts are retained until the authorized activation window opens" {
+		t.Fatalf("future activation state = %q %q", waitingCurrent.Status.Phase, waitingCurrent.Status.Message)
+	}
+	var waitingLeaves opsv1alpha1.IOSXESoftwareUpgradeList
+	if err := waitingClient.List(context.Background(), &waitingLeaves, client.InNamespace(waiting.Namespace)); err != nil {
+		t.Fatal(err)
+	}
+	if len(waitingLeaves.Items) != len(targets) {
+		t.Fatalf("future window created an activation leaf: got %d leaves, want %d", len(waitingLeaves.Items), len(targets))
+	}
+
+	reordered := rollout.DeepCopy()
+	reordered.Spec.ActivationApproval.Receipts[0], reordered.Spec.ActivationApproval.Receipts[1] =
+		reordered.Spec.ActivationApproval.Receipts[1], reordered.Spec.ActivationApproval.Receipts[0]
+	second, err := validateActivationApproval(reordered, leaves)
+	if err != nil || second.Hash != validated.Hash {
+		t.Fatalf("receipt order changed canonical authorization: first=%s second=%#v err=%v", validated.Hash, second, err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareRollout, map[string]opsv1alpha1.IOSXESoftwareUpgrade)
+	}{
+		{name: "receipt substitution", mutate: func(r *opsv1alpha1.IOSXESoftwareRollout, _ map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			r.Spec.ActivationApproval.Receipts[0].ReceiptHash = "sha256:" + strings.Repeat("0", 64)
+		}},
+		{name: "missing receipt", mutate: func(r *opsv1alpha1.IOSXESoftwareRollout, _ map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			r.Spec.ActivationApproval.Receipts = r.Spec.ActivationApproval.Receipts[:1]
+		}},
+		{name: "leaf uid drift", mutate: func(_ *opsv1alpha1.IOSXESoftwareRollout, l map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			leaf := l[targets[0].ChildName]
+			leaf.UID = "recreated-leaf"
+			l[targets[0].ChildName] = leaf
+		}},
+		{name: "invalid window", mutate: func(r *opsv1alpha1.IOSXESoftwareRollout, _ map[string]opsv1alpha1.IOSXESoftwareUpgrade) {
+			r.Spec.ActivationApproval.NotAfter = r.Spec.ActivationApproval.NotBefore
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := rollout.DeepCopy()
+			candidateLeaves := make(map[string]opsv1alpha1.IOSXESoftwareUpgrade, len(leaves))
+			for name, leaf := range leaves {
+				candidateLeaves[name] = *leaf.DeepCopy()
+			}
+			test.mutate(candidate, candidateLeaves)
+			if _, err := validateActivationApproval(candidate, candidateLeaves); err == nil {
+				t.Fatal("invalid activation approval was accepted")
+			}
+		})
 	}
 }
 
@@ -298,6 +877,17 @@ func TestTerminalRolloutPreservesAuditResultWhenDependenciesChange(t *testing.T)
 			}
 			if got.Status.Phase != phase || got.Status.Message != "retained audit result" {
 				t.Fatalf("terminal status changed to phase %q message %q", got.Status.Phase, got.Status.Message)
+			}
+			// Recovery must not reopen the existing combined-upgrade terminal
+			// path when an operator later cancels an already successful rollout.
+			got.Spec.Plan.Strategy = opsv1alpha1.IOSXESoftwareRolloutStrategyReload
+			got.Spec.Control.Cancel = true
+			if err := apiClient.Update(context.Background(), &got); err != nil {
+				t.Fatal(err)
+			}
+			result, err = reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(rollout)})
+			if err != nil || result != (ctrl.Result{}) {
+				t.Fatalf("completed Reload cancellation reopened reconciliation: %+v %v", result, err)
 			}
 		})
 	}
@@ -695,6 +1285,70 @@ func attachReadyManagedWorkerProof(
 	return []client.Object{deployment, replicaSet, pod}
 }
 
+func attachReadyManagedNetworkWorkerProof(
+	t *testing.T,
+	device *ciskov1.CiscoDevice,
+	now time.Time,
+) []client.Object {
+	t.Helper()
+	labels := perDeviceNetworkDeploymentLabels(device.Name)
+	template := corev1.PodTemplateSpec{
+		ObjectMeta: metav1.ObjectMeta{Labels: labels},
+		Spec:       corev1.PodSpec{Containers: []corev1.Container{{Name: "cisco-vk", Image: "network-worker:test"}}},
+	}
+	revision, err := managedWorkerPodTemplateRevision(&template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template.Annotations = map[string]string{managedprotocol.AnnotationWorkerConfigRevision: revision}
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: device.Namespace, Name: networkDeploymentName(string(device.UID)),
+			UID: "network-deployment-uid", Generation: 3,
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: ciskov1.GroupVersion.String(), Kind: "CiscoDevice", Name: device.Name,
+				UID: device.UID, Controller: ptr.To(true),
+			}},
+		},
+		Spec: appsv1.DeploymentSpec{Replicas: ptr.To[int32](1), Template: template},
+		Status: appsv1.DeploymentStatus{
+			ObservedGeneration: 3, Replicas: 1, UpdatedReplicas: 1, ReadyReplicas: 1, AvailableReplicas: 1,
+		},
+	}
+	replicaSet := &appsv1.ReplicaSet{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "network-worker-rs", UID: "network-worker-rs-uid",
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment", Name: deployment.Name,
+			UID: deployment.UID, Controller: ptr.To(true),
+		}},
+	}}
+	start := metav1.NewTime(now.Add(-time.Minute))
+	ready := metav1.NewTime(now.Add(-30 * time.Second))
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: device.Namespace, Name: "network-worker-pod", UID: "network-worker-pod-uid",
+			Labels: labels, Annotations: map[string]string{managedprotocol.AnnotationWorkerConfigRevision: revision},
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "ReplicaSet", Name: replicaSet.Name,
+				UID: replicaSet.UID, Controller: ptr.To(true),
+			}},
+		},
+		Status: corev1.PodStatus{
+			Phase: corev1.PodRunning, StartTime: &start,
+			Conditions: []corev1.PodCondition{{
+				Type: corev1.PodReady, Status: corev1.ConditionTrue, LastTransitionTime: ready,
+			}},
+		},
+	}
+	device.Status.NetworkWorkerRevision = &ciskov1.DeviceNetworkWorkerRevisionStatus{
+		DesiredRevision: revision, ObservedRevision: revision,
+		DeploymentUID: string(deployment.UID), DeploymentGeneration: deployment.Generation,
+		PodUID: string(pod.UID), PodStartTime: start.DeepCopy(), PodReadyTime: ready.DeepCopy(),
+		ObservedAt: metav1.NewTime(now),
+	}
+	return []client.Object{deployment, replicaSet, pod}
+}
+
 func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	const topologyKey = "topology.cisco.vk/site"
 	now := time.Date(2026, time.September, 12, 12, 0, 0, 0, time.UTC)
@@ -810,6 +1464,60 @@ func TestFreezeTargetRequiresCompletedWorkerHandoff(t *testing.T) {
 	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err != nil {
 		t.Fatalf("freezeTarget() after worker handoff error = %v", err)
 	}
+	policy.Config.RiskGroups = []topologyrollout.AdminRiskGroup{{
+		Name: "path-east", MaxConcurrentTransfers: 1, MaxUnavailable: 1, MaxAggregateTransferBytesPerSecond: 4_000_000,
+		Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+	}}
+	riskTarget, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now)
+	if err != nil {
+		t.Fatalf("freezeTarget() with risk group error = %v", err)
+	}
+	if strings.Join(riskTarget.RiskGroups, ",") != "path-east" {
+		t.Fatalf("frozen target risk groups = %v", riskTarget.RiskGroups)
+	}
+	if riskTarget.MaxTransferBytesPerSecond != 4_000_000 {
+		t.Fatalf("frozen target transfer rate = %d, want 4000000", riskTarget.MaxTransferBytesPerSecond)
+	}
+	policy.Config.RiskGroups = nil
+	policy.Config.DisruptionProtections = []topologyrollout.AdminDisruptionProtection{{
+		Name: "critical-service", Reason: "CriticalService",
+		Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+	}}
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err == nil ||
+		!strings.Contains(err.Error(), "CriticalServiceProtected") {
+		t.Fatalf("freezeTarget() disruption protection error = %v", err)
+	}
+	policy.Config.DisruptionProtections = nil
+
+	// Reproduce the original planning path: network evidence is enabled before
+	// status.effectivePolicy exists. The parsed administrator policy must drive
+	// freshness, and a complete target must freeze without dereferencing rollout
+	// status that has not been published yet.
+	for _, object := range attachReadyManagedNetworkWorkerProof(t, device, now) {
+		if err := apiClient.Create(context.Background(), object); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rollout.Spec.Plan.Health.Network = &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+		Enabled: true, RequireCompleteEvidence: true,
+	}
+	device.Status.HealthObservation.AcceptedNetwork = &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(now.Add(-2 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(now.Add(-time.Second)),
+		ObservedAt:          metav1.NewTime(now.Add(-2 * time.Second)),
+		SampleSequence:      1,
+		WorkerPodUID:        device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:    device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}
+	policy.Config.HealthFreshnessSeconds = 120
+	if rollout.Status.EffectivePolicy != nil {
+		t.Fatal("test requires an unpublished effective policy")
+	}
+	if _, err := reconciler.freezeTarget(context.Background(), rollout, device, policy, frozenSource, "canary", now); err != nil {
+		t.Fatalf("freezeTarget() with network evidence before status publication error = %v", err)
+	}
 
 	// A bound worker may report live inventory, but it cannot choose rollout
 	// identity. A post-binding NodeInfo forgery must close admission even while
@@ -913,6 +1621,87 @@ func TestStablePhysicalIdentityRequiresDeclarationBindingAndLiveAgreement(t *tes
 	}
 }
 
+func TestPostMutationNetworkHealthRequiresNewAcceptedSampleAndResetsOnFailure(t *testing.T) {
+	now := time.Date(2026, time.October, 1, 22, 0, 0, 0, time.UTC)
+	completed := now.Add(-10 * time.Second)
+	device := &ciskov1.CiscoDevice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "lab", Name: "device-a", UID: types.UID("device-uid"), Generation: 2,
+		},
+		Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, PhysicalIdentity: "SERIAL-A"},
+	}
+	objects := attachReadyManagedNetworkWorkerProof(t, device, now)
+	device.Status.HealthObservation = &ciskov1.DeviceHealthObservationStatus{AcceptedNetwork: &ciskov1.DeviceNetworkObservationStatus{
+		CollectionStartedAt: metav1.NewTime(completed.Add(-2 * time.Second)),
+		CollectionEndedAt:   metav1.NewTime(completed.Add(-time.Second)),
+		ObservedAt:          metav1.NewTime(completed.Add(-time.Second)),
+		SampleSequence:      1,
+		WorkerPodUID:        device.Status.NetworkWorkerRevision.PodUID,
+		ProducerRevision:    device.Status.NetworkWorkerRevision.DesiredRevision,
+		DeviceIdentityHash:  identityHashForPhysicalID("serial-a"),
+		Complete:            true,
+	}}
+	objects = append(objects, device)
+	apiClient := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objects...).Build()
+	reconciler := &IOSXESoftwareRolloutReconciler{
+		Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now },
+	}
+	rollout := &opsv1alpha1.IOSXESoftwareRollout{
+		ObjectMeta: metav1.ObjectMeta{Namespace: device.Namespace},
+		Spec: opsv1alpha1.IOSXESoftwareRolloutSpec{Plan: opsv1alpha1.IOSXESoftwareRolloutPlan{
+			Health: opsv1alpha1.IOSXESoftwareRolloutHealthSpec{
+				MaxObservationAgeSeconds: 60,
+				Network: &opsv1alpha1.IOSXESoftwareRolloutNetworkHealthSpec{
+					Enabled: true, RequireCompleteEvidence: true,
+				},
+			},
+		}},
+	}
+	policy := &topologyrollout.ParsedAdminPolicy{Config: topologyrollout.AdminPolicyConfig{HealthFreshnessSeconds: 120}}
+	target := opsv1alpha1.IOSXESoftwareRolloutPlannedTarget{
+		DeviceName: device.Name, DeviceUID: string(device.UID), DeviceGeneration: device.Generation,
+		PhysicalIdentity: "serial-a",
+	}
+
+	healthy, detail, err := reconciler.targetPostMutationNetworkHealthy(
+		context.Background(), rollout, policy, target, completed)
+	if err != nil || healthy || !strings.Contains(detail, "collected after") {
+		t.Fatalf("pre-operation sample result = healthy %t, detail %q, err %v", healthy, detail, err)
+	}
+
+	var current ciskov1.CiscoDevice
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	accepted := current.Status.HealthObservation.AcceptedNetwork
+	accepted.CollectionStartedAt = metav1.NewTime(completed.Add(time.Second))
+	accepted.CollectionEndedAt = metav1.NewTime(completed.Add(2 * time.Second))
+	accepted.ObservedAt = metav1.NewTime(completed.Add(2 * time.Second))
+	accepted.SampleSequence++
+	if err := apiClient.Update(context.Background(), &current); err != nil {
+		t.Fatal(err)
+	}
+	healthy, detail, err = reconciler.targetPostMutationNetworkHealthy(
+		context.Background(), rollout, policy, target, completed)
+	if err != nil || !healthy {
+		t.Fatalf("post-operation sample result = healthy %t, detail %q, err %v", healthy, detail, err)
+	}
+
+	if err := apiClient.Get(context.Background(), client.ObjectKeyFromObject(device), &current); err != nil {
+		t.Fatal(err)
+	}
+	current.Status.HealthObservation.AcceptedNetwork.Complete = false
+	current.Status.HealthObservation.AcceptedNetwork.UnknownReason = "required peer is not Full"
+	if err := apiClient.Update(context.Background(), &current); err != nil {
+		t.Fatal(err)
+	}
+	healthy, detail, err = reconciler.targetPostMutationNetworkHealthy(
+		context.Background(), rollout, policy, target, completed)
+	if err != nil || healthy || !strings.Contains(detail, "EvidenceIncomplete") {
+		t.Fatalf("failed-soak sample result = healthy %t, detail %q, err %v", healthy, detail, err)
+	}
+}
+
 func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 	const topologyKey = "topology.cisco.vk/site"
 	baseDevice := &ciskov1.CiscoDevice{
@@ -947,8 +1736,9 @@ func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 	policy := &topologyrollout.ParsedAdminPolicy{Selector: labels.Everything()}
 
 	for _, tt := range []struct {
-		name   string
-		mutate func(*ciskov1.CiscoDevice)
+		name         string
+		mutate       func(*ciskov1.CiscoDevice)
+		mutatePolicy func(*topologyrollout.ParsedAdminPolicy)
 	}{
 		{name: "unchanged", mutate: func(*ciskov1.CiscoDevice) {}},
 		{name: "address generation", mutate: func(device *ciskov1.CiscoDevice) {
@@ -961,6 +1751,20 @@ func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 		{name: "qualification cohort", mutate: func(device *ciskov1.CiscoDevice) {
 			device.Labels[managedprotocol.QualificationCohortLabel] = "c9400"
 		}},
+		{name: "administrator disruption protection", mutate: func(*ciskov1.CiscoDevice) {}, mutatePolicy: func(policy *topologyrollout.ParsedAdminPolicy) {
+			policy.Config.RequiredTopologyKeys = []string{topologyKey}
+			policy.Config.DisruptionProtections = []topologyrollout.AdminDisruptionProtection{{
+				Name: "singleton-path", Reason: "SingletonPath",
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+			}}
+		}},
+		{name: "administrator risk-group membership", mutate: func(*ciskov1.CiscoDevice) {}, mutatePolicy: func(policy *topologyrollout.ParsedAdminPolicy) {
+			policy.Config.RequiredTopologyKeys = []string{topologyKey}
+			policy.Config.RiskGroups = []topologyrollout.AdminRiskGroup{{
+				Name: "path-east", MaxConcurrentTransfers: 1, MaxUnavailable: 1,
+				Selector: metav1.LabelSelector{MatchLabels: map[string]string{topologyKey: "site-a"}},
+			}}
+		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			device := baseDevice.DeepCopy()
@@ -972,7 +1776,11 @@ func TestRevalidateFrozenTargetRejectsDeviceSpecDrift(t *testing.T) {
 			objects := append([]client.Object{device, node}, workerObjects...)
 			apiClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 			reconciler := &IOSXESoftwareRolloutReconciler{Client: apiClient, APIReader: apiClient, Now: func() time.Time { return now }}
-			err := reconciler.revalidateFrozenTarget(context.Background(), rollout, policy, target)
+			testPolicy := *policy
+			if tt.mutatePolicy != nil {
+				tt.mutatePolicy(&testPolicy)
+			}
+			err := reconciler.revalidateFrozenTarget(context.Background(), rollout, &testPolicy, target)
 			if tt.name == "unchanged" {
 				if err != nil {
 					t.Fatalf("unchanged target rejected: %v", err)

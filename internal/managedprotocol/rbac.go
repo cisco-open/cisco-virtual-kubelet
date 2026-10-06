@@ -62,6 +62,10 @@ func WorkerClusterRoleContracts() map[string][]rbacv1.PolicyRule {
 		},
 		NetworkManagementReadOnlyClusterRole: {
 			policyRule([]string{"cisco.vk"}, []string{"ciscodevices"}, "get", "list", "watch"),
+			// Read-only network workers may publish only the bounded network
+			// observation subtree under admission. Exact authenticated Pod-to-device
+			// ownership still requires E01 qualification; RBAC alone does not confine it.
+			policyRule([]string{"cisco.vk"}, []string{"ciscodevices/status"}, "get", "update", "patch"),
 			policyRule([]string{"config.cisco.vk"}, []string{
 				"iosxedevicegroupconfigs", "iosxeinterfacegroupconfigs", "iosxetemplates", "iosxeconfigs",
 				"nxosconfigs", "iosxeconfigapplylogs", "iosxeconfigrevisions",
@@ -78,6 +82,7 @@ func WorkerClusterRoleContracts() map[string][]rbacv1.PolicyRule {
 		},
 		NetworkManagementReadWriteClusterRole: {
 			policyRule([]string{"cisco.vk"}, []string{"ciscodevices"}, "get", "list", "watch"),
+			policyRule([]string{"cisco.vk"}, []string{"ciscodevices/status"}, "get", "update", "patch"),
 			policyRule([]string{"config.cisco.vk"}, []string{"iosxedevicegroupconfigs", "iosxeinterfacegroupconfigs", "iosxetemplates"}, "get", "list", "watch"),
 			policyRule([]string{"config.cisco.vk"}, []string{"iosxeconfigs", "nxosconfigs", "iosxetelemetries", "iosxediagnostics"}, "get", "list", "watch", "update", "patch"),
 			policyRule([]string{"config.cisco.vk"}, []string{"iosxeconfigs/status", "nxosconfigs/status", "iosxetelemetries/status", "iosxediagnostics/status"}, "get", "update", "patch"),

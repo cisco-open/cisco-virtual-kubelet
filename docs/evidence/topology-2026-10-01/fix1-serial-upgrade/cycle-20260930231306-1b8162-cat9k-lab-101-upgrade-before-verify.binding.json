@@ -1,0 +1,18 @@
+{
+  "annotations": {
+    "topology.cisco.vk/device-name": "cat9k-lab-101",
+    "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+    "topology.cisco.vk/managed": "true",
+    "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-779dd78868-rpsxd",
+    "topology.cisco.vk/network-worker-pod-uid": "3405a78b-52eb-44aa-84a6-eb23f89695e7",
+    "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+  },
+  "metadata": {
+    "creationTimestamp": "2026-09-30T23:43:26Z",
+    "generation": 1,
+    "name": "cycle-20260930231306-1b8162-cat9k-lab-101-upgrade-before-verify",
+    "namespace": "cvk-live",
+    "resourceVersion": "9422703",
+    "uid": "cdb90ce0-d37f-48f0-8888-19722c38f44d"
+  }
+}

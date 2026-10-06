@@ -39,6 +39,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -48,11 +49,152 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 )
+
+// TestEnvtest_RolloutHeadroomScopeValidation ensures a configured transfer
+// headroom threshold can never be admitted with an empty effective interface
+// set. This must be an API-server test because fake.Client does not evaluate
+// the CRD's CEL rule or item constraints.
+func TestEnvtest_RolloutHeadroomScopeValidation(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-rollout-headroom"
+	envtestNamespace(t, c, namespace)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	newRollout := func(name string, interfaces []any) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "ops.cisco.vk/v1alpha1",
+			"kind":       "IOSXESoftwareRollout",
+			"metadata":   map[string]any{"name": name, "namespace": namespace},
+			"spec": map[string]any{
+				"plan": map[string]any{
+					"requestedBy": "envtest",
+					"requestedAt": "2026-10-01T00:00:00Z",
+					"targets": map[string]any{
+						"selector": map[string]any{"matchLabels": map[string]any{"topology.cisco.vk/managed": "true"}},
+					},
+					"image": map[string]any{
+						"sha256":      strings.Repeat("a", 64),
+						"imageFamily": "cat9k",
+						"sources": []any{map[string]any{
+							"name": "global", "priority": int64(100),
+							"url": "https://software.example.test/cat9k.bin",
+						}},
+					},
+					"targetVersion": "17.18.4",
+					"canaries":      []any{map[string]any{"name": "cat9k", "devices": []any{"switch-a"}}},
+					"budgets":       map[string]any{"maxConcurrentTransfers": int64(1), "maxUnavailable": int64(1)},
+					"workloads":     map[string]any{"policy": "BlockIfRunning"},
+					"health": map[string]any{"network": map[string]any{
+						"enabled": true, "minimumHeadroomPercent": int64(30), "requiredInterfaces": interfaces,
+					}},
+				},
+				"control": map[string]any{"revision": int64(0)},
+			},
+		}}
+	}
+
+	for _, tc := range []struct {
+		name       string
+		interfaces []any
+		accepted   bool
+	}{
+		{name: "empty item", interfaces: []any{""}},
+		{name: "whitespace item", interfaces: []any{" \t "}},
+		{name: "valid item", interfaces: []any{"GigabitEthernet1/0/1"}, accepted: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := c.Create(ctx, newRollout(fmt.Sprintf("headroom-%s", strings.ReplaceAll(tc.name, " ", "-")), tc.interfaces))
+			if tc.accepted {
+				if err != nil {
+					t.Fatalf("apiserver rejected valid headroom scope: %v", err)
+				}
+				return
+			}
+			if err == nil || !apierrors.IsInvalid(err) {
+				t.Fatalf("apiserver admitted invalid headroom scope: %v", err)
+			}
+		})
+	}
+}
+
+func TestEnvtest_RolloutActivationApprovalIsPrepareOnlyAppendOnlyAndWindowed(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-rollout-activation"
+	envtestNamespace(t, c, namespace)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	hash := "sha256:" + strings.Repeat("a", 64)
+	newRollout := func(name, strategy, notBefore, notAfter string) *unstructured.Unstructured {
+		return &unstructured.Unstructured{Object: map[string]any{
+			"apiVersion": "ops.cisco.vk/v1alpha1",
+			"kind":       "IOSXESoftwareRollout",
+			"metadata":   map[string]any{"name": name, "namespace": namespace},
+			"spec": map[string]any{
+				"plan": map[string]any{
+					"requestedBy": "envtest", "requestedAt": "2026-10-02T00:00:00Z",
+					"targets": map[string]any{"selector": map[string]any{}, "allowAll": true, "maxTargets": int64(1)},
+					"image": map[string]any{
+						"sha256": strings.Repeat("b", 64), "imageFamily": "cat9k",
+						"sources": []any{map[string]any{"name": "global", "priority": int64(100), "url": "https://software.example.test/cat9k.bin"}},
+					},
+					"targetVersion": "17.18.4", "strategy": strategy,
+					"canaries":  []any{map[string]any{"name": "cat9k", "devices": []any{"switch-a"}}},
+					"budgets":   map[string]any{"maxConcurrentTransfers": int64(1), "maxUnavailable": int64(1)},
+					"workloads": map[string]any{"policy": "BlockIfRunning"},
+					"health":    map[string]any{"maxObservationAgeSeconds": int64(300)},
+				},
+				"activationApproval": map[string]any{
+					"planHash": hash,
+					"receipts": []any{map[string]any{
+						"deviceUID": "device-uid", "upgradeUID": "upgrade-uid",
+						"receiptHash": "sha256:" + strings.Repeat("c", 64),
+					}},
+					"notBefore": notBefore, "notAfter": notAfter,
+					"approvedBy": "activator@example.test", "approvedAt": "2026-10-02T00:00:00Z",
+				},
+				"control": map[string]any{"revision": int64(0)},
+			},
+		}}
+	}
+
+	invalidStrategy := newRollout("reload", "Reload", "2026-10-02T01:00:00Z", "2026-10-02T02:00:00Z")
+	if err := c.Create(ctx, invalidStrategy); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("apiserver admitted activation approval for Reload: %v", err)
+	}
+
+	invalidWindow := newRollout("bad-window", "PrepareOnly", "2026-10-02T02:00:00Z", "2026-10-02T01:00:00Z")
+	if err := c.Create(ctx, invalidWindow); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("apiserver admitted reversed activation window: %v", err)
+	}
+
+	valid := newRollout("valid", "PrepareOnly", "2026-10-02T01:00:00Z", "2026-10-02T02:00:00Z")
+	if err := c.Create(ctx, valid); err != nil {
+		t.Fatalf("apiserver rejected valid activation approval: %v", err)
+	}
+	receipts, _, err := unstructured.NestedSlice(valid.Object, "spec", "activationApproval", "receipts")
+	if err != nil || len(receipts) != 1 {
+		t.Fatalf("read activation receipts: %v %#v", err, receipts)
+	}
+	receipt := receipts[0].(map[string]any)
+	receipt["receiptHash"] = "sha256:" + strings.Repeat("d", 64)
+	receipts[0] = receipt
+	if err := unstructured.SetNestedSlice(valid.Object, receipts, "spec", "activationApproval", "receipts"); err != nil {
+		t.Fatalf("mutate activation receipt fixture: %v", err)
+	}
+	if err := c.Update(ctx, valid); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("apiserver allowed activation receipt replacement: %v", err)
+	}
+}
 
 func TestEnvtest_CiscoDeviceExplicitGNOIRequiresVerifiedTLS(t *testing.T) {
 	c, stop := startEnvtest(t)
@@ -472,6 +614,7 @@ func TestEnvtest_IOSXESoftwareUpgradeStrategyEnumEnforced(t *testing.T) {
 		opsv1alpha1.UpgradeStrategyReload,
 		opsv1alpha1.UpgradeStrategyISSU,
 		opsv1alpha1.UpgradeStrategyNoReboot,
+		opsv1alpha1.UpgradeStrategyPrepareOnly,
 	} {
 		up := newUpgrade("ok-"+strings.ToLower(string(s)), "envtest-upgrade-strategy", "17.15.01")
 		up.Spec.Strategy = s
@@ -489,6 +632,63 @@ func TestEnvtest_IOSXESoftwareUpgradeStrategyEnumEnforced(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "supported value") && !strings.Contains(err.Error(), "Unsupported value") {
 		t.Fatalf("expected enum-rejection error, got %v", err)
+	}
+}
+
+func TestEnvtest_PreparedReceiptIsRequiredAndImmutable(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-prepared-receipt"
+	envtestNamespace(t, c, namespace)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	up := newUpgrade("prepared", namespace, "17.18.03")
+	up.Spec.Strategy = opsv1alpha1.UpgradeStrategyPrepareOnly
+	up.Spec.ImageSource = opsv1alpha1.UpgradeImageSource{
+		URL: "https://images.example.test/cat9k.bin", SHA256: strings.Repeat("a", 64),
+	}
+	if err := c.Create(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	if err := c.Status().Update(ctx, up); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("Prepared phase without receipt was not rejected: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	up.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{
+		ProtocolVersion: "prepare-v1", UpgradeUID: string(up.UID), DeviceUID: "device-uid",
+		SourceDigest:       "sha256:" + strings.Repeat("a", 64),
+		SourceIdentityHash: "sha256:" + strings.Repeat("b", 64),
+		ContentBinding:     "source-digest-install-claim-v1",
+		TargetVersion:      "17.18.03", ValidatedVersion: "17.18.03.0.123", RunningVersion: "17.18.02",
+		PrimarySupervisorInstalled: true,
+		InstallStartedAt:           metav1.NewTime(time.Unix(100, 0).UTC()),
+		PreparedAt:                 metav1.NewTime(time.Unix(123, 0).UTC()),
+		ReceiptHash:                "sha256:" + strings.Repeat("c", 64),
+	}
+	if err := c.Status().Update(ctx, up); err != nil {
+		t.Fatalf("valid Prepared receipt rejected: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.PreparedReceipt.ValidatedVersion = "17.18.03.0.999"
+	if err := c.Status().Update(ctx, up); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("prepared receipt edit was not rejected: %v", err)
+	}
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.PreparedReceipt = nil
+	if err := c.Status().Update(ctx, up); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("prepared receipt removal was not rejected: %v", err)
 	}
 }
 
@@ -750,6 +950,97 @@ func TestEnvtest_IOSXESoftwareUpgradeSpecImmutable(t *testing.T) {
 	}
 }
 
+// TestEnvtest_IOSXESoftwareUpgradeNetworkGrantAuthority validates the native
+// API boundary that fake clients cannot exercise: evidence is all-or-nothing,
+// appears atomically with a grant, and cannot be replaced afterward.
+func TestEnvtest_IOSXESoftwareUpgradeNetworkGrantAuthority(t *testing.T) {
+	c, stop := startEnvtest(t)
+	defer stop()
+	const namespace = "envtest-upgrade-network-grant"
+	envtestNamespace(t, c, namespace)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	up := newUpgrade("network-grant", namespace, "26.01.01")
+	if err := c.Create(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	up.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		State: opsv1alpha1.UpgradeManagerAdmissionPending, PolicyEpoch: 1,
+		TopologyLockID: strings.Repeat("1", 32), DeviceGeneration: 1,
+		UpdatedAt: metav1.NewTime(time.Now().UTC()),
+	}
+	if err := c.Status().Update(ctx, up); err != nil {
+		t.Fatalf("persist pending admission: %v", err)
+	}
+
+	grant := func(current *opsv1alpha1.IOSXESoftwareUpgrade) {
+		controlRevision := int64(0)
+		admission := current.Status.ManagerAdmission
+		admission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
+		admission.ProtocolVersion = opsv1alpha1.ManagedUpgradeProtocolRolloutV1
+		admission.CampaignUID = "campaign-uid"
+		admission.PlanHash = "sha256:" + strings.Repeat("a", 64)
+		admission.PolicyUID = "policy-uid"
+		admission.PolicyResourceVersion = "1"
+		admission.LedgerUID = "ledger-uid"
+		admission.ReservationID = "reservation-1"
+		admission.LeafUID = string(current.UID)
+		admission.DeviceUID = "device-uid"
+		admission.PhysicalIdentity = "serial-a"
+		admission.NodeUID = "node-uid"
+		admission.ControlRevision = &controlRevision
+		admission.UpdatedAt = metav1.NewTime(time.Now().UTC())
+	}
+
+	var current opsv1alpha1.IOSXESoftwareUpgrade
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	grant(&current)
+	current.Status.ManagerAdmission.NetworkEvidenceHash = "sha256:" + strings.Repeat("b", 64)
+	if err := c.Status().Update(ctx, &current); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("partial network evidence update error = %v, want Invalid", err)
+	}
+
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	grant(&current)
+	sequence := uint64(7)
+	admission := current.Status.ManagerAdmission
+	admission.NetworkEvidenceHash = "sha256:" + strings.Repeat("b", 64)
+	admission.NetworkEvidenceProducerRevision = "sha256:worker"
+	admission.NetworkEvidenceWorkerPodUID = "worker-pod-uid"
+	admission.NetworkEvidenceSampleSequence = &sequence
+	admission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(time.Now().UTC().Add(time.Minute)))
+	if err := c.Status().Update(ctx, &current); err != nil {
+		t.Fatalf("complete atomic network grant rejected: %v", err)
+	}
+
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	admission = current.Status.ManagerAdmission
+	admission.NetworkEvidenceHash = "sha256:" + strings.Repeat("c", 64)
+	if err := c.Status().Update(ctx, &current); err == nil || !apierrors.IsInvalid(err) {
+		t.Fatalf("network grant replacement error = %v, want Invalid", err)
+	}
+
+	if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: up.Name}, &current); err != nil {
+		t.Fatal(err)
+	}
+	admission = current.Status.ManagerAdmission
+	renewedSequence := uint64(8)
+	admission.NetworkEvidenceHash = "sha256:" + strings.Repeat("c", 64)
+	admission.NetworkEvidenceSampleSequence = &renewedSequence
+	admission.NetworkEvidenceNotAfter = ptr.To(metav1.NewTime(time.Now().UTC().Add(2 * time.Minute)))
+	admission.UpdatedAt = metav1.NewTime(time.Now().UTC())
+	if err := c.Status().Update(ctx, &current); err != nil {
+		t.Fatalf("monotonic complete network grant renewal rejected: %v", err)
+	}
+}
+
 func TestEnvtest_IOSXESoftwareUpgradeInstallTimeoutDefaultAndBounds(t *testing.T) {
 	c, stop := startEnvtest(t)
 	defer stop()
@@ -776,6 +1067,27 @@ func TestEnvtest_IOSXESoftwareUpgradeInstallTimeoutDefaultAndBounds(t *testing.T
 		candidate.Spec.InstallTimeoutSeconds = tc.value
 		if err := c.Create(ctx, candidate); err == nil {
 			t.Errorf("apiserver admitted installTimeoutSeconds=%d", tc.value)
+		}
+	}
+
+	for _, tc := range []struct {
+		name     string
+		value    int64
+		wantPass bool
+	}{
+		{name: "paced-minimum", value: 1, wantPass: true},
+		{name: "paced-maximum", value: 1 << 40, wantPass: true},
+		{name: "paced-negative", value: -1},
+		{name: "paced-above-maximum", value: 1<<40 + 1},
+	} {
+		candidate := newUpgrade(tc.name, "envtest-upgrade-install-timeout", "26.01.01")
+		candidate.Spec.MaxTransferBytesPerSecond = tc.value
+		err := c.Create(ctx, candidate)
+		if tc.wantPass && err != nil {
+			t.Errorf("apiserver rejected maxTransferBytesPerSecond=%d: %v", tc.value, err)
+		}
+		if !tc.wantPass && err == nil {
+			t.Errorf("apiserver admitted maxTransferBytesPerSecond=%d", tc.value)
 		}
 	}
 }

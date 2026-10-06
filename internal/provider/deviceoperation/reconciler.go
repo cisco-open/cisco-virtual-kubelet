@@ -73,6 +73,7 @@ const (
 	inlinePreviewBytes = 2 * 1024
 
 	envConfigDiffAllowedNamespaces = "CVK_OPS_CONFIGDIFF_ALLOWED_NAMESPACES"
+	managedBindingPoll             = 2 * time.Second
 )
 
 // TransportProvider abstracts the per-device config reconciler so operation
@@ -100,6 +101,13 @@ type Reconciler struct {
 	// execute it with device credentials. Empty disables the check (legacy
 	// single-tenant behaviour for tests that do not plumb the namespace).
 	DeviceNamespace string
+	// ManagedTopology requires the manager-owned network-object identity
+	// envelope before this worker writes status or touches device transport.
+	// A new object is intentionally invisible to the worker until the manager
+	// binds it to this exact device incarnation and Pod.
+	ManagedTopology bool
+	DeviceUID       string
+	WorkerPodUID    string
 	// Platform selects the read-only command allowlist for CLI-backed
 	// operation kinds. Empty preserves the IOS-XE-compatible allowlist used by
 	// existing deployments.
@@ -146,6 +154,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 
 	if op.Spec.DeviceRef.Name != r.DeviceName {
 		return reconcile.Result{}, nil
+	}
+	if r.ManagedTopology && !r.managedBindingReady(&op) {
+		// Do not write Pending here. Native admission correctly rejects a status
+		// write before the manager has stamped the Pod binding; avoiding the
+		// write also prevents an expected initialization race from becoming a
+		// reconcile error loop. The manager watch will enqueue the stamped
+		// object, while this bounded poll covers a lost watch notification.
+		return reconcile.Result{RequeueAfter: managedBindingPoll}, nil
 	}
 
 	// DeviceOperation.spec.deviceRef is a same-namespace pointer by convention,
@@ -336,6 +352,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		span.SetStatus(codes.Ok, "")
 	}
 	return reconcile.Result{}, r.finishWithReason(ctx, &op, terminalPhase, reason, message, outputs, artifactURIs, now)
+}
+
+func (r *Reconciler) managedBindingReady(op *opsv1alpha1.DeviceOperation) bool {
+	if op == nil || !managedprotocol.NetworkObjectBindingComplete(op.Annotations) {
+		return false
+	}
+	return op.Namespace == r.DeviceNamespace &&
+		op.Spec.DeviceRef.Name == r.DeviceName &&
+		op.Annotations[managedprotocol.AnnotationDeviceNamespace] == r.DeviceNamespace &&
+		op.Annotations[managedprotocol.AnnotationDeviceName] == r.DeviceName &&
+		op.Annotations[managedprotocol.AnnotationDeviceUID] == r.DeviceUID &&
+		op.Annotations[managedprotocol.AnnotationNetworkWorkerPodUID] == r.WorkerPodUID
 }
 
 func (r *Reconciler) startOperationSpan(ctx context.Context, op *opsv1alpha1.DeviceOperation) (context.Context, trace.Span) {

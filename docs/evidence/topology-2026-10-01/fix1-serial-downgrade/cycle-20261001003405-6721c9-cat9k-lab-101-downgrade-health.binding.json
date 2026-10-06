@@ -1,0 +1,18 @@
+{
+  "annotations": {
+    "topology.cisco.vk/device-name": "cat9k-lab-101",
+    "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+    "topology.cisco.vk/managed": "true",
+    "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-779dd78868-rpsxd",
+    "topology.cisco.vk/network-worker-pod-uid": "3405a78b-52eb-44aa-84a6-eb23f89695e7",
+    "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+  },
+  "metadata": {
+    "creationTimestamp": "2026-10-01T01:30:39Z",
+    "generation": 1,
+    "name": "cycle-20261001003405-6721c9-cat9k-lab-101-downgrade-health",
+    "namespace": "cvk-live",
+    "resourceVersion": "9440401",
+    "uid": "17a56eee-4c40-4894-9f15-8eed5731d75d"
+  }
+}

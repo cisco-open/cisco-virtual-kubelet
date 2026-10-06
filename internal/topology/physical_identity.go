@@ -14,77 +14,18 @@
 
 package topology
 
-import (
-	"fmt"
-	"strings"
-)
+import "github.com/cisco/virtual-kubelet-cisco/internal/topologyidentity"
 
-const MaxPhysicalIdentityLength = 128
+const MaxPhysicalIdentityLength = topologyidentity.MaxPhysicalIdentityLength
 
-// CanonicalPhysicalIdentity validates an operator- or device-supplied stable
-// hardware identity and returns the case-insensitive canonical form used for
-// duplicate detection and rollout admission. The accepted alphabet matches the
-// CiscoDevice CRD and deliberately excludes whitespace and control characters.
+// CanonicalPhysicalIdentity preserves the controller-facing API while its
+// dependency-free implementation is shared with release tooling.
 func CanonicalPhysicalIdentity(value string) (string, error) {
-	if value == "" {
-		return "", fmt.Errorf("physicalIdentity is required in managed topology")
-	}
-	if strings.TrimSpace(value) != value {
-		return "", fmt.Errorf("physicalIdentity must not contain leading or trailing whitespace")
-	}
-	if len(value) > MaxPhysicalIdentityLength {
-		return "", fmt.Errorf("physicalIdentity exceeds %d bytes", MaxPhysicalIdentityLength)
-	}
-	for index, character := range value {
-		if asciiAlphaNumeric(character) {
-			continue
-		}
-		if index == 0 || index == len(value)-1 || !strings.ContainsRune("._:/-", character) {
-			return "", fmt.Errorf("physicalIdentity must start and end with an alphanumeric character and contain only alphanumerics, '.', '_', ':', '/', or '-'")
-		}
-	}
-	return strings.ToLower(value), nil
+	return topologyidentity.CanonicalPhysicalIdentity(value)
 }
 
-// ObservedPhysicalIdentity requires the authenticated worker's live NodeInfo
-// inventory to be internally consistent and to match the immutable declared
-// authority. A worker observation can block admission, but never supplies or
-// changes the identity used for deduplication.
+// ObservedPhysicalIdentity preserves the controller-facing API while its
+// dependency-free implementation is shared with release tooling.
 func ObservedPhysicalIdentity(declared, machineID, systemUUID string) (string, error) {
-	authority, err := CanonicalPhysicalIdentity(declared)
-	if err != nil {
-		return "", err
-	}
-	machineID = strings.TrimSpace(machineID)
-	systemUUID = strings.TrimSpace(systemUUID)
-	if machineID == "" && systemUUID == "" {
-		return "", fmt.Errorf("Node has no live physical identity observation")
-	}
-	var observed string
-	if machineID != "" {
-		observed, err = CanonicalPhysicalIdentity(machineID)
-		if err != nil {
-			return "", fmt.Errorf("Node machineID is invalid: %w", err)
-		}
-	}
-	if systemUUID != "" {
-		canonicalSystem, systemErr := CanonicalPhysicalIdentity(systemUUID)
-		if systemErr != nil {
-			return "", fmt.Errorf("Node systemUUID is invalid: %w", systemErr)
-		}
-		if observed != "" && observed != canonicalSystem {
-			return "", fmt.Errorf("Node physical identity observations conflict")
-		}
-		observed = canonicalSystem
-	}
-	if observed != authority {
-		return "", fmt.Errorf("Node physical identity observation %q does not match declared authority %q", observed, authority)
-	}
-	return authority, nil
-}
-
-func asciiAlphaNumeric(character rune) bool {
-	return character >= 'a' && character <= 'z' ||
-		character >= 'A' && character <= 'Z' ||
-		character >= '0' && character <= '9'
+	return topologyidentity.ObservedPhysicalIdentity(declared, machineID, systemUUID)
 }

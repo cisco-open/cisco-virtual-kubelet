@@ -1,0 +1,6 @@
+Checkpoint evidence audit, 2026-10-01:
+PASS: all 469 saved source artifacts match artifact-index.json byte counts and SHA-256 hashes.
+PASS: all 5 original reports are byte-for-byte unchanged against the retrieved source reports, including STOPPED and historical PASS results.
+96 historical polling files are intentionally omitted and explicitly indexed; no claim of full original-log retention is made.
+PASS: offline latest-run classifier and ordered leaf timestamp/inventory-revision assertions (see offline-analysis.json).
+SHA256SUMS is generated after these analysis/verification files; verify it with shasum -a 256 -c SHA256SUMS after checkout. It excludes only itself.

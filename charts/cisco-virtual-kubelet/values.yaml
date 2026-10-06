@@ -120,6 +120,27 @@ topology:
       serviceAccountName: ""
       accessMode: readOnly
 
+  # Optional read-only graph input. Helm writes this as graph.json beside the
+  # rollout authority in the admission-protected topology-policy ConfigMap,
+  # but it remains separate from policy.json and from all campaign hashes.
+  # Mappings must be verified by the administrator from device inventory;
+  # CVK never learns or writes a mapping from unauthenticated CDP names.
+  graph:
+    enabled: false
+    peerMappings: []
+    #  - source: cdp
+    #    observedPeer: C9K-2
+    #    routingDomain: ""
+    #    physicalID: FOC2520L6H1
+    #    external: false # true for an observed but non-CVK-managed endpoint
+    declaredLinks: []
+    #  - local: FOC2520L6E8
+    #    peer: FOC2520L6H1
+    #    source: cdp
+    #    interface: GigabitEthernet1/0/1
+    #    remoteInterface: GigabitEthernet1/0/1
+    #    routingDomain: ""
+
   policy:
     # Empty namespace/name values use the release namespace and
     # <fullname>-topology-policy. The policy and ledger must remain in the same
@@ -156,6 +177,39 @@ topology:
       topology.kubernetes.io/region: 1
     domainMaxUnavailable:
       topology.kubernetes.io/zone: 1
+
+    # Optional fail-closed administrator rules for devices whose current
+    # combined software lifecycle must not be disrupted. Selector keys must be
+    # present in requiredTopologyKeys. The manager re-evaluates these rules at
+    # planning and immediately before admission. Empty preserves existing
+    # behavior. A future independently qualified prepare-only phase will have
+    # its own authorization contract; these rules currently block the whole
+    # combined lifecycle.
+    disruptionProtections: []
+    #  - name: critical-services
+    #    reason: CriticalService
+    #    selector:
+    #      matchLabels:
+    #        operations.cisco.vk/service-tier: critical
+    #      matchExpressions: []
+
+    # Optional overlapping administrator risk groups. A device may match more
+    # than one selector; every matching unavailable/transfer ceiling is charged
+    # atomically across all campaigns, including unhealthy non-target peers.
+    # Exact physical membership is frozen into each approved plan, so label or
+    # fleet membership drift requires a new approval. Selector keys must be in
+    # requiredTopologyKeys.
+    riskGroups: []
+    #  - name: customer-a-path
+    #    maxConcurrentTransfers: 1
+    #    maxUnavailable: 1
+    #    # Optional aggregate link ceiling. The manager freezes a conservative
+    #    # per-transfer share and workers pace both source fetch and gNOI upload.
+    #    maxAggregateTransferBytesPerSecond: 12500000 # 100 Mbit/s
+    #    selector:
+    #      matchLabels:
+    #        topology.cisco.vk/redundancy-group: customer-a
+    #      matchExpressions: []
 
     healthFreshnessSeconds: 300
     maxCampaignTargets: 100

@@ -2,7 +2,8 @@
 
 # Exercise the optional Kubernetes 1.37 Workload/PodGroup topology-aware
 # scheduler against the exact checked-in CVK example. The caller owns the
-# disposable kind cluster; this script never installs a CVK runtime component.
+# disposable kind cluster. The script also executes CVK's drain guard against
+# a served scheduling-group Pod; it does not install a CVK runtime component.
 
 set -euo pipefail
 
@@ -13,6 +14,7 @@ namespace="edge-workloads"
 node_a="cvk-native-tas-a"
 node_b="cvk-native-tas-b"
 expected_context="${CVK_NATIVE_TAS_TEST_CONTEXT:-kind-cvk-native-tas}"
+heartbeat_pid=""
 
 fail() {
   echo "native TAS conformance: $*" >&2
@@ -27,6 +29,9 @@ if [[ "$current_context" != "$expected_context" ]] && \
    [[ "${CVK_NATIVE_TAS_TEST_ALLOW_DISPOSABLE_CONTEXT:-}" != "true" ]]; then
   fail "refusing unexpected kind context $current_context; expected $expected_context"
 fi
+client_version="$(kubectl version --client -o json | jq -r '.clientVersion.gitVersion')"
+[[ "$client_version" == v1.37.0 ]] || \
+  fail "qualification requires pinned kubectl v1.37.0, got $client_version"
 
 # Never adopt or delete a pre-existing namespace or Node. A prior interrupted
 # run must be discarded with its disposable cluster rather than guessed at.
@@ -42,14 +47,19 @@ done
 cleanup() {
   local cleanup_status=0
 
-  kubectl delete pod \
-    edge-worker-0 edge-worker-1 edge-conflict-a edge-conflict-b \
+  if [[ -n "$heartbeat_pid" ]]; then
+    kill "$heartbeat_pid" >/dev/null 2>&1 || true
+    wait "$heartbeat_pid" >/dev/null 2>&1 || true
+    heartbeat_pid=""
+  fi
+
+  kubectl delete pod --all \
     --namespace "$namespace" --force --grace-period=0 \
     --ignore-not-found --wait=false >/dev/null 2>&1 || cleanup_status=1
-  kubectl delete podgroup edge-workers-0 edge-conflict \
+  kubectl delete podgroup --all \
     --namespace "$namespace" --ignore-not-found \
     --wait=true --timeout=30s >/dev/null 2>&1 || cleanup_status=1
-  kubectl delete workload edge-gang-policy \
+  kubectl delete workload --all \
     --namespace "$namespace" --ignore-not-found \
     --wait=true --timeout=30s >/dev/null 2>&1 || cleanup_status=1
   kubectl delete namespace "$namespace" --ignore-not-found \
@@ -126,20 +136,36 @@ EOF
 create_scheduler_node "$node_a" a site-a
 create_scheduler_node "$node_b" b site-b
 
-heartbeat="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-for node in "$node_a" "$node_b"; do
-  kubectl patch node "$node" --subresource=status --type=merge -p "{
-    \"status\":{
-      \"capacity\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
-      \"allocatable\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
-      \"conditions\":[{
-        \"type\":\"Ready\",\"status\":\"True\",\"reason\":\"ConformanceFixture\",
-        \"message\":\"synthetic native TAS scheduler fixture\",
-        \"lastHeartbeatTime\":\"${heartbeat}\",\"lastTransitionTime\":\"${heartbeat}\"
-      }]
-    }
-  }" >/dev/null
-done
+refresh_scheduler_nodes() {
+  local heartbeat node
+  heartbeat="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  for node in "$node_a" "$node_b"; do
+    kubectl patch node "$node" --subresource=status --type=merge -p "{
+      \"status\":{
+        \"capacity\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
+        \"allocatable\":{\"cpu\":\"4\",\"memory\":\"8Gi\",\"pods\":\"16\"},
+        \"conditions\":[{
+          \"type\":\"Ready\",\"status\":\"True\",\"reason\":\"ConformanceFixture\",
+          \"message\":\"synthetic native TAS scheduler fixture\",
+          \"lastHeartbeatTime\":\"${heartbeat}\",\"lastTransitionTime\":\"${heartbeat}\"
+        }]
+      }
+    }" >/dev/null
+  done
+}
+
+# Synthetic Nodes have no kubelet to renew their status. Keep their heartbeat
+# current while uncached CI compiles the live integration guard; otherwise the
+# node lifecycle controller correctly marks them NotReady and adds a taint,
+# turning a scheduler assertion into a runner-speed race.
+refresh_scheduler_nodes
+(
+  while true; do
+    sleep 10
+    refresh_scheduler_nodes >/dev/null 2>&1 || true
+  done
+) &
+heartbeat_pid=$!
 kubectl wait --for=condition=Ready node/"$node_a" node/"$node_b" \
   --timeout=15s >/dev/null
 
@@ -185,6 +211,16 @@ wait_for_group_condition() {
   return 1
 }
 
+assert_unbound() {
+  local pod
+
+  for pod in "$@"; do
+    [[ -z "$(kubectl get pod "$pod" --namespace "$namespace" \
+      -o jsonpath='{.spec.nodeName}')" ]] || \
+      fail "Pod $pod was unexpectedly bound"
+  done
+}
+
 first_node="$(wait_for_binding edge-worker-0)"
 second_node="$(wait_for_binding edge-worker-1)"
 [[ "$first_node" == "$second_node" ]] || \
@@ -197,6 +233,45 @@ site="$(kubectl get node "$first_node" \
   -o jsonpath='{.metadata.labels.topology\.cisco\.vk/site}')"
 [[ -n "$site" ]] || fail "selected Node has no topology.cisco.vk/site label"
 wait_for_group_condition edge-workers-0 True Scheduled
+
+# Exercise the production CVK guard through a real Kubernetes 1.37 API read.
+# This must happen before replacement tests mutate the group fixture.
+CVK_NATIVE_TAS_TEST_CONTEXT="$expected_context" \
+CVK_NATIVE_TAS_GUARD_NAMESPACE="$namespace" \
+CVK_NATIVE_TAS_GUARD_POD="edge-worker-0" \
+  go test -tags native_tas_integration -count=1 -v \
+    ./internal/controller -run '^TestNativeTASServedSchedulingGroupGuard$'
+
+# Recreate one member after the group initially schedules. The replacement
+# must retain the group's selected topology rather than silently scheduling in
+# another domain. This is a scheduler recovery assertion; a supported workload
+# controller remains a separate physical-CVK qualification requirement.
+kubectl delete pod edge-worker-1 --namespace "$namespace" \
+  --force --grace-period=0 --wait=true >/dev/null
+cat <<EOF | kubectl create -f - >/dev/null
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-worker-1
+  namespace: ${namespace}
+  labels:
+    app: edge-gang
+spec:
+  schedulingGroup:
+    podGroupName: edge-workers-0
+  nodeSelector:
+    type: virtual-kubelet
+  containers:
+    - name: edge-worker
+      image: registry.k8s.io/pause:3.10
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+EOF
+replacement_node="$(wait_for_binding edge-worker-1)"
+[[ "$replacement_node" == "$first_node" ]] || \
+  fail "replacement group member moved from $first_node to $replacement_node"
 
 # A second group proves the topology constraint is enforced rather than the
 # successful pair merely landing together by chance. Each Pod is individually
@@ -246,10 +321,212 @@ spec:
 EOF
 
 wait_for_group_condition edge-conflict False Unschedulable
-for pod in edge-conflict-a edge-conflict-b; do
-  [[ -z "$(kubectl get pod "$pod" --namespace "$namespace" \
-    -o jsonpath='{.spec.nodeName}')" ]] || \
-    fail "conflicting topology Pod $pod was unexpectedly bound"
-done
+assert_unbound edge-conflict-a edge-conflict-b
 
-echo "native Kubernetes 1.37 TAS conformance passed: site=$site node=$first_node"
+# A maintenance-tainted selected member must block the whole gang. This
+# models a CVK Node that remains registered while maintenance makes it
+# ineligible; the scheduler must not partially bind the other member.
+kubectl taint node "$node_a" cisco.vk/maintenance=true:NoSchedule >/dev/null
+cat <<EOF | kubectl apply -f - >/dev/null
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PodGroup
+metadata:
+  name: edge-maintenance
+  namespace: ${namespace}
+spec:
+  schedulingPolicy:
+    gang:
+      minCount: 2
+  schedulingConstraints:
+    topology:
+      - key: topology.cisco.vk/site
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-maintenance-0
+  namespace: ${namespace}
+spec:
+  schedulingGroup:
+    podGroupName: edge-maintenance
+  nodeSelector:
+    test.cisco.vk/native-tas-node: "a"
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-maintenance-1
+  namespace: ${namespace}
+spec:
+  schedulingGroup:
+    podGroupName: edge-maintenance
+  nodeSelector:
+    test.cisco.vk/native-tas-node: "a"
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+EOF
+wait_for_group_condition edge-maintenance False Unschedulable
+assert_unbound edge-maintenance-0 edge-maintenance-1
+kubectl taint node "$node_a" cisco.vk/maintenance- >/dev/null
+maintenance_node_0="$(wait_for_binding edge-maintenance-0)"
+maintenance_node_1="$(wait_for_binding edge-maintenance-1)"
+[[ "$maintenance_node_0" == "$node_a" ]] && \
+  [[ "$maintenance_node_1" == "$node_a" ]] || \
+  fail "maintenance group did not recover completely on $node_a"
+wait_for_group_condition edge-maintenance True Scheduled
+kubectl delete pod edge-maintenance-0 edge-maintenance-1 \
+  --namespace "$namespace" --force --grace-period=0 --wait=true >/dev/null
+kubectl delete podgroup edge-maintenance --namespace "$namespace" \
+  --wait=true --timeout=30s >/dev/null
+
+# Each member is feasible in isolation, but the selected site lacks capacity
+# for the complete gang. The group must stay entirely unbound with a visible
+# Unschedulable condition.
+cat <<EOF | kubectl apply -f - >/dev/null
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PodGroup
+metadata:
+  name: edge-capacity
+  namespace: ${namespace}
+spec:
+  schedulingPolicy:
+    gang:
+      minCount: 2
+  schedulingConstraints:
+    topology:
+      - key: topology.cisco.vk/site
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-capacity-0
+  namespace: ${namespace}
+spec:
+  schedulingGroup:
+    podGroupName: edge-capacity
+  nodeSelector:
+    test.cisco.vk/native-tas-node: "a"
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+      resources:
+        requests:
+          cpu: "3"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-capacity-1
+  namespace: ${namespace}
+spec:
+  schedulingGroup:
+    podGroupName: edge-capacity
+  nodeSelector:
+    test.cisco.vk/native-tas-node: "a"
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+      resources:
+        requests:
+          cpu: "3"
+EOF
+wait_for_group_condition edge-capacity False Unschedulable
+assert_unbound edge-capacity-0 edge-capacity-1
+
+# Restart the native scheduler process and prove a new PodGroup is scheduled
+# after kubelet recreates its static container. Deleting only the mirror Pod
+# would not stop the underlying process, so this kind-only lane stops the CRI
+# container inside the control-plane node and waits for a different container.
+# This catches state that exists only in one scheduler process and verifies
+# that API-backed group state survives the restart.
+kind_cluster="${current_context#kind-}"
+control_plane="${kind_cluster}-control-plane"
+scheduler_pod="kube-scheduler-${control_plane}"
+[[ "$(docker inspect --format '{{ index .Config.Labels "io.x-k8s.kind.cluster" }}' \
+  "$control_plane")" == "$kind_cluster" ]] || \
+  fail "container $control_plane is not part of kind cluster $kind_cluster"
+[[ "$(kubectl get pod "$scheduler_pod" --namespace kube-system \
+  -o jsonpath='{.spec.nodeName}')" == "$control_plane" ]] || \
+  fail "scheduler Pod does not belong to the selected control-plane Node"
+scheduler_container_id="$(kubectl get pod "$scheduler_pod" \
+  --namespace kube-system \
+  -o jsonpath='{.status.containerStatuses[?(@.name=="kube-scheduler")].containerID}')"
+runtime_scheduler_id="$(docker exec "$control_plane" \
+  crictl ps --state Running --name kube-scheduler -q | head -1)"
+[[ -n "$runtime_scheduler_id" ]] || \
+  fail "could not resolve the running native scheduler container"
+docker exec "$control_plane" crictl --timeout=30s stop --timeout=10 "$runtime_scheduler_id" >/dev/null
+scheduler_restarted=false
+for _ in $(seq 1 60); do
+  new_scheduler_container_id="$(kubectl get pod "$scheduler_pod" \
+    --namespace kube-system \
+    -o jsonpath='{.status.containerStatuses[?(@.name=="kube-scheduler")].containerID}' \
+    2>/dev/null || true)"
+  ready="$(kubectl get pod "$scheduler_pod" --namespace kube-system \
+    -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' \
+    2>/dev/null || true)"
+  if [[ -n "$new_scheduler_container_id" ]] && \
+     [[ "$new_scheduler_container_id" != "$scheduler_container_id" ]] && \
+     [[ "$ready" == "True" ]]; then
+    scheduler_restarted=true
+    break
+  fi
+  sleep 1
+done
+[[ "$scheduler_restarted" == "true" ]] || \
+  fail "native scheduler did not recover with a new container ID"
+
+cat <<EOF | kubectl apply -f - >/dev/null
+apiVersion: scheduling.k8s.io/v1beta1
+kind: PodGroup
+metadata:
+  name: edge-after-restart
+  namespace: ${namespace}
+spec:
+  schedulingPolicy:
+    gang:
+      minCount: 2
+  schedulingConstraints:
+    topology:
+      - key: topology.cisco.vk/site
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-after-restart-0
+  namespace: ${namespace}
+spec:
+  schedulingGroup:
+    podGroupName: edge-after-restart
+  nodeSelector:
+    test.cisco.vk/native-tas-node: "b"
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge-after-restart-1
+  namespace: ${namespace}
+spec:
+  schedulingGroup:
+    podGroupName: edge-after-restart
+  nodeSelector:
+    test.cisco.vk/native-tas-node: "b"
+  containers:
+    - name: pause
+      image: registry.k8s.io/pause:3.10
+EOF
+restart_node_0="$(wait_for_binding edge-after-restart-0)"
+restart_node_1="$(wait_for_binding edge-after-restart-1)"
+[[ "$restart_node_0" == "$node_b" ]] && \
+  [[ "$restart_node_1" == "$node_b" ]] || \
+  fail "post-restart group did not bind completely to $node_b"
+wait_for_group_condition edge-after-restart True Scheduled
+
+echo "native Kubernetes 1.37 TAS conformance passed: site=$site node=$first_node replacement=$replacement_node maintenance=blocked capacity=blocked scheduler-restart=recovered"

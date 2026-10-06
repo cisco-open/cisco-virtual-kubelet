@@ -40,6 +40,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	configprovider "github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 )
 
@@ -885,6 +886,201 @@ func TestLegacyHandoffSafetyBlocksActiveControlState(t *testing.T) {
 			}
 			assertWorkerAccessAbsent(t, fixture.client, device, topologyLegacyWorkerServiceAccountName(device))
 		})
+	}
+}
+
+func TestLegacyHandoffBlocksRetainedPreparedReceipt(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "retained-preparation", UID: "prepared-leaf-uid",
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:   "true",
+			managedprotocol.AnnotationDeviceUID: string(device.UID),
+		},
+	}}
+	leaf.Spec.DeviceRef.Name = device.Name
+	if err := fixture.client.Create(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+	leaf.Status.Phase = opsv1alpha1.UpgradePhasePrepared
+	leaf.Status.PreparedReceipt = &opsv1alpha1.UpgradePreparedReceiptStatus{}
+	leaf.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		State: opsv1alpha1.UpgradeManagerAdmissionSettled, DeviceUID: string(device.UID),
+	}
+	if err := fixture.client.Update(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := fixture.r.reconcileManagedTopology(ctx, fixture.device(t))
+	if err == nil || !strings.Contains(err.Error(), "retained prepared software upgrade") {
+		t.Fatalf("retained receipt handoff error = %v", err)
+	}
+	if !result.Managed {
+		t.Fatalf("blocked handoff result = %+v, want managed ownership retained", result)
+	}
+	current := fixture.device(t)
+	if current.Status.LegacyHandoff != nil {
+		t.Fatalf("blocked handoff created state %#v", current.Status.LegacyHandoff)
+	}
+	assertWorkerAccessAbsent(t, fixture.client, current, topologyLegacyWorkerServiceAccountName(current))
+}
+
+func TestLegacyHandoffBlocksSettledNonTerminalLeaf(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "unresolved-transfer", UID: "unresolved-leaf-uid",
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:   "true",
+			managedprotocol.AnnotationDeviceUID: string(device.UID),
+		},
+	}}
+	leaf.Spec.DeviceRef.Name = device.Name
+	if err := fixture.client.Create(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+	leaf.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	leaf.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		State: opsv1alpha1.UpgradeManagerAdmissionSettled, DeviceUID: string(device.UID),
+	}
+	if err := fixture.client.Update(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := fixture.r.reconcileManagedTopology(ctx, fixture.device(t))
+	if err == nil || !strings.Contains(err.Error(), "non-terminal software upgrade") {
+		t.Fatalf("non-terminal leaf handoff error = %v", err)
+	}
+	if !result.Managed {
+		t.Fatalf("blocked handoff result = %+v, want managed ownership retained", result)
+	}
+	current := fixture.device(t)
+	if current.Status.LegacyHandoff != nil {
+		t.Fatalf("blocked handoff created state %#v", current.Status.LegacyHandoff)
+	}
+	assertWorkerAccessAbsent(t, fixture.client, current, topologyLegacyWorkerServiceAccountName(current))
+}
+
+func TestLegacyHandoffAcceptsSettledUnclaimedCancellation(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	now := metav1.NewTime(fixture.clock.Now())
+	controlRevision := int64(7)
+	planHash := "sha256:" + strings.Repeat("a", 64)
+	leaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: "cancelled-before-dispatch", UID: "cancelled-leaf-uid",
+		Annotations: map[string]string{
+			managedprotocol.AnnotationManaged:       "true",
+			managedprotocol.AnnotationDeviceUID:     string(device.UID),
+			managedprotocol.AnnotationNodeUID:       device.Status.NodeIdentity.NodeUID,
+			managedprotocol.AnnotationCampaignUID:   "campaign-uid",
+			managedprotocol.AnnotationPlanHash:      planHash,
+			managedprotocol.AnnotationLedgerUID:     "ledger-uid",
+			managedprotocol.AnnotationReservationID: "reservation-id",
+		},
+	}}
+	leaf.Spec.DeviceRef.Name = device.Name
+	leaf.Status.Phase = opsv1alpha1.UpgradePhaseTransferring
+	leaf.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+	leaf.Status.ManagerAdmission = &opsv1alpha1.UpgradeManagerAdmissionStatus{
+		ProtocolVersion: opsv1alpha1.ExpectedManagedUpgradeProtocol(leaf.Spec.MaxTransferBytesPerSecond),
+		State:           opsv1alpha1.UpgradeManagerAdmissionSettled, CampaignUID: "campaign-uid",
+		PlanHash: planHash, PolicyUID: "policy-uid", PolicyResourceVersion: "1", PolicyEpoch: 1,
+		LedgerUID: "ledger-uid", ReservationID: "reservation-id", LeafUID: string(leaf.UID),
+		DeviceUID: string(device.UID), DeviceGeneration: device.Generation,
+		PhysicalIdentity: device.Spec.PhysicalIdentity, NodeUID: device.Status.NodeIdentity.NodeUID,
+		ControlRevision: &controlRevision, UpdatedAt: now,
+	}
+	leaf.Status.ManagerControl = &opsv1alpha1.UpgradeManagerControlStatus{
+		Revision: controlRevision, Cancel: true, UpdatedAt: now,
+	}
+	leaf.Status.WorkerControl = &opsv1alpha1.UpgradeWorkerControlStatus{
+		ObservedAdmissionState: opsv1alpha1.UpgradeManagerAdmissionSettled,
+		ObservedPolicyEpoch:    1, ObservedControlRevision: controlRevision,
+		ObservedWorkerConfigRevision: "sha256:" + strings.Repeat("b", 64),
+		EffectiveState:               opsv1alpha1.UpgradeWorkerControlSettled, UpdatedAt: now,
+	}
+	if err := fixture.client.Create(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.client.Update(ctx, leaf); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := fixture.r.reconcileManagedTopology(ctx, fixture.device(t))
+	if err != nil {
+		t.Fatalf("settled unclaimed cancellation blocked handoff: %v", err)
+	}
+	current := fixture.device(t)
+	if !result.LegacyWorker || current.Status.LegacyHandoff == nil ||
+		current.Status.LegacyHandoff.Phase != ciskov1.DeviceLegacyHandoffPreparing {
+		t.Fatalf("handoff did not start: result=%+v status=%#v", result, current.Status.LegacyHandoff)
+	}
+
+	leaf.Status.ManagedMutationClaims = []opsv1alpha1.UpgradeManagedMutationClaimStatus{{
+		Stage:         opsv1alpha1.UpgradeManagedMutationPrimaryInstall,
+		ReservationID: "reservation-id", PolicyEpoch: 1, ClaimedAt: now,
+	}}
+	if softwareupgrade.SettledUnclaimedManagedOperation(leaf) {
+		t.Fatal("mutation claim was accepted as an unclaimed cancellation")
+	}
+	policyFence := leaf.DeepCopy()
+	policyFence.Status.Phase = ""
+	policyFence.Status.ExecutionModel = ""
+	policyFence.Status.ManagedMutationClaims = nil
+	policyFence.Status.ManagerControl.Cancel = false
+	policyFence.Status.ManagerControl.Reason = "AdministratorPolicyChanged"
+	policyFence.Status.WorkerControl = nil
+	if !softwareupgrade.SettledUnclaimedManagedOperation(policyFence) {
+		t.Fatal("empty-phase settled policy fence was not accepted as unclaimed")
+	}
+}
+
+func TestSharedCompatibilityAccessReleasesExactHistoricalOwner(t *testing.T) {
+	ctx := context.Background()
+	fixture := newLegacyHandoffFixture(t)
+	device := fixture.device(t)
+	sharedSA := fixture.r.vkServiceAccountName()
+	legacy := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
+		Namespace: device.Namespace, Name: sharedSA,
+		OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(
+			device, ciskov1.GroupVersion.WithKind("CiscoDevice"),
+		)},
+	}}
+	if err := fixture.client.Create(ctx, legacy); err != nil {
+		t.Fatal(err)
+	}
+	device.Status.LegacyHandoff = &ciskov1.DeviceLegacyHandoffStatus{
+		Phase: ciskov1.DeviceLegacyHandoffSharedWriterPending,
+	}
+	if err := fixture.r.ensureVKAccess(ctx, device, sharedSA, false); err != nil {
+		t.Fatalf("migrate exact historical shared owner: %v", err)
+	}
+	var current corev1.ServiceAccount
+	if err := fixture.client.Get(ctx, types.NamespacedName{Namespace: device.Namespace, Name: sharedSA}, &current); err != nil {
+		t.Fatal(err)
+	}
+	if len(current.OwnerReferences) != 0 {
+		t.Fatalf("shared ServiceAccount retained owner references: %#v", current.OwnerReferences)
+	}
+	if err := fixture.r.verifySharedLegacyAccess(ctx, device); err != nil {
+		t.Fatalf("migrated shared access did not verify: %v", err)
+	}
+
+	foreign := current.DeepCopy()
+	foreign.Name = sharedSA + "-foreign"
+	foreign.ResourceVersion = ""
+	foreign.UID = ""
+	foreign.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: ciskov1.GroupVersion.String(), Kind: "CiscoDevice", Name: "other", UID: "other-uid",
+		Controller: ptr.To(true),
+	}}
+	if err := releaseExactLegacySharedOwner(&foreign.ObjectMeta, device); err == nil {
+		t.Fatal("foreign historical owner was released")
 	}
 }
 

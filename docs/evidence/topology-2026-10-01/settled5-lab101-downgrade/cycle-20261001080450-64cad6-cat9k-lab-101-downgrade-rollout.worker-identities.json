@@ -1,0 +1,11 @@
+{
+  "appWorkerPods": [
+    "cat9k-lab-101-vk-7d4dd64c4d-5d8kp"
+  ],
+  "device": "cat9k-lab-101",
+  "managerPods": [
+    "cisco-vk-cisco-virtual-kubelet-controller-84448856bb-t4ntp"
+  ],
+  "networkWorkerPod": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-7c99b8c77d-j64f7",
+  "networkWorkerPodUID": "2e2d051c-e4fc-4e60-a8ad-458faffcf29b"
+}

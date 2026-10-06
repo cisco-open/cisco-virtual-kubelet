@@ -1,0 +1,55 @@
+time="2026-10-01T22:27:00Z" level=warning msg="network topology observation status update failed" file="topology_observation.go:95" error="network worker binding is not at the desired revision"
+2026-10-01T22:33:21Z	ERROR	Reconciler error	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "IOSXESoftwareUpgrade": {"name":"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98","namespace":"cvk-live"}, "namespace": "cvk-live", "name": "roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98", "reconcileID": "bf0c64ea-1964-4624-9f2c-d0f3c09d5990", "error": "acknowledge managed upgrade control: iosxesoftwareupgrades.ops.cisco.vk \"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98\" is forbidden: ValidatingAdmissionPolicy 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' with binding 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' denied request: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).reconcileHandler
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:495
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).processNextWorkItem
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:438
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).Start.func1.1
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:313
+2026-10-01T22:33:21Z	ERROR	Reconciler error	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "IOSXESoftwareUpgrade": {"name":"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98","namespace":"cvk-live"}, "namespace": "cvk-live", "name": "roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98", "reconcileID": "8cf2a61b-af5a-47aa-afe2-857d3877bb05", "error": "acknowledge managed upgrade control: iosxesoftwareupgrades.ops.cisco.vk \"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98\" is forbidden: ValidatingAdmissionPolicy 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' with binding 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' denied request: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).reconcileHandler
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:495
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).processNextWorkItem
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:438
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).Start.func1.1
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:313
+2026-10-01T22:33:21Z	ERROR	Reconciler error	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "IOSXESoftwareUpgrade": {"name":"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98","namespace":"cvk-live"}, "namespace": "cvk-live", "name": "roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98", "reconcileID": "4a996bc6-6448-4e5d-95c2-802d26dfbd7d", "error": "acknowledge managed upgrade control: iosxesoftwareupgrades.ops.cisco.vk \"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98\" is forbidden: ValidatingAdmissionPolicy 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' with binding 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' denied request: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).reconcileHandler
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:495
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).processNextWorkItem
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:438
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).Start.func1.1
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:313
+2026-10-01T22:33:21Z	ERROR	Reconciler error	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "IOSXESoftwareUpgrade": {"name":"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98","namespace":"cvk-live"}, "namespace": "cvk-live", "name": "roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98", "reconcileID": "a634ff8b-fea1-4ff3-93f7-ec778a313be7", "error": "acknowledge managed upgrade control: iosxesoftwareupgrades.ops.cisco.vk \"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98\" is forbidden: ValidatingAdmissionPolicy 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' with binding 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' denied request: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).reconcileHandler
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:495
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).processNextWorkItem
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:438
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).Start.func1.1
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:313
+2026-10-01T22:33:23Z	ERROR	Reconciler error	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "IOSXESoftwareUpgrade": {"name":"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98","namespace":"cvk-live"}, "namespace": "cvk-live", "name": "roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98", "reconcileID": "545632c0-f89b-4879-8d80-9c8241210051", "error": "acknowledge managed upgrade control: iosxesoftwareupgrades.ops.cisco.vk \"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98\" is forbidden: ValidatingAdmissionPolicy 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' with binding 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' denied request: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).reconcileHandler
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:495
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).processNextWorkItem
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:438
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).Start.func1.1
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:313
+2026-10-01T22:33:24Z	ERROR	Reconciler error	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "IOSXESoftwareUpgrade": {"name":"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98","namespace":"cvk-live"}, "namespace": "cvk-live", "name": "roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98", "reconcileID": "96fb1609-a21b-4e88-9eda-b89f9603cdd0", "error": "acknowledge managed upgrade control: iosxesoftwareupgrades.ops.cisco.vk \"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98\" is forbidden: ValidatingAdmissionPolicy 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' with binding 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' denied request: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).reconcileHandler
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:495
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).processNextWorkItem
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:438
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).Start.func1.1
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:313
+2026-10-01T22:33:24Z	ERROR	Reconciler error	{"controller": "iosxesoftwareupgrade", "controllerGroup": "ops.cisco.vk", "controllerKind": "IOSXESoftwareUpgrade", "IOSXESoftwareUpgrade": {"name":"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98","namespace":"cvk-live"}, "namespace": "cvk-live", "name": "roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98", "reconcileID": "1e85fedd-5373-44a1-b6ba-c4fc83116113", "error": "acknowledge managed upgrade control: iosxesoftwareupgrades.ops.cisco.vk \"roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98\" is forbidden: ValidatingAdmissionPolicy 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' with binding 'cisco-vk-cisco-virtual-kubelet-shared-upgrade-leaf' denied request: shared functional leaf mutation requires the exact manager-bound worker Pod name and UID"}
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).reconcileHandler
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:495
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).processNextWorkItem
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:438
+sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[...]).Start.func1.1
+	sigs.k8s.io/controller-runtime@v0.23.3/pkg/internal/controller/controller.go:313
+time="2026-10-01T22:33:29Z" level=info msg="IOSXESoftwareUpgrade phase advanced" file="reconciler.go:3669" from= reason=Pending softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 to=Pending
+time="2026-10-01T22:33:51Z" level=info msg="IOSXESoftwareUpgrade phase advanced" file="reconciler.go:3669" from=Pending reason=Resolving softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 to=Resolving
+time="2026-10-01T22:33:52Z" level=info msg="IOSXESoftwareUpgrade phase advanced" file="reconciler.go:3669" from=Resolving reason=TransferPending softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 to=Transferring
+time="2026-10-01T22:34:55Z" level=info msg="ListPods: discovering pods from device" file="pod_lifecycle.go:653"
+time="2026-10-01T22:34:56Z" level=warning msg="dispatching gNOI OS.Install" file="reconciler.go:2086" softwareUpgrade=cvk-live/roadmap-pacing-downgrade-20261002-103-cat9k-lab-103-0f3c4e98 standbySupervisor=false targetVersion=17.18.02
