@@ -88,6 +88,40 @@ func TestEnsureTLSConfig_IPAddressSAN(t *testing.T) {
 	t.Errorf("IP SAN 192.168.1.1 not found in cert; got %v", cert.IPAddresses)
 }
 
+func TestEnsureTLSConfig_MultipleIPAddressSANs(t *testing.T) {
+	dir := t.TempDir()
+	cfg, err := EnsureTLSConfig(
+		filepath.Join(dir, "tls.crt"),
+		filepath.Join(dir, "tls.key"),
+		filepath.Join(dir, "tls.crt"),
+		filepath.Join(dir, "tls.key"),
+		"192.168.1.1",
+		"10.0.0.77",
+	)
+	if err != nil {
+		t.Fatalf("EnsureTLSConfig() error = %v", err)
+	}
+
+	cert, err := parseCertFromConfig(cfg)
+	if err != nil {
+		t.Fatalf("parseCertFromConfig() error = %v", err)
+	}
+
+	for _, want := range []string{"192.168.1.1", "10.0.0.77"} {
+		parsed := net.ParseIP(want)
+		found := false
+		for _, ip := range cert.IPAddresses {
+			if ip.Equal(parsed) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("IP SAN %s not found in cert; got %v", want, cert.IPAddresses)
+		}
+	}
+}
+
 // TestEnsureTLSConfig_DNSSANHostname verifies that a non-IP device address is
 // added to the certificate's DNSNames SANs.
 func TestEnsureTLSConfig_DNSSANHostname(t *testing.T) {

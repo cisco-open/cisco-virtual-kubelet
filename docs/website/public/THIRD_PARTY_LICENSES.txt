@@ -1392,7 +1392,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ================================================================================
-source-map-js@1.2.1
+source-map-js@1.2.2
 ================================================================================
 License: BSD-3-Clause
 Author: Valentin 7rulnik Semirulnik <v7rulnik@gmail.com>
