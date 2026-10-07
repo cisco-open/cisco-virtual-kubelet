@@ -211,6 +211,12 @@ type NetworkControllerSpec struct {
 	// +optional
 	TLS *NetworkControllerTLSConfig `json:"tls,omitempty"`
 
+	// DeviceAdoption opts the controller into turning its inventory into
+	// standalone CiscoDevice objects. Omitted or disabled means inventory is
+	// reported only.
+	// +optional
+	DeviceAdoption *NetworkControllerDeviceAdoption `json:"deviceAdoption,omitempty"`
+
 	// PreferredAPIVersion optionally pins an adapter-supported API version.
 	// Empty requests adapter discovery and negotiation.
 	// +kubebuilder:validation:MaxLength=128

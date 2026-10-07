@@ -11,9 +11,15 @@ package controller
 import (
 	"os"
 	"os/exec"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
+
+	rbacv1 "k8s.io/api/rbac/v1"
+	"sigs.k8s.io/yaml"
+
+	"github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter"
 )
 
 func TestVKRBACStrictProfileGatesHighRiskRules(t *testing.T) {
@@ -123,6 +129,88 @@ func TestNetworkControllerWorkerRBACStaysSecretlessAndStatusOnly(t *testing.T) {
 	} {
 		if strings.Contains(text, forbidden) {
 			t.Fatalf("controller-worker RBAC contains forbidden grant %q", forbidden)
+		}
+	}
+}
+
+func workerClusterRoles(t *testing.T) map[string]rbacv1.ClusterRole {
+	t.Helper()
+	raw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/templates/controller-worker-rbac.yaml")
+	if err != nil {
+		t.Fatalf("read controller-worker RBAC template: %v", err)
+	}
+	roles := map[string]rbacv1.ClusterRole{}
+	for _, doc := range strings.Split(string(raw), "\n---\n") {
+		var kept []string
+		for _, line := range strings.Split(doc, "\n") {
+			if !strings.Contains(line, "{{") { // Helm directives and the labels they feed
+				kept = append(kept, line)
+			}
+		}
+		var role rbacv1.ClusterRole
+		if err := yaml.Unmarshal([]byte(strings.Join(kept, "\n")), &role); err != nil || role.Kind != "ClusterRole" {
+			continue
+		}
+		roles[role.Name] = role
+	}
+	return roles
+}
+
+func TestDeviceAdoptionWorkerRoleExtendsBaseOnlyByCiscoDevices(t *testing.T) {
+	roles := workerClusterRoles(t)
+	base, ok := roles[controlleradapter.DefaultWorkerClusterRole]
+	if !ok {
+		t.Fatal("base worker ClusterRole missing from chart")
+	}
+	adopt, ok := roles[controlleradapter.DeviceAdoptionWorkerClusterRole]
+	if !ok {
+		t.Fatal("device-adoption worker ClusterRole missing from chart")
+	}
+	if len(adopt.Rules) != len(base.Rules)+1 {
+		t.Fatalf("adoption role has %d rules, want base (%d) + 1", len(adopt.Rules), len(base.Rules))
+	}
+	for i, rule := range base.Rules {
+		if !reflect.DeepEqual(rule, adopt.Rules[i]) {
+			t.Fatalf("adoption role drifted from base at rule %d: %+v vs %+v", i, adopt.Rules[i], rule)
+		}
+	}
+	extra := adopt.Rules[len(adopt.Rules)-1]
+	want := rbacv1.PolicyRule{
+		APIGroups: []string{"cisco.vk"},
+		Resources: []string{"ciscodevices"},
+		Verbs:     []string{"get", "list", "watch", "create", "update", "patch"},
+	}
+	if !reflect.DeepEqual(extra, want) {
+		t.Fatalf("unexpected extra rule %+v, want %+v", extra, want)
+	}
+	for _, rule := range adopt.Rules {
+		for _, res := range rule.Resources {
+			if res == "secrets" || res == "ciscodevices/status" || res == "ciscodevices/finalizers" {
+				t.Fatalf("adoption role must not grant %q", res)
+			}
+		}
+		for _, verb := range rule.Verbs {
+			if verb == "delete" || verb == "deletecollection" || verb == "*" {
+				t.Fatalf("adoption role must not grant verb %q", verb)
+			}
+		}
+	}
+}
+
+func TestManagerBindMarkerCoversEveryAuditedWorkerRole(t *testing.T) {
+	raw, err := os.ReadFile("networkcontroller_controller.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var marker string
+	for _, line := range strings.Split(string(raw), "\n") {
+		if strings.Contains(line, "resources=clusterroles") && strings.Contains(line, "verbs=bind") {
+			marker = line
+		}
+	}
+	for _, role := range []string{controlleradapter.DefaultWorkerClusterRole, controlleradapter.DeviceAdoptionWorkerClusterRole} {
+		if !strings.Contains(marker, role) {
+			t.Errorf("manager bind marker does not cover %q: %s", role, marker)
 		}
 	}
 }

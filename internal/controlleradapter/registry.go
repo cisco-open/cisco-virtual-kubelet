@@ -294,7 +294,7 @@ func validateRegistration(reg Registration) error {
 // here, to the chart, and to the manager bind markers in one reviewed change.
 func auditedWorkerClusterRole(name string) bool {
 	switch name {
-	case DefaultWorkerClusterRole:
+	case DefaultWorkerClusterRole, DeviceAdoptionWorkerClusterRole:
 		return true
 	default:
 		return false

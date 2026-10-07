@@ -99,6 +99,27 @@ func (a *adapter) syncInventory(ctx context.Context) {
 	if perr := a.publishCapability(ctx, CapabilityInventory, ok, msg); perr != nil {
 		log.Error(perr, "publish inventory status")
 	}
+	if err == nil && a.devices.enabled() {
+		a.syncDevices(ctx, items)
+	}
+}
+
+// syncDevices runs only after a complete, successful inventory refresh, so a
+// partial or failed listing can never look like a change in the fleet.
+func (a *adapter) syncDevices(ctx context.Context, items []InventoryItem) {
+	log := ctrl.Log.WithName("nexus-dashboard").WithValues("networkController", a.key)
+	res, err := a.devices.Sync(ctx, items)
+	if ctx.Err() != nil {
+		return
+	}
+	ok, msg := res.ok() && err == nil, res.String()
+	if err != nil {
+		ok, msg = false, bound(fmt.Sprintf("device adoption failed: %s", err))
+		log.Info("device adoption failed", "error", err.Error())
+	}
+	if perr := a.publishCapability(ctx, CapabilityDeviceAdoption, ok, bound(msg)); perr != nil {
+		log.Error(perr, "publish device-adoption status")
+	}
 }
 
 func (a *adapter) publishCapability(ctx context.Context, name string, ok bool, msg string) error {

@@ -42,8 +42,8 @@ func Descriptor() controlleradapter.Descriptor {
 			ModelVersions: []string{"nd-4.2"},
 			Sections:      []string{"nd"},
 		},
-		Capabilities:      []string{CapabilityHealth, CapabilityInventory},
-		WorkerClusterRole: controlleradapter.DefaultWorkerClusterRole,
+		Capabilities:      []string{CapabilityHealth, CapabilityInventory, CapabilityDeviceAdoption},
+		WorkerClusterRole: controlleradapter.DeviceAdoptionWorkerClusterRole,
 	}
 }
 

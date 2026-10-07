@@ -51,6 +51,9 @@ type adapter struct {
 	inventoryInterval time.Duration
 	inventory         inventoryStore
 	statusWriter      ctrlclient.Client // set in SetupWithManager
+	adoption          *ciskov1.NetworkControllerDeviceAdoption
+	uid               string
+	devices           *deviceSyncer // nil unless adoption is enabled
 }
 
 // newAdapter validates local options only. It never dials and starts nothing.
@@ -72,6 +75,9 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 	concurrency := int(conn.MaxConcurrentRequests)
 	if concurrency < 1 {
 		concurrency = defaultConcurrency
+	}
+	if ad := nc.Spec.DeviceAdoption; ad != nil && ad.Enabled && ad.Defaults == nil {
+		return nil, fmt.Errorf("nexus-dashboard: deviceAdoption is enabled without defaults")
 	}
 	insecure := nc.Spec.TLS != nil && nc.Spec.TLS.InsecureSkipVerify
 	if timeout <= 0 || interval <= 0 {
@@ -97,12 +103,17 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 		inventoryInterval: defaultInventoryInterval,
 		invalidate:        c.Invalidate,
 		now:               time.Now,
+		adoption:          nc.Spec.DeviceAdoption.DeepCopy(),
+		uid:               string(nc.UID),
 	}, nil
 }
 
 // SetupWithManager registers the health loop as a manager-owned Runnable.
 func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 	a.statusWriter = mgr.GetClient()
+	if a.adoption != nil && a.adoption.Enabled {
+		a.devices = &deviceSyncer{client: a.statusWriter, namespace: a.key.Namespace, uid: a.uid, adoption: a.adoption}
+	}
 	if err := mgr.Add(&healthRunnable{adapter: a}); err != nil {
 		return err
 	}

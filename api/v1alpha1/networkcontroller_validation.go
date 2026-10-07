@@ -121,6 +121,8 @@ func ValidateNetworkControllerSpec(spec *NetworkControllerSpec) field.ErrorList 
 		}
 	}
 
+	errs = append(errs, validateDeviceAdoption(root.Child("deviceAdoption"), spec.DeviceAdoption)...)
+
 	connectionPath := root.Child("connection")
 	if requestTimeout := spec.Connection.RequestTimeout; requestTimeout != nil {
 		duration := requestTimeout.Duration
@@ -150,5 +152,55 @@ func ValidateNetworkControllerSpec(spec *NetworkControllerSpec) field.ErrorList 
 		errs = append(errs, field.Invalid(root.Child("preferredAPIVersion"), spec.PreferredAPIVersion, "must not be whitespace"))
 	}
 
+	return errs
+}
+
+var deviceScopePattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+
+func validateSecretName(path *field.Path, name string) field.ErrorList {
+	if name == "" {
+		return field.ErrorList{field.Required(path, "Secret name is required")}
+	}
+	if problems := utilvalidation.IsDNS1123Subdomain(name); len(problems) > 0 {
+		return field.ErrorList{field.Invalid(path, name, strings.Join(problems, "; "))}
+	}
+	return nil
+}
+
+// validateDeviceAdoption mirrors the CRD rules and, because overrides replace
+// fields one by one, checks that every scope still resolves to a complete
+// access set.
+func validateDeviceAdoption(path *field.Path, a *NetworkControllerDeviceAdoption) field.ErrorList {
+	if a == nil {
+		return nil
+	}
+	var errs field.ErrorList
+	if a.Enabled && a.Defaults == nil {
+		errs = append(errs, field.Required(path.Child("defaults"), "required when enabled is true"))
+	}
+	if a.Defaults != nil {
+		d := path.Child("defaults")
+		if a.Defaults.Username == "" {
+			errs = append(errs, field.Required(d.Child("username"), "device username is required"))
+		}
+		errs = append(errs, validateSecretName(d.Child("credentialSecretRef").Child("name"), a.Defaults.CredentialSecretRef.Name)...)
+	}
+	if len(a.ScopeOverrides) > 64 {
+		errs = append(errs, field.TooMany(path.Child("scopeOverrides"), len(a.ScopeOverrides), 64))
+	}
+	seen := make(map[string]struct{}, len(a.ScopeOverrides))
+	for i, o := range a.ScopeOverrides {
+		p := path.Child("scopeOverrides").Index(i)
+		if len(o.Scope) == 0 || len(o.Scope) > 64 || !deviceScopePattern.MatchString(o.Scope) {
+			errs = append(errs, field.Invalid(p.Child("scope"), o.Scope, "must be 1-64 characters of [A-Za-z0-9_.-] starting with an alphanumeric"))
+		}
+		if _, dup := seen[o.Scope]; dup {
+			errs = append(errs, field.Duplicate(p.Child("scope"), o.Scope))
+		}
+		seen[o.Scope] = struct{}{}
+		if o.CredentialSecretRef != nil {
+			errs = append(errs, validateSecretName(p.Child("credentialSecretRef").Child("name"), o.CredentialSecretRef.Name)...)
+		}
+	}
 	return errs
 }
