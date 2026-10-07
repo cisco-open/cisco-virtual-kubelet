@@ -44,7 +44,7 @@
     "js-yaml": "4.3.2",
     "source-map-js": "1.2.2",
     "next": {
-      "sharp": "0.35.4"
+      "sharp": "0.35.5"
     }
   }
 }
