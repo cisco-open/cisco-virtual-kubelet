@@ -14,6 +14,11 @@
 
 package main
 
+import (
+	// Nexus Dashboard network-controller adapter.
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard"
+)
+
 // Concrete network-controller adapters are enabled with blank imports in this
 // composition file, mirroring drivers_register.go. The generic manager reads
 // only their registered descriptors; controller-worker is the sole command
