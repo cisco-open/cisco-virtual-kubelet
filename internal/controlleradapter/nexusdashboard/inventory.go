@@ -28,7 +28,7 @@ import (
 const (
 	fabricsPath = "/api/v1/manage/fabrics"
 	// switchesPathFmt takes one validated fabric name.
-	switchesPathFmt = "/api/v1/manage/fabric/%s/switches"
+	switchesPathFmt = "/api/v1/manage/fabrics/%s/switches"
 
 	// Paging query parameter names are UNVERIFIED against a live ND; the
 	// swagger example only shows the meta.counts response envelope.
@@ -49,7 +49,7 @@ var fabricNameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 var nxosModelRE = regexp.MustCompile(`^N[0-9]+[A-Z]?-`)
 
 // InventoryItem is the adapter-neutral view of one ND-managed switch.
-// Role is empty until ND exposes it in the Manage switch schema.
+// Role is ND's switchRole (for example leaf, spine) when present.
 type InventoryItem struct {
 	Serial          string
 	Hostname        string
@@ -68,6 +68,8 @@ type InventoryItem struct {
 // ndSwitch is the subset of the ND Manage switch schema the adapter reads.
 type ndSwitch struct {
 	SwitchID           string `json:"switchId"`
+	SerialNumber       string `json:"serialNumber"`
+	SwitchRole         string `json:"switchRole"`
 	Hostname           string `json:"hostname"`
 	Model              string `json:"model"`
 	SoftwareVersion    string `json:"softwareVersion"`
@@ -79,21 +81,35 @@ type ndSwitch struct {
 	} `json:"telemetryIpCollection"`
 	Additional struct {
 		DiscoveryStatus string `json:"discoveryStatus"`
+		PlatformType    string `json:"platformType"`
 		Vendor          string `json:"vendor"`
-	} `json:"additionalSwitchData"`
+	} `json:"additionalData"`
 }
 
 type ndFabric struct {
 	Name string `json:"name"`
 }
 
+// pageMeta reads the paging envelope. ND 4.x is inconsistent: the switch list
+// reports meta.counts.{remaining,total} while the fabric list reports
+// meta.{remaining,total} directly, so both shapes are accepted.
+type pageMetaBody struct {
+	Remaining int `json:"remaining"`
+	Counts    struct {
+		Remaining int `json:"remaining"`
+		Total     int `json:"total"`
+	} `json:"counts"`
+}
+
 type pageMeta struct {
-	Meta struct {
-		Counts struct {
-			Remaining int `json:"remaining"`
-			Total     int `json:"total"`
-		} `json:"counts"`
-	} `json:"meta"`
+	Meta pageMetaBody `json:"meta"`
+}
+
+func (m pageMetaBody) remaining() int {
+	if m.Counts.Remaining > m.Remaining {
+		return m.Counts.Remaining
+	}
+	return m.Remaining
 }
 
 // listPaged follows meta.counts.remaining and returns the raw items found
@@ -125,7 +141,7 @@ func (c *client) listPaged(ctx context.Context, path, key string) ([]json.RawMes
 			}
 		}
 		all = append(all, items...)
-		if len(items) == 0 || env.Meta.Counts.Remaining <= 0 {
+		if len(items) == 0 || env.Meta.remaining() <= 0 {
 			return all, nil
 		}
 		offset += len(items)
@@ -168,7 +184,8 @@ func (c *client) ListInventory(ctx context.Context) ([]InventoryItem, error) {
 
 func toInventoryItem(sw ndSwitch, fabric string) InventoryItem {
 	item := InventoryItem{
-		Serial:          sw.SwitchID,
+		Serial:          firstNonEmpty(sw.SerialNumber, sw.SwitchID),
+		Role:            sw.SwitchRole,
 		Hostname:        sw.Hostname,
 		MgmtAddress:     firstNonEmpty(sw.FabricManagementIP, sw.Telemetry.OutOfBandIPv4),
 		Model:           sw.Model,
@@ -178,7 +195,7 @@ func toInventoryItem(sw ndSwitch, fabric string) InventoryItem {
 		Reachable:       strings.EqualFold(sw.Additional.DiscoveryStatus, "ok"),
 		Platform:        PlatformOther,
 	}
-	if nxosModelRE.MatchString(sw.Model) {
+	if nxosModelRE.MatchString(sw.Model) || strings.EqualFold(sw.Additional.PlatformType, "nx-os") {
 		item.Platform = PlatformNXOS
 	}
 	switch {

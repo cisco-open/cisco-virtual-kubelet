@@ -35,11 +35,11 @@ read request. Only GET requests are retried.
 
 Every 5 minutes (jittered by 10%) the worker lists fabrics with
 `GET /api/v1/manage/fabrics`, then the switches of each fabric with
-`GET /api/v1/manage/fabric/{fabricName}/switches`, following
+`GET /api/v1/manage/fabrics/{fabricName}/switches`, following
 `meta.counts.remaining`. Each switch becomes an in-memory `InventoryItem`
 (serial from `switchId`, hostname, management address from
 `fabricManagementIp`, model, software version, fabric, and reachability from
-`additionalSwitchData.discoveryStatus == ok`).
+`additionalData.discoveryStatus == ok`).
 
 - A switch is adoptable only if its model looks like NX-OS (`N9K-...`), and it
   has a serial and a management address. Others are skipped with a reason.
@@ -50,7 +50,7 @@ Every 5 minutes (jittered by 10%) the worker lists fabrics with
   snapshot is kept; the capability shows `Supported=false` with a redacted
   reason.
 - Nothing consumes the inventory yet, and there is no fabric or role filter.
-  `role` is empty because the documented switch schema has no role field.
+  `role` comes from ND's `switchRole`.
 
 Unverified against a live ND: the paging query parameter names (`max`,
 `offset`). Run `go test -tags live -run TestLiveInventory -v` to confirm.
@@ -111,6 +111,7 @@ kubectl get networkcontroller nd-lab -o jsonpath='{range .status.conditions[*]}{
 - Documented example tokens expire about 20 minutes after issue; the adapter
   refreshes on its own schedule and on 401.
 - The Manage API is GA from ND 4.2.1; Early Access releases may change schemas.
-- The switch schema comes from the in-product swagger
-  (`https://<nd>/help-center/swagger/`); the example fixture is
-  `testdata/switches_page.json`. It was not captured from a live ND.
+- The switch schema was checked against a live ND 4.x capture;
+  `testdata/switches_page.json` is that response with identifiers replaced.
+  The `max`/`offset` paging parameters are not yet confirmed with more than
+  one page of data.

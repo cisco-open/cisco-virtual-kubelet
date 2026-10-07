@@ -30,6 +30,7 @@ package nexusdashboard
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,12 +102,17 @@ func TestLiveDumpPaths(t *testing.T) {
 	}
 	for _, p := range strings.Split(paths, ",") {
 		p = strings.TrimSpace(p)
-		body, err := c.Get(context.Background(), p, nil)
+		path, rawQuery, _ := strings.Cut(p, "?")
+		query, qerr := url.ParseQuery(rawQuery)
+		if qerr != nil {
+			t.Fatalf("bad query in %q: %v", p, qerr)
+		}
+		body, err := c.Get(context.Background(), path, query)
 		if err != nil {
 			t.Errorf("GET %s: %v", p, err)
 			continue
 		}
-		name := strings.Trim(strings.ReplaceAll(p, "/", "_"), "_") + ".json"
+		name := strings.Trim(strings.NewReplacer("/", "_", "?", "_", "&", "_", "=", "-").Replace(p), "_") + ".json"
 		if err := os.WriteFile(filepath.Join(out, name), body, 0o600); err != nil {
 			t.Fatal(err)
 		}

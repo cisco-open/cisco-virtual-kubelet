@@ -62,8 +62,8 @@ func registerInventory(f *fakeND, fabrics map[string][]map[string]any, pages *[]
 		}
 		page(w, r, "fabrics", list)
 	})
-	f.mux.HandleFunc("/api/v1/manage/fabric/", func(w http.ResponseWriter, r *http.Request) {
-		name := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/v1/manage/fabric/"), "/switches")
+	f.mux.HandleFunc("/api/v1/manage/fabrics/", func(w http.ResponseWriter, r *http.Request) {
+		name := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/v1/manage/fabrics/"), "/switches")
 		sw, ok := fabrics[name]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
@@ -79,12 +79,12 @@ func registerInventory(f *fakeND, fabrics map[string][]map[string]any, pages *[]
 
 func sw(serial, model, ip, status string) map[string]any {
 	return map[string]any{
-		"switchId": serial, "hostname": "h-" + serial, "model": model, "fabricManagementIp": ip,
-		"softwareVersion": "10.4(2)", "additionalSwitchData": map[string]any{"discoveryStatus": status},
+		"switchId": serial, "serialNumber": serial, "switchRole": "leaf", "hostname": "h-" + serial, "model": model, "fabricManagementIp": ip,
+		"softwareVersion": "10.4(2)", "additionalData": map[string]any{"discoveryStatus": status},
 	}
 }
 
-func TestToInventoryItemFromSwaggerExample(t *testing.T) {
+func TestToInventoryItemFromLiveCapture(t *testing.T) {
 	raw, err := os.ReadFile("testdata/switches_page.json")
 	if err != nil {
 		t.Fatal(err)
@@ -95,10 +95,11 @@ func TestToInventoryItemFromSwaggerExample(t *testing.T) {
 	if err := json.Unmarshal(raw, &env); err != nil || len(env.Switches) != 1 {
 		t.Fatalf("decode: %v", err)
 	}
-	got := toInventoryItem(env.Switches[0], "fab1")
+	got := toInventoryItem(env.Switches[0], "lab-fabric")
 	want := InventoryItem{
-		Serial: "SAL1948TRHH", Hostname: "nx-leaf1", MgmtAddress: "10.23.244.72", Model: "N9K-C93180YC-FX3",
-		Platform: PlatformNXOS, Fabric: "fab1", FabricType: "VXLAN", SoftwareVersion: "10.4(2)", Reachable: true,
+		Serial: "SERIAL0001", Hostname: "nx-os-test", MgmtAddress: "192.0.2.10", Model: "N9K-C9300v",
+		Platform: PlatformNXOS, Fabric: "lab-fabric", FabricType: "vxlanIbgp", Role: "leaf",
+		SoftwareVersion: "10.5(6)", Reachable: true,
 	}
 	if got != want {
 		t.Fatalf("got %+v\nwant %+v", got, want)
@@ -147,7 +148,7 @@ func TestListInventoryPaginatesAcrossFabrics(t *testing.T) {
 	}
 	bigPages := 0
 	for _, p := range pages {
-		if strings.Contains(p, "/fabric/big/") {
+		if strings.Contains(p, "/fabrics/big/") {
 			bigPages++
 		}
 	}
@@ -205,7 +206,7 @@ func TestInvalidFabricNameNeverReachesURL(t *testing.T) {
 	f.setFabrics(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"fabrics":[{"name":"../../infra"},{"name":"a b"}],"meta":{"counts":{"remaining":0,"total":2}}}`))
 	})
-	f.mux.HandleFunc("/api/v1/manage/fabric/", func(http.ResponseWriter, *http.Request) { hit = true })
+	f.mux.HandleFunc("/api/v1/manage/fabrics/", func(http.ResponseWriter, *http.Request) { hit = true })
 	c := testClient(f, writeCreds(t, "s3cret", ""), "", false)
 	items, err := c.ListInventory(context.Background())
 	if err != nil || len(items) != 0 || hit {
@@ -251,6 +252,18 @@ func TestJitterBounds(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		if j := jittered(d); j < time.Duration(0.9*float64(d)) || j > time.Duration(1.1*float64(d)) {
 			t.Fatalf("jitter out of bounds: %v", j)
+		}
+	}
+}
+
+func TestPageMetaAcceptsBothEnvelopes(t *testing.T) {
+	for name, body := range map[string]string{
+		"switches": `{"meta":{"counts":{"remaining":4,"total":9}}}`,
+		"fabrics":  `{"meta":{"remaining":4,"total":9}}`,
+	} {
+		var m pageMeta
+		if err := json.Unmarshal([]byte(body), &m); err != nil || m.Meta.remaining() != 4 {
+			t.Errorf("%s: remaining=%d err=%v", name, m.Meta.remaining(), err)
 		}
 	}
 }
