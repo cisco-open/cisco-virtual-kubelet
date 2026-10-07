@@ -498,3 +498,7 @@ RBAC behavior.
 The acceptance bar is that removing the adapter package and its composition-
 root import leaves the generic APIs, registry, manager, worker, existing device
 drivers, and transports building and behaving identically.
+
+## Reference adapters
+
+- [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health only.
