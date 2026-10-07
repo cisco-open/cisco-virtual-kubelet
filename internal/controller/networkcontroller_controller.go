@@ -79,10 +79,10 @@ type NetworkControllerReconciler struct {
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
-// The base worker ClusterRole is installed by Helm and bound into each
-// controller namespace. Product-specific worker roles must be installed and
-// explicitly added to this audited bind allow-list when their adapter lands.
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet-controller-worker,verbs=bind
+// The worker ClusterRoles are installed by Helm and bound into each
+// controller namespace. Any further worker role must be installed and
+// explicitly added to this audited bind allow-list when its adapter lands.
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet-controller-worker;cisco-virtual-kubelet-controller-worker-device-adoption,verbs=bind
 
 // Reconcile creates the non-sensitive bootstrap ConfigMap, dedicated Service
 // Account and RoleBinding, and restricted worker Deployment for a registered

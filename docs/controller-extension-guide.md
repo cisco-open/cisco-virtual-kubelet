@@ -357,6 +357,13 @@ therefore constrained to the worker's namespace and grants only:
 - read-only source ConfigMaps;
 - Events for bounded, sanitized operational feedback.
 
+Adapters that adopt controller inventory as `CiscoDevice` objects use the
+separate `cisco-virtual-kubelet-controller-worker-device-adoption` role: the
+same rules plus get/list/watch/create/update/patch on `ciscodevices`, with no
+delete grant and no Secrets access. Any new worker role must be added in one
+reviewed change to the chart, the registry allow-list, and the manager `bind`
+marker; `chart_rbac_test.go` checks the three stay aligned.
+
 The unique ServiceAccount isolates identity and auditing, but its RoleBinding
 does not create an endpoint-level Kubernetes authorization boundary. In
 particular, Kubernetes authorizes that worker to update or patch the
@@ -498,3 +505,7 @@ RBAC behavior.
 The acceptance bar is that removing the adapter package and its composition-
 root import leaves the generic APIs, registry, manager, worker, existing device
 drivers, and transports building and behaving identically.
+
+## Reference adapters
+
+- [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health only.

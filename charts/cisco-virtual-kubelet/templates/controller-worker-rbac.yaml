@@ -51,3 +51,42 @@ rules:
     verbs: ["create", "patch"]
   # Credential Secrets are intentionally absent. The kubelet projects the
   # administrator-approved Secret keys into the worker pod as read-only files.
+---
+# Base worker grants plus CiscoDevice create/update/patch/delete, for adapters
+# that adopt controller inventory as standalone CiscoDevice objects. A
+# RoleBinding can reference only one ClusterRole, so the base rules are
+# repeated here; chart_rbac_test.go fails if the two drift. Delete is needed
+# only for the opt-in spec.deviceAdoption.removal.policy=Prune. RBAC cannot
+# condition on policy, so the adapter itself deletes only devices that carry
+# its own controller-UID label, after a grace period and behind a mass-delete
+# guard. There is no deletecollection and still no Secrets access: the adapter
+# only writes Secret names into CiscoDevice.spec.credentialSecretRef.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-controller-worker-device-adoption
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["networkcontrollerconfigs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["networkcontrollerconfigs/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Adopted inventory. Status stays with the CiscoDevice controller.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]

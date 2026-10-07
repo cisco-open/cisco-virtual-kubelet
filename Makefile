@@ -126,6 +126,7 @@ test-envtest: ## Run envtest real-apiserver smoke tests (requires setup-envtest 
 	@KUBEBUILDER_ASSETS="$$(setup-envtest use 1.35.0 -p path)" \
 		$(GO_BIN) test -tags envtest -count=1 -v \
 			./internal/provider/ ./internal/controller/ ./internal/topologyrollout/ \
+			./internal/controlleradapter/nexusdashboard/ \
 			-run TestEnvtest_
 
 lint: ## Run linter

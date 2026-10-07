@@ -192,6 +192,7 @@ rules:
   - rbac.authorization.k8s.io
   resourceNames:
   - cisco-virtual-kubelet-controller-worker
+  - cisco-virtual-kubelet-controller-worker-device-adoption
   resources:
   - clusterroles
   verbs:
