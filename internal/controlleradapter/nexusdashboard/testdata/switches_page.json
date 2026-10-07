@@ -1,0 +1,16 @@
+{
+  "meta": {"counts": {"remaining": 0, "total": 3}},
+  "switches": [
+    {
+      "additionalSwitchData": {"discoveryStatus": "ok", "vendor": "Cisco", "configSyncStatus": "inSync"},
+      "fabricManagementIp": "10.23.244.72",
+      "fabricName": "fab1",
+      "fabricType": "VXLAN",
+      "hostname": "nx-leaf1",
+      "model": "N9K-C93180YC-FX3",
+      "softwareVersion": "10.4(2)",
+      "switchId": "SAL1948TRHH",
+      "telemetryIpCollection": {"outOfBandIpV4Address": "10.23.244.72"}
+    }
+  ]
+}

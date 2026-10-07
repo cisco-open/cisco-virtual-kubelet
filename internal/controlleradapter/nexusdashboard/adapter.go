@@ -40,14 +40,17 @@ const (
 )
 
 type adapter struct {
-	key          types.NamespacedName
-	client       *client
-	interval     time.Duration
-	rotation     <-chan struct{}
-	probe        func(context.Context) error
-	invalidate   func()
-	now          func() time.Time
-	statusWriter ctrlclient.Client // set in SetupWithManager
+	key               types.NamespacedName
+	client            *client
+	interval          time.Duration
+	rotation          <-chan struct{}
+	probe             func(context.Context) error
+	invalidate        func()
+	now               func() time.Time
+	list              func(context.Context) ([]InventoryItem, error)
+	inventoryInterval time.Duration
+	inventory         inventoryStore
+	statusWriter      ctrlclient.Client // set in SetupWithManager
 }
 
 // newAdapter validates local options only. It never dials and starts nothing.
@@ -85,20 +88,25 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 		Limiter:            rate.NewLimiter(rate.Limit(rps), burst),
 	})
 	return &adapter{
-		key:        types.NamespacedName{Namespace: nc.Namespace, Name: nc.Name},
-		client:     c,
-		interval:   interval,
-		rotation:   opts.MaterialRotation.Changes,
-		probe:      c.Probe,
-		invalidate: c.Invalidate,
-		now:        time.Now,
+		key:               types.NamespacedName{Namespace: nc.Namespace, Name: nc.Name},
+		client:            c,
+		interval:          interval,
+		rotation:          opts.MaterialRotation.Changes,
+		probe:             c.Probe,
+		list:              c.ListInventory,
+		inventoryInterval: defaultInventoryInterval,
+		invalidate:        c.Invalidate,
+		now:               time.Now,
 	}, nil
 }
 
 // SetupWithManager registers the health loop as a manager-owned Runnable.
 func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 	a.statusWriter = mgr.GetClient()
-	return mgr.Add(&healthRunnable{adapter: a})
+	if err := mgr.Add(&healthRunnable{adapter: a}); err != nil {
+		return err
+	}
+	return mgr.Add(&inventoryRunnable{adapter: a})
 }
 
 type healthRunnable struct{ adapter *adapter }

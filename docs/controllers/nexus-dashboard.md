@@ -4,9 +4,9 @@ The `nexus-dashboard` adapter connects a `NetworkController` to Cisco Nexus
 Dashboard (ND) 4.x through the `/api/v1` APIs (Infra login, Manage). It does
 not use the NDFC legacy `/appcenter/...` APIs.
 
-**Current scope (phase 1):** connect, authenticate, and report health. Inventory
-and node creation are planned in later phases; intent reconciliation is not
-implemented. The Network as Code stripe is `nd`, declared but not reconciled.
+**Current scope (phases 1-2):** connect, authenticate, report health, and read
+the switch inventory (read-only). Node creation is planned for a later phase;
+intent reconciliation is not implemented. The Network as Code stripe is `nd`, declared but not reconciled.
 
 ## What it checks
 
@@ -30,6 +30,30 @@ Messages are redacted and limited to 512 characters. Tokens and passwords never
 reach status, events, or logs. The token is cached and rebuilt on projected
 credential/CA rotation, after `MaxSessionLifetime`, and once after a 401 on a
 read request. Only GET requests are retried.
+
+## Inventory
+
+Every 5 minutes (jittered by 10%) the worker lists fabrics with
+`GET /api/v1/manage/fabrics`, then the switches of each fabric with
+`GET /api/v1/manage/fabric/{fabricName}/switches`, following
+`meta.counts.remaining`. Each switch becomes an in-memory `InventoryItem`
+(serial from `switchId`, hostname, management address from
+`fabricManagementIp`, model, software version, fabric, and reachability from
+`additionalSwitchData.discoveryStatus == ok`).
+
+- A switch is adoptable only if its model looks like NX-OS (`N9K-...`), and it
+  has a serial and a management address. Others are skipped with a reason.
+- The `inventory` capability in `status.capabilities` reports counts only, for
+  example `3 switches in 1 fabrics; 2 adoptable NX-OS, 1 skipped`. Serials,
+  hostnames, and addresses are never written to status or logs.
+- If any fabric fails to list, the whole refresh fails and the last complete
+  snapshot is kept; the capability shows `Supported=false` with a redacted
+  reason.
+- Nothing consumes the inventory yet, and there is no fabric or role filter.
+  `role` is empty because the documented switch schema has no role field.
+
+Unverified against a live ND: the paging query parameter names (`max`,
+`offset`). Run `go test -tags live -run TestLiveInventory -v` to confirm.
 
 ## Credential Secret
 
@@ -87,5 +111,6 @@ kubectl get networkcontroller nd-lab -o jsonpath='{range .status.conditions[*]}{
 - Documented example tokens expire about 20 minutes after issue; the adapter
   refreshes on its own schedule and on 401.
 - The Manage API is GA from ND 4.2.1; Early Access releases may change schemas.
-- The switch inventory schema is only published in the in-product swagger
-  (`https://<nd>/help-center/swagger/`) and has not been verified yet.
+- The switch schema comes from the in-product swagger
+  (`https://<nd>/help-center/swagger/`); the example fixture is
+  `testdata/switches_page.json`. It was not captured from a live ND.

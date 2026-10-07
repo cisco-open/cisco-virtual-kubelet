@@ -49,7 +49,7 @@ func TestRegisteredDescriptor(t *testing.T) {
 	if !ok {
 		t.Fatal("nexus-dashboard not registered")
 	}
-	if got.WorkerClusterRole != controlleradapter.DefaultWorkerClusterRole || len(got.Capabilities) != 1 || got.Capabilities[0] != "health" {
+	if got.WorkerClusterRole != controlleradapter.DefaultWorkerClusterRole || !reflect.DeepEqual(got.Capabilities, []string{"health", "inventory"}) {
 		t.Fatalf("unexpected descriptor %+v", got)
 	}
 }

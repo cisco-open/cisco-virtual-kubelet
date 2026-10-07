@@ -31,6 +31,7 @@ import (
 
 type fakeND struct {
 	srv        *httptest.Server
+	mux        *http.ServeMux
 	logins     atomic.Int32
 	probes     atomic.Int32
 	password   string
@@ -38,7 +39,10 @@ type fakeND struct {
 	failProbe  atomic.Int32 // number of probe calls to fail with 503
 	probeCode  atomic.Int32 // fixed status for probe if non-zero
 	lastDomain atomic.Value
+	fabrics    atomic.Value // http.HandlerFunc overriding the fabrics/probe endpoint
 }
+
+func (f *fakeND) setFabrics(h http.HandlerFunc) { f.fabrics.Store(h) }
 
 func newFakeND(t *testing.T, tls bool) *fakeND {
 	t.Helper()
@@ -58,6 +62,10 @@ func newFakeND(t *testing.T, tls bool) *fakeND {
 	})
 	mux.HandleFunc(probePath, func(w http.ResponseWriter, r *http.Request) {
 		f.probes.Add(1)
+		if h, ok := f.fabrics.Load().(http.HandlerFunc); ok {
+			h(w, r)
+			return
+		}
 		if code := int(f.probeCode.Load()); code != 0 {
 			w.WriteHeader(code)
 			return
@@ -74,6 +82,7 @@ func newFakeND(t *testing.T, tls bool) *fakeND {
 		}
 		_, _ = w.Write([]byte(`{"fabrics":[]}`))
 	})
+	f.mux = mux
 	if tls {
 		f.srv = httptest.NewTLSServer(mux)
 	} else {

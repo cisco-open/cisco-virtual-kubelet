@@ -113,3 +113,21 @@ func TestLiveDumpPaths(t *testing.T) {
 		t.Logf("saved %d bytes of GET %s to %s", len(body), p, filepath.Join(out, name))
 	}
 }
+
+// TestLiveInventory runs the real fabric and switch listing. It works against
+// an empty ND (zero switches) and against one with devices; it logs counts
+// only. It also confirms the paging query parameters (max/offset), which are
+// unverified assumptions, are accepted by this ND release.
+func TestLiveInventory(t *testing.T) {
+	c := liveClient(t, os.Getenv("ND_PASSWORD"))
+	items, err := c.ListInventory(context.Background())
+	if err != nil {
+		t.Fatalf("ListInventory: %v", err)
+	}
+	t.Logf("inventory: %s", summarize(items))
+	for _, it := range items {
+		if it.SkipReason != "" {
+			t.Logf("skipped model=%q reason=%s", it.Model, it.SkipReason)
+		}
+	}
+}
