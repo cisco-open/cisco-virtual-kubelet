@@ -178,7 +178,7 @@ func TestDeviceAdoptionWorkerRoleExtendsBaseOnlyByCiscoDevices(t *testing.T) {
 	want := rbacv1.PolicyRule{
 		APIGroups: []string{"cisco.vk"},
 		Resources: []string{"ciscodevices"},
-		Verbs:     []string{"get", "list", "watch", "create", "update", "patch"},
+		Verbs:     []string{"get", "list", "watch", "create", "update", "patch", "delete"},
 	}
 	if !reflect.DeepEqual(extra, want) {
 		t.Fatalf("unexpected extra rule %+v, want %+v", extra, want)
@@ -190,7 +190,7 @@ func TestDeviceAdoptionWorkerRoleExtendsBaseOnlyByCiscoDevices(t *testing.T) {
 			}
 		}
 		for _, verb := range rule.Verbs {
-			if verb == "delete" || verb == "deletecollection" || verb == "*" {
+			if verb == "deletecollection" || verb == "*" {
 				t.Fatalf("adoption role must not grant verb %q", verb)
 			}
 		}

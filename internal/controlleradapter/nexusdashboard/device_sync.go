@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,6 +46,16 @@ const (
 	labelManagedBy  = "app.kubernetes.io/managed-by"
 	managedByValue  = "cvk-nexus-dashboard"
 
+	// annotationMissingSince records, in RFC 3339, when a device was first seen
+	// missing from a complete inventory refresh. It is cleared when the switch
+	// returns and is the clock for the Prune grace period.
+	annotationMissingSince = "cisco.vk/nd-missing-since"
+
+	// annotationManagedLabels lists the label keys the adapter applied (comma
+	// separated), so a label dropped from the NetworkController or from ND is
+	// removed again, while labels added by users are never touched.
+	annotationManagedLabels = "cisco.vk/nd-managed-labels"
+
 	labelFabric = "nd.cisco.vk/fabric"
 	labelRole   = "nd.cisco.vk/role"
 	labelModel  = "nd.cisco.vk/model"
@@ -54,23 +66,35 @@ type deviceSyncResult struct {
 	Created, Updated, Unchanged int
 	Unreachable, Invalid        int
 	Conflicts, Failed           int
+	// Missing devices are annotated, Pruned ones deleted, and PruneGuarded
+	// ones were due for deletion but held back by the mass-delete guard.
+	Missing, Pruned, PruneGuarded int
 }
 
 func (r deviceSyncResult) ok() bool { return r.Failed == 0 }
 
 func (r deviceSyncResult) String() string {
-	return fmt.Sprintf("%d created, %d updated, %d unchanged; %d unreachable, %d invalid, %d name conflicts, %d failed",
-		r.Created, r.Updated, r.Unchanged, r.Unreachable, r.Invalid, r.Conflicts, r.Failed)
+	return fmt.Sprintf("%d created, %d updated, %d unchanged; %d unreachable, %d invalid, %d name conflicts, %d failed; %d missing, %d pruned, %d prune-guarded",
+		r.Created, r.Updated, r.Unchanged, r.Unreachable, r.Invalid, r.Conflicts, r.Failed, r.Missing, r.Pruned, r.PruneGuarded)
 }
 
 // deviceSyncer turns inventory into CiscoDevice objects in one namespace. It
-// creates and updates only: it holds no delete permission, and removal of
-// switches from ND is never propagated here.
+// creates and updates devices, annotates the ones whose switch left ND, and
+// deletes them only under the opt-in Prune policy, after a grace period and
+// behind a mass-delete guard.
 type deviceSyncer struct {
 	client    ctrlclient.Client
 	namespace string
 	uid       string
 	adoption  *ciskov1.NetworkControllerDeviceAdoption
+	now       func() time.Time
+}
+
+func (s *deviceSyncer) clock() time.Time {
+	if s.now != nil {
+		return s.now()
+	}
+	return time.Now()
 }
 
 func (s *deviceSyncer) enabled() bool { return s != nil && s.adoption != nil && s.adoption.Enabled }
@@ -143,7 +167,97 @@ func (s *deviceSyncer) Sync(ctx context.Context, items []InventoryItem) (deviceS
 			res.Unchanged++
 		}
 	}
+	s.reconcileMissing(ctx, list.Items, items, &res)
 	return res, nil
+}
+
+// reconcileMissing handles owned devices whose switch is not in the snapshot.
+// An unreachable or skipped switch is still in ND and therefore not missing.
+// An empty snapshot is treated as suspect and changes nothing.
+func (s *deviceSyncer) reconcileMissing(ctx context.Context, devices []ciskov1.CiscoDevice, items []InventoryItem, res *deviceSyncResult) {
+	if len(items) == 0 {
+		return
+	}
+	names := make(map[string]struct{}, len(items))
+	serials := make(map[string]struct{}, len(items))
+	for _, it := range items {
+		if it.Serial == "" {
+			continue
+		}
+		serials[it.Serial] = struct{}{}
+		if n, ok := deviceName(it.Serial); ok {
+			names[n] = struct{}{}
+		}
+	}
+
+	removal := s.adoption.Removal
+	now := s.clock()
+	var owned int
+	var due []*ciskov1.CiscoDevice
+	for i := range devices {
+		d := &devices[i]
+		if !s.owned(d) || d.DeletionTimestamp != nil {
+			continue
+		}
+		owned++
+		_, byName := names[d.Name]
+		_, bySerial := serials[d.Spec.PhysicalIdentity]
+		since, annotated := d.Annotations[annotationMissingSince]
+		if byName || (d.Spec.PhysicalIdentity != "" && bySerial) {
+			if annotated && s.patchMissingSince(ctx, d, nil) != nil {
+				res.Failed++
+			}
+			continue
+		}
+		res.Missing++
+		first, perr := time.Parse(time.RFC3339, since)
+		if !annotated || perr != nil {
+			stamp := now.UTC().Format(time.RFC3339)
+			if s.patchMissingSince(ctx, d, &stamp) != nil {
+				res.Failed++
+			}
+			continue
+		}
+		if removal.EffectivePolicy() == ciskov1.DeviceRemovalPrune && now.Sub(first) >= removal.EffectiveGracePeriod() {
+			due = append(due, d)
+		}
+	}
+	if len(due) == 0 {
+		return
+	}
+	// At least one device may always be pruned; beyond that the fraction of
+	// the fleet is capped so a bad inventory cannot empty the cluster.
+	limit := int(int64(owned) * int64(removal.EffectiveMaxPrunePercent()) / 100)
+	if limit < 1 {
+		limit = 1
+	}
+	if len(due) > limit {
+		res.PruneGuarded += len(due)
+		return
+	}
+	for _, d := range due {
+		uid := d.UID
+		err := s.client.Delete(ctx, d, ctrlclient.Preconditions{UID: &uid})
+		switch {
+		case err == nil, apierrors.IsNotFound(err):
+			res.Pruned++
+		default:
+			res.Failed++
+		}
+	}
+}
+
+// patchMissingSince sets the annotation to *stamp, or removes it when nil.
+func (s *deviceSyncer) patchMissingSince(ctx context.Context, d *ciskov1.CiscoDevice, stamp *string) error {
+	var v any
+	if stamp != nil {
+		v = *stamp
+	}
+	raw, err := json.Marshal(map[string]any{"metadata": map[string]any{"annotations": map[string]any{annotationMissingSince: v}}})
+	if err != nil {
+		return err
+	}
+	return s.client.Patch(ctx, d, ctrlclient.RawPatch(types.MergePatchType, raw))
 }
 
 type outcome int
@@ -167,12 +281,13 @@ func desiredLabels(it InventoryItem) map[string]string {
 
 func (s *deviceSyncer) apply(ctx context.Context, name string, it InventoryItem, access ciskov1.NetworkControllerDeviceAccess,
 	cur *ciskov1.CiscoDevice, uniqueHostname bool, takenNodes map[string]struct{}) (outcome, error) {
-	nodeLabels := desiredLabels(it)
+	nodeLabels := mergeLabels(access.Labels, desiredLabels(it))
 	if cur == nil {
 		dev := &ciskov1.CiscoDevice{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: name, Namespace: s.namespace,
-				Labels: mergeLabels(nodeLabels, map[string]string{labelController: s.uid, labelManagedBy: managedByValue}),
+				Labels:      mergeLabels(nodeLabels, map[string]string{labelController: s.uid, labelManagedBy: managedByValue}),
+				Annotations: map[string]string{annotationManagedLabels: managedKeys(nodeLabels)},
 			},
 			Spec: ciskov1.DeviceSpec{
 				Driver:              ciskov1.DeviceDriverNXOS,
@@ -234,12 +349,18 @@ func (s *deviceSyncer) mergePatch(cur *ciskov1.CiscoDevice, it InventoryItem, ac
 	if cur.Spec.PhysicalIdentity == "" {
 		spec["physicalIdentity"] = it.Serial
 	}
-	if l := labelDiff(cur.Spec.Labels, nodeLabels); len(l) > 0 {
+	// Keys applied earlier but no longer wanted are set to null, which a merge
+	// patch turns into a removal. Only keys in the managed annotation qualify.
+	stale := staleKeys(cur.Annotations[annotationManagedLabels], nodeLabels)
+	if l := labelPatch(cur.Spec.Labels, nodeLabels, stale); len(l) > 0 {
 		spec["labels"] = l
 	}
 	meta := map[string]any{}
-	if l := labelDiff(cur.Labels, mergeLabels(nodeLabels, map[string]string{labelManagedBy: managedByValue})); len(l) > 0 {
+	if l := labelPatch(cur.Labels, mergeLabels(nodeLabels, map[string]string{labelManagedBy: managedByValue}), stale); len(l) > 0 {
 		meta["labels"] = l
+	}
+	if want := managedKeys(nodeLabels); cur.Annotations[annotationManagedLabels] != want {
+		meta["annotations"] = map[string]any{annotationManagedLabels: want}
 	}
 	patch := map[string]any{}
 	if len(spec) > 0 {
@@ -251,12 +372,40 @@ func (s *deviceSyncer) mergePatch(cur *ciskov1.CiscoDevice, it InventoryItem, ac
 	return patch, len(patch) > 0
 }
 
-// labelDiff returns the entries of want that differ from have.
-func labelDiff(have, want map[string]string) map[string]string {
-	out := map[string]string{}
+// labelPatch returns the merge-patch entries that bring have to want: changed
+// or missing values, and nil (removal) for stale keys that are present.
+func labelPatch(have, want map[string]string, stale []string) map[string]any {
+	out := map[string]any{}
 	for k, v := range want {
-		if have[k] != v {
+		if cur, ok := have[k]; !ok || cur != v {
 			out[k] = v
+		}
+	}
+	for _, k := range stale {
+		if _, ok := have[k]; ok {
+			out[k] = nil
+		}
+	}
+	return out
+}
+
+// managedKeys is the sorted, comma-separated key list stored in the
+// annotationManagedLabels annotation.
+func managedKeys(labels map[string]string) string {
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, ",")
+}
+
+// staleKeys returns the keys named in the annotation that want no longer has.
+func staleKeys(annotation string, want map[string]string) []string {
+	var out []string
+	for _, k := range strings.Split(annotation, ",") {
+		if _, ok := want[k]; k != "" && !ok {
+			out = append(out, k)
 		}
 	}
 	return out

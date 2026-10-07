@@ -72,6 +72,57 @@ spec:
         credentialSecretRef: {name: dc2-switch-creds}
 ```
 
+### Labels for grouping devices
+
+`defaults.labels` and `scopeOverrides[].labels` add your own labels to every
+adopted device, for example to group switches into upgrade waves:
+
+```yaml
+spec:
+  deviceAdoption:
+    defaults:
+      labels: {upgrade-wave: "1", owner: netops}
+    scopeOverrides:
+      - scope: dc2-fabric
+        labels: {upgrade-wave: "2"}      # merged per key over the defaults
+```
+
+They are written to `metadata.labels` (for `kubectl get ciscodevices -l
+upgrade-wave=2`) and to `spec.labels` (projected onto the Node, for
+`nodeSelector`). Labels users add themselves are never touched. A label you
+remove from the NetworkController is removed from the devices again, because
+the adapter records the keys it applied in the annotation
+`cisco.vk/nd-managed-labels`. The `nd.cisco.vk/`, `cisco.vk/`,
+`topology.cisco.vk/` and `kubernetes.io`/`k8s.io` namespaces are reserved, and
+at most 16 labels are allowed per block. CVK does not act on these labels
+itself; something else, such as a Job with a `nodeSelector`, has to.
+
+### Removing devices
+
+```yaml
+spec:
+  deviceAdoption:
+    removal:
+      policy: Prune          # Retain (default) | Prune
+      gracePeriod: 24h       # 10m - 720h, default 24h
+      maxPrunePercent: 25    # default 25
+```
+
+With `Prune`, an adopted CiscoDevice is deleted once it has been missing for
+the grace period (measured from the annotation, so it survives worker
+restarts). Deleting the CiscoDevice makes the CiscoDevice controller remove
+the worker and the Node. Guards:
+
+- only devices with this controller's UID label are ever deleted;
+- an empty inventory marks and deletes nothing;
+- if more than `maxPrunePercent` of the adopted devices are due at once,
+  nothing is deleted and they are reported as `prune-guarded` (one device is
+  always allowed, so a small fleet can still shrink);
+- delete uses a UID precondition.
+
+The worker role carries the `delete` verb for this. RBAC cannot depend on the
+policy, so every ND worker holds it, even with `Retain`.
+
 ND does not expose device passwords, so the operator supplies them. The
 adapter writes only the Secret *name* and never reads the Secret; it has no
 Secrets permission. Create the Secret in the same namespace, with a `password`
@@ -101,9 +152,12 @@ Safety rules:
 - Updates are merge patches of the fields the adapter owns (address, username,
   secret, TLS, labels). Labels, ports, taints and other fields that users add
   are kept.
-- It never deletes. A switch that disappears from ND, or an empty or failed
-  refresh, leaves existing CiscoDevices as they are. Adoption runs only after
-  a complete successful refresh.
+- Adoption runs only after a complete successful refresh. A failed or empty
+  refresh changes nothing.
+- A device whose switch is missing from a complete refresh gets the annotation
+  `cisco.vk/nd-missing-since` (first-seen time, RFC 3339). It is removed again
+  if the switch returns. An unreachable or non-NX-OS switch is still in ND and
+  is not "missing". By default (policy `Retain`) nothing is ever deleted.
 - Unreachable switches (`discoveryStatus` not `ok`), non-NX-OS switches, and
   switches with a serial that is not a valid `physicalIdentity` are not
   adopted.
@@ -113,7 +167,7 @@ Safety rules:
 
 The ND worker is bound to `cisco-virtual-kubelet-controller-worker-device-adoption`:
 the base worker role plus get/list/watch/create/update/patch on `ciscodevices`
-(no delete, no Secrets, no `ciscodevices/status`). The role is static, so an
+(delete but no deletecollection, no Secrets, no `ciscodevices/status`). The role is static, so an
 ND worker holds it even when adoption is disabled.
 
 ## Credential Secret

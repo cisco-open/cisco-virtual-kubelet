@@ -33,9 +33,10 @@ const (
 	DefaultWorkerClusterRole = "cisco-virtual-kubelet-controller-worker"
 
 	// DeviceAdoptionWorkerClusterRole is the base worker role plus create,
-	// update and patch on CiscoDevice objects in the worker's own namespace.
-	// It deliberately has no delete grant and no access to Secrets. Adapters
-	// that turn controller inventory into CiscoDevices select it.
+	// update, patch and delete on CiscoDevice objects in the worker's own
+	// namespace. Delete serves only the opt-in prune policy. It deliberately
+	// has no deletecollection and no access to Secrets. Adapters that turn
+	// controller inventory into CiscoDevices select it.
 	DeviceAdoptionWorkerClusterRole = "cisco-virtual-kubelet-controller-worker-device-adoption"
 
 	// DefaultCredentialPath is the read-only mount point offered to controller

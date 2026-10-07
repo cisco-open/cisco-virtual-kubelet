@@ -153,6 +153,18 @@ spec:
                         required:
                         - name
                         type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          Labels are added to every adopted CiscoDevice, both in metadata.labels
+                          (for kubectl selectors) and in spec.labels (projected onto the Node), for
+                          example to group devices into upgrade waves. The adapter's own
+                          nd.cisco.vk/ labels, the cisco.vk/ and kubernetes.io/ namespaces and
+                          scheduling-topology keys are reserved. A label removed here is removed
+                          from the devices the adapter manages.
+                        maxProperties: 16
+                        type: object
                       tls:
                         description: |-
                           TLS is copied to CiscoDevice.spec.tls. Omit to keep the CiscoDevice
@@ -213,6 +225,32 @@ spec:
                     default: false
                     description: Enabled turns adoption on.
                     type: boolean
+                  removal:
+                    description: Removal controls devices whose switch has left the
+                      inventory.
+                    properties:
+                      gracePeriod:
+                        description: |-
+                          GracePeriod is how long a device must stay missing, across refreshes,
+                          before Prune deletes it. Defaults to 24h; between 10m and 720h.
+                        type: string
+                      maxPrunePercent:
+                        description: |-
+                          MaxPrunePercent is the guard against mass deletion: when more than this
+                          percentage of the adopted devices are due for pruning at once (at least
+                          one device is always allowed), nothing is deleted. Defaults to 25.
+                        format: int32
+                        maximum: 100
+                        minimum: 1
+                        type: integer
+                      policy:
+                        default: Retain
+                        description: Policy is Retain (default) or Prune.
+                        enum:
+                        - Retain
+                        - Prune
+                        type: string
+                    type: object
                   scopeOverrides:
                     description: ScopeOverrides replace default access fields per
                       scope.
@@ -234,6 +272,14 @@ spec:
                               type: string
                           required:
                           - name
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Labels are merged key by key over the default labels; a key set here
+                            replaces the default value for devices in this scope.
+                          maxProperties: 16
                           type: object
                         scope:
                           description: Scope is the controller-defined grouping name,

@@ -112,7 +112,7 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 	a.statusWriter = mgr.GetClient()
 	if a.adoption != nil && a.adoption.Enabled {
-		a.devices = &deviceSyncer{client: a.statusWriter, namespace: a.key.Namespace, uid: a.uid, adoption: a.adoption}
+		a.devices = &deviceSyncer{client: a.statusWriter, namespace: a.key.Namespace, uid: a.uid, adoption: a.adoption, now: a.now}
 	}
 	if err := mgr.Add(&healthRunnable{adapter: a}); err != nil {
 		return err

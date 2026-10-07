@@ -14,7 +14,13 @@
 
 package v1alpha1
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 func adoptionFixture() *NetworkControllerDeviceAdoption {
 	return &NetworkControllerDeviceAdoption{
@@ -84,9 +90,60 @@ func TestValidateDeviceAdoption(t *testing.T) {
 		"bad override secret": {func(a *NetworkControllerDeviceAdoption) {
 			a.ScopeOverrides[0].CredentialSecretRef.Name = "../x"
 		}, true},
-		"duplicate scope": {func(a *NetworkControllerDeviceAdoption) { a.ScopeOverrides[1].Scope = "fab-b" }, true},
-		"path-like scope": {func(a *NetworkControllerDeviceAdoption) { a.ScopeOverrides[0].Scope = "a/b" }, true},
-		"empty scope":     {func(a *NetworkControllerDeviceAdoption) { a.ScopeOverrides[0].Scope = "" }, true},
+		"duplicate scope":  {func(a *NetworkControllerDeviceAdoption) { a.ScopeOverrides[1].Scope = "fab-b" }, true},
+		"path-like scope":  {func(a *NetworkControllerDeviceAdoption) { a.ScopeOverrides[0].Scope = "a/b" }, true},
+		"empty scope":      {func(a *NetworkControllerDeviceAdoption) { a.ScopeOverrides[0].Scope = "" }, true},
+		"removal defaults": {func(a *NetworkControllerDeviceAdoption) { a.Removal = &NetworkControllerDeviceRemoval{} }, false},
+		"prune ok": {func(a *NetworkControllerDeviceAdoption) {
+			a.Removal = &NetworkControllerDeviceRemoval{Policy: DeviceRemovalPrune, GracePeriod: &metav1.Duration{Duration: time.Hour}}
+		}, false},
+		"grace too short": {func(a *NetworkControllerDeviceAdoption) {
+			a.Removal = &NetworkControllerDeviceRemoval{GracePeriod: &metav1.Duration{Duration: time.Minute}}
+		}, true},
+		"grace too long": {func(a *NetworkControllerDeviceAdoption) {
+			a.Removal = &NetworkControllerDeviceRemoval{GracePeriod: &metav1.Duration{Duration: 800 * time.Hour}}
+		}, true},
+		"percent zero": {func(a *NetworkControllerDeviceAdoption) {
+			z := int32(0)
+			a.Removal = &NetworkControllerDeviceRemoval{MaxPrunePercent: &z}
+		}, true},
+		"percent over 100": {func(a *NetworkControllerDeviceAdoption) {
+			v := int32(101)
+			a.Removal = &NetworkControllerDeviceRemoval{MaxPrunePercent: &v}
+		}, true},
+		"unknown policy": {func(a *NetworkControllerDeviceAdoption) {
+			a.Removal = &NetworkControllerDeviceRemoval{Policy: "Delete"}
+		}, true},
+		"labels ok": {func(a *NetworkControllerDeviceAdoption) {
+			a.Defaults.Labels = map[string]string{"upgrade-wave": "1", "example.com/owner": "netops"}
+		}, false},
+		"override labels ok": {func(a *NetworkControllerDeviceAdoption) {
+			a.ScopeOverrides[0].Labels = map[string]string{"upgrade-wave": "2"}
+		}, false},
+		"reserved nd label": {func(a *NetworkControllerDeviceAdoption) {
+			a.Defaults.Labels = map[string]string{"nd.cisco.vk/role": "x"}
+		}, true},
+		"reserved cisco label": {func(a *NetworkControllerDeviceAdoption) { a.Defaults.Labels = map[string]string{"cisco.vk/x": "x"} }, true},
+		"reserved topology label": {func(a *NetworkControllerDeviceAdoption) {
+			a.Defaults.Labels = map[string]string{"topology.kubernetes.io/zone": "x"}
+		}, true},
+		"reserved kubernetes.io": {func(a *NetworkControllerDeviceAdoption) {
+			a.Defaults.Labels = map[string]string{"node-role.kubernetes.io/x": "x"}
+		}, true},
+		"reserved managed-by": {func(a *NetworkControllerDeviceAdoption) {
+			a.Defaults.Labels = map[string]string{"app.kubernetes.io/managed-by": "x"}
+		}, true},
+		"bad label key":   {func(a *NetworkControllerDeviceAdoption) { a.Defaults.Labels = map[string]string{"bad key": "x"} }, true},
+		"bad label value": {func(a *NetworkControllerDeviceAdoption) { a.Defaults.Labels = map[string]string{"k": "bad value!"} }, true},
+		"bad override label": {func(a *NetworkControllerDeviceAdoption) {
+			a.ScopeOverrides[0].Labels = map[string]string{"cisco.vk/x": "x"}
+		}, true},
+		"too many labels": {func(a *NetworkControllerDeviceAdoption) {
+			a.Defaults.Labels = map[string]string{}
+			for i := 0; i < 17; i++ {
+				a.Defaults.Labels[fmt.Sprintf("k%d", i)] = "v"
+			}
+		}, true},
 		"too many overrides": {func(a *NetworkControllerDeviceAdoption) {
 			a.ScopeOverrides = make([]NetworkControllerDeviceScopeOverride, 65)
 		}, true},
@@ -102,5 +159,19 @@ func TestValidateDeviceAdoption(t *testing.T) {
 				t.Fatalf("wantErr=%v, got %v", tc.wantErr, errs.ToAggregate())
 			}
 		})
+	}
+}
+
+func TestResolveAccessMergesLabelsPerKeyWithoutAliasing(t *testing.T) {
+	a := adoptionFixture()
+	a.Defaults.Labels = map[string]string{"wave": "1", "owner": "netops"}
+	a.ScopeOverrides[0].Labels = map[string]string{"wave": "2"}
+	got, ok := a.ResolveAccess(a.ScopeOverrides[0].Scope)
+	if !ok || got.Labels["wave"] != "2" || got.Labels["owner"] != "netops" {
+		t.Fatalf("got %+v", got.Labels)
+	}
+	got.Labels["x"] = "y"
+	if _, leaked := a.Defaults.Labels["x"]; leaked || a.Defaults.Labels["wave"] != "1" {
+		t.Fatal("resolved labels must not alias the defaults")
 	}
 }

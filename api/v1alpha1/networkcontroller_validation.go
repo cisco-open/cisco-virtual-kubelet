@@ -184,6 +184,7 @@ func validateDeviceAdoption(path *field.Path, a *NetworkControllerDeviceAdoption
 			errs = append(errs, field.Required(d.Child("username"), "device username is required"))
 		}
 		errs = append(errs, validateSecretName(d.Child("credentialSecretRef").Child("name"), a.Defaults.CredentialSecretRef.Name)...)
+		errs = append(errs, validateDeviceLabels(d.Child("labels"), a.Defaults.Labels)...)
 	}
 	if len(a.ScopeOverrides) > 64 {
 		errs = append(errs, field.TooMany(path.Child("scopeOverrides"), len(a.ScopeOverrides), 64))
@@ -198,8 +199,67 @@ func validateDeviceAdoption(path *field.Path, a *NetworkControllerDeviceAdoption
 			errs = append(errs, field.Duplicate(p.Child("scope"), o.Scope))
 		}
 		seen[o.Scope] = struct{}{}
+		errs = append(errs, validateDeviceLabels(p.Child("labels"), o.Labels)...)
 		if o.CredentialSecretRef != nil {
 			errs = append(errs, validateSecretName(p.Child("credentialSecretRef").Child("name"), o.CredentialSecretRef.Name)...)
+		}
+	}
+	if r := a.Removal; r != nil {
+		p := path.Child("removal")
+		if g := r.EffectiveGracePeriod(); g < MinDeviceRemovalGracePeriod || g > MaxDeviceRemovalGracePeriod {
+			errs = append(errs, field.Invalid(p.Child("gracePeriod"), g.String(), "must be between 10m and 720h"))
+		}
+		if m := r.EffectiveMaxPrunePercent(); m < 1 || m > 100 {
+			errs = append(errs, field.Invalid(p.Child("maxPrunePercent"), m, "must be between 1 and 100"))
+		}
+		if pol := r.EffectivePolicy(); pol != DeviceRemovalRetain && pol != DeviceRemovalPrune {
+			errs = append(errs, field.NotSupported(p.Child("policy"), pol, []string{string(DeviceRemovalRetain), string(DeviceRemovalPrune)}))
+		}
+	}
+	return errs
+}
+
+// reservedDeviceLabelPrefixes cannot be set through deviceAdoption labels: the
+// adapter owns its own keys, and topology keys need the administrator
+// allowlist (projectedTopologyKeys).
+var reservedDeviceLabelPrefixes = []string{"nd.cisco.vk/", "cisco.vk/", "topology.cisco.vk/"}
+
+// reservedLabelDomain reports whether the key's namespace is kubernetes.io or
+// k8s.io, or a subdomain of either; those are reserved for Kubernetes itself.
+func reservedLabelDomain(key string) bool {
+	domain, _, found := strings.Cut(key, "/")
+	if !found {
+		return false
+	}
+	for _, d := range []string{"kubernetes.io", "k8s.io"} {
+		if domain == d || strings.HasSuffix(domain, "."+d) {
+			return true
+		}
+	}
+	return false
+}
+
+func validateDeviceLabels(path *field.Path, labels map[string]string) field.ErrorList {
+	var errs field.ErrorList
+	if len(labels) > 16 {
+		errs = append(errs, field.TooMany(path, len(labels), 16))
+	}
+	for k, v := range labels {
+		p := path.Key(k)
+		if problems := utilvalidation.IsQualifiedName(k); len(problems) > 0 {
+			errs = append(errs, field.Invalid(p, k, strings.Join(problems, "; ")))
+			continue
+		}
+		if reservedLabelDomain(k) {
+			errs = append(errs, field.Forbidden(p, "the kubernetes.io and k8s.io label namespaces are reserved"))
+		}
+		for _, prefix := range reservedDeviceLabelPrefixes {
+			if strings.HasPrefix(k, prefix) {
+				errs = append(errs, field.Forbidden(p, "label namespace "+prefix+" is reserved"))
+			}
+		}
+		if problems := utilvalidation.IsValidLabelValue(v); len(problems) > 0 {
+			errs = append(errs, field.Invalid(p, v, strings.Join(problems, "; ")))
 		}
 	}
 	return errs
