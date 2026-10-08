@@ -4,10 +4,12 @@ package catalystcenter
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -58,6 +60,17 @@ func TestSWIMClientContracts(t *testing.T) {
 		case imagesPath:
 			_, _ = w.Write([]byte(`{"response":[{"imageUuid":"img-1","version":"17.18.3"}]}`))
 		case distributePath, activatePath:
+			var got []map[string]any
+			if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+				t.Error(err)
+			}
+			want := []map[string]any{{"deviceUuid": "d1", "imageUuid": "img-1"}}
+			if r.URL.Path == activatePath {
+				want = []map[string]any{{"deviceUuid": "d1", "imageUuidList": []any{"img-1"}}}
+			}
+			if r.Method != http.MethodPost || r.Header.Get("X-Auth-Token") != "test-token" || !reflect.DeepEqual(got, want) {
+				t.Errorf("invalid SWIM request: %s %+v", r.Method, got)
+			}
 			_, _ = w.Write([]byte(`{"response":{"taskId":"task-1","url":"/dna/intent/api/v1/task/task-1"}}`))
 		case taskPath + "task-1":
 			_, _ = w.Write([]byte(`{"response":{"isError":false,"data":"complete"}}`))

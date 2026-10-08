@@ -4,8 +4,8 @@ package catalystcenter
 
 import (
 	"errors"
+	"net/http"
 	"reflect"
-	"strings"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
@@ -24,15 +24,28 @@ func classify(err error) healthResult {
 	if err == nil {
 		return healthResult{ciskov1.NetworkControllerPhaseReady, true, true, "Connected", "Catalyst Center API is reachable"}
 	}
-	msg := transport.RedactCredentials(err.Error())
 	var restErr *transport.RESTError
-	if errors.As(err, &restErr) && restErr.AuthFailure() {
-		return healthResult{ciskov1.NetworkControllerPhaseError, false, false, "AuthenticationFailed", "Catalyst Center rejected the supplied credentials"}
+	if errors.Is(err, errCredentials) {
+		return healthResult{ciskov1.NetworkControllerPhaseError, false, false, "InvalidCredentials", "Cannot read non-empty Catalyst Center username and password files"}
 	}
-	if strings.Contains(strings.ToLower(msg), "credential") {
-		return healthResult{ciskov1.NetworkControllerPhaseError, false, false, "InvalidCredentials", msg}
+	if errors.As(err, &restErr) {
+		if restErr.StatusCode == http.StatusUnauthorized || (restErr.Path == authPath && restErr.StatusCode == http.StatusForbidden) {
+			return healthResult{ciskov1.NetworkControllerPhaseError, false, false, "AuthenticationFailed", "Catalyst Center rejected authentication"}
+		}
+		if restErr.Path != authPath {
+			switch restErr.StatusCode {
+			case http.StatusForbidden:
+				return healthResult{ciskov1.NetworkControllerPhaseDegraded, true, false, "Forbidden", "Authenticated but not authorized to read device inventory"}
+			case http.StatusNotFound:
+				return healthResult{ciskov1.NetworkControllerPhaseDegraded, true, false, "InventoryAPIUnavailable", "The required device inventory API is unavailable"}
+			}
+		}
+		return healthResult{ciskov1.NetworkControllerPhaseDegraded, restErr.Path != authPath, false, "APIRequestFailed", "Catalyst Center API request failed"}
 	}
-	return healthResult{ciskov1.NetworkControllerPhaseDegraded, false, false, "Unreachable", msg}
+	if errors.Is(err, errInvalidResponse) {
+		return healthResult{ciskov1.NetworkControllerPhaseDegraded, false, false, "InvalidAPIResponse", "Catalyst Center returned an invalid API response"}
+	}
+	return healthResult{ciskov1.NetworkControllerPhaseDegraded, false, false, "Unreachable", "Catalyst Center connection could not be established"}
 }
 
 func setCapability(st *ciskov1.NetworkControllerStatus, name string, supported bool, message string) {
@@ -45,9 +58,7 @@ func setCapability(st *ciskov1.NetworkControllerStatus, name string, supported b
 	st.Capabilities = append(st.Capabilities, ciskov1.NetworkControllerCapabilityStatus{Name: name, Supported: supported, Message: message})
 }
 func equalStatus(a, b *ciskov1.NetworkController) bool {
-	x, y := a.Status.DeepCopy(), b.Status.DeepCopy()
-	x.LastAttemptTime, y.LastAttemptTime = nil, nil
-	return reflect.DeepEqual(x, y)
+	return reflect.DeepEqual(a.Status, b.Status)
 }
 func condition(typ string, ok bool, reason, message string, generation int64) metav1.Condition {
 	status := metav1.ConditionFalse

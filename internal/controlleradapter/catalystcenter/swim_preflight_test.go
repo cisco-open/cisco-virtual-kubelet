@@ -11,7 +11,7 @@ import (
 )
 
 func TestResolveSWIMTarget(t *testing.T) {
-	d := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{UID: types.UID("uid-1")}, Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, Address: "192.0.2.10", PhysicalIdentity: "ABC123"}}
+	d := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{Namespace: "lab", Name: "switch", UID: types.UID("uid-1")}, Spec: ciskov1.DeviceSpec{Driver: ciskov1.DeviceDriverXE, Address: "192.0.2.10", PhysicalIdentity: "ABC123"}}
 	items := []Device{{ID: "id-1", Serial: "abc123", ManagementIP: "192.0.2.10", Reachability: "Reachable"}}
 	got, err := resolveSWIMTarget(d, items)
 	if err != nil || got.ID != "id-1" {
@@ -25,6 +25,15 @@ func TestResolveSWIMTarget(t *testing.T) {
 		{"wrong address", func(d *ciskov1.CiscoDevice, _ *[]Device) { d.Spec.Address = "192.0.2.11" }},
 		{"unreachable", func(_ *ciskov1.CiscoDevice, items *[]Device) { (*items)[0].Reachability = "Unreachable" }},
 		{"duplicate", func(_ *ciskov1.CiscoDevice, items *[]Device) { *items = append(*items, (*items)[0]) }},
+		{"aliased ID", func(_ *ciskov1.CiscoDevice, items *[]Device) {
+			*items = append(*items, Device{ID: "id-1", Serial: "OTHER", ManagementIP: "192.0.2.11"})
+		}},
+		{"aliased address", func(_ *ciskov1.CiscoDevice, items *[]Device) {
+			*items = append(*items, Device{ID: "id-2", Serial: "OTHER", ManagementIP: "192.0.2.10"})
+		}},
+		{"blank addresses", func(d *ciskov1.CiscoDevice, items *[]Device) { d.Spec.Address = ""; (*items)[0].ManagementIP = "" }},
+		{"deleted", func(d *ciskov1.CiscoDevice, _ *[]Device) { now := metav1.Now(); d.DeletionTimestamp = &now }},
+		{"unbound UID", func(d *ciskov1.CiscoDevice, _ *[]Device) { d.UID = "" }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

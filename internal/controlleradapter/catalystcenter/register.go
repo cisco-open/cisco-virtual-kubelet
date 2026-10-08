@@ -17,8 +17,8 @@ const (
 )
 
 // Descriptor declares the controller-centric Catalyst Center Network as Code
-// contract. SWIM is exposed as an operational capability; it is not a
-// Network as Code section in the upstream model.
+// baseline. This adapter currently reconciles endpoint health and inventory,
+// not configuration intent. SWIM execution is not an available capability.
 func Descriptor() controlleradapter.Descriptor {
 	return controlleradapter.Descriptor{
 		Type: TypeName, DisplayName: "Catalyst Center",

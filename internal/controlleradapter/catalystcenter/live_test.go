@@ -20,12 +20,20 @@ func liveClient(t *testing.T) *client {
 		endpoint = "https://127.0.0.1:19443"
 	}
 	user, password := os.Getenv("CATC_USERNAME"), os.Getenv("CATC_PASSWORD")
-	if user == "" || password == "" {
+	if (user == "") != (password == "") {
+		t.Fatal("set both CATC_USERNAME and CATC_PASSWORD")
+	}
+	if user == "" {
 		data, err := os.ReadFile("/tmp/catc")
 		if err != nil {
 			t.Skip("set CATC_USERNAME/CATC_PASSWORD or provide /tmp/catc")
 		}
-		values := strings.Fields(string(data))
+		var values []string
+		for _, line := range strings.Split(string(data), "\n") {
+			if value := strings.TrimSpace(line); value != "" {
+				values = append(values, value)
+			}
+		}
 		if len(values) < 2 {
 			t.Fatal("CATC credentials require username and password")
 		}
@@ -37,20 +45,24 @@ func liveClient(t *testing.T) *client {
 			t.Fatal(err)
 		}
 	}
-	return newClient(clientConfig{Endpoint: endpoint, CredentialPath: dir, InsecureSkipVerify: true, RequestTimeout: 20 * time.Second, MaxSessionLifetime: 15 * time.Minute})
+	c := newClient(clientConfig{Endpoint: endpoint, CredentialPath: dir, InsecureSkipVerify: true, RequestTimeout: 20 * time.Second, MaxSessionLifetime: 15 * time.Minute})
+	t.Cleanup(c.Invalidate)
+	return c
 }
 
 func TestLiveCatalystCenterHealthInventoryAndSWIMRead(t *testing.T) {
 	c := liveClient(t)
-	if err := c.Probe(context.Background()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	if err := c.Probe(ctx); err != nil {
 		t.Fatal(err)
 	}
-	devices, err := c.ListDevices(context.Background())
+	devices, err := c.ListDevices(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("Catalyst Center inventory: %d devices", len(devices))
-	images, err := c.ListImages(context.Background())
+	images, err := c.ListImages(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
