@@ -57,6 +57,42 @@ version other than `v1` is rejected rather than silently ignored.
 
 ## SWIM direction
 
+### Execution selection and task engine
+
+The internal `softwarelifecycle.UpgradeExecution` contract distinguishes
+`Direct` from `CatalystCenter`. Omission resolves to `Direct`, preserving the
+existing gNOI choice. A controller execution must pin its namespace, name and
+Kubernetes UID. Switching methods or controller incarnations requires a new,
+separately authorized operation; an outage never causes automatic fallback.
+This contract is not yet exposed as an `IOSXESoftwareUpgrade` manifest field.
+
+The adapter now has an internal SWIM task executor with this sequence:
+
+```text
+Pending -> distribution claim persisted -> Distributing -> Distributed
+        -> activation claim persisted -> Activating -> Verifying -> Succeeded
+```
+
+Each POST requires a durable mutation-authority claim, an atomic write-ahead
+dispatch marker and a fresh authorization check. Task IDs are recorded before
+polling. Restarting with a dispatch marker but no receipt enters
+`OutcomeUnknown`, retaining the device fence and never resubmitting the POST.
+Missing tasks and failed polls also cannot authorize replay. Activation needs
+a completed distribution; task completion then requires fresh, matching device
+identity/version evidence before success is persisted and the fence released.
+Unsupported or incomplete operation records fail closed.
+
+The executor is tested with simulated API, persistence and admission failures,
+including lost activation receipts. **It is not registered in the worker yet.**
+Its storage, authority and verification interfaces intentionally have no
+permissive production defaults. The outstanding integration is a Kubernetes
+operation API/store and an authenticated bridge to the existing manager/device
+admission and evidence paths. The in-memory store exists only in tests.
+Existing direct upgrade manifests continue through the existing reconciler;
+there is no usable Catalyst Center upgrade manifest in this build yet.
+
+### Admission integration still required
+
 Catalyst Center SWIM has distinct import, distribution, activation, and task
 polling operations. The client contains the distribution, activation, and task
 contracts, but a Kubernetes operation resource is still required before
