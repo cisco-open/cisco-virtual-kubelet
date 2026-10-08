@@ -15,6 +15,8 @@
 package main
 
 import (
+	// Catalyst Center network-controller adapter.
+	_ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
 	// Nexus Dashboard network-controller adapter.
 	_ "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard"
 )
