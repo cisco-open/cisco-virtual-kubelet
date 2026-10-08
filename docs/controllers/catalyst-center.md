@@ -47,6 +47,22 @@ including `imageName`, `isTaggedGolden` and `imageIntegrityStatus`.
 An image UUID lookup establishes presence only; it does not establish image
 integrity, device compatibility or authorization to activate.
 
+The adapter client also supports the modern device-image details and readiness
+APIs. Product association binds the device UUID and management address to the
+controller's exact product identifier, including supervisor where applicable,
+then matches that identifier to the imported image's `mdfId`. The human-readable
+family name and the catalogue's sometimes incomplete PID list are insufficient
+on their own. Readiness results reuse the bounded inventory pagination helper
+and are filtered by device and operation.
+
+Readiness qualification requires matching task/device identities, fresh completed
+validation evidence and explicit success for every returned check. Missing,
+conflicting, warning, skipped or partial results fail qualification. A successful
+parent task with no validation records is not a pass. The decoder accepts both
+the documented top-level status and the 3.2.3 `resultDetails` STATUS entry, while
+discarding free-form device output. This is an internal preflight facility;
+it is not yet connected to production mutation admission.
+
 Redirects are rejected for login, reads and writes. Only read requests with a
 401 refresh the session once; 403 responses do not trigger another login, and
 mutating POST requests are never retried automatically. Remote error bodies
@@ -129,6 +145,29 @@ through the established device inventory/telemetry path and honour existing
 rollout budgets before admitting mutation. SWIM stays unsupported
 in controller status until this durable path and its RBAC/CRD are installed.
 
-Until that operation resource is added, live validation is deliberately
-read-only: authentication, device inventory, and image inventory are tested
-against the appliance without starting a distribution or activation.
+The default live test reads health and inventories. An additional opt-in test,
+`TestLiveCatalystCenterSWIMReadiness`, consumes persisted readiness receipts from
+`CATC_READINESS_RECEIPTS` and optionally checks product associations for the
+comma-separated `CATC_TEST_IMAGE_IDS`. It never starts or replays a POST.
+The receipt file maps management addresses to `device_id`, `started_at` (Unix
+seconds), and `receipt.response.taskId`. Receipts expire after 15 minutes for
+qualification. An expired or unsuccessful run requires a new, deliberately
+submitted readiness check; rerunning the test does not submit one.
+
+[The 8 October lab record](../evidence/catalyst-center-2026-10-08/README.md)
+records the separately authorized readiness jobs and a site-scoped golden-image
+assignment. Distribution and activation have not been qualified or deployed.
+
+### API profile work required before deployment
+
+The lab appliance reports 3.2.3. Cisco marks the old distribution/activation
+endpoints used by the current internal executor as
+[sunset](https://developer.cisco.com/docs/catalyst-center/api-changelog/).
+Do not simply substitute URLs: modern
+[distribution](https://developer.cisco.com/docs/catalyst-center/distribute-images-on-the-network-device/)
+and [activation](https://developer.cisco.com/docs/catalyst-center/update-images-on-the-network-device/)
+use object payloads and report workflow progress through
+`networkDeviceImageUpdates?parentId=...`. Modern activation can also distribute
+images, so its mutation claim must cover that behavior. Pin the selected API
+contract in the durable operation and test its child-workflow outcomes; never
+retry an ambiguous POST through the alternative API contract.

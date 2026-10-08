@@ -266,13 +266,23 @@ func (c *client) ListDevices(ctx context.Context) ([]Device, error) {
 // These endpoints use one-based offsets. A malformed or repeating page is
 // an error, never a successful partial inventory.
 func listInventory[T any](ctx context.Context, c *client, path string, identity func(T) string) ([]T, error) {
+	return listInventoryQuery(ctx, c, path, nil, identity)
+}
+
+func listInventoryQuery[T any](ctx context.Context, c *client, path string, filters url.Values, identity func(T) string) ([]T, error) {
 	const pageSize = 500
 	const maxPages = 100
+	query := make(url.Values, len(filters)+2)
+	for key, values := range filters {
+		query[key] = append([]string(nil), values...)
+	}
+	query.Set("limit", strconv.Itoa(pageSize))
 	var out []T
 	seen := make(map[string]struct{})
 	for pageNumber := 0; pageNumber < maxPages; pageNumber++ {
 		offset := 1 + pageNumber*pageSize
-		body, err := c.Get(ctx, path, url.Values{"limit": {strconv.Itoa(pageSize)}, "offset": {strconv.Itoa(offset)}})
+		query.Set("offset", strconv.Itoa(offset))
+		body, err := c.Get(ctx, path, query)
 		if err != nil {
 			return nil, err
 		}
@@ -314,13 +324,21 @@ func decodeList[T any](body []byte) ([]T, error) {
 }
 
 type Image struct {
-	ID              string `json:"imageUuid"`
-	Name            string `json:"name"`
-	ImageName       string `json:"imageName"`
-	Version         string `json:"version"`
-	Family          string `json:"family"`
-	Golden          bool   `json:"isTaggedGolden"`
-	IntegrityStatus string `json:"imageIntegrityStatus"`
+	ID                string         `json:"imageUuid"`
+	Name              string         `json:"name"`
+	ImageName         string         `json:"imageName"`
+	Version           string         `json:"version"`
+	Family            string         `json:"family"`
+	Golden            bool           `json:"isTaggedGolden"`
+	IntegrityStatus   string         `json:"imageIntegrityStatus"`
+	ApplicableDevices []ImageProduct `json:"applicableDevicesForImage"`
+}
+
+// ImageProduct is the appliance's image-to-product mapping. Family alone is
+// insufficient: different Catalyst platforms use different image packages.
+type ImageProduct struct {
+	ID         string   `json:"mdfId"`
+	ProductIDs []string `json:"productId"`
 }
 
 func (c *client) ListImages(ctx context.Context) ([]Image, error) {
@@ -345,7 +363,11 @@ func (c *client) Activate(ctx context.Context, deviceID, imageID string) (Task, 
 	return c.submit(ctx, activatePath, map[string]any{"deviceUuid": deviceID, "imageUuidList": []string{imageID}})
 }
 func (c *client) submit(ctx context.Context, path string, payload any) (Task, error) {
-	body, err := json.Marshal([]any{payload})
+	return c.submitTask(ctx, path, []any{payload})
+}
+
+func (c *client) submitTask(ctx context.Context, path string, payload any) (Task, error) {
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return Task{}, err
 	}
