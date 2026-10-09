@@ -1,0 +1,14 @@
+{
+  "operationUID": "4960d563-e07f-4b5e-a6e3-ffcd013d454d",
+  "leaseUID": "805d5577-2ee9-4f1b-96c5-a243a3712116",
+  "path": "flash:gNOI_iosxe_17.18.02.0.4112.1766116039.bin",
+  "size": 1247897709,
+  "sha256": "c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355",
+  "sha512": "d8a8d7b9dde721501e5abb5ca63a21d49c9c49380b516d5ad366a7af729ea2c7e9ea898e7981b585db450b25393faddb2f0e45fe365459bd3c3541d2453f174c",
+  "backup": "/tmp/cvk-swim-live-20261008/retired-17.18.02.bin",
+  "submittedAt": "2026-10-08T16:35:05.813126+00:00",
+  "mode": "SupervisedLabCleanup",
+  "verifiedAt": "2026-10-08T16:35:09.350922+00:00",
+  "freeBytes": 3281846272,
+  "result": "VerifiedRemoved"
+}

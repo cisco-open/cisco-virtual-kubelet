@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"time"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
@@ -15,8 +16,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 )
 
 const inventoryInterval = 5 * time.Minute
@@ -74,7 +77,14 @@ func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 	if err := mgr.Add(&healthRunnable{a}); err != nil {
 		return err
 	}
-	return mgr.Add(&inventoryRunnable{a})
+	if err := mgr.Add(&inventoryRunnable{a}); err != nil {
+		return err
+	}
+	// Parent grants are read live rather than watched. Cap observation backoff
+	// so a long pause cannot delay recovery beyond the two-minute grant lifetime.
+	return ctrl.NewControllerManagedBy(mgr).Named("catalyst-center-swim").
+		WithOptions(controller.Options{RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[ctrl.Request](time.Second, 30*time.Second)}).
+		For(&ops.CatalystCenterSWIMHandoff{}).Complete(&handoffReconciler{a: a})
 }
 
 type healthRunnable struct{ a *adapter }
@@ -187,11 +197,11 @@ func (a *adapter) publishInventory(ctx context.Context, items []Device, err erro
 			msg = "inventory refresh failed"
 		}
 		setCapability(&nc.Status, CapabilityInventory, ok, msg)
-		imageMessage := fmt.Sprintf("%d imported images returned; no SWIM operation controller is registered", len(images))
+		imageMessage := fmt.Sprintf("%d imported images returned; managed SWIM handoff available; native verification required", len(images))
 		if imageErr != nil {
 			imageMessage = "image inventory refresh failed"
 		}
-		setCapability(&nc.Status, CapabilitySWIM, false, imageMessage)
+		setCapability(&nc.Status, CapabilitySWIM, imageErr == nil, imageMessage)
 		if equalStatus(before, nc) {
 			return nil
 		}

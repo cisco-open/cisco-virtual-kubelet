@@ -17,8 +17,7 @@ const (
 )
 
 // Descriptor declares the controller-centric Catalyst Center Network as Code
-// baseline. This adapter currently reconciles endpoint health and inventory,
-// not configuration intent. SWIM execution is not an available capability.
+// baseline. SWIM runs only through a managed device-worker handoff.
 func Descriptor() controlleradapter.Descriptor {
 	return controlleradapter.Descriptor{
 		Type: TypeName, DisplayName: "Catalyst Center",
@@ -27,8 +26,8 @@ func Descriptor() controlleradapter.Descriptor {
 			ModelVersions: []string{"0.5.0"},
 			Sections:      []string{"sites", "network_settings", "network_profiles", "fabric", "templates", "inventory", "wireless", "lan_automation", "system_settings"},
 		},
-		Capabilities:      []string{CapabilityHealth, CapabilityInventory},
-		WorkerClusterRole: controlleradapter.DefaultWorkerClusterRole,
+		Capabilities:      []string{CapabilityHealth, CapabilityInventory, CapabilitySWIM},
+		WorkerClusterRole: controlleradapter.CatalystCenterWorkerClusterRole,
 	}
 }
 

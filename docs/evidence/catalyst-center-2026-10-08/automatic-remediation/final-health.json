@@ -1,0 +1,59 @@
+{
+  "observedAt": "2026-10-08T19:29:31.245113+00:00",
+  "node": {
+    "name": "cat9k-lab-101",
+    "uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+    "unschedulable": false,
+    "taints": [],
+    "conditions": [
+      {
+        "lastHeartbeatTime": "2026-10-08T19:29:25Z",
+        "lastTransitionTime": "2026-10-08T19:26:24Z",
+        "message": "Cisco IOx is enabled and reachable",
+        "reason": "KubeletReady",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-08T19:29:25Z",
+        "lastTransitionTime": "2026-10-08T19:26:24Z",
+        "message": "worker is enforcing the rollout-v1 status-only Node writer contract",
+        "reason": "StatusOnlyRolloutV1",
+        "status": "True",
+        "type": "CiscoVirtualKubeletManagedReady"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-08T19:29:25Z",
+        "lastTransitionTime": "2026-10-08T19:26:24Z",
+        "message": "Sufficient storage available",
+        "reason": "StorageAvailable",
+        "status": "False",
+        "type": "DiskPressure"
+      }
+    ]
+  },
+  "workloads": [
+    {
+      "name": "cvk-topology-drain-a-0926-649c457fff-wrjds",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "containers": [
+        {
+          "ready": true,
+          "restarts": 0
+        }
+      ]
+    },
+    {
+      "name": "cvk-topology-drain-b-0926-67ff7d64b-wrnff",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "containers": [
+        {
+          "ready": true,
+          "restarts": 0
+        }
+      ]
+    }
+  ]
+}

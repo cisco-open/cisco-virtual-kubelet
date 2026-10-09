@@ -52,6 +52,7 @@ func (s *memorySWIMStore) Replace(_ context.Context, before, after swimRecord) e
 type testSWIMAuthority struct {
 	claims, holds, releases int
 	denyClaim, denyCheck    bool
+	claimRevision           string
 }
 
 func (a *testSWIMAuthority) Claim(_ context.Context, _ swimIntent, phase swimPhase) (string, error) {
@@ -59,7 +60,7 @@ func (a *testSWIMAuthority) Claim(_ context.Context, _ swimIntent, phase swimPha
 	if a.denyClaim {
 		return "", errors.New("no admission")
 	}
-	return string(phase) + "-claim", nil
+	return string(phase) + "-claim" + a.claimRevision, nil
 }
 func (a *testSWIMAuthority) Check(context.Context, swimIntent, swimPhase, string) error {
 	if a.denyCheck {

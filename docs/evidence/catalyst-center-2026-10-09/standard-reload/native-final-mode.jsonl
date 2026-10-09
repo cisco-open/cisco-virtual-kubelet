@@ -1,0 +1,3 @@
+{"command": "show xfsu status", "output": "show xfsu status\nxFSU PLATFORM Status: Not started yet\n\n"}
+{"command": "show version | include uptime|Last reload reason", "output": "show version | include uptime|Last reload reason\nC9K-2 uptime is 7 minutes\nLast reload reason: Image Install\n"}
+{"command": "show boot", "output": "show boot\n---------------------------\nSwitch 1\n---------------------------\nCurrent Boot Variables:\nBOOT variable = flash:packages.conf;\n\nBoot Variables on next reload:\nBOOT variable = flash:packages.conf;\nManual Boot = no\nEnable Break = no\nBoot Mode = DEVICE\niPXE Timeout = 0\n"}

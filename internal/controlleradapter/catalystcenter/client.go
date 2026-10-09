@@ -214,6 +214,10 @@ func (c *client) Get(ctx context.Context, path string, query url.Values) ([]byte
 }
 
 func (c *client) Post(ctx context.Context, path string, body []byte) ([]byte, error) {
+	return c.mutate(ctx, http.MethodPost, path, body)
+}
+
+func (c *client) mutate(ctx context.Context, method, path string, body []byte) ([]byte, error) {
 	release, err := c.acquire(ctx)
 	if err != nil {
 		return nil, err
@@ -223,7 +227,7 @@ func (c *client) Post(ctx context.Context, path string, body []byte) ([]byte, er
 	if err != nil {
 		return nil, err
 	}
-	resp, err := rest.Do(ctx, transport.RESTRequest{Method: http.MethodPost, Path: path, Body: body, Headers: map[string]string{"X-Auth-Token": token}})
+	resp, err := rest.Do(ctx, transport.RESTRequest{Method: method, Path: path, Body: body, Headers: map[string]string{"X-Auth-Token": token}})
 	// Mutating requests are never replayed, including authentication errors.
 	return resp, sanitizeError(err)
 }

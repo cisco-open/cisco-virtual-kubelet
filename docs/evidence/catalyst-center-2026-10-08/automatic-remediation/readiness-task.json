@@ -1,0 +1,16 @@
+{
+  "response": {
+    "data": "READINESS_CHECK",
+    "endTime": 1791485701604,
+    "startTime": 1791485685942,
+    "version": 1791485685942,
+    "progress": "Swim Network Validation Successfully Executed",
+    "additionalStatusURL": "/dna/intent/api/v1/networkDeviceImages/validationResults?networkDeviceId=70601ab8-5104-46bc-a061-1ffbaf108c16&operationType=READINESS_CHECK&type=PRE_VALIDATION",
+    "isError": false,
+    "serviceType": "Swim Service",
+    "rootId": "01a11cde-30b6-784b-9539-08df1a4f0280",
+    "instanceTenantId": "6aac917b41bd7b001357e1e2",
+    "id": "01a11cde-30b6-784b-9539-08df1a4f0280"
+  },
+  "version": "1.0"
+}

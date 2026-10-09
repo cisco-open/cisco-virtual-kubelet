@@ -1,0 +1,1755 @@
+{
+  "time": "2026-10-08T19:29:29.393438+00:00",
+  "rollout": {
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "IOSXESoftwareRollout",
+    "metadata": {
+      "creationTimestamp": "2026-10-08T18:20:37Z",
+      "finalizers": [
+        "ops.cisco.vk/iosxesoftwarerollout-safety"
+      ],
+      "generation": 3,
+      "name": "catc-auto-remediation-20261008-101",
+      "namespace": "cvk-live",
+      "resourceVersion": "11399817",
+      "uid": "1003bf72-8938-4e7b-be8f-54b81f892c31"
+    },
+    "spec": {
+      "approval": {
+        "approvedAt": "2026-10-08T18:24:07.425066Z",
+        "approvedBy": "system:admin",
+        "planHash": "sha256:89afdcce47ec0073461bd043c62195edb59d8c4bc826444135d30ea9f543572a"
+      },
+      "control": {
+        "cancel": true,
+        "pause": false,
+        "reason": "Automatic cleanup and inventory synchronization qualified; cancel same-version test at xFSU readiness warning without distribution or activation.",
+        "requestedAt": "2026-10-08T19:07:34Z",
+        "requestedBy": "system:admin",
+        "revision": 1
+      },
+      "plan": {
+        "budgets": {
+          "domains": [
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "distribution.cisco.vk/cache-domain"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "operations.cisco.vk/redundancy-domain"
+            }
+          ],
+          "maxConcurrentTransfers": 1,
+          "maxUnavailable": 1
+        },
+        "canaries": [
+          {
+            "devices": [
+              "cat9k-lab-101"
+            ],
+            "name": "c9300-24p"
+          }
+        ],
+        "health": {
+          "canarySoakSeconds": 30,
+          "maxObservationAgeSeconds": 300,
+          "network": {
+            "enabled": true,
+            "requireCompleteEvidence": true
+          },
+          "waveSoakSeconds": 30
+        },
+        "image": {
+          "imageFamily": "cat9k",
+          "sha256": "e1eecde5e78d7cc061c83d49e0e2bbb6405f447faaced9e6ba24f0815bcc1a9b",
+          "sources": [
+            {
+              "catalystCenter": {
+                "controllerName": "catc",
+                "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+                "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+                "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+                "imageVersion": "17.18.04.0.759",
+                "preparation": {
+                  "name": "swim-auto-cleanup-20261008",
+                  "sha256": "dd96201b78b562029de5efb7f8a12bbef569b3947d55b82de2e6f28e8e78bb88",
+                  "uid": "7ed30098-ca6b-452f-91ad-322a08e5e3b2"
+                },
+                "transferFallbackAddress": "192.0.2.254"
+              },
+              "name": "catalyst-center",
+              "priority": 100
+            }
+          ]
+        },
+        "installTimeoutSeconds": 7200,
+        "pauseAfterCanary": false,
+        "rebootTimeoutSeconds": 3600,
+        "requestedAt": "2026-10-08T18:20:37.577948Z",
+        "requestedBy": "system:admin",
+        "rollbackOnFailure": false,
+        "strategy": "Reload",
+        "targetVersion": "17.18.04",
+        "targets": {
+          "allowAll": false,
+          "maxTargets": 1,
+          "selector": {
+            "matchLabels": {
+              "topology.cisco.vk/lab-node": "cat9k-lab-101",
+              "topology.cisco.vk/lab-set": "pr194-physical-c9k",
+              "topology.cisco.vk/managed": "true"
+            }
+          }
+        },
+        "workloads": {
+          "policy": "BlockIfRunning"
+        }
+      }
+    },
+    "status": {
+      "approval": {
+        "planHash": "sha256:89afdcce47ec0073461bd043c62195edb59d8c4bc826444135d30ea9f543572a",
+        "reason": "ExactPlanApproved",
+        "valid": true,
+        "validatedAt": "2026-10-08T18:24:07Z"
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-10-08T18:20:40Z",
+          "message": "frozen plan created; approval of the exact plan hash is required",
+          "observedGeneration": 1,
+          "reason": "PlanFrozen",
+          "status": "True",
+          "type": "Planned"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T18:24:07Z",
+          "message": "exact frozen plan hash was approved",
+          "observedGeneration": 2,
+          "reason": "ExactPlanApproved",
+          "status": "True",
+          "type": "Approved"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T19:28:52Z",
+          "message": "campaign cancellation is effective and every reservation is settled",
+          "observedGeneration": 3,
+          "reason": "Cancelled",
+          "status": "False",
+          "type": "Progressing"
+        }
+      ],
+      "control": {
+        "cancelled": true,
+        "effectiveRevision": 1,
+        "requestedRevision": 1
+      },
+      "counts": {
+        "cancelled": 1,
+        "total": 1
+      },
+      "effectivePolicy": {
+        "epoch": 1,
+        "policy": {
+          "domains": [
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "distribution.cisco.vk/cache-domain"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "operations.cisco.vk/redundancy-domain"
+            },
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "topology.kubernetes.io/region"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "topology.kubernetes.io/zone"
+            }
+          ],
+          "healthFreshnessSeconds": 300,
+          "ledgerName": "cisco-vk-cisco-virtual-kubelet-topology-ledger",
+          "ledgerNamespace": "cisco-vk-system",
+          "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+          "maxActiveReservations": 3,
+          "maxConcurrentTransfers": 1,
+          "maxLedgerSizeBytes": 262144,
+          "maxTargets": 3,
+          "maxUnavailable": 1,
+          "name": "cisco-vk-cisco-virtual-kubelet-topology-policy",
+          "namespace": "cisco-vk-system",
+          "resourceVersion": "10532649",
+          "semanticHash": "sha256:4af003a1f88f5edd64e5ca1b71063ee6ac1ae5c51bce8c31999b8d11cc46c800",
+          "structuralHash": "sha256:b4c49ffaac4c3540a38fef3adc15c8dc4b48760d3034cf1721cd1c3ed41cca01",
+          "uid": "525ff87f-b74a-44c4-b54e-408e63a3a2e7"
+        },
+        "updatedAt": "2026-10-08T18:20:40Z"
+      },
+      "frozenPlan": {
+        "campaignGeneration": 1,
+        "createdAt": "2026-10-08T18:20:40Z",
+        "encodedSizeBytes": 4167,
+        "hash": "sha256:89afdcce47ec0073461bd043c62195edb59d8c4bc826444135d30ea9f543572a",
+        "policy": {
+          "domains": [
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "distribution.cisco.vk/cache-domain"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "operations.cisco.vk/redundancy-domain"
+            },
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "topology.kubernetes.io/region"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "topology.kubernetes.io/zone"
+            }
+          ],
+          "healthFreshnessSeconds": 300,
+          "ledgerName": "cisco-vk-cisco-virtual-kubelet-topology-ledger",
+          "ledgerNamespace": "cisco-vk-system",
+          "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+          "maxActiveReservations": 3,
+          "maxConcurrentTransfers": 1,
+          "maxLedgerSizeBytes": 262144,
+          "maxTargets": 3,
+          "maxUnavailable": 1,
+          "name": "cisco-vk-cisco-virtual-kubelet-topology-policy",
+          "namespace": "cisco-vk-system",
+          "resourceVersion": "10532649",
+          "semanticHash": "sha256:4af003a1f88f5edd64e5ca1b71063ee6ac1ae5c51bce8c31999b8d11cc46c800",
+          "structuralHash": "sha256:b4c49ffaac4c3540a38fef3adc15c8dc4b48760d3034cf1721cd1c3ed41cca01",
+          "uid": "525ff87f-b74a-44c4-b54e-408e63a3a2e7"
+        },
+        "riskGroupMembershipHash": "sha256:17569b19e0d3ae1ce98c191c8d8977408cee00bcc7f3951d63265b54d11d5982",
+        "targets": [
+          {
+            "canaryCohort": "c9300-24p",
+            "childName": "catc-auto-remediation-20261008-101-cat9k-lab-101-987e78f4",
+            "deviceGeneration": 6,
+            "deviceName": "cat9k-lab-101",
+            "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+            "driver": "XE",
+            "imageFamily": "cat9k",
+            "nodeName": "cat9k-lab-101",
+            "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+            "physicalIdentity": "foc2520l6h1",
+            "projectionHash": "sha256:692be3346f119d8c911d6420967b74b764162eca6bcc3b33a31daf891c4484f2",
+            "qualificationCohort": "c9300-24p",
+            "source": {
+              "catalystCenter": {
+                "controllerName": "catc",
+                "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+                "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+                "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+                "imageVersion": "17.18.04.0.759",
+                "preparation": {
+                  "name": "swim-auto-cleanup-20261008",
+                  "sha256": "dd96201b78b562029de5efb7f8a12bbef569b3947d55b82de2e6f28e8e78bb88",
+                  "uid": "7ed30098-ca6b-452f-91ad-322a08e5e3b2"
+                },
+                "transferFallbackAddress": "192.0.2.254"
+              },
+              "name": "catalyst-center",
+              "priority": 100,
+              "sha256": "e1eecde5e78d7cc061c83d49e0e2bbb6405f447faaced9e6ba24f0815bcc1a9b"
+            },
+            "topology": [
+              {
+                "key": "distribution.cisco.vk/cache-domain",
+                "value": "ubuntu16"
+              },
+              {
+                "key": "operations.cisco.vk/redundancy-domain",
+                "value": "physical-c9k-lab"
+              },
+              {
+                "key": "topology.cisco.vk/lab-node",
+                "value": "cat9k-lab-101"
+              },
+              {
+                "key": "topology.cisco.vk/lab-set",
+                "value": "pr194-physical-c9k"
+              },
+              {
+                "key": "topology.cisco.vk/site",
+                "value": "ubuntu16-physical"
+              },
+              {
+                "key": "topology.kubernetes.io/region",
+                "value": "lab"
+              },
+              {
+                "key": "topology.kubernetes.io/zone",
+                "value": "physical-c9k-lab"
+              }
+            ],
+            "wave": 0,
+            "workerProtocolVersion": "rollout-v1"
+          }
+        ]
+      },
+      "message": "campaign cancellation is effective and every reservation is settled",
+      "observedGeneration": 3,
+      "phase": "Cancelled",
+      "targets": [
+        {
+          "deviceName": "cat9k-lab-101",
+          "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+          "lastTransitionTime": "2026-10-08T19:28:52Z",
+          "leafName": "catc-auto-remediation-20261008-101-cat9k-lab-101-987e78f4",
+          "leafUID": "da660b9f-3b49-433d-bf19-a45782261561",
+          "message": "accepted work reached a reconciled outcome before cancellation settled",
+          "phase": "Cancelled",
+          "reason": "CancelledAfterOutcome"
+        }
+      ]
+    }
+  },
+  "upgrade": {
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "IOSXESoftwareUpgrade",
+    "metadata": {
+      "annotations": {
+        "topology.cisco.vk/app-worker-config-revision": "sha256:0d95793515c2d9f9c015bf1819cfa3c27a79633996fc55870dfdeb2e82caaec7",
+        "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-bcc5bd45c-c4dnz",
+        "topology.cisco.vk/app-worker-pod-uid": "6059836c-07e2-449d-bfc5-5e8111204d8a",
+        "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+        "topology.cisco.vk/campaign-name": "catc-auto-remediation-20261008-101",
+        "topology.cisco.vk/campaign-namespace": "cvk-live",
+        "topology.cisco.vk/campaign-uid": "1003bf72-8938-4e7b-be8f-54b81f892c31",
+        "topology.cisco.vk/device-generation": "6",
+        "topology.cisco.vk/device-name": "cat9k-lab-101",
+        "topology.cisco.vk/device-namespace": "cvk-live",
+        "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "topology.cisco.vk/ledger-uid": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+        "topology.cisco.vk/managed": "true",
+        "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-747575f48c-hcrvv",
+        "topology.cisco.vk/network-worker-pod-uid": "33977f3a-63eb-4755-9f8f-18a103975864",
+        "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "topology.cisco.vk/node-name": "cat9k-lab-101",
+        "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "topology.cisco.vk/plan-hash": "sha256:89afdcce47ec0073461bd043c62195edb59d8c4bc826444135d30ea9f543572a",
+        "topology.cisco.vk/reservation-id": "987e78f4e0e88d02b9e2b1438f25497b",
+        "topology.cisco.vk/worker-protocol": "rollout-v1",
+        "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+      },
+      "creationTimestamp": "2026-10-08T18:24:27Z",
+      "finalizers": [
+        "ops.cisco.vk/iosxesoftwareupgrade-cleanup"
+      ],
+      "generation": 1,
+      "labels": {
+        "topology.cisco.vk/campaign-uid": "1003bf72-8938-4e7b-be8f-54b81f892c31"
+      },
+      "name": "catc-auto-remediation-20261008-101-cat9k-lab-101-987e78f4",
+      "namespace": "cvk-live",
+      "resourceVersion": "11399819",
+      "uid": "da660b9f-3b49-433d-bf19-a45782261561"
+    },
+    "spec": {
+      "deviceRef": {
+        "name": "cat9k-lab-101"
+      },
+      "imageSource": {
+        "catalystCenter": {
+          "controllerName": "catc",
+          "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+          "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+          "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+          "imageVersion": "17.18.04.0.759",
+          "preparation": {
+            "name": "swim-auto-cleanup-20261008",
+            "sha256": "dd96201b78b562029de5efb7f8a12bbef569b3947d55b82de2e6f28e8e78bb88",
+            "uid": "7ed30098-ca6b-452f-91ad-322a08e5e3b2"
+          },
+          "transferFallbackAddress": "192.0.2.254"
+        }
+      },
+      "installTimeoutSeconds": 7200,
+      "maxRetries": 3,
+      "rebootTimeoutSeconds": 3600,
+      "requireNetworkEvidence": true,
+      "resumePolicy": "Retry",
+      "rollbackOnFailure": false,
+      "strategy": "Reload",
+      "targetVersion": "17.18.04"
+    },
+    "status": {
+      "completionTime": "2026-10-08T19:08:09Z",
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-10-08T18:24:41Z",
+          "message": "preparation and inventory synchronization settled; no distribution or activation dispatched; native baseline verified",
+          "observedGeneration": 1,
+          "reason": "ControllerPreparationCancelled",
+          "status": "False",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T19:08:09Z",
+          "message": "preparation and inventory synchronization settled; no distribution or activation dispatched; native baseline verified",
+          "observedGeneration": 1,
+          "reason": "MutationCompleted",
+          "status": "True",
+          "type": "DeviceMutationSettled"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T18:25:35Z",
+          "message": "claiming bounded Catalyst Center preparation and distribution",
+          "observedGeneration": 1,
+          "reason": "StagingRequested",
+          "status": "False",
+          "type": "Staged"
+        }
+      ],
+      "controllerHandoff": {
+        "controlRevision": 0,
+        "expiresAt": "2026-10-08T19:09:34Z",
+        "name": "swim-85d138c942a697274903dcc998e8cdaf",
+        "policyEpoch": 1,
+        "preparation": [
+          {
+            "completedAt": "2026-10-08T18:50:52Z",
+            "files": [
+              {
+                "claimedAt": "2026-10-08T18:50:37Z",
+                "path": "flash:gNOI_iosxe_17.18.02.0.4112.1766116039.bin",
+                "receiptUID": "fcd5a376-5524-41f5-a939-4de69696fee6",
+                "removedAt": "2026-10-08T18:50:48Z",
+                "sha256": "c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355",
+                "size": 1247897709
+              }
+            ],
+            "freeBytesAfter": 3281833984,
+            "freeBytesBefore": 2032709632,
+            "id": "ba149373-c9bd-41e2-9cb2-d19d57227fbc",
+            "observedAt": "2026-10-08T18:48:35Z",
+            "phase": "Complete",
+            "planSHA256": "4862aa5b62338bf8bac6f3ed35f4d1f8befaec8749792a3865ecc83368468711",
+            "policySHA256": "dd96201b78b562029de5efb7f8a12bbef569b3947d55b82de2e6f28e8e78bb88",
+            "stage": "ReadyToDistribute"
+          }
+        ],
+        "stage": "Readiness",
+        "token": "dd7353fc-96ae-4d21-84d7-ef5273d3d768",
+        "uid": "89e74d54-2301-4c66-bac4-4809126a5457",
+        "workerPodUID": "8efdcdde-7a4f-4891-be3d-57ed9f9a80d0"
+      },
+      "executionModel": "CatalystCenterPreparationV1",
+      "failureReason": "ControllerPreparationCancelled",
+      "installStartTime": "2026-10-08T18:25:35Z",
+      "managedMutationClaims": [
+        {
+          "claimedAt": "2026-10-08T18:25:35Z",
+          "controlRevision": 0,
+          "policyEpoch": 1,
+          "reservationID": "987e78f4e0e88d02b9e2b1438f25497b",
+          "stage": "Staging"
+        }
+      ],
+      "managerAdmission": {
+        "campaignUID": "1003bf72-8938-4e7b-be8f-54b81f892c31",
+        "controlRevision": 1,
+        "deviceGeneration": 6,
+        "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "leafUID": "da660b9f-3b49-433d-bf19-a45782261561",
+        "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+        "networkEvidenceHash": "sha256:098c39e3346fe3af00debf8758d07b49fe7533e31e2bf1b3bd4e7dac56af79b4",
+        "networkEvidenceNotAfter": "2026-10-08T19:12:28Z",
+        "networkEvidenceProducerRevision": "sha256:ec4d390f02bd17bb0c6dfd3e19f4f911a750675f86291c239974ec3f891ccd0f",
+        "networkEvidenceSampleSequence": 2,
+        "networkEvidenceWorkerPodUID": "8efdcdde-7a4f-4891-be3d-57ed9f9a80d0",
+        "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "physicalIdentity": "foc2520l6h1",
+        "planHash": "sha256:89afdcce47ec0073461bd043c62195edb59d8c4bc826444135d30ea9f543572a",
+        "policyEpoch": 1,
+        "policyResourceVersion": "10532649",
+        "policyUID": "525ff87f-b74a-44c4-b54e-408e63a3a2e7",
+        "protocolVersion": "rollout-controller-preparation-v1",
+        "reservationID": "987e78f4e0e88d02b9e2b1438f25497b",
+        "state": "Settled",
+        "topologyLockID": "9317fca40ce9930db4c7cb81b1672ab9",
+        "updatedAt": "2026-10-08T19:28:52Z"
+      },
+      "managerControl": {
+        "cancel": true,
+        "reason": "CampaignControl",
+        "revision": 1,
+        "updatedAt": "2026-10-08T19:07:35Z"
+      },
+      "message": "preparation and inventory synchronization settled; no distribution or activation dispatched; native baseline verified",
+      "observedGeneration": 1,
+      "phase": "Cancelled",
+      "previousVersion": "17.18.04.0.759.1784396682",
+      "runningVersion": "17.18.04.0.759.1784396682",
+      "stagingRequested": true,
+      "startTime": "2026-10-08T18:25:34Z",
+      "workerControl": {
+        "effectiveState": "Settled",
+        "message": "managed upgrade has a terminal and conclusively settled worker outcome",
+        "observedAdmissionState": "Settled",
+        "observedControlRevision": 1,
+        "observedPolicyEpoch": 1,
+        "observedWorkerConfigRevision": "sha256:ad317c019496e95495227b9f1e320e4b9673745510936b14923e3c4290d76924",
+        "updatedAt": "2026-10-08T19:28:53Z"
+      }
+    }
+  },
+  "handoff": {
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "CatalystCenterSWIMHandoff",
+    "metadata": {
+      "creationTimestamp": "2026-10-08T18:25:35Z",
+      "finalizers": [
+        "ops.cisco.vk/swim-handoff-evidence"
+      ],
+      "generation": 1,
+      "name": "swim-85d138c942a697274903dcc998e8cdaf",
+      "namespace": "cvk-live",
+      "resourceVersion": "11390004",
+      "uid": "89e74d54-2301-4c66-bac4-4809126a5457"
+    },
+    "spec": {
+      "controllerGeneration": 2,
+      "controllerUsername": "system:serviceaccount:cvk-live:catc-controller-worker",
+      "deviceName": "cat9k-lab-101",
+      "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+      "deviceWorkerPodUID": "647ee644-9221-465e-aefe-26f042fbf224",
+      "deviceWorkerUsername": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+      "serial": "FOC2520L6H1",
+      "source": {
+        "controllerName": "catc",
+        "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+        "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+        "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+        "imageVersion": "17.18.04.0.759",
+        "preparation": {
+          "name": "swim-auto-cleanup-20261008",
+          "sha256": "dd96201b78b562029de5efb7f8a12bbef569b3947d55b82de2e6f28e8e78bb88",
+          "uid": "7ed30098-ca6b-452f-91ad-322a08e5e3b2"
+        },
+        "transferFallbackAddress": "192.0.2.254"
+      },
+      "targetVersion": "17.18.04",
+      "upgradeName": "catc-auto-remediation-20261008-101-cat9k-lab-101-987e78f4",
+      "upgradeUID": "da660b9f-3b49-433d-bf19-a45782261561"
+    },
+    "status": {
+      "inventorySyncs": [
+        {
+          "claim": "dd7353fc-96ae-4d21-84d7-ef5273d3d768",
+          "completedAt": "2026-10-08T18:53:41Z",
+          "preparationID": "ba149373-c9bd-41e2-9cb2-d19d57227fbc",
+          "stage": "ReadyToDistribute",
+          "submittedAt": "2026-10-08T18:51:08Z",
+          "task": "01a11cdb-d703-709d-9ebe-3516d7205a96"
+        }
+      ],
+      "phase": "PreparationCancelled",
+      "readinessClaim": "dd7353fc-96ae-4d21-84d7-ef5273d3d768",
+      "readinessFor": "ReadyToDistribute",
+      "readinessNotBefore": "2026-10-08T18:53:42Z",
+      "readinessTask": "01a11cde-30b6-784b-9539-08df1a4f0280"
+    }
+  },
+  "lease": {
+    "apiVersion": "coordination.k8s.io/v1",
+    "kind": "Lease",
+    "metadata": {
+      "annotations": {
+        "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-bcc5bd45c-c4dnz",
+        "topology.cisco.vk/app-worker-pod-uid": "6059836c-07e2-449d-bfc5-5e8111204d8a",
+        "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+        "topology.cisco.vk/device-name": "cat9k-lab-101",
+        "topology.cisco.vk/device-namespace": "cvk-live",
+        "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "topology.cisco.vk/lease-purpose": "device-mutation",
+        "topology.cisco.vk/managed": "true",
+        "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-747575f48c-hcrvv",
+        "topology.cisco.vk/network-worker-pod-uid": "33977f3a-63eb-4755-9f8f-18a103975864",
+        "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "topology.cisco.vk/node-name": "cat9k-lab-101",
+        "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "topology.cisco.vk/retain-lease": "true",
+        "topology.cisco.vk/worker-protocol": "rollout-v1",
+        "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+      },
+      "creationTimestamp": "2026-09-25T16:39:17Z",
+      "labels": {
+        "cisco.vk/device": "device-18bf8e21debc4863",
+        "cisco.vk/family": "device-disruptive-mutation"
+      },
+      "name": "cvk-device-18bf8e21debc4863-device-disruptive-mutation-27ab075b",
+      "namespace": "cvk-live",
+      "resourceVersion": "11399904",
+      "uid": "805d5577-2ee9-4f1b-96c5-a243a3712116"
+    },
+    "spec": {
+      "acquireTime": "2026-10-08T19:29:25.662582Z",
+      "holderIdentity": "device-write/dbec8f1c-a9f0-4d9e-b770-e105282dc319",
+      "leaseDurationSeconds": 1860,
+      "leaseTransitions": 15459,
+      "renewTime": "2026-10-08T19:29:25.662582Z"
+    }
+  },
+  "device": {
+    "apiVersion": "cisco.vk/v1alpha1",
+    "kind": "CiscoDevice",
+    "metadata": {
+      "annotations": {
+        "cvk.cisco.com/lab-reconcile": "20261001T080431",
+        "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"cisco.vk/v1alpha1\",\"kind\":\"CiscoDevice\",\"metadata\":{\"annotations\":{},\"name\":\"cat9k-lab-101\",\"namespace\":\"cvk-live\"},\"spec\":{\"address\":\"198.51.100.101\",\"credentialSecretRef\":{\"name\":\"cat9k-creds\"},\"driver\":\"XE\",\"logLevel\":\"info\",\"maxPods\":16,\"port\":443,\"tls\":{\"enabled\":true,\"insecureSkipVerify\":true},\"transport\":\"restconf\",\"username\":\"AI_AGENT_RW\",\"xe\":{\"networking\":{\"interface\":{\"management\":{\"dhcp\":true},\"type\":\"Management\"}}}}}\n",
+        "operations.cisco.vk/cancelled-drain-taint-release": "423f728b-1a11-4de7-95aa-275501b6fd82/ad86a87e-356c-4075-8128-894bb94025bf",
+        "topology.cisco.vk/adopt-node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95"
+      },
+      "creationTimestamp": "2026-09-09T18:47:04Z",
+      "finalizers": [
+        "cisco.vk/device-cleanup"
+      ],
+      "generation": 6,
+      "labels": {
+        "distribution.cisco.vk/cache-domain": "ubuntu16",
+        "operations.cisco.vk/image-family": "cat9k",
+        "operations.cisco.vk/qualification-cohort": "c9300-24p",
+        "operations.cisco.vk/redundancy-domain": "physical-c9k-lab",
+        "topology.cisco.vk/lab-node": "cat9k-lab-101",
+        "topology.cisco.vk/lab-set": "pr194-physical-c9k",
+        "topology.cisco.vk/managed": "true",
+        "topology.cisco.vk/site": "ubuntu16-physical",
+        "topology.kubernetes.io/region": "lab",
+        "topology.kubernetes.io/zone": "physical-c9k-lab"
+      },
+      "name": "cat9k-lab-101",
+      "namespace": "cvk-live",
+      "resourceVersion": "11399879",
+      "uid": "20f3e68e-b127-4f2e-9a36-b66945135051"
+    },
+    "spec": {
+      "address": "198.51.100.101",
+      "allowUnsignedApps": false,
+      "credentialSecretRef": {
+        "name": "cat9k-creds"
+      },
+      "driver": "XE",
+      "gnoi": {
+        "port": 9339,
+        "transportSecurity": "tls"
+      },
+      "logLevel": "info",
+      "maxPods": 2,
+      "physicalIdentity": "FOC2520L6H1",
+      "port": 443,
+      "resourceLimits": {},
+      "tls": {
+        "enabled": true,
+        "insecureSkipVerify": true
+      },
+      "transport": "restconf",
+      "username": "AI_AGENT_RW",
+      "worker": {
+        "resources": {
+          "limits": {
+            "cpu": "2",
+            "ephemeral-storage": "4Gi",
+            "memory": "1Gi"
+          },
+          "requests": {
+            "cpu": "100m",
+            "ephemeral-storage": "3Gi",
+            "memory": "256Mi"
+          }
+        },
+        "tmpSizeLimit": "3Gi"
+      },
+      "xe": {
+        "gnoi": {
+          "certificateProvisioning": {
+            "certificateID": "cvk-gnoi-c9k101-20260909",
+            "replaceTargetCABundle": true,
+            "secretRef": {
+              "name": "cat9k-lab-101-gnoi-identity"
+            }
+          }
+        },
+        "networking": {
+          "interface": {
+            "management": {
+              "dhcp": true
+            },
+            "type": "Management"
+          }
+        }
+      }
+    },
+    "status": {
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-10-08T19:27:17Z",
+          "message": "Referenced gNOI Secret material is valid and the exact network worker is ready; device connectivity has not been checked",
+          "observedGeneration": 6,
+          "reason": "Validated",
+          "status": "True",
+          "type": "GNOIConfigurationReady"
+        },
+        {
+          "lastTransitionTime": "2026-09-19T13:39:23Z",
+          "message": "Node name and UID are bound to this CiscoDevice incarnation",
+          "observedGeneration": 6,
+          "reason": "UIDBound",
+          "status": "True",
+          "type": "NodeIdentityReady"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T19:28:09Z",
+          "message": "required topology is projected and the live physical identity is verified",
+          "observedGeneration": 6,
+          "reason": "ProjectionComplete",
+          "status": "True",
+          "type": "TopologyReady"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T19:29:14Z",
+          "message": "manager settled the operation outcome and released its reservation",
+          "observedGeneration": 6,
+          "reason": "SessionSettled",
+          "status": "True",
+          "type": "MaintenanceReady"
+        },
+        {
+          "lastTransitionTime": "2026-09-19T13:41:19Z",
+          "message": "all required topology labels are present",
+          "observedGeneration": 6,
+          "reason": "ProjectionComplete",
+          "status": "False",
+          "type": "TopologyIncomplete"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T19:28:09Z",
+          "message": "no topology ownership conflict is present",
+          "observedGeneration": 6,
+          "reason": "ProjectionComplete",
+          "status": "False",
+          "type": "TopologyConflict"
+        }
+      ],
+      "healthObservation": {
+        "acceptedNetwork": {
+          "collectionEndedAt": "2026-10-08T19:29:10Z",
+          "collectionStartedAt": "2026-10-08T19:29:08Z",
+          "complete": true,
+          "deviceIdentityHash": "sha256:dac037030871a1337647598d725235d4c94cbdb200cecf271309b46af0a1eaa2",
+          "interfaces": [
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "AppGigabitEthernet1/0/1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 40000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "FortyGigabitEthernet1/1/1",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 40000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "FortyGigabitEthernet1/1/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 140000,
+              "headroomPercent": 99,
+              "ingressBitsPerSecond": 5000,
+              "name": "GigabitEthernet0/0",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/10",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/11",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/12",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/13",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/14",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/15",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/16",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/17",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/18",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/19",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/20",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/21",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/22",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/23",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/24",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/3",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/4",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/5",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/6",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/7",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/8",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/9",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/1",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/3",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/4",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 8000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Loopback990",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/2",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/3",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/4",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/5",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/6",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/7",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/8",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 25000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TwentyFiveGigE1/1/1",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 25000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TwentyFiveGigE1/1/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Vlan1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Vlan100",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Vlan99",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            }
+          ],
+          "neighbors": [
+            {
+              "id": "C9K-1",
+              "identity": "cdp|C9K-1|GigabitEthernet1/0/1|",
+              "interface": "GigabitEthernet1/0/1",
+              "remoteInterface": "GigabitEthernet1/0/1",
+              "source": "cdp",
+              "state": "discovered"
+            },
+            {
+              "id": "MaC_Outside_Switch",
+              "identity": "cdp|MaC_Outside_Switch|GigabitEthernet0/0|",
+              "interface": "GigabitEthernet0/0",
+              "remoteInterface": "GigabitEthernet1/0/15",
+              "source": "cdp",
+              "state": "discovered"
+            }
+          ],
+          "observedAt": "2026-10-08T19:29:08Z",
+          "producerRevision": "sha256:ad317c019496e95495227b9f1e320e4b9673745510936b14923e3c4290d76924",
+          "sampleSequence": 4,
+          "workerPodUID": "33977f3a-63eb-4755-9f8f-18a103975864"
+        },
+        "conditionObservations": [
+          {
+            "observedAt": "2026-10-08T19:29:16Z",
+            "observedGeneration": 6,
+            "status": "True",
+            "type": "GNOIConfigurationReady"
+          },
+          {
+            "observedAt": "2026-10-08T19:29:14Z",
+            "observedGeneration": 6,
+            "status": "True",
+            "type": "NodeIdentityReady"
+          },
+          {
+            "observedAt": "2026-10-08T19:29:14Z",
+            "observedGeneration": 6,
+            "status": "True",
+            "type": "TopologyReady"
+          }
+        ],
+        "deviceConditionsHash": "sha256:9ceb86789e36576e12e75699799ba34fdc6c1e98781938ee846d9c90a6b089f3",
+        "network": {
+          "collectionEndedAt": "2026-10-08T19:29:10Z",
+          "collectionStartedAt": "2026-10-08T19:29:08Z",
+          "complete": true,
+          "deviceIdentityHash": "sha256:dac037030871a1337647598d725235d4c94cbdb200cecf271309b46af0a1eaa2",
+          "interfaces": [
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "AppGigabitEthernet1/0/1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 40000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "FortyGigabitEthernet1/1/1",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 40000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "FortyGigabitEthernet1/1/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 140000,
+              "headroomPercent": 99,
+              "ingressBitsPerSecond": 5000,
+              "name": "GigabitEthernet0/0",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/10",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/11",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/12",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/13",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/14",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/15",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/16",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/17",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/18",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/19",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/20",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/21",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/22",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/23",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/24",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/3",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/4",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/5",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/6",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/7",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/8",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/0/9",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/1",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/3",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "GigabitEthernet1/1/4",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 8000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Loopback990",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/2",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/3",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/4",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/5",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/6",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/7",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 10000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TenGigabitEthernet1/1/8",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 25000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TwentyFiveGigE1/1/1",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 25000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "TwentyFiveGigE1/1/2",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Vlan1",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Vlan100",
+              "operUp": false,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            },
+            {
+              "capacityBitsPerSecond": 1000000000,
+              "egressBitsPerSecond": 0,
+              "headroomPercent": 100,
+              "ingressBitsPerSecond": 0,
+              "name": "Vlan99",
+              "operUp": true,
+              "rateSource": "cisco-ios-xe-interfaces-oper:statistics-kbps"
+            }
+          ],
+          "neighbors": [
+            {
+              "id": "C9K-1",
+              "identity": "cdp|C9K-1|GigabitEthernet1/0/1|",
+              "interface": "GigabitEthernet1/0/1",
+              "remoteInterface": "GigabitEthernet1/0/1",
+              "source": "cdp",
+              "state": "discovered"
+            },
+            {
+              "id": "MaC_Outside_Switch",
+              "identity": "cdp|MaC_Outside_Switch|GigabitEthernet0/0|",
+              "interface": "GigabitEthernet0/0",
+              "remoteInterface": "GigabitEthernet1/0/15",
+              "source": "cdp",
+              "state": "discovered"
+            }
+          ],
+          "observedAt": "2026-10-08T19:29:08Z",
+          "producerRevision": "sha256:ad317c019496e95495227b9f1e320e4b9673745510936b14923e3c4290d76924",
+          "sampleSequence": 4,
+          "workerPodUID": "33977f3a-63eb-4755-9f8f-18a103975864"
+        },
+        "nodeReadyHeartbeatTime": "2026-10-08T19:28:54Z",
+        "observedAt": "2026-10-08T19:29:16Z"
+      },
+      "maintenanceSession": {
+        "acknowledgedAt": "2026-10-08T18:25:25Z",
+        "controlRevision": 1,
+        "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "lease": {
+          "holder": "software-upgrade/da660b9f-3b49-433d-bf19-a45782261561",
+          "name": "cvk-device-18bf8e21debc4863-device-disruptive-mutation-27ab075b",
+          "namespace": "cvk-live",
+          "uid": "805d5577-2ee9-4f1b-96c5-a243a3712116"
+        },
+        "message": "manager settled the operation outcome and released its reservation",
+        "nodeName": "cat9k-lab-101",
+        "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "operation": {
+          "name": "catc-auto-remediation-20261008-101-cat9k-lab-101-987e78f4",
+          "namespace": "cvk-live",
+          "uid": "da660b9f-3b49-433d-bf19-a45782261561"
+        },
+        "phase": "Settled",
+        "requestedAt": "2026-10-08T18:24:41Z",
+        "sessionToken": "c3e6252e-ae81-49fd-8a6d-126b1d010122"
+      },
+      "netAsCode": {
+        "format": "netascode-iosxe",
+        "sections": [
+          "entity",
+          "device",
+          "interface"
+        ],
+        "stripe": "iosxe",
+        "type": "DeviceCentric"
+      },
+      "networkWorkerRevision": {
+        "deploymentGeneration": 8,
+        "deploymentUID": "0515d5b0-6f0f-41d4-92f8-dc5d8487adef",
+        "desiredRevision": "sha256:ad317c019496e95495227b9f1e320e4b9673745510936b14923e3c4290d76924",
+        "observedAt": "2026-10-08T19:27:15Z",
+        "observedRevision": "sha256:ad317c019496e95495227b9f1e320e4b9673745510936b14923e3c4290d76924",
+        "podReadyTime": "2026-10-08T19:26:38Z",
+        "podStartTime": "2026-10-08T19:26:35Z",
+        "podUID": "33977f3a-63eb-4755-9f8f-18a103975864"
+      },
+      "nodeIdentity": {
+        "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "nodeName": "cat9k-lab-101",
+        "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "physicalIdentity": "foc2520l6h1"
+      },
+      "phase": "Ready",
+      "topologyProjection": {
+        "effectiveLabelHash": "sha256:692be3346f119d8c911d6420967b74b764162eca6bcc3b33a31daf891c4484f2",
+        "lastSuccessfulTime": "2026-09-19T13:41:19Z",
+        "sourceResourceVersion": "6907458"
+      },
+      "workerCapabilities": [
+        {
+          "enabled": true,
+          "name": "apphosting",
+          "runtime": "per-device-worker"
+        },
+        {
+          "enabled": true,
+          "name": "config",
+          "runtime": "per-device-worker"
+        },
+        {
+          "enabled": true,
+          "name": "telemetry",
+          "runtime": "per-device-worker"
+        },
+        {
+          "enabled": true,
+          "name": "diagnostics",
+          "runtime": "per-device-worker"
+        },
+        {
+          "enabled": true,
+          "name": "operations",
+          "runtime": "per-device-worker"
+        },
+        {
+          "enabled": true,
+          "name": "lifecycle",
+          "runtime": "per-device-worker"
+        }
+      ],
+      "workerRevision": {
+        "deploymentGeneration": 8,
+        "deploymentUID": "5e0b6d27-d3b8-498f-bc3e-065a97860581",
+        "desiredRevision": "sha256:0d95793515c2d9f9c015bf1819cfa3c27a79633996fc55870dfdeb2e82caaec7",
+        "observedAt": "2026-10-08T19:29:14Z",
+        "observedRevision": "sha256:0d95793515c2d9f9c015bf1819cfa3c27a79633996fc55870dfdeb2e82caaec7",
+        "podStartTime": "2026-10-08T19:26:04Z",
+        "podUID": "6059836c-07e2-449d-bfc5-5e8111204d8a",
+        "readyHeartbeatTime": "2026-10-08T19:28:54Z"
+      },
+      "workerTopology": "PerDevice"
+    }
+  }
+}

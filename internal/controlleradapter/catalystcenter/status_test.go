@@ -121,7 +121,7 @@ func TestStatusConflictRetryPreservesOtherWriter(t *testing.T) {
 	}
 }
 
-func TestFailedProbePersistsAttemptTimeAndSWIMRemainsUnavailable(t *testing.T) {
+func TestFailedProbePersistsAttemptTimeAndReportsManagedSWIMCapability(t *testing.T) {
 	a, nc := statusFixture(t)
 	old := metav1.NewTime(time.Now().Add(-time.Hour))
 	if err := a.statusWriter.Get(context.Background(), a.key, nc); err != nil {
@@ -155,8 +155,8 @@ func TestFailedProbePersistsAttemptTimeAndSWIMRemainsUnavailable(t *testing.T) {
 	for _, capability := range nc.Status.Capabilities {
 		if capability.Name == CapabilitySWIM {
 			found = true
-			if capability.Supported {
-				t.Fatal("image inventory enabled SWIM execution")
+			if !capability.Supported {
+				t.Fatal("managed SWIM capability was not reported")
 			}
 		}
 	}

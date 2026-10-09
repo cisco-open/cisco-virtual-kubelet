@@ -81,6 +81,8 @@ func WorkerClusterRoleContracts() map[string][]rbacv1.PolicyRule {
 			policyRule([]string{"coordination.k8s.io"}, []string{"leases"}, "get", "list", "watch"),
 		},
 		NetworkManagementReadWriteClusterRole: {
+			policyRule([]string{"cisco.vk"}, []string{"networkcontrollers"}, "get"),
+			policyRule([]string{"ops.cisco.vk"}, []string{"catalystcenterswimhandoffs"}, "get", "list", "watch", "create", "update", "patch"),
 			policyRule([]string{"cisco.vk"}, []string{"ciscodevices"}, "get", "list", "watch"),
 			policyRule([]string{"cisco.vk"}, []string{"ciscodevices/status"}, "get", "update", "patch"),
 			policyRule([]string{"config.cisco.vk"}, []string{"iosxedevicegroupconfigs", "iosxeinterfacegroupconfigs", "iosxetemplates"}, "get", "list", "watch"),
@@ -147,4 +149,31 @@ func canonicalPolicyRules(rules []rbacv1.PolicyRule) []string {
 	}
 	sort.Strings(canonical)
 	return canonical
+}
+
+// CatalystCenterSWIMClusterRole is the narrowly delegated controller handoff role.
+const CatalystCenterSWIMClusterRole = "cisco-virtual-kubelet-controller-worker-swim"
+
+func CatalystCenterSWIMRules() []rbacv1.PolicyRule {
+	return []rbacv1.PolicyRule{
+		policyRule([]string{"cisco.vk"}, []string{"networkcontrollers"}, "get", "list", "watch"),
+		policyRule([]string{"cisco.vk"}, []string{"networkcontrollers/status"}, "get", "update", "patch"),
+		policyRule([]string{"config.cisco.vk"}, []string{"networkcontrollerconfigs"}, "get", "list", "watch"),
+		policyRule([]string{"config.cisco.vk"}, []string{"networkcontrollerconfigs/status"}, "get", "update", "patch"),
+		policyRule([]string{""}, []string{"configmaps"}, "get", "list", "watch"),
+		policyRule([]string{""}, []string{"events"}, "create", "patch"),
+		policyRule([]string{"cisco.vk"}, []string{"ciscodevices"}, "get"),
+		policyRule([]string{"ops.cisco.vk"}, []string{"iosxesoftwareupgrades"}, "get"),
+		policyRule([]string{"coordination.k8s.io"}, []string{"leases"}, "get"),
+		policyRule([]string{"ops.cisco.vk"}, []string{"catalystcenterswimhandoffs"}, "get", "list", "watch"),
+		policyRule([]string{"ops.cisco.vk"}, []string{"catalystcenterswimhandoffs/status"}, "get", "update"),
+	}
+}
+
+func ValidateCatalystCenterSWIMRole(role *rbacv1.ClusterRole) error {
+	if role == nil || role.Name != CatalystCenterSWIMClusterRole || role.AggregationRule != nil ||
+		!reflect.DeepEqual(canonicalPolicyRules(role.Rules), canonicalPolicyRules(CatalystCenterSWIMRules())) {
+		return fmt.Errorf("Catalyst Center SWIM role differs from the compiled contract")
+	}
+	return nil
 }

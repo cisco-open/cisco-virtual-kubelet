@@ -123,8 +123,6 @@ func TestNetworkControllerWorkerRBACStaysSecretlessAndStatusOnly(t *testing.T) {
 		`resources: ["secrets"]`,
 		`resources: ["pods"]`,
 		`resources: ["deployments"]`,
-		`"leases"`,
-		`"coordination.k8s.io"`,
 		`verbs: ["*"]`,
 	} {
 		if strings.Contains(text, forbidden) {
@@ -212,5 +210,59 @@ func TestManagerBindMarkerCoversEveryAuditedWorkerRole(t *testing.T) {
 		if !strings.Contains(marker, role) {
 			t.Errorf("manager bind marker does not cover %q: %s", role, marker)
 		}
+	}
+}
+
+func TestSWIMWorkerCannotOwnDeviceMutation(t *testing.T) {
+	roles := workerClusterRoles(t)
+	base := roles[controlleradapter.DefaultWorkerClusterRole]
+	swim, ok := roles[controlleradapter.CatalystCenterWorkerClusterRole]
+	if !ok {
+		t.Fatal("SWIM role missing")
+	}
+	if len(swim.Rules) != len(base.Rules)+5 {
+		t.Fatal("SWIM role expanded unexpectedly")
+	}
+	for i, r := range base.Rules {
+		if !reflect.DeepEqual(r, swim.Rules[i]) {
+			t.Fatal("base permissions drifted")
+		}
+	}
+	for name, role := range roles {
+		for _, r := range role.Rules {
+			for _, resource := range r.Resources {
+				if resource == "leases" && (name != controlleradapter.CatalystCenterWorkerClusterRole || !reflect.DeepEqual(r.Verbs, []string{"get"})) {
+					t.Fatal("controller can mutate device lease")
+				}
+				if (resource == "iosxesoftwareupgrades" || resource == "ciscodevices") && name == controlleradapter.CatalystCenterWorkerClusterRole && !reflect.DeepEqual(r.Verbs, []string{"get"}) {
+					t.Fatal("SWIM can mutate authority")
+				}
+			}
+		}
+	}
+}
+
+func TestManagerSWIMRecoveryHasReadOnlyJournalAccess(t *testing.T) {
+	raw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/templates/role.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var role rbacv1.ClusterRole
+	if err = yaml.Unmarshal(raw, &role); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, rule := range role.Rules {
+		for _, resource := range rule.Resources {
+			if strings.HasPrefix(resource, "catalystcenterswimhandoffs") {
+				if resource != "catalystcenterswimhandoffs" || !reflect.DeepEqual(rule.Verbs, []string{"get"}) {
+					t.Fatalf("manager may mutate controller journal: %+v", rule)
+				}
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("manager cannot read handoff recovery proof")
 	}
 }

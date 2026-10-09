@@ -545,6 +545,19 @@ func (r *IOSXESoftwareRolloutReconciler) verifyFrozenSource(ctx context.Context,
 	for i := range rollout.Status.FrozenPlan.Targets {
 		target := &rollout.Status.FrozenPlan.Targets[i]
 		source := target.Source
+		if source.CatalystCenter != nil {
+			frozen, err := r.freezeSource(ctx, rollout.Namespace, rollout.Spec.Plan.Image, opsv1alpha1.IOSXESoftwareRolloutSourceSpec{Name: source.Name, Priority: source.Priority, CatalystCenter: source.CatalystCenter, URL: source.URL})
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(frozen, source) {
+				return fmt.Errorf("frozen controller source changed")
+			}
+			if rollout.Spec.Plan.Strategy != opsv1alpha1.IOSXESoftwareRolloutStrategyReload || rollout.Spec.Plan.RollbackOnFailure == nil || *rollout.Spec.Plan.RollbackOnFailure || target.MaxTransferBytesPerSecond != 0 {
+				return fmt.Errorf("SWIM requires Reload, rollbackOnFailure=false, and no unsupported transfer pacing")
+			}
+			continue
+		}
 		if source.Name == "" || source.URL == "" || source.SHA256 != rollout.Spec.Plan.Image.SHA256 {
 			return fmt.Errorf("target %s has an incomplete or mismatched frozen image source", target.DeviceName)
 		}
@@ -694,7 +707,10 @@ func validateManagedLeafBinding(
 
 func expectedLeafSpec(rollout *opsv1alpha1.IOSXESoftwareRollout, target opsv1alpha1.IOSXESoftwareRolloutPlannedTarget) opsv1alpha1.IOSXESoftwareUpgradeSpec {
 	source := target.Source
-	imageSource := opsv1alpha1.UpgradeImageSource{URL: source.URL, SHA256: source.SHA256}
+	imageSource := opsv1alpha1.UpgradeImageSource{URL: source.URL, SHA256: source.SHA256, CatalystCenter: source.CatalystCenter.DeepCopy()}
+	if source.CatalystCenter != nil {
+		imageSource.SHA256 = ""
+	}
 	if source.SecretName != "" {
 		imageSource.URLSecretRef = &corev1.LocalObjectReference{Name: source.SecretName}
 	}
@@ -1755,7 +1771,7 @@ func (r *IOSXESoftwareRolloutReconciler) revalidateFrozenTarget(
 		expectedSecretName = expectedSource.URLSecretRef.Name
 	}
 	if target.Source.Name != expectedSource.Name || target.Source.Priority != expectedSource.Priority ||
-		target.Source.URL != expectedSource.URL || target.Source.SHA256 != rollout.Spec.Plan.Image.SHA256 ||
+		!reflect.DeepEqual(target.Source.CatalystCenter, expectedSource.CatalystCenter) || target.Source.URL != expectedSource.URL || target.Source.SHA256 != rollout.Spec.Plan.Image.SHA256 ||
 		target.Source.SecretName != expectedSecretName {
 		return fmt.Errorf("frozen target image source selection changed")
 	}

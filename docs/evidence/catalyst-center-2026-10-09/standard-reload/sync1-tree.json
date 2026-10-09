@@ -1,0 +1,41 @@
+{
+  "response": [
+    {
+      "endTime": 1791521231266,
+      "startTime": 1791521159529,
+      "version": 1791521159560,
+      "progress": "Synced devices: [198.51.100.101]",
+      "lastUpdate": 1791521159560,
+      "isError": false,
+      "serviceType": "Inventory service",
+      "rootId": "01a11efb-7968-75a9-8437-ddb127a9b6fd",
+      "instanceTenantId": "6aac917b41bd7b001357e1e2",
+      "id": "01a11efb-7968-75a9-8437-ddb127a9b6fd"
+    },
+    {
+      "endTime": 1791521230726,
+      "startTime": 1791521159561,
+      "version": 1791521230725,
+      "progress": "Synced device: 198.51.100.101 Status: SUCCESS",
+      "lastUpdate": 1791521230725,
+      "isError": false,
+      "serviceType": "Inventory service",
+      "parentId": "01a11efb-7968-75a9-8437-ddb127a9b6fd",
+      "rootId": "01a11efb-7968-75a9-8437-ddb127a9b6fd",
+      "instanceTenantId": "6aac917b41bd7b001357e1e2",
+      "id": "01a11efb-7989-7e9f-a559-9330f3c48f2b"
+    },
+    {
+      "startTime": 1791521231265,
+      "version": 1791521231265,
+      "progress": "Inventory service sync device success",
+      "isError": false,
+      "serviceType": "NCIM",
+      "parentId": "01a11efb-7968-75a9-8437-ddb127a9b6fd",
+      "rootId": "01a11efb-7968-75a9-8437-ddb127a9b6fd",
+      "instanceTenantId": "6aac917b41bd7b001357e1e2",
+      "id": "01a11efc-91a1-7068-b30a-dcf3f5d58983"
+    }
+  ],
+  "version": "1.0"
+}

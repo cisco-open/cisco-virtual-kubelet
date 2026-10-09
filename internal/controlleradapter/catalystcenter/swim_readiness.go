@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -14,6 +15,11 @@ import (
 const networkDeviceImagesPath = "/dna/intent/api/v1/networkDeviceImages/"
 
 type DeviceImageDetails struct {
+	GoldenImages []struct {
+		ID        string `json:"id"`
+		Version   string `json:"version"`
+		ImageType string `json:"imageType"`
+	} `json:"goldenImages"`
 	ID                string `json:"id"`
 	ManagementAddress string `json:"managementAddress"`
 	NetworkDevice     struct {
@@ -62,6 +68,10 @@ type ReadinessResult struct {
 	Status    string `json:"status"`
 	StartTime int64  `json:"startTime"`
 	EndTime   int64  `json:"endTime"`
+	// Derived only from the exact qualified positive fallback detail pair.
+	// Never accepted from a top-level API field or logged as arbitrary text.
+	TransferFallbackAddress string `json:"-"`
+	XFSUVersionPathTarget   string `json:"-"`
 }
 
 // 3.2.3 may omit top-level status and return it as a STATUS entry in a
@@ -77,6 +87,8 @@ func (r *ReadinessResult) UnmarshalJSON(data []byte) error {
 		return errInvalidResponse
 	}
 	status := strings.ToUpper(strings.TrimSpace(wire.Status))
+	fallbackAddress := ""
+	xfsuTarget := ""
 	if len(wire.Details) > 0 && string(wire.Details) != "null" {
 		type detail struct {
 			Key   string `json:"key"`
@@ -91,7 +103,14 @@ func (r *ReadinessResult) UnmarshalJSON(data []byte) error {
 			details = []detail{item}
 		}
 		count := 0
+		knownDetails := map[string]string{}
 		for _, d := range details {
+			if d.Key == "DESCRIPTION" || d.Key == "EXPECTED" {
+				if _, exists := knownDetails[d.Key]; exists {
+					return errInvalidResponse
+				}
+				knownDetails[d.Key] = d.Value
+			}
 			if d.Key != "STATUS" {
 				continue
 			}
@@ -102,9 +121,26 @@ func (r *ReadinessResult) UnmarshalJSON(data []byte) error {
 			}
 			status = nested
 		}
+		if knownDetails["EXPECTED"] == "If upgrade image version is greater than 26.1.x, the running image version also must be 26.1.x or higher." {
+			match := regexp.MustCompile(`^Upgrades using xfsu to (26\.[0-9]+\.[0-9]+) is not supported from running image version (17\.[0-9]+\.[0-9]+)$`).FindStringSubmatch(knownDetails["DESCRIPTION"])
+			if len(match) == 3 {
+				xfsuTarget = match[1]
+			}
+		}
+		const prefix = "HTTPS/SCP is reachable: "
+		const suffix = "/ Netconf transfer failed"
+		desc := knownDetails["DESCRIPTION"]
+		if strings.HasPrefix(desc, prefix) && strings.HasSuffix(desc, suffix) {
+			address := strings.TrimSuffix(strings.TrimPrefix(desc, prefix), suffix)
+			if knownDetails["EXPECTED"] == prefix+address+". The Netconf transfer failed, likely because the device is unable to ping "+address+" through the default VRF." {
+				fallbackAddress = address
+			}
+		}
 	}
 	*r = ReadinessResult(wire.plain)
 	r.Status = status
+	r.TransferFallbackAddress = fallbackAddress
+	r.XFSUVersionPathTarget = xfsuTarget
 	return nil
 }
 

@@ -1,0 +1,148 @@
+[
+  {
+    "id": "36986185-f520-41be-9785-f069c597929e",
+    "parentId": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Startup config check",
+    "status": null,
+    "startTime": 1791474711367,
+    "endTime": 1791474730735,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": ""
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Startup configuration exist for this device"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "14a99e0f-1c00-479b-89d7-4f82a18b881c",
+    "parentId": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Config register check",
+    "status": null,
+    "startTime": 1791474711119,
+    "endTime": 1791474729696,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "0x102,0x2102"
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Config-register verified successfully"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "c8139ca3-55a0-44c3-86d9-dae0476cbbc4",
+    "parentId": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Flash check",
+    "status": null,
+    "startTime": 1791474711078,
+    "endTime": 1791474729066,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "2620 MB\n Available Free space is: 1938 MB [Install mode needs free space to 2.2 times of Image size]"
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Image Size is larger than free space"
+      },
+      {
+        "key": "STATUS",
+        "value": "WARNING"
+      }
+    ]
+  },
+  {
+    "id": "b0153367-041c-4492-a228-1e1a4528d670",
+    "parentId": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "File Transfer Check",
+    "status": null,
+    "startTime": 1791474711001,
+    "endTime": 1791474728828,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254. The Netconf transfer failed, likely because the device is unable to ping 192.0.2.254 through the default VRF."
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254/ Netconf transfer failed"
+      },
+      {
+        "key": "STATUS",
+        "value": "warning"
+      }
+    ]
+  },
+  {
+    "id": "a5aed52f-c3ed-4ccc-a736-2c212507e37d",
+    "parentId": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Image Version Support",
+    "status": null,
+    "startTime": 1791474710907,
+    "endTime": 1791474719312,
+    "details": [
+      {
+        "key": "DESCRIPTION",
+        "value": "The standard image is applicable to the device"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "6a793b8a-f1d4-4d05-b63b-74161823abdb",
+    "parentId": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "XFSU Compatibility Check",
+    "status": null,
+    "startTime": 1791474710670,
+    "endTime": 1791474718450,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": ""
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Device is eligible for xFSU upgrade."
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  }
+]

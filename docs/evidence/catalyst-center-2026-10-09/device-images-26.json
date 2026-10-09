@@ -1,0 +1,40 @@
+{
+  "response": {
+    "id": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "managementAddress": "198.51.100.101",
+    "networkDeviceImageStatus": "OUTDATED",
+    "networkDeviceUpdateStatus": "DISTRIBUTION_PENDING",
+    "networkDeviceImageCompatibilityStatus": "UNKNOWN",
+    "goldenImages": [
+      {
+        "id": "86159098-3ca1-47af-8456-ff2fc3e0d549",
+        "name": "cat9k_iosxe.26.02.01.SPA.bin",
+        "version": "26.02.01.0.263",
+        "imageType": "SYSTEM",
+        "goldenTaggingDetails": [
+          {
+            "nameHierarchy": null,
+            "deviceRoles": "ACCESS",
+            "inherited": false,
+            "siteId": "14943839-d66c-450d-b65a-5552eb1af040",
+            "siteName": "MUC07"
+          }
+        ]
+      }
+    ],
+    "installedImages": [
+      {
+        "id": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+        "name": "cat9k_iosxe.17.18.04.SPA.bin",
+        "version": "17.18.04.0.759",
+        "imageType": "SYSTEM"
+      }
+    ],
+    "networkDevice": {
+      "id": "286315874",
+      "productName": "Cisco Catalyst 9300 Switch",
+      "productNameOrdinal": 286315874
+    }
+  },
+  "version": "1.0"
+}

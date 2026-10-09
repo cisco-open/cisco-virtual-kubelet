@@ -1,0 +1,12 @@
+{
+  "spec": {
+    "control": {
+      "revision": 1,
+      "cancel": true,
+      "pause": false,
+      "requestedBy": "system:admin",
+      "requestedAt": "2026-10-08T19:07:34Z",
+      "reason": "Automatic cleanup and inventory synchronization qualified; cancel same-version test at xFSU readiness warning without distribution or activation."
+    }
+  }
+}

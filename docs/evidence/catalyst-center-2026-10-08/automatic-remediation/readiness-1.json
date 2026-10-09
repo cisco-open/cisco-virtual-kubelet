@@ -1,0 +1,144 @@
+[
+  {
+    "id": "e9f3238c-b15e-4e3e-9887-65b8938ae6b9",
+    "parentId": "01a11cde-30b6-784b-9539-08df1a4f0280",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Startup config check",
+    "status": null,
+    "startTime": 1791485688214,
+    "endTime": 1791485700909,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": ""
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Startup configuration exist for this device"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "c11ee0e8-59db-4159-bb9e-8273d79b460e",
+    "parentId": "01a11cde-30b6-784b-9539-08df1a4f0280",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Config register check",
+    "status": null,
+    "startTime": 1791485688048,
+    "endTime": 1791485699476,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "0x102,0x2102"
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Config-register verified successfully"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "ed468c2f-220f-4dd4-88b7-68701d7becc4",
+    "parentId": "01a11cde-30b6-784b-9539-08df1a4f0280",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Flash check",
+    "status": null,
+    "startTime": 1791485688006,
+    "endTime": 1791485699002,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "2620 MB\n Available Free space is: 3129 MB [Install mode needs free space to 2.2 times of Image size]"
+      },
+      {
+        "key": "STATUS",
+        "value": "SUCCESS"
+      }
+    ]
+  },
+  {
+    "id": "d8df7df6-4678-4a40-a2f6-32c973fd5381",
+    "parentId": "01a11cde-30b6-784b-9539-08df1a4f0280",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "File Transfer Check",
+    "status": null,
+    "startTime": 1791485687961,
+    "endTime": 1791485698889,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254. The Netconf transfer failed, likely because the device is unable to ping 192.0.2.254 through the default VRF."
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254/ Netconf transfer failed"
+      },
+      {
+        "key": "STATUS",
+        "value": "warning"
+      }
+    ]
+  },
+  {
+    "id": "59529dfb-37a5-4f9e-973a-20b03dce1813",
+    "parentId": "01a11cde-30b6-784b-9539-08df1a4f0280",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Image Version Support",
+    "status": null,
+    "startTime": 1791485687912,
+    "endTime": 1791485689503,
+    "details": [
+      {
+        "key": "DESCRIPTION",
+        "value": "The standard image is applicable to the device"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "39e93f79-17eb-42d7-89ac-85b0a5b73b08",
+    "parentId": "01a11cde-30b6-784b-9539-08df1a4f0280",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "XFSU Compatibility Check",
+    "status": null,
+    "startTime": 1791485687685,
+    "endTime": 1791485688570,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "The upgrade image version must be higher than the currently running version 17.18.4."
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "xFSU operations are supported since the running image version and the upgrade image version are the same."
+      },
+      {
+        "key": "STATUS",
+        "value": "warning"
+      }
+    ]
+  }
+]

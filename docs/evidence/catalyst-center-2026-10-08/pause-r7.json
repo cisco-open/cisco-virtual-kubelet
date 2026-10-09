@@ -1,0 +1,11 @@
+{
+  "spec": {
+    "control": {
+      "revision": 2,
+      "pause": true,
+      "reason": "Activation readiness flash check: 1938 MB available, 2620 MB required. Guarded cleanup execution is not implemented; preserve staged/running images.",
+      "requestedBy": "system:admin",
+      "requestedAt": "2026-10-08T15:55:54Z"
+    }
+  }
+}

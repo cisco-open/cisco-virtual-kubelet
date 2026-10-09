@@ -31,13 +31,19 @@ does not introduce a new Network as Code section.
   `GET /dna/intent/api/v1/image/importation`.
 - Internal SWIM distribution and activation request contracts, including
   asynchronous task IDs and task polling through `/dna/intent/api/v1/task/{id}`.
-  These methods are not wired to a public operation or exposed as an available
-  controller capability.
+  Managed rollouts now delegate these operations through a durable
+  `CatalystCenterSWIMHandoff`; final success requires native XE verification.
 
 The adapter uses the existing CVK REST transport for TLS, rate limiting,
 request execution, and error redaction. Credentials are read from the worker's
 projected `username` and `password` files. Tokens are held only in the worker
 process and are not written to Kubernetes status or logs.
+
+Co-locating SWIM with managed XE devices requires credential Secret references
+for every CiscoDevice in that namespace. The namespace RBAC audit accepts only
+the canonical, live Catalyst Center worker binding and its exact compiled SWIM
+role; inline device passwords, stale ownership, extra subjects, and broader
+permissions remain blocking.
 
 Device and image inventories use bounded, one-based pagination. Invalid,
 missing, null or repeated pages fail the refresh without publishing a partial
@@ -60,8 +66,19 @@ validation evidence and explicit success for every returned check. Missing,
 conflicting, warning, skipped or partial results fail qualification. A successful
 parent task with no validation records is not a pass. The decoder accepts both
 the documented top-level status and the 3.2.3 `resultDetails` STATUS entry, while
-discarding free-form device output. This is an internal preflight facility;
-it is not yet connected to production mutation admission.
+discarding free-form device output. The managed SWIM handoff runs these checks
+before distribution and again before activation.
+
+A completed but unsuccessful readiness run can be replaced after an explicit
+parent reauthorization, such as pause/resume after verified remediation. The
+new device-worker grant must differ from the previous one, at least one minute
+must have elapsed, and each stage permits at most three submissions. Prior task,
+claim, stage and submission-time receipts are retained in `readinessHistory`.
+The new check uses the same write-ahead dispatch and fresh admission checks.
+In-flight checks and uncertain submissions are never replayed. A repeated task
+ID is rejected; retries do not waive any readiness check or activation gate.
+This supports supervised recovery. Opt-in manifest-driven cleanup and inventory
+synchronization are described in [SWIM remediation](catalyst-center-remediation.md).
 
 Redirects are rejected for login, reads and writes. Only read requests with a
 401 refresh the session once; 403 responses do not trigger another login, and
@@ -71,7 +88,7 @@ uses direct Kubernetes reads and rejects stale UID/generation bindings, paused
 controllers and terminating controllers. Enabled device adoption or an API
 version other than `v1` is rejected rather than silently ignored.
 
-## SWIM direction
+## Managed SWIM execution
 
 ### Execution selection and task engine
 
@@ -80,7 +97,8 @@ The internal `softwarelifecycle.UpgradeExecution` contract distinguishes
 existing gNOI choice. A controller execution must pin its namespace, name and
 Kubernetes UID. Switching methods or controller incarnations requires a new,
 separately authorized operation; an outage never causes automatic fallback.
-This contract is not yet exposed as an `IOSXESoftwareUpgrade` manifest field.
+Managed rollout image sources select `catalystCenter` explicitly; the manager
+copies that binding into the generated `IOSXESoftwareUpgrade` leaf.
 
 The adapter now has an internal SWIM task executor with this sequence:
 
@@ -98,52 +116,59 @@ a completed distribution; task completion then requires fresh, matching device
 identity/version evidence before success is persisted and the fence released.
 Unsupported or incomplete operation records fail closed.
 
-The executor is tested with simulated API, persistence and admission failures,
-including lost activation receipts. **It is not registered in the worker yet.**
-Its storage, authority and verification interfaces intentionally have no
-permissive production defaults. The outstanding integration is a Kubernetes
-operation API/store and an authenticated bridge to the existing manager/device
-admission and evidence paths. The in-memory store exists only in tests.
-Existing direct upgrade manifests continue through the existing reconciler;
-there is no usable Catalyst Center upgrade manifest in this build yet.
+### Managed handoff
 
-### Admission integration still required
+The XE software-upgrade reconciler owns the existing maintenance session,
+rollout reservation, canonical device mutation Lease, and stage claims. It
+creates a same-namespace `CatalystCenterSWIMHandoff` journal and publishes a
+short-lived stage grant in the parent upgrade's `status.controllerHandoff`.
+The Catalyst Center worker consumes that grant and updates only journal status.
+It cannot write the parent admission, acquire another Lease, or read device
+credentials. The dedicated worker role permits read-only Lease access in its
+namespace; the first supported deployment therefore places the controller,
+device and canonical Lease in the same namespace.
 
-Catalyst Center SWIM has distinct import, distribution, activation, and task
-polling operations. The client contains the distribution, activation, and task
-contracts, but a Kubernetes operation resource is still required before
-mutating SWIM actions are exposed to users. The target preflight code already
-requires a persisted IOS XE `CiscoDevice`, its immutable physical identity,
-and a unique reachable Catalyst Center inventory record with the same serial
-and management IP address. This currently requires literal IP addresses;
-hostname-to-device identity binding is not implemented. These local checks are
-not wired into an operation controller and are not mutation authorization.
+The controller checks uncached parent/controller/device identities, maintenance
+acknowledgement, exact live Lease UID/holder, grant expiry, policy/control
+revision, pause/cancel state, maintenance window, and network-evidence deadline.
+Every distribution or activation also requires the parent's matching durable
+mutation claim. Inventory checks bind the serial, management IP, controller
+device UUID, image UUID/version and product association immediately before
+submission. The requested image must be the device's sole golden SYSTEM image,
+since that is the target of the qualified readiness endpoint. A second live
+grant check follows those inventory calls.
 
-The product operation controller belongs in the adapter worker, but it must
-obtain admission through CVK's existing device coordination authority. Reusing
-`devicecoordination.MutationLeaseFamily` is necessary, but is not sufficient:
-a remote SWIM task can continue after a worker exits or a Lease expires.
-The implementation must integrate with the same durable mutation claims,
-prepared-state checks, maintenance/drain controls, topology reservations and
-uncertain-operation recovery used by the gNOI upgrade flow. It must use the
-canonical CiscoDevice identity and the existing Lease's namespace and key;
-creating a second Lease in the controller namespace would bypass coordination.
-Managed admission also binds authorized worker identities and pre-created
-Leases, so adding generic Lease RBAC to this adapter would not implement that
-contract. The current read-only worker role is intentionally retained.
+The journal uses Kubernetes resourceVersion compare-and-swap. A persisted
+submission marker without its receipt becomes `OutcomeUnknown` after restart;
+it never authorizes another POST. Unresolved mutations remain in canonical
+quarantine, including across Lease expiry and deletion requests. Cancellation
+blocks new stages but allows observations of accepted work. Controller UID or
+configuration-generation changes fence the journal for investigation.
 
-Persist the controller and CiscoDevice UIDs, serial, image UUID, operation phase
-and mutation claim before dispatch; record the task ID immediately on acceptance.
-Renew the fence throughout execution and preserve it when remote outcome is
-uncertain, including after cancellation, deletion or worker restart. Do not
-release it merely because a task polling deadline or Kubernetes Lease expired.
-If a submission times out before an API task ID is recorded, reconciliation
-must stop in an explicit ambiguous state and require task reconciliation;
-blind POST replay risks duplicate activation. Successful Catalyst Center task
-completion is not final success: verify device software version and identity
-through the established device inventory/telemetry path and honour existing
-rollout budgets before admitting mutation. SWIM stays unsupported
-in controller status until this durable path and its RBAC/CRD are installed.
+After Catalyst Center reports activation success, the XE worker uses the
+existing gNOI Verify and native lifecycle inventory paths to prove the pinned
+version is running and committed. It writes identity-bound native evidence to
+the parent; the controller then marks the journal successful. Only then does
+the XE worker settle the parent and allow existing maintenance recovery to
+release the fence. Successful journals remain as audit records, with their
+retention finalizer removed.
+
+Install the generated CRDs, chart RBAC/admission policies, and matching manager
+and device/controller worker binaries together before using the new source.
+Manager startup verifies the new admission policy's compiled contract. The
+`rollout-controller-swim-v1` handshake and `CatalystCenterV1` execution marker
+prevent old workers from interpreting controller work as Direct/gNOI work.
+Existing URL/device-file/preinstalled sources keep their existing paths.
+
+Use [the controller rollout example](../../examples/configs/catalyst-center/swim-rollout.yaml)
+through the existing plan/approve/execute workflow. Each controller source pins
+one device UUID: target one device, or provide separately selected sources for
+different device UUIDs. This first execution profile requires single-supervisor
+IOS XE, `Reload`, explicit `rollbackOnFailure: false`, and no byte-pacing policy.
+It does not silently substitute direct rollback, ISSU, cleanup or transfer
+pacing. Campaign SHA-256 remains the administrator's imported-image audit pin;
+controller UUID/version and product/readiness evidence do not independently
+prove a vendor signature or the imported file checksum.
 
 The default live test reads health and inventories. An additional opt-in test,
 `TestLiveCatalystCenterSWIMReadiness`, consumes persisted readiness receipts from
@@ -155,19 +180,174 @@ qualification. An expired or unsuccessful run requires a new, deliberately
 submitted readiness check; rerunning the test does not submit one.
 
 [The 8 October lab record](../evidence/catalyst-center-2026-10-08/README.md)
-records the separately authorized readiness jobs and a site-scoped golden-image
-assignment. Distribution and activation have not been qualified or deployed.
+records the deployed `.101` upgrade from 17.18.03 to committed 17.18.04 through
+Catalyst Center, including native verification, health soak and fence release.
+Cleanup and controller inventory synchronization were supervised in that run.
+The subsequent [automatic remediation qualification](../evidence/catalyst-center-2026-10-08/automatic-remediation/README.md)
+records manifest-triggered archive deletion, independently observed free space,
+and a correlated successful inventory synchronization on `.101`. That separate
+same-version qualification stopped at an xFSU readiness warning; it is not
+evidence of another completed upgrade or a version-changing automatic cycle.
 
-### API profile work required before deployment
+### Modern API execution profile
 
-The lab appliance reports 3.2.3. Cisco marks the old distribution/activation
-endpoints used by the current internal executor as
-[sunset](https://developer.cisco.com/docs/catalyst-center/api-changelog/).
-Do not simply substitute URLs: modern
-[distribution](https://developer.cisco.com/docs/catalyst-center/distribute-images-on-the-network-device/)
-and [activation](https://developer.cisco.com/docs/catalyst-center/update-images-on-the-network-device/)
-use object payloads and report workflow progress through
-`networkDeviceImageUpdates?parentId=...`. Modern activation can also distribute
-images, so its mutation claim must cover that behavior. Pin the selected API
-contract in the durable operation and test its child-workflow outcomes; never
-retry an ambiguous POST through the alternative API contract.
+The managed executor supports the pinned `networkDeviceImages-v1` profile.
+It persists a readiness dispatch marker and receipt before distribution and
+again before activation, requires the six qualified XE checks, and observes
+the exact per-device workflow (task, device, operation, controller image version
+and time range). Empty workflow results remain pending. Final success still
+requires fresh device-side version verification. Contract selection is immutable;
+the legacy route remains separate and is never used as a retry fallback.
+
+An optional `transferFallbackAddress` in `imageSource.catalystCenter` qualifies only the
+exact 3.2.3 warning detail pair reporting positive HTTPS/SCP reachability and
+failed NETCONF transfer for that literal appliance IP. It does not suppress
+flash, startup, image, xFSU or unknown warnings. Omission blocks all warnings.
+This narrow manifest option is not proof that a live transfer works.
+
+These transitions have race-tested simulated coverage, including lost responses,
+missing receipts, missing workflows and partial readiness. Kubernetes storage
+and the manager/worker handoff are implemented. The supervised 8 October live
+run qualified distribution, activation, native committed-image verification and
+maintenance release on `.101`. Automatic retired-archive cleanup and inventory
+synchronization are implemented through the opt-in preparation policy; their
+qualification limits are described in [SWIM remediation](catalyst-center-remediation.md).
+The adapter advertises managed SWIM when image inventory is available;
+that capability alone does not certify other releases, platforms or remediation
+policies.
+
+### Qualified API profile and current limits
+
+The opt-in `standardReloadProfile: CatalystCenter323` pins Catalyst Center build
+`3.2.3-75346.100` and uses the modern device-image APIs. A live 17.18.04 to
+26.02.01 campaign completed through distribution, activation, reboot, commit,
+native verification and maintenance release. See the
+[qualification report](../evidence/catalyst-center-2026-10-09/standard-reload/README.md).
+This qualifies normal reload on that build/path, not xFSU or other versions.
+The legacy internal execution contract remains separate; an ambiguous modern
+submission never retries through the legacy API.
+
+Unknown readiness warnings remain blocking. The explicit reload profile may
+classify only the observed, target-bound cross-version xFSU warning as
+non-applicable. The separately selected `transferFallbackAddress` qualifies only
+the exact positive HTTPS/SCP warning described above. Neither option suppresses
+flash, startup, image compatibility or device eligibility failures.
+
+## Manifest-driven preparation and recovery
+
+Use [SWIM preparation and remediation](catalyst-center-remediation.md) and the
+examples in `examples/configs/catalyst-center/` for the implemented contract.
+The Catalyst Center source optionally pins an immutable administrator-owned
+ConfigMap by name, UID and SHA-256 under `preparation`. The supported policy is
+`RetiredCVKImageArchivesV1`; this is CVK operational policy, not a new NetAsCode
+configuration section. No target manifest accepts arbitrary cleanup commands.
+
+The device worker observes native state and can remove only exact retired CVK
+image archives backed by invalidated preparation receipts. It verifies size,
+digest, boot/install references, current/target image protection, empty application
+inventory and cumulative file/byte limits before issuing a durable one-shot
+removal. Catalyst Center then refreshes inventory, verifies the exact device's
+sync completion and runs fresh readiness checks before distribution and again
+before activation. A lost mutation response is reconciled from observations;
+unknown outcomes retain the fence and are never blindly replayed.
+
+Reserve both incoming archive and extracted-package space before distribution,
+in addition to the pre-activation floor and headroom. If eligible archives cannot
+satisfy that budget, the workflow stops. Application archives, installed packages,
+route/VRF repairs and arbitrary file cleanup are outside this policy. Required
+network configuration must converge separately through the existing drivers.
+
+Automatic cleanup and inventory synchronization have separate live evidence.
+The completed version-changing campaign used supervised application-archive
+offloads and no-op automatic preparation; it does not establish a fully
+unattended version-changing cleanup cycle. Recovery testing and the final merge
+candidate must preserve this distinction.
+
+### Cleanup ownership and protection
+
+Catalyst Center documents
+[automatic flash cleanup during distribution](https://www.cisco.com/c/en/us/td/docs/cloud-systems-management/network-automation-and-management/catalyst-center/3-1-x/user_guide/b_cisco_catalyst_center_user_guide_3_1_x/b_cisco_dna_center_ug_3_1_x_chapter_0100.html).
+Its native behavior may remove unused image/package/configuration files until
+space is available. This does **not** establish that its API supports CVK's
+per-file allowlists, byte limits or retention exclusions. Capability validation
+must establish those guarantees before a `CatalystCenter` cleanup action can
+be admitted. A policy the selected executor cannot enforce is unsupported,
+not permission to weaken the policy or fall back to a different executor.
+
+If native cleanup cannot enforce the policy, use an explicitly selected,
+separately coordinated device preparation action through the existing device
+worker. Controller credentials remain in the controller worker. The upgrade
+still executes through Catalyst Center; choosing a direct preparation action
+must not silently change the upgrade executor or introduce another device
+credential/session stack in the CC adapter.
+
+Mandatory exclusions cannot be disabled by target manifests: active/committed
+images and boot files, the selected target image, rollback images retained by
+policy, files referenced by unresolved operations or valid preparation receipts,
+and app-hosting packages/storage. An "inactive" install package is not
+automatically safe to delete: it can be the rollback or a prepared target.
+Do not translate `RemoveUnreferencedImageFiles` into blanket `install remove
+inactive`, wildcard deletion or deletion of `.conf` files.
+
+Bind each candidate to the device UID/serial, filesystem/member, exact path,
+size/digest and inventory revision. Recheck references immediately before
+dispatch while holding canonical device mutation admission. If files or
+references changed, invalidate the plan instead of selecting replacement files
+under the old authorization. Post-upgrade cleanup is a separate action after
+successful verification and the required rollback/soak retention period.
+
+### Integration with the existing upgrade flow
+
+The logical sequence is:
+
+```text
+Observe -> Classify checks -> Plan authorized remediation
+        -> Claim existing device mutation admission -> Execute
+        -> Verify remediation -> Fresh readiness
+        -> Admit distribution/activation -> Verify device and workloads
+```
+
+Remediation reuses existing canonical device coordination, maintenance policy,
+topology reservations, manager/device identity binding and durable mutation
+claims. It must not acquire an independent "cleanup lease" or use the controller
+namespace as the device lock key. Apply drain requirements appropriate to the
+action; do not assume that controller-owned distribution is only a byte copy.
+The manager records the action plan before dispatch; the executor records its
+task receipt and outcome. Status should expose the finding, action, executor,
+candidate files, reclaimed bytes, attempts and fresh verification timestamps.
+
+A lost response or expired timeout is an uncertain outcome: preserve the fence
+and reconcile evidence, rather than replaying deletion or distribution. Known
+remaining insufficient space stops the upgrade after the bounded action;
+there is no unbounded cleanup/retry loop. A readiness retry is a new observation
+job after a settled run, not permission to replay an ambiguous mutation.
+
+Implement this first in the CC operational integration and use the existing
+coordination hooks. ND and default Direct/gNOI behavior remain unchanged.
+Qualify protected-file exclusion, insufficient-space-after-cleanup, changed
+inventory, stale policy/controller/device bindings, duplicate submissions,
+lost task receipts, restart recovery and concurrent Direct versus SWIM claims
+before enabling mutation from these proposed manifest fields.
+
+### Live test preparation
+
+After replacing workers, wait for the manager to accept a fresh complete network
+observation before submitting a rollout with network health enabled. A failed
+planning attempt is retained; submit a new plan once its prerequisite is met.
+Use `BlockIfRunning` for an empty target, or the existing policy-bounded `Drain`
+workflow for workload migration. A replacement that cannot activate must block
+PDB-aware drain; it is not evidence of a SWIM failure or permission to bypass
+that gate. Cancellation must settle before another upgrade targets the device.
+
+If cancellation leaves an unowned CVK maintenance taint, an infrastructure
+administrator can request its removal by annotating the CiscoDevice with
+`operations.cisco.vk/cancelled-drain-taint-release=<leaf-UID>/<session-token>`.
+Use the exact retained operation UID and session token from
+`status.maintenanceSession`. This is an explicit recovery action, not automatic
+SWIM remediation. The manager requires a validated, cancelled, recovering
+workload-drain session, an unexpired recovery deadline, all selected pods closed,
+and a wholly idle, request-free canonical lease. Software mutation claims,
+controller handoffs, pre-existing taints, and desired CiscoDevice taints prevent
+this action. Only the exact `cisco.vk/device-maintenance=gnoi:NoSchedule` taint is
+removed; unrelated taints and all lease/admission state are preserved. The
+annotation remains as audit evidence and cannot match a different session.

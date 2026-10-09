@@ -633,3 +633,115 @@ func TestValidateManagedMutationLeaseSpecIdleHolderEncoding(t *testing.T) {
 		})
 	}
 }
+
+func TestSettledSWIMCancellationRepairsOnlyExactWorkerSubstrate(t *testing.T) {
+	r, d, n, u, l := cancelledMaintenanceRecoveryFixture(t)
+	ctx := context.Background()
+	now := metav1.NewTime(r.now())
+	d.Spec.Driver = ciskov1.DeviceDriverXE
+	u.Spec.ImageSource.CatalystCenter = &ops.CatalystCenterImageSource{Preparation: &ops.SWIMPreparationPolicyRef{SHA256: "digest"}}
+	if err := r.Update(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	u.Status.ExecutionModel = ops.UpgradeExecutionModelCatalystCenterPreparationV1
+	u.Status.ManagerAdmission.ProtocolVersion = ops.ManagedUpgradeProtocolControllerPreparationV1
+	u.Status.Phase = ops.UpgradePhaseCancelled
+	u.Status.FailureReason = "ControllerPreparationCancelled"
+	u.Status.CompletionTime = &now
+	u.Status.StagingRequested = true
+	u.Status.Conditions = []metav1.Condition{{Type: "DeviceMutationSettled", Status: metav1.ConditionTrue, ObservedGeneration: u.Generation}}
+	u.Status.ControllerHandoff = &ops.UpgradeControllerHandoffStatus{Name: "handoff", UID: "handoff-uid", Preparation: []ops.SWIMDevicePreparation{{ID: "prep", Stage: "ReadyToDistribute", Phase: "Complete", CompletedAt: &now, PolicySHA256: "digest"}}}
+	if err := r.Status().Update(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	h := &ops.CatalystCenterSWIMHandoff{ObjectMeta: metav1.ObjectMeta{Name: "handoff", Namespace: u.Namespace, UID: "handoff-uid"}, Spec: ops.CatalystCenterSWIMHandoffSpec{UpgradeUID: string(u.UID), DeviceUID: string(d.UID)}, Status: ops.CatalystCenterSWIMHandoffStatus{Phase: "PreparationCancelled", ReadinessFor: "ReadyToDistribute", ReadinessTask: "readiness", ReadinessNotBefore: &now, InventorySyncs: []ops.SWIMInventorySync{{Stage: "ReadyToDistribute", PreparationID: "prep", Task: "sync", CompletedAt: &now}}}}
+	if err := r.Create(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	l.Annotations, l.Labels = managedMutationLeaseMetadata(d, n.Name, string(n.UID), managedNetworkWorkerUsername(n))
+	if err := r.Update(ctx, l); err != nil {
+		t.Fatal(err)
+	}
+	allowed, err := r.managedCancellationWorkerRecoveryReady(ctx, d, n)
+	if err != nil || !allowed {
+		t.Fatalf("verified recovery: %v %v", allowed, err)
+	}
+	// The exception authorizes worker repair only; it must not accept a foreign
+	// canonical lease or a controller journal with unresolved mutation work.
+	original := *l.Spec.HolderIdentity
+	l.Spec.HolderIdentity = ptr.To("software-upgrade/other")
+	if err := r.Update(ctx, l); err != nil {
+		t.Fatal(err)
+	}
+	allowed, err = r.managedCancellationWorkerRecoveryReady(ctx, d, n)
+	if err != nil || allowed {
+		t.Fatalf("foreign lease accepted: %v %v", allowed, err)
+	}
+	l.Spec.HolderIdentity = &original
+	if err := r.Update(ctx, l); err != nil {
+		t.Fatal(err)
+	}
+	h.Status.DistributionClaim = "unknown"
+	if err := r.Update(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	allowed, err = r.managedCancellationWorkerRecoveryReady(ctx, d, n)
+	if err != nil || allowed {
+		t.Fatalf("unknown distribution accepted: %v %v", allowed, err)
+	}
+}
+
+func TestPausedSWIMWorkerRepairRequiresEmptyJournal(t *testing.T) {
+	r, d, n, u, l := cancelledMaintenanceRecoveryFixture(t)
+	ctx := context.Background()
+	d.Spec.Driver = ciskov1.DeviceDriverXE
+	u.Spec.ImageSource.CatalystCenter = &ops.CatalystCenterImageSource{Preparation: &ops.SWIMPreparationPolicyRef{SHA256: "digest"}}
+	if err := r.Update(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	u.Status.ExecutionModel = ops.UpgradeExecutionModelCatalystCenterPreparationV1
+	u.Status.ManagerAdmission.ProtocolVersion = ops.ManagedUpgradeProtocolControllerPreparationV1
+	u.Status.ManagerAdmission.State = ops.UpgradeManagerAdmissionGranted
+	u.Status.ManagerAdmission.RevocationReason = ""
+	u.Status.ManagerControl.Cancel = false
+	u.Status.ManagerControl.Pause = true
+	u.Status.Phase = ops.UpgradePhaseStaging
+	u.Status.ControllerHandoff = &ops.UpgradeControllerHandoffStatus{Name: "handoff", UID: "handoff-uid"}
+	if err := r.Status().Update(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	h := &ops.CatalystCenterSWIMHandoff{ObjectMeta: metav1.ObjectMeta{Name: "handoff", Namespace: u.Namespace, UID: "handoff-uid"}, Spec: ops.CatalystCenterSWIMHandoffSpec{UpgradeUID: string(u.UID), DeviceUID: string(d.UID)}, Status: ops.CatalystCenterSWIMHandoffStatus{Phase: "Preparing", ReadinessFor: "ReadyToDistribute"}}
+	if err := r.Create(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := r.managedCancellationWorkerRecoveryReady(ctx, d, n); err != nil || !ok {
+		t.Fatalf("empty paused journal: %v %v", ok, err)
+	}
+	h.Status.DistributionClaim = "unknown-dispatch"
+	if err := r.Update(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := r.managedCancellationWorkerRecoveryReady(ctx, d, n); ok {
+		t.Fatal("allowed repair with submission marker")
+	}
+	h.Status.DistributionClaim = ""
+	if err := r.Update(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	u.Status.ControllerHandoff.Preparation = []ops.SWIMDevicePreparation{{Phase: "Removing"}}
+	if err := r.Status().Update(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := r.managedCancellationWorkerRecoveryReady(ctx, d, n); ok {
+		t.Fatal("allowed repair with preparation state")
+	}
+	u.Status.ControllerHandoff.Preparation = nil
+	u.Status.ManagerControl.Pause = false
+	if err := r.Status().Update(ctx, u); err != nil {
+		t.Fatal(err)
+	}
+	if ok, _ := r.managedCancellationWorkerRecoveryReady(ctx, d, n); ok {
+		t.Fatal("allowed unpaused repair")
+	}
+	_ = l
+}

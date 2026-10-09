@@ -1,0 +1,59 @@
+{
+  "node": {
+    "uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+    "unschedulable": false,
+    "taints": [],
+    "conditions": [
+      {
+        "lastHeartbeatTime": "2026-10-09T05:35:31Z",
+        "lastTransitionTime": "2026-10-09T05:30:31Z",
+        "message": "Cisco IOx is enabled and reachable",
+        "reason": "KubeletReady",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-09T05:35:31Z",
+        "lastTransitionTime": "2026-10-09T05:15:31Z",
+        "message": "worker is enforcing the rollout-v1 status-only Node writer contract",
+        "reason": "StatusOnlyRolloutV1",
+        "status": "True",
+        "type": "CiscoVirtualKubeletManagedReady"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-09T05:35:31Z",
+        "lastTransitionTime": "2026-10-09T05:15:31Z",
+        "message": "Sufficient storage available",
+        "reason": "StorageAvailable",
+        "status": "False",
+        "type": "DiskPressure"
+      }
+    ]
+  },
+  "maintenance": {
+    "acknowledgedAt": "2026-10-09T04:24:59Z",
+    "controlRevision": 8,
+    "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+    "lease": {
+      "holder": "software-upgrade/ae945c1e-dd78-4e55-872c-6959723294a5",
+      "name": "cvk-device-18bf8e21debc4863-device-disruptive-mutation-27ab075b",
+      "namespace": "cvk-live",
+      "uid": "805d5577-2ee9-4f1b-96c5-a243a3712116"
+    },
+    "message": "manager settled the operation outcome and released its reservation",
+    "nodeName": "cat9k-lab-101",
+    "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+    "operation": {
+      "name": "catc-auto-reload-20261009-101-r2-cat9k-lab-101-81e08128",
+      "namespace": "cvk-live",
+      "uid": "ae945c1e-dd78-4e55-872c-6959723294a5"
+    },
+    "phase": "Settled",
+    "requestedAt": "2026-10-09T04:24:41Z",
+    "sessionToken": "9f603475-f208-49ef-bdd0-c9d272d4cfbe"
+  },
+  "lease": {
+    "leaseTransitions": 16367
+  },
+  "topologyLock": null
+}

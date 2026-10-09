@@ -301,6 +301,12 @@ rules:
   - apiGroups: ["ops.cisco.vk"]
     resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers"]
+    verbs: ["get"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["catalystcenterswimhandoffs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # These bounded writes are stable profile capabilities. The corresponding
   # controller is registered only when its explicit runtime gate is enabled;
   # managed admission independently checks operation ownership and protocol.

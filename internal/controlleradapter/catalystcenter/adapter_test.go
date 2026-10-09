@@ -11,13 +11,13 @@ import (
 
 func TestDescriptor(t *testing.T) {
 	d := Descriptor()
-	if d.Type != TypeName || d.WorkerClusterRole != controlleradapter.DefaultWorkerClusterRole {
+	if d.Type != TypeName || d.WorkerClusterRole != controlleradapter.CatalystCenterWorkerClusterRole {
 		t.Fatalf("unexpected descriptor: %+v", d)
 	}
 	if !reflect.DeepEqual(d.NetAsCode.Sections, []string{"sites", "network_settings", "network_profiles", "fabric", "templates", "inventory", "wireless", "lan_automation", "system_settings"}) {
 		t.Fatalf("unexpected sections: %v", d.NetAsCode.Sections)
 	}
-	if !reflect.DeepEqual(d.Capabilities, []string{CapabilityHealth, CapabilityInventory}) {
+	if !reflect.DeepEqual(d.Capabilities, []string{CapabilityHealth, CapabilityInventory, CapabilitySWIM}) {
 		t.Fatalf("unexpected capabilities: %v", d.Capabilities)
 	}
 }

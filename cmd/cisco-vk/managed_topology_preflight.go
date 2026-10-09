@@ -50,6 +50,7 @@ var managedAdmissionPolicySuffixes = []string{
 	"managed-device",
 	"managed-rollout",
 	"managed-upgrade-leaf",
+	"swim-handoff",
 	"topology-policy",
 	"topology-ledger",
 	"managed-maintenance-lease",
@@ -141,6 +142,13 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "activationApproval.receipts", "check('activate')", "check('control')", "check('recover')", "preparationInvalidation", "request.subResource != 'status'", "spec.control.revision == 0"},
 		digest:            "sha256:8df8e50f1d5cb91d69c7e10ee2685a06557d5aa82d0d419daa88e073c1e57844",
 	},
+	"swim-handoff": {
+		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"catalystcenterswimhandoffs", "catalystcenterswimhandoffs/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		variables: []string{"journal", "boundPod", "creator", "controller"}, validations: 1,
+		requiredFragments: []string{"authentication.kubernetes.io/pod-uid", "deviceWorkerUsername", "controllerUsername", "Succeeded", "swim-handoff-evidence"},
+		digest:            "sha256:c807b45e5e9518d775be8349051e7cd2b699f4bc2ab17c4aa61b492e996f608c",
+	},
 	"managed-upgrade-leaf": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
@@ -148,7 +156,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		variables:         []string{"manager", "appDrainWriter", "oldClaims", "newClaims", "managerFunctionalWorkerBinding"},
 		validations:       8,
 		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "preparedReceipt", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:80cedca07e67a45caa10fdedc9aaa174e39825b342af5d44b69a1334f6a6101a",
+		digest:            "sha256:a249482434518d7d2d97f0a7739e08300d01a9baf86dac03bb0ce521ec5b0e3a",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},

@@ -84,6 +84,73 @@ spec:
                   lifecycle: transfer external bytes, use a preinstalled version, or
                   register a device-resident file.
                 properties:
+                  catalystCenter:
+                    description: CatalystCenter explicitly selects controller-managed
+                      SWIM.
+                    properties:
+                      controllerName:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      controllerUID:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      deviceID:
+                        maxLength: 253
+                        pattern: ^[A-Za-z0-9_-]{1,128}$
+                        type: string
+                      imageID:
+                        maxLength: 253
+                        pattern: ^[A-Za-z0-9_-]{1,128}$
+                        type: string
+                      imageVersion:
+                        description: ImageVersion is the exact controller inventory
+                          version.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      preparation:
+                        description: |-
+                          Preparation pins an immutable administrator-owned ConfigMap policy.
+                          Omission preserves the existing controller execution profile.
+                        properties:
+                          name:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          sha256:
+                            pattern: ^[a-f0-9]{64}$
+                            type: string
+                          uid:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        - sha256
+                        - uid
+                        type: object
+                      standardReloadProfile:
+                        description: |-
+                          StandardReloadProfile opts into the release-qualified normal-reload contract.
+                          It selects no optional activation features and permits only the narrowly
+                          recognized xFSU version-path warning. Omission retains strict readiness.
+                        enum:
+                        - CatalystCenter323
+                        type: string
+                      transferFallbackAddress:
+                        description: TransferFallbackAddress qualifies only the known
+                          positive HTTPS/SCP check.
+                        maxLength: 253
+                        type: string
+                    required:
+                    - controllerName
+                    - controllerUID
+                    - deviceID
+                    - imageID
+                    - imageVersion
+                    type: object
                   configMapRef:
                     description: |-
                       ConfigMapRef names a ConfigMap whose binaryData["image"] holds
@@ -192,10 +259,11 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: exactly one of url, configMapRef, preinstalled, deviceFile,
-                    or localPath must be set
+                    localPath, or catalystCenter must be set
                   rule: '(has(self.url) ? 1 : 0) + (has(self.configMapRef) ? 1 : 0)
                     + (has(self.preinstalled) ? 1 : 0) + (has(self.deviceFile) ? 1
-                    : 0) + (has(self.localPath) ? 1 : 0) == 1'
+                    : 0) + (has(self.localPath) ? 1 : 0) + (has(self.catalystCenter)
+                    ? 1 : 0) == 1'
                 - message: sha256 must be set if and only if url is set
                   rule: has(self.url) == has(self.sha256)
                 - message: urlSecretRef may be set only when url is set
@@ -440,6 +508,130 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              controllerHandoff:
+                description: ControllerHandoff is device-worker-owned delegation and
+                  verification.
+                properties:
+                  controlRevision:
+                    format: int64
+                    type: integer
+                  expiresAt:
+                    format: date-time
+                    type: string
+                  name:
+                    maxLength: 253
+                    type: string
+                  policyEpoch:
+                    format: int64
+                    type: integer
+                  preparation:
+                    description: Preparation is device-worker-owned evidence under
+                      the parent's lease.
+                    items:
+                      properties:
+                        completedAt:
+                          format: date-time
+                          type: string
+                        files:
+                          items:
+                            properties:
+                              claimedAt:
+                                format: date-time
+                                type: string
+                              path:
+                                maxLength: 253
+                                type: string
+                              receiptUID:
+                                maxLength: 253
+                                type: string
+                              removedAt:
+                                format: date-time
+                                type: string
+                              sha256:
+                                maxLength: 64
+                                type: string
+                              size:
+                                format: int64
+                                type: integer
+                            required:
+                            - path
+                            - receiptUID
+                            - sha256
+                            - size
+                            type: object
+                          maxItems: 3
+                          type: array
+                        freeBytesAfter:
+                          format: int64
+                          type: integer
+                        freeBytesBefore:
+                          format: int64
+                          type: integer
+                        id:
+                          maxLength: 253
+                          type: string
+                        observedAt:
+                          format: date-time
+                          type: string
+                        phase:
+                          enum:
+                          - Planned
+                          - Removing
+                          - Complete
+                          - OutcomeUnknown
+                          type: string
+                        planSHA256:
+                          maxLength: 64
+                          type: string
+                        policySHA256:
+                          maxLength: 64
+                          type: string
+                        stage:
+                          enum:
+                          - ReadyToDistribute
+                          - ReadyToActivate
+                          type: string
+                      required:
+                      - files
+                      - freeBytesBefore
+                      - id
+                      - observedAt
+                      - phase
+                      - planSHA256
+                      - policySHA256
+                      - stage
+                      type: object
+                    maxItems: 2
+                    type: array
+                  stage:
+                    description: Stage is Readiness, Staging, or PrimaryActivation.
+                    maxLength: 253
+                    type: string
+                  token:
+                    maxLength: 253
+                    type: string
+                  uid:
+                    maxLength: 253
+                    type: string
+                  verifiedAt:
+                    format: date-time
+                    type: string
+                  verifiedVersion:
+                    maxLength: 253
+                    type: string
+                  workerPodUID:
+                    maxLength: 253
+                    type: string
+                required:
+                - controlRevision
+                - expiresAt
+                - name
+                - policyEpoch
+                - stage
+                - token
+                - uid
+                - workerPodUID
+                type: object
               executionModel:
                 description: |-
                   ExecutionModel is persisted before this reconciler advances a new or
@@ -659,6 +851,9 @@ spec:
                     - rollout-byte-pacing-v1
                     - rollout-staged-activation-v1
                     - rollout-network-evidence-v1
+                    - rollout-controller-swim-v1
+                    - rollout-controller-preparation-v1
+                    - rollout-controller-reload-v1
                     type: string
                   reservationID:
                     description: ReservationID identifies the atomic device and domain
@@ -1547,6 +1742,9 @@ spec:
                     - rollout-byte-pacing-v1
                     - rollout-staged-activation-v1
                     - rollout-network-evidence-v1
+                    - rollout-controller-swim-v1
+                    - rollout-controller-preparation-v1
+                    - rollout-controller-reload-v1
                     type: string
                   nodeUID:
                     description: |-
@@ -2051,12 +2249,20 @@ spec:
           rule: '!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state
             != ''Granted'' || !has(self.spec.requireNetworkEvidence) || !self.spec.requireNetworkEvidence
             || (has(self.status.managerAdmission.networkEvidenceHash) && self.status.managerAdmission.protocolVersion
-            in [''rollout-network-evidence-v1'', ''rollout-staged-activation-v1''])'
+            in [''rollout-network-evidence-v1'', ''rollout-staged-activation-v1'',
+            ''rollout-controller-swim-v1'', ''rollout-controller-preparation-v1'',
+            ''rollout-controller-reload-v1''])'
         - message: managed preparation and preinstalled activation require the staged
             lifecycle protocol before granting work
           rule: '!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state
             != ''Granted'' || !(self.spec.strategy == ''PrepareOnly'' || has(self.spec.imageSource.preinstalled))
             || self.status.managerAdmission.protocolVersion == ''rollout-staged-activation-v1'''
+        - message: controller SWIM requires its dedicated worker protocol
+          rule: '!has(self.spec.imageSource.catalystCenter) || !has(self.status) ||
+            !has(self.status.managerAdmission) || self.status.managerAdmission.state
+            != ''Granted'' || self.status.managerAdmission.protocolVersion == (has(self.spec.imageSource.catalystCenter.standardReloadProfile)
+            ? ''rollout-controller-reload-v1'' : has(self.spec.imageSource.catalystCenter.preparation)
+            ? ''rollout-controller-preparation-v1'' : ''rollout-controller-swim-v1'')'
     served: true
     storage: true
     subresources:

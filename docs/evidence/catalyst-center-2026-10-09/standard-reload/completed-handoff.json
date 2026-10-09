@@ -1,0 +1,77 @@
+{
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "CatalystCenterSWIMHandoff",
+    "metadata": {
+        "creationTimestamp": "2026-10-09T04:25:05Z",
+        "generation": 1,
+        "name": "swim-c8004090f9ee96c4008edfea0d947cff",
+        "namespace": "cvk-live",
+        "resourceVersion": "11507268",
+        "uid": "ca67c4aa-9c13-4b6d-972c-4f9617f075d5"
+    },
+    "spec": {
+        "controllerGeneration": 2,
+        "controllerUsername": "system:serviceaccount:cvk-live:catc-controller-worker",
+        "deviceName": "cat9k-lab-101",
+        "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "deviceWorkerPodUID": "39c6d1da-5766-49b7-8da6-729f9d7f344f",
+        "deviceWorkerUsername": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "serial": "FOC2520L6H1",
+        "source": {
+            "controllerName": "catc",
+            "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+            "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+            "imageID": "86159098-3ca1-47af-8456-ff2fc3e0d549",
+            "imageVersion": "26.02.01.0.263",
+            "preparation": {
+                "name": "swim-reload-reserve-20261009",
+                "sha256": "474c73311c49c45fed015da01fd50b344609cbd905db00e2c190f6e2a2ea7a6e",
+                "uid": "be622ad4-e3ce-49a9-9e52-e55e6978d444"
+            },
+            "standardReloadProfile": "CatalystCenter323",
+            "transferFallbackAddress": "192.0.2.254"
+        },
+        "targetVersion": "26.02.01",
+        "upgradeName": "catc-auto-reload-20261009-101-r2-cat9k-lab-101-81e08128",
+        "upgradeUID": "ae945c1e-dd78-4e55-872c-6959723294a5"
+    },
+    "status": {
+        "activationClaim": "e7143257-3bea-4d45-9ac9-80dad746e5ab",
+        "activationNotBefore": "2026-10-09T05:21:35Z",
+        "activationTask": "01a11f1d-1103-7695-af9f-a846d47448db",
+        "distributionClaim": "5e7ee653-dde9-42bc-863d-8bfa08136a8f",
+        "distributionNotBefore": "2026-10-09T04:48:51Z",
+        "distributionTask": "01a11eff-15f5-7f9a-bb2e-d08498993174",
+        "inventorySyncs": [
+            {
+                "claim": "3b7107bb-9704-4478-adc8-7fbec527d0b1",
+                "completedAt": "2026-10-09T04:47:28Z",
+                "preparationID": "6f9a5cc4-e844-4ba9-b2c6-6950b0cc2422",
+                "stage": "ReadyToDistribute",
+                "submittedAt": "2026-10-09T04:44:54Z",
+                "task": "01a11efb-7968-75a9-8437-ddb127a9b6fd"
+            },
+            {
+                "claim": "44ecf64a-b12b-4c39-839a-10cd1fecb7c3",
+                "completedAt": "2026-10-09T05:20:11Z",
+                "preparationID": "72e602c7-3c95-4e6c-ade6-bd0e11d53faa",
+                "stage": "ReadyToActivate",
+                "submittedAt": "2026-10-09T05:17:39Z",
+                "task": "01a11f19-741e-7f96-8963-ea529ddf4e73"
+            }
+        ],
+        "phase": "Succeeded",
+        "readinessClaim": "44ecf64a-b12b-4c39-839a-10cd1fecb7c3",
+        "readinessFor": "ReadyToActivate",
+        "readinessHistory": [
+            {
+                "claim": "3b7107bb-9704-4478-adc8-7fbec527d0b1",
+                "stage": "ReadyToDistribute",
+                "submittedAt": "2026-10-09T04:47:28Z",
+                "task": "01a11efd-d531-7574-8f0e-bf2eaae562e9"
+            }
+        ],
+        "readinessNotBefore": "2026-10-09T05:20:11Z",
+        "readinessTask": "01a11f1b-ca11-7c59-8b47-566dda38845e"
+    }
+}

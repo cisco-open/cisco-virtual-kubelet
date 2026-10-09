@@ -161,6 +161,12 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ops.cisco.vk
+  resources:
+  - catalystcenterswimhandoffs
+  verbs:
+  - get
+- apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - clusterrolebindings
@@ -193,6 +199,7 @@ rules:
   resourceNames:
   - cisco-virtual-kubelet-controller-worker
   - cisco-virtual-kubelet-controller-worker-device-adoption
+  - cisco-virtual-kubelet-controller-worker-swim
   resources:
   - clusterroles
   verbs:

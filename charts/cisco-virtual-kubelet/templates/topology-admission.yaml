@@ -1434,6 +1434,7 @@ spec:
            !has(object.status.activationStartTime) &&
            !has(object.status.completionTime) &&
            !has(object.status.conditions) &&
+           !has(object.status.controllerHandoff) &&
            !has(object.status.executionModel) &&
            !has(object.status.failureReason) &&
            !has(object.status.individualSupervisorInstall) &&
@@ -1475,6 +1476,8 @@ spec:
            (!has(object.status.completionTime) || object.status.completionTime == oldObject.status.completionTime) &&
            (has(object.status.conditions) == has(oldObject.status.conditions)) &&
            (!has(object.status.conditions) || object.status.conditions == oldObject.status.conditions) &&
+           (has(object.status.controllerHandoff) == has(oldObject.status.controllerHandoff)) &&
+           (!has(object.status.controllerHandoff) || object.status.controllerHandoff == oldObject.status.controllerHandoff) &&
            (has(object.status.executionModel) == has(oldObject.status.executionModel)) &&
            (!has(object.status.executionModel) || object.status.executionModel == oldObject.status.executionModel) &&
            (has(object.status.failureReason) == has(oldObject.status.failureReason)) &&
