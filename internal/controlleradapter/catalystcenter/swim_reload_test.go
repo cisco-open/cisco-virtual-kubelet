@@ -14,44 +14,48 @@ import (
 )
 
 func TestStandardReloadWarningIsBoundAndOptIn(t *testing.T) {
-	now := time.Now()
-	start := now.Add(-time.Minute)
-	items := make([]ReadinessResult, len(requiredXEReadinessChecks))
-	for n, name := range requiredXEReadinessChecks {
-		items[n] = ReadinessResult{ID: name[:1] + "-id", ParentID: "task", DeviceID: "device", Operation: "READINESS_CHECK", Type: "PRE_VALIDATION", Name: name, Status: "SUCCESS", StartTime: start.UnixMilli(), EndTime: now.UnixMilli()}
-		items[n].ID = string(rune('a' + n))
-	}
-	last := len(items) - 1
-	items[last].Status = "WARNING"
-	items[last].XFSUVersionPathTarget = "26.02.01"
-	i := swimIntent{StandardReloadProfile: "CatalystCenter323", APIContract: swimModernContract, ControllerDeviceID: "device", TargetVersion: "26.02.01"}
-	if err := validateStandardReloadReadiness(items, i, "task", start, now); err != nil {
-		t.Fatal(err)
-	}
-	if items[last].Status != "WARNING" {
-		t.Fatal("modified original evidence")
-	}
-	if err := validateXEReadiness(items, "device", "task", "", start, now); err == nil {
-		t.Fatal("legacy profile accepted warning")
-	}
-	for _, change := range []func([]ReadinessResult){
-		func(x []ReadinessResult) { x[last].XFSUVersionPathTarget = "26.02.02" },
-		func(x []ReadinessResult) { x[last].XFSUVersionPathTarget = "" },
-		func(x []ReadinessResult) { x[last].Status = "FAILURE" },
-		func(x []ReadinessResult) { x[last].DeviceID = "other" },
-		func(x []ReadinessResult) { x[last].ParentID = "other" },
-		func(x []ReadinessResult) { x[last].StartTime = start.Add(-time.Hour).UnixMilli() },
-		func(x []ReadinessResult) { x[0].Status = "WARNING" },
-	} {
-		x := append([]ReadinessResult(nil), items...)
-		change(x)
-		if err := validateStandardReloadReadiness(x, i, "task", start, now); err == nil {
-			t.Fatal("accepted unqualified readiness")
-		}
-	}
-	i.StandardReloadProfile = ""
-	if err := validateStandardReloadReadiness(items, i, "task", start, now); err == nil {
-		t.Fatal("accepted unpinned mode")
+	for _, target := range []string{"26.02.01", "17.18.04"} {
+		t.Run(target, func(t *testing.T) {
+			now := time.Now()
+			start := now.Add(-time.Minute)
+			items := make([]ReadinessResult, len(requiredXEReadinessChecks))
+			for n, name := range requiredXEReadinessChecks {
+				items[n] = ReadinessResult{ID: name[:1] + "-id", ParentID: "task", DeviceID: "device", Operation: "READINESS_CHECK", Type: "PRE_VALIDATION", Name: name, Status: "SUCCESS", StartTime: start.UnixMilli(), EndTime: now.UnixMilli()}
+				items[n].ID = string(rune('a' + n))
+			}
+			last := len(items) - 1
+			items[last].Status = "WARNING"
+			items[last].XFSUVersionPathTarget = target
+			i := swimIntent{StandardReloadProfile: "CatalystCenter323", APIContract: swimModernContract, ControllerDeviceID: "device", TargetVersion: target}
+			if err := validateStandardReloadReadiness(items, i, "task", start, now); err != nil {
+				t.Fatal(err)
+			}
+			if items[last].Status != "WARNING" {
+				t.Fatal("modified original evidence")
+			}
+			if err := validateXEReadiness(items, "device", "task", "", start, now); err == nil {
+				t.Fatal("legacy profile accepted warning")
+			}
+			for _, change := range []func([]ReadinessResult){
+				func(x []ReadinessResult) { x[last].XFSUVersionPathTarget = "26.02.02" },
+				func(x []ReadinessResult) { x[last].XFSUVersionPathTarget = "" },
+				func(x []ReadinessResult) { x[last].Status = "FAILURE" },
+				func(x []ReadinessResult) { x[last].DeviceID = "other" },
+				func(x []ReadinessResult) { x[last].ParentID = "other" },
+				func(x []ReadinessResult) { x[last].StartTime = start.Add(-time.Hour).UnixMilli() },
+				func(x []ReadinessResult) { x[0].Status = "WARNING" },
+			} {
+				x := append([]ReadinessResult(nil), items...)
+				change(x)
+				if err := validateStandardReloadReadiness(x, i, "task", start, now); err == nil {
+					t.Fatal("accepted unqualified readiness")
+				}
+			}
+			i.StandardReloadProfile = ""
+			if err := validateStandardReloadReadiness(items, i, "task", start, now); err == nil {
+				t.Fatal("accepted unpinned mode")
+			}
+		})
 	}
 }
 
@@ -145,5 +149,37 @@ func TestStandardReloadExecutorUsesPinnedDispatchAndNativeVerification(t *testin
 	}
 	if s.record.Phase != swimSucceeded || api.standardPosts != 1 || api.checks < 2 || v.calls != 1 || a.releases != 1 {
 		t.Fatalf("unexpected flow phase=%s posts=%d checks=%d verify=%d release=%d", s.record.Phase, api.standardPosts, api.checks, v.calls, a.releases)
+	}
+}
+
+func TestNormalReloadDowngradeWarningIsExact(t *testing.T) {
+	details := []map[string]string{
+		{"key": "DESCRIPTION", "value": "Downgrade operations are not supported."},
+		{"key": "EXPECTED", "value": "The upgrade image version must be higher than the currently running version 26.02.1."},
+		{"key": "ACTUAL", "value": "Selected upgrade image version: 17.18.04"},
+		{"key": "STATUS", "value": "WARNING"},
+	}
+	for _, changed := range []int{-1, 0, 1, 2} {
+		copyDetails := make([]map[string]string, len(details))
+		for n, d := range details {
+			copyDetails[n] = map[string]string{"key": d["key"], "value": d["value"]}
+		}
+		if changed >= 0 {
+			copyDetails[changed]["value"] += " unqualified"
+		}
+		raw, _ := json.Marshal(map[string]any{"XFSUVersionPathTarget": "17.18.04", "resultDetails": copyDetails})
+		var r ReadinessResult
+		if err := json.Unmarshal(raw, &r); err != nil {
+			t.Fatal(err)
+		}
+		if (r.XFSUVersionPathTarget == "17.18.04") != (changed < 0) {
+			t.Fatalf("accepted changed detail %d", changed)
+		}
+	}
+	duplicate := append(details, map[string]string{"key": "ACTUAL", "value": "Selected upgrade image version: 17.18.04"})
+	raw, _ := json.Marshal(map[string]any{"resultDetails": duplicate})
+	var r ReadinessResult
+	if json.Unmarshal(raw, &r) == nil {
+		t.Fatal("accepted ambiguous target details")
 	}
 }

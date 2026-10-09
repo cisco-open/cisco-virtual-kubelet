@@ -105,7 +105,7 @@ func (r *ReadinessResult) UnmarshalJSON(data []byte) error {
 		count := 0
 		knownDetails := map[string]string{}
 		for _, d := range details {
-			if d.Key == "DESCRIPTION" || d.Key == "EXPECTED" {
+			if d.Key == "DESCRIPTION" || d.Key == "EXPECTED" || d.Key == "ACTUAL" {
 				if _, exists := knownDetails[d.Key]; exists {
 					return errInvalidResponse
 				}
@@ -126,6 +126,16 @@ func (r *ReadinessResult) UnmarshalJSON(data []byte) error {
 			if len(match) == 3 {
 				xfsuTarget = match[1]
 			}
+		}
+		// This is an xFSU mode restriction on the inverse of the qualified
+		// normal-reload lab path, not a generic downgrade/image-support waiver.
+		// Keep both versions and the complete detail strings exact. The caller
+		// still requires the pinned reload profile, task/device/target identity,
+		// freshness, and every other readiness check.
+		if knownDetails["DESCRIPTION"] == "Downgrade operations are not supported." &&
+			knownDetails["EXPECTED"] == "The upgrade image version must be higher than the currently running version 26.02.1." &&
+			knownDetails["ACTUAL"] == "Selected upgrade image version: 17.18.04" {
+			xfsuTarget = "17.18.04"
 		}
 		const prefix = "HTTPS/SCP is reachable: "
 		const suffix = "/ Netconf transfer failed"

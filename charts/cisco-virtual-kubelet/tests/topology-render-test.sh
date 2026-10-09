@@ -180,7 +180,7 @@ helm template cvk "$chart_dir" \
   --set rbac.profile=strict \
   --set-json 'topology.policy.disruptionProtections=null' \
   --set-json 'topology.policy.riskGroups=null' >"$managed_legacy_values_render"
-helm template cvk "$chart_dir" --namespace cisco-vk-system --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
+helm template cvk "$chart_dir" --namespace cisco-vk-system --kube-version 1.35.0 --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
   --set config.leaseNamespace=cvk-leases >"$managed_lease_namespace_render"
 
 # The Go contract reader uses a duplicate-key-aware YAML decoder. Include the
@@ -280,8 +280,8 @@ grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-policy' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-ledger' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-graph-viewer' "$managed_render"
 grep -Fq 'topology.cisco.vk/admission-policy-prefix: "cvk-cisco-virtual-kubelet"' "$managed_render"
-test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 55
-test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 66
+test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 57
+test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 68
 grep -Fq '"globalMaxConcurrentTransfers":1' "$managed_render"
 grep -Fq '"domainMaxConcurrentTransfers":{"topology.kubernetes.io/region":1}' "$managed_render"
 grep -Fq '"appHostingServiceAccountName":"cvk-cisco-virtual-kubelet-app-hosting"' "$managed_render"
@@ -336,8 +336,8 @@ if grep -Eq '^[[:space:]]+topology\.cisco\.vk/ledger-uid:' "$managed_render"; th
   exit 1
 fi
 
-test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 27
-test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 27
+test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 28
+test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 28
 test "$(grep -c '^    topology.cisco.vk/admission-contract-digest: "sha256:02c0e65602ac0ebcc3d19b15bd7cbcd7c3840c081d72f7541efbafc394f2ee76"$' "$managed_render")" -eq 2
 grep -Fq 'upgrade this release once with topology.enabled=true before disabling topology' \
   "$chart_dir/templates/_helpers.tpl"

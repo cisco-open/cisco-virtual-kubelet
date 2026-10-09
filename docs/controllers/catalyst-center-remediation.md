@@ -12,8 +12,12 @@ The branch also has an opt-in `standardReloadProfile: CatalystCenter323` under
 the Catalyst Center image source. It requires the dedicated
 `rollout-controller-reload-v1` handshake and pins the appliance build to
 `3.2.3-75346.100`. Activation uses the modern endpoint with an explicitly empty
-`compatibleFeatures` list. Only the exact observed xFSU 17.x-to-26.x version-path
-warning for the requested target is classified as non-applicable; device xFSU
+`compatibleFeatures` list. The exact observed xFSU 17.x-to-26.x version-path
+warning for the requested target is classified as non-applicable. The inverse
+lab path also recognizes the exact xFSU downgrade warning from running `26.02.1`
+to selected `17.18.04`, requiring all three observed description, expected and
+actual detail strings. This does not permit other downgrade paths or generic
+image warnings. Device xFSU
 eligibility failures, unknown warnings, flash failures and image compatibility
 failures remain blocking. The 17.18.04 to 26.02.01 normal-reload path passed
 [live qualification](../evidence/catalyst-center-2026-10-09/standard-reload/README.md)
