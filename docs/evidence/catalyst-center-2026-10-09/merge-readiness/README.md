@@ -75,3 +75,21 @@ for the live upgrade; its manual offloads are not unattended-remediation evidenc
 - Merge the ND prerequisite, then retarget/revalidate Catalyst Center against main.
 
 Keep the Catalyst Center review in draft until these gates are closed.
+
+## CI security follow-up
+
+The first GitHub smoke run on `0bfaa9e6` found reachable vulnerabilities in the
+previous Go 1.26.7 / x/net v0.58.0 baseline. The fix pins Go 1.26.9 throughout
+builds, CI and the installer, and updates x/net to v0.60.0 in both Go modules,
+with the dependency graph's required x/crypto, x/sys, x/term and x/text updates.
+The installer also rejects Go 1.27 patches below 1.27.2. Official download
+checksums and the multi-platform builder digest were verified; historical
+release notes and earlier qualification logs retain their original versions.
+
+The patched full race suite and separate Terraform race suite passed. The
+controller vulnerability scan reports zero reachable vulnerabilities (it still
+reports non-reachable dependency findings); the Terraform scan reports none.
+All 16 release-contract tests passed. No advisory was suppressed. See the
+[Go advisory](https://pkg.go.dev/vuln/GO-2026-6617) for the fixed version floors.
+These security changes require a new CI run and a newly built lab image; prior
+live qualification does not certify that new binary.

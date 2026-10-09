@@ -45,7 +45,7 @@ scan; a rerun could move those aliases outside the corrected gates below.
   git diff --exit-code
   ```
 
-- [ ] Run the root Go tests with the pinned release toolchain (`go1.26.7`),
+- [ ] Run the root Go tests with the pinned release toolchain (`go1.26.9`),
   `go vet ./...`, `go test -race ./...`,
   `go run golang.org/x/vuln/cmd/govulncheck@v1.7.0 ./...`, the same exact
   vulnerability scan from `tools/terraform-provider-iosxeconfig`, and the hard
@@ -260,7 +260,7 @@ git push origin "refs/tags/${release_version}"
 - [ ] Confirm the `release` workflow resolved the tag to the exact full commit
   SHA and that every job succeeded. The workflow must leave the release in
   draft state.
-- [ ] Confirm the image was built with Go 1.26.7 and reports the exact tag,
+- [ ] Confirm the image was built with Go 1.26.9 and reports the exact tag,
   full SHA, and RFC3339 UTC commit build time from both `version` and
   `--version`.
 - [ ] Confirm all four plugin archives execute on their native
