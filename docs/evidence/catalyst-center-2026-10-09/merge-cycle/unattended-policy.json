@@ -1,0 +1,21 @@
+{
+  "apiVersion": "v1",
+  "data": {
+    "policy.json": "{\"profile\":\"RetiredCVKImageArchivesV1\",\"requiredFreeBytes\":2936012800,\"headroomBytes\":134217728,\"distributionReserveBytes\":0,\"maxFiles\":1,\"maxBytes\":1610612736}\n"
+  },
+  "immutable": true,
+  "kind": "ConfigMap",
+  "metadata": {
+    "annotations": {
+      "qualification.cisco.vk/scope": "Cached 26.02.01 archive and extracted packages; zero incremental distribution reserve. Cold transfer is not qualified by this fixture."
+    },
+    "creationTimestamp": "2026-10-09T13:33:04Z",
+    "labels": {
+      "ops.cisco.vk/swim-preparation-policy": "true"
+    },
+    "name": "swim-merge-cached-20261009",
+    "namespace": "cvk-live",
+    "resourceVersion": "11589080",
+    "uid": "0f518ca7-8090-4273-b3e8-391b7c4596c7"
+  }
+}

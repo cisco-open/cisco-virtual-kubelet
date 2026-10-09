@@ -25,6 +25,13 @@ on this appliance build. An empty feature list is not a portable guarantee for
 other Catalyst Center builds.
 Existing sources that omit this field retain strict readiness validation.
 
+The [completed automatic-cycle record](../evidence/catalyst-center-2026-10-09/merge-cycle/README.md)
+qualifies actual manifest-driven archive cleanup, both inventory synchronizations
+and an uninterrupted 17.18.04 → 26.02.01 normal reload on the empty single-RP
+`.101` switch. Its target was already cached; it does not qualify fresh-transfer
+capacity sizing or xFSU. Setup and earlier supervised recovery are recorded
+separately from the approved automatic campaign.
+
 Preparation policies may set `distributionReserveBytes` to reserve additional
 space before distribution while retaining `requiredFreeBytes + headroomBytes`
 as the pre-activation floor. The reserve is conservative even when an image is

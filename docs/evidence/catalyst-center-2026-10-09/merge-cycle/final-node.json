@@ -1,0 +1,114 @@
+{
+  "apiVersion": "v1",
+  "kind": "Node",
+  "metadata": {
+    "annotations": {
+      "cisco.io/cdp-neighbor-count": "2",
+      "cisco.io/protocols": "cdp",
+      "node.alpha.kubernetes.io/ttl": "0",
+      "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-867d55fb4b-bgjtk",
+      "topology.cisco.vk/app-worker-pod-uid": "191737d2-a6a9-4abb-8ea4-73f8a4c85c69",
+      "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+      "topology.cisco.vk/device-name": "cat9k-lab-101",
+      "topology.cisco.vk/device-namespace": "cvk-live",
+      "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+      "topology.cisco.vk/managed": "true",
+      "topology.cisco.vk/managed-taints": "",
+      "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-699b5578c8-t56nm",
+      "topology.cisco.vk/network-worker-pod-uid": "c3074e4f-5d2f-47c8-9d90-985f64913f3c",
+      "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+      "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+      "topology.cisco.vk/projected-keys": "kubernetes.io/hostname,platform,provider,topology.cisco.vk/lab-node,topology.cisco.vk/site,topology.kubernetes.io/region,topology.kubernetes.io/zone,type",
+      "topology.cisco.vk/projection-hash": "sha256:692be3346f119d8c911d6420967b74b764162eca6bcc3b33a31daf891c4484f2",
+      "topology.cisco.vk/worker-observed-revision": "sha256:fcb25ae4a5c5cfe0c57a985ff0fd334a0d2e184de67928c217bb65f4e2ab40de",
+      "topology.cisco.vk/worker-protocol": "rollout-v1",
+      "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+      "virtual-kubelet.io/last-applied-node-status": "{\"capacity\":{\"memory\":\"2Gi\",\"pods\":\"2\",\"storage\":\"112487Mi\"},\"allocatable\":{\"memory\":\"2Gi\",\"pods\":\"2\",\"storage\":\"112487Mi\"},\"conditions\":[{\"type\":\"Ready\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-10-09T17:20:31Z\",\"lastTransitionTime\":\"2026-10-09T17:16:31Z\",\"reason\":\"KubeletReady\",\"message\":\"Cisco IOx is enabled and reachable\"},{\"type\":\"CiscoVirtualKubeletManagedReady\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-10-09T17:20:31Z\",\"lastTransitionTime\":\"2026-10-09T16:49:00Z\",\"reason\":\"StatusOnlyRolloutV1\",\"message\":\"worker is enforcing the rollout-v1 status-only Node writer contract\"},{\"type\":\"DiskPressure\",\"status\":\"False\",\"lastHeartbeatTime\":\"2026-10-09T17:20:31Z\",\"lastTransitionTime\":\"2026-10-09T16:49:00Z\",\"reason\":\"StorageAvailable\",\"message\":\"Sufficient storage available\"}],\"addresses\":[{\"type\":\"InternalIP\",\"address\":\"10.0.0.188\"}],\"daemonEndpoints\":{\"kubeletEndpoint\":{\"Port\":10250}},\"nodeInfo\":{\"machineID\":\"FOC2520L6H1\",\"systemUUID\":\"FOC2520L6H1\",\"bootID\":\"\",\"kernelVersion\":\"17.18.4\",\"osImage\":\"IOS-XE\",\"containerRuntimeVersion\":\"\",\"kubeletVersion\":\"v1.12.0\",\"kubeProxyVersion\":\"\",\"operatingSystem\":\"Cisco\",\"architecture\":\"C9300-24P\"}}",
+      "virtual-kubelet.io/last-applied-object-meta": "{\"name\":\"cat9k-lab-101\",\"uid\":\"1d153018-19a3-42dc-a7b9-da36c5bf0a95\"}"
+    },
+    "creationTimestamp": "2026-09-09T18:49:29Z",
+    "finalizers": [
+      "wrangler.cattle.io/node"
+    ],
+    "labels": {
+      "kubernetes.io/hostname": "cat9k-lab-101",
+      "platform": "cisco-ios-xe",
+      "provider": "cisco-apphosting",
+      "topology.cisco.vk/lab-node": "cat9k-lab-101",
+      "topology.cisco.vk/site": "ubuntu16-physical",
+      "topology.kubernetes.io/region": "lab",
+      "topology.kubernetes.io/zone": "physical-c9k-lab",
+      "type": "virtual-kubelet"
+    },
+    "name": "cat9k-lab-101",
+    "resourceVersion": "11634554",
+    "uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95"
+  },
+  "spec": {
+    "podCIDR": "10.42.5.0/24",
+    "podCIDRs": [
+      "10.42.5.0/24"
+    ]
+  },
+  "status": {
+    "addresses": [
+      {
+        "address": "10.0.0.188",
+        "type": "InternalIP"
+      }
+    ],
+    "allocatable": {
+      "memory": "2Gi",
+      "pods": "2",
+      "storage": "112487Mi"
+    },
+    "capacity": {
+      "memory": "2Gi",
+      "pods": "2",
+      "storage": "112487Mi"
+    },
+    "conditions": [
+      {
+        "lastHeartbeatTime": "2026-10-09T17:20:31Z",
+        "lastTransitionTime": "2026-10-09T17:16:31Z",
+        "message": "Cisco IOx is enabled and reachable",
+        "reason": "KubeletReady",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-09T17:20:31Z",
+        "lastTransitionTime": "2026-10-09T16:49:00Z",
+        "message": "worker is enforcing the rollout-v1 status-only Node writer contract",
+        "reason": "StatusOnlyRolloutV1",
+        "status": "True",
+        "type": "CiscoVirtualKubeletManagedReady"
+      },
+      {
+        "lastHeartbeatTime": "2026-10-09T17:20:31Z",
+        "lastTransitionTime": "2026-10-09T16:49:00Z",
+        "message": "Sufficient storage available",
+        "reason": "StorageAvailable",
+        "status": "False",
+        "type": "DiskPressure"
+      }
+    ],
+    "daemonEndpoints": {
+      "kubeletEndpoint": {
+        "Port": 10250
+      }
+    },
+    "nodeInfo": {
+      "architecture": "C9300-24P",
+      "bootID": "",
+      "containerRuntimeVersion": "",
+      "kernelVersion": "17.18.4",
+      "kubeProxyVersion": "",
+      "kubeletVersion": "v1.12.0",
+      "machineID": "FOC2520L6H1",
+      "operatingSystem": "Cisco",
+      "osImage": "IOS-XE",
+      "systemUUID": "FOC2520L6H1"
+    }
+  }
+}

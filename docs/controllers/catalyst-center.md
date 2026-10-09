@@ -258,11 +258,13 @@ satisfy that budget, the workflow stops. Application archives, installed package
 route/VRF repairs and arbitrary file cleanup are outside this policy. Required
 network configuration must converge separately through the existing drivers.
 
-Automatic cleanup and inventory synchronization have separate live evidence.
-The completed version-changing campaign used supervised application-archive
-offloads and no-op automatic preparation; it does not establish a fully
-unattended version-changing cleanup cycle. Recovery testing and the final merge
-candidate must preserve this distinction.
+The [9 October uninterrupted qualification](../evidence/catalyst-center-2026-10-09/merge-cycle/README.md)
+completed 17.18.04 → 26.02.01 on the empty single-RP `.101` switch, including
+actual retired-archive cleanup, both inventory synchronizations, SWIM activation,
+native committed-image verification and maintenance release. Control revision
+remained zero after approval. The target archive/packages were already cached;
+this does not qualify a fresh-transfer cycle or xFSU. Earlier supervised cleanup
+and recovery runs remain separately identified in their evidence records.
 
 ### Cleanup ownership and protection
 

@@ -1,6 +1,9 @@
 # Catalyst Center merge qualification — 9 October 2026
 
 This is a merge-readiness checkpoint, not a completed unattended SWIM qualification.
+The subsequent [completed automatic-cycle record](../merge-cycle/README.md)
+documents the fixes, uninterrupted version-changing qualification and remaining
+repository merge gates. This earlier checkpoint is retained as historical evidence.
 
 ## Baseline and scope
 
