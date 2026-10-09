@@ -147,7 +147,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		variables: []string{"journal", "boundPod", "creator", "controller"}, validations: 1,
 		requiredFragments: []string{"authentication.kubernetes.io/pod-uid", "deviceWorkerUsername", "controllerUsername", "Succeeded", "swim-handoff-evidence"},
-		digest:            "sha256:c807b45e5e9518d775be8349051e7cd2b699f4bc2ab17c4aa61b492e996f608c",
+		digest:            "sha256:33a2a1a980a84736a748d9ff2143d5392450bae3bed744fc7cd9e38cf96bf46a",
 	},
 	"managed-upgrade-leaf": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},

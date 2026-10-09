@@ -44,9 +44,15 @@ spec:
         request.operation == 'DELETE' ?
           (variables.creator && has(oldObject.status) && oldObject.status.phase == 'Succeeded') :
         (has(request.subResource) && request.subResource == 'status') ?
-          (variables.controller && object.spec == oldObject.spec && ['labels', 'annotations', 'finalizers', 'ownerReferences'].all(k,
-            ((k in object.metadata) == (k in oldObject.metadata)) &&
-            (!(k in object.metadata) || object.metadata[k] == oldObject.metadata[k]))) :
+          (variables.controller && object.spec == oldObject.spec &&
+           (has(object.metadata.labels) == has(oldObject.metadata.labels)) &&
+           (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+           (has(object.metadata.annotations) == has(oldObject.metadata.annotations)) &&
+           (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+           (has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)) &&
+           (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+           (has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)) &&
+           (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences)) :
           (variables.creator && object.spec == oldObject.spec &&
            (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences.size() == 0) &&
            (has(object.status) == has(oldObject.status)) &&

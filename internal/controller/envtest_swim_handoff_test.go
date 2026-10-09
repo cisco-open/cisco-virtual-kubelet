@@ -129,6 +129,19 @@ func TestEnvtest_SWIMHandoffOwnership(t *testing.T) {
 	if err = callers["xe-worker"].Delete(ctx, h); !(apierrors.IsForbidden(err) || apierrors.IsInvalid(err)) {
 		t.Fatalf("unresolved journal deleted: %v", err)
 	}
+	// Exercise both absent and present optional metadata under the typed CEL
+	// guards. The controller may preserve these fields during status writes,
+	// but it cannot take over the device worker's metadata ownership.
+	h.Labels = map[string]string{"qualification": "swim"}
+	h.Annotations = map[string]string{"qualification.cisco.vk/owner": "device-worker"}
+	if err = callers["xe-worker"].Update(ctx, h); err != nil {
+		t.Fatalf("device-worker metadata update rejected: %v", err)
+	}
+	changed = h.DeepCopy()
+	changed.Labels["qualification"] = "changed"
+	if err = callers["catc-worker"].Update(ctx, changed); !(apierrors.IsForbidden(err) || apierrors.IsInvalid(err)) {
+		t.Fatalf("controller changed journal metadata: %v", err)
+	}
 	h.Status.Phase = "Succeeded"
 	h.Status.ReadinessHistory = []ops.SWIMReadinessReceipt{{Task: "prior-task", Claim: "prior-claim", Stage: "ReadyToActivate", SubmittedAt: metav1.Now()}}
 	if err = callers["catc-worker"].Status().Update(ctx, h); err != nil {
