@@ -161,6 +161,7 @@ helm "${helm_args[@]}" \
   --show-only templates/topology-configmaps.yaml >"$config_manifest"
 helm "${helm_args[@]}" \
   --show-only templates/topology-admission.yaml \
+  --show-only templates/swim-handoff-admission.yaml \
   --show-only templates/topology-worker-admission.yaml >"$admission_manifest"
 
 # Keep both upstream kube-controller-manager credential modes in the rendered
