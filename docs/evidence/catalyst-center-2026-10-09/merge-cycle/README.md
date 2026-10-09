@@ -112,6 +112,10 @@ then completed successfully. It is recovery evidence, not the uninterrupted run.
   had passed unit/envtest, security, Terraform, YANG, Helm, native TAS and both
   admission suites at capture time; production image steps were still running.
   The PR description records the subsequent final-review-commit CI outcome.
+- That candidate run subsequently passed every job. The documentation-head
+  rerun reached the former 35-minute job limit during the last device-call probe.
+  The job budget is now 45 minutes; all checks and individual test deadlines are
+  retained. This CI-only adjustment does not change the qualified runtime.
 
 ## Other nodes and remaining merge gates
 

@@ -48,7 +48,10 @@ on:
 jobs:
   build-and-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # Native admission matrices and both architecture builds can leave too
+    # little time for the final device-call probes under the former 35m cap.
+    # Retain all checks and their individual deadlines; allow cold-cache runs.
+    timeout-minutes: 45
     env:
       KIND_NODE_IMAGE: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
     permissions:
