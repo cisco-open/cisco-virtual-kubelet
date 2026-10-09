@@ -148,17 +148,18 @@ kind load docker-image --name "${context#kind-}" "$lab_image" >"$work/lab-image-
 run_probe lab-new-contract "$lab_image" Failed 'has 9 validations, want exactly 7'
 
 # Older staged managers either drop caSecretRef or project its mutable Secret
-# directly. Both must stop at the exact current native public-CA contract.
+# directly. They also predate the SWIM-aware upgrade contract, which is checked
+# before public-CA policy. Require that exact earlier digest rejection; these
+# entrypoint probes establish fail-closed startup, not isolated CA validation.
 pre_ca_baseline=dfe02ae43bd9ce721ab481bde05d970fc6fe5100
 direct_ca_baseline=dbdbb4e7cbc4ce258fa3275b620ac01a2c409556
 for stage in pre-ca direct-ca; do
   if [ "$stage" = pre-ca ]; then
     revision="$pre_ca_baseline"
-    denial='has 2 validations, want exactly 1'
   else
     revision="$direct_ca_baseline"
-    denial='want sha256:5d1f9e89b84c9eda661a652fe78f9beda28e07f7f2e1a4952c212443f34f7270'
   fi
+  denial="${prefix}-managed-upgrade-leaf\": compiled contract digest is sha256:a249482434518d7d2d97f0a7739e08300d01a9baf86dac03bb0ce521ec5b0e3a, want sha256:80cedca07e67a45caa10fdedc9aaa174e39825b342af5d44b69a1334f6a6101a"
   git -C "$root" cat-file -e "$revision^{commit}"
   mkdir "$work/$stage-source" "$work/$stage-image"
   git -C "$root" archive "$revision" | tar -x -C "$work/$stage-source"
