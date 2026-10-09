@@ -13,7 +13,7 @@ chart_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repo_root="$(cd "$chart_dir/../.." && pwd)"
 release_name="cvk-topology-it"
 admission_prefix="${release_name}-cisco-virtual-kubelet"
-expected_policy_count=27
+expected_policy_count=28
 legacy_node_marker_policy="${admission_prefix}-legacy-node-marker"
 legacy_node_marker_digest="sha256:02c0e65602ac0ebcc3d19b15bd7cbcd7c3840c081d72f7541efbafc394f2ee76"
 system_namespace="cvk-topology-system"
@@ -320,7 +320,10 @@ kubectl delete rolebinding cisco-virtual-kubelet-device \
 policy_count="$(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' ')"
-test "$policy_count" -eq "$expected_policy_count"
+if [ "$policy_count" -ne "$expected_policy_count" ]; then
+  echo "expected ${expected_policy_count} release admission policies, found ${policy_count}" >&2
+  exit 1
+fi
 for policy in $(kubectl get validatingadmissionpolicy \
   -l "app.kubernetes.io/instance=${release_name}" \
   -o jsonpath='{.items[*].metadata.name}'); do
