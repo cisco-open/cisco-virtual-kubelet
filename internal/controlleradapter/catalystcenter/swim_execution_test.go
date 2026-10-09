@@ -169,6 +169,43 @@ func TestSWIMLostTaskReceiptNeverReplaysAfterRestart(t *testing.T) {
 	}
 }
 
+func TestSWIMRecordedTaskSurvivesObservationOutageAndRestart(t *testing.T) {
+	for _, phase := range []swimPhase{swimDistributing, swimActivating} {
+		t.Run(string(phase), func(t *testing.T) {
+			e, i, s, a, api, v := executionFixture(t)
+			for n := 0; n < 5 && s.record.Phase != phase; n++ {
+				step(t, e, i)
+			}
+			if s.record.Phase != phase {
+				t.Fatalf("did not reach %s", phase)
+			}
+			before := s.record
+			api.pollErr = context.DeadlineExceeded
+			for n := 0; n < 2; n++ {
+				// Reconstruct only from persisted state, including the task receipt.
+				restarted, err := newSWIMExecutor(e.binding, s, a, v, api)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := restarted.Step(context.Background(), i); err == nil {
+					t.Fatal("observation outage was not reported")
+				}
+				if s.record.Phase != before.Phase || s.record.Revision != before.Revision || a.releases != 0 {
+					t.Fatal("observation outage changed durable task or released fence")
+				}
+				e = restarted
+			}
+			api.pollErr = nil
+			for n := 0; n < 8 && a.releases == 0; n++ {
+				step(t, e, i)
+			}
+			if s.record.Phase != swimSucceeded || api.distributions != 1 || api.activations != 1 || a.releases != 1 || v.calls != 1 {
+				t.Fatalf("did not resume exactly once: phase=%s distribution=%d activation=%d release=%d verification=%d", s.record.Phase, api.distributions, api.activations, a.releases, v.calls)
+			}
+		})
+	}
+}
+
 func TestSWIMLostSubmissionResponseDoesNotFallback(t *testing.T) {
 	e, i, s, a, api, _ := executionFixture(t)
 	step(t, e, i)

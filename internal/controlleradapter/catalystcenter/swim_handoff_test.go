@@ -174,6 +174,44 @@ func TestHandoffRejectsStaleAuthority(t *testing.T) {
 		})
 	}
 }
+
+func TestHandoffPauseResumeRequiresFreshGrant(t *testing.T) {
+	b, i, up, _, _ := handoffFixture(t)
+	attachHandoffAPI(t, b)
+	ctx := context.Background()
+	up.Status.ManagerControl.Revision = 2
+	up.Status.ManagerControl.Pause = true
+	if err := b.a.statusWriter.Status().Update(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.Claim(ctx, i, swimReadinessClaimed); err == nil {
+		t.Fatal("pause permitted a new submission")
+	}
+	if err := b.Hold(ctx, i); err != nil {
+		t.Fatalf("pause lost the existing mutation fence: %v", err)
+	}
+	up.Status.ManagerControl.Revision = 3
+	up.Status.ManagerControl.Pause = false
+	if err := b.a.statusWriter.Status().Update(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := b.Claim(ctx, i, swimReadinessClaimed); err == nil {
+		t.Fatal("resume reused a grant from before the pause")
+	}
+	revision := int64(3)
+	up.Status.ManagerAdmission.ControlRevision = &revision
+	up.Status.ControllerHandoff.ControlRevision = revision
+	up.Status.ControllerHandoff.Token = "resumed-token"
+	if err := b.a.statusWriter.Status().Update(ctx, up); err != nil {
+		t.Fatal(err)
+	}
+	if err := b.Check(ctx, i, swimReadinessClaimed, "token"); err == nil {
+		t.Fatal("old token survived fresh authorization")
+	}
+	if token, err := b.Claim(ctx, i, swimReadinessClaimed); err != nil || token != "resumed-token" {
+		t.Fatalf("fresh resume grant rejected: %q %v", token, err)
+	}
+}
 func TestHandoffJournalCASAndRestart(t *testing.T) {
 	b, i, _, _, _ := handoffFixture(t)
 	ctx := context.Background()
