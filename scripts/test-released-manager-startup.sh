@@ -40,6 +40,16 @@ image="cvk-october-startup:probe-$$"
 docker build --platform "linux/$architecture" -t "$image" \
   -f "$root/scripts/testdata/released-manager.Dockerfile" "$work/image" >"$work/image-build.log" 2>&1
 kind load docker-image --name "${context#kind-}" "$image" >"$work/image-load.log" 2>&1
+# The disposable cluster is removed by the caller on failure. Keep the actual
+# startup error in CI output rather than only naming a runner-local evidence
+# file that disappears with the job. These probes contain no device credentials.
+probe_diagnostics() {
+  local name="$1"
+  printf '\nManager startup diagnostics for %s:\n' "$name" >&2
+  jq '{phase:.status.phase, conditions:.status.conditions, containers:[.status.containerStatuses[]? | {name,ready,restartCount,state,lastState}]}' \
+    "$work/${name}-pod.json" >&2
+  tail -n 100 "$work/${name}.log" >&2
+}
 # Run with the rendered manager account and its projected namespace/token.
 # A host process cannot exercise the unchanged in-cluster leader-election path.
 run_probe() {
@@ -113,6 +123,7 @@ if [ "$expected" = Failed ]; then
      [ -z "$denial" ] || ! grep -Fq "$denial" "$work/${name}.log" ||
      grep -Fq 'starting manager' "$work/${name}.log"; then
     printf 'FAIL: %s did not stop at admission preflight; inspect %s\n' "$name" "$work/${name}.log" >&2
+    probe_diagnostics "$name"
     return 1
   fi
   cmp "$work/${name}-authority-before.json" "$work/${name}-authority-after.json"
@@ -121,6 +132,7 @@ else
      ! jq -e --arg pod "$pod" '.spec.holderIdentity | startswith($pod + "_")' "$work/${name}-leader.json" >/dev/null ||
      ! grep -Fq 'starting manager' "$work/${name}.log"; then
     printf 'FAIL: %s did not start and acquire leadership; inspect %s\n' "$name" "$work/${name}.log" >&2
+    probe_diagnostics "$name"
     return 1
   fi
   # Observe a real manager with no device authority, then stop it gracefully.
