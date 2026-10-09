@@ -160,7 +160,8 @@ Manager startup verifies the new admission policy's compiled contract. The
 prevent old workers from interpreting controller work as Direct/gNOI work.
 Existing URL/device-file/preinstalled sources keep their existing paths.
 
-Use [the controller rollout example](../../examples/configs/catalyst-center/swim-rollout.yaml)
+Use the controller rollout example at
+`examples/configs/catalyst-center/swim-rollout.yaml` in the repository
 through the existing plan/approve/execute workflow. Each controller source pins
 one device UUID: target one device, or provide separately selected sources for
 different device UUIDs. This first execution profile requires single-supervisor
