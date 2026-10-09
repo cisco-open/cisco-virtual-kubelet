@@ -1,0 +1,4 @@
+=== RUN   TestLabSSHDiagnosticRejection
+    ssh_cli_lab_test.go:67: PASS: show version accepted; unsupported syntax rejected; subsequent app inventory accepted; trusted SSH host key verified
+--- PASS: TestLabSSHDiagnosticRejection (0.27s)
+PASS

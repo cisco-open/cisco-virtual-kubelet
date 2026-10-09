@@ -90,3 +90,53 @@ rules:
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cisco-virtual-kubelet-controller-worker-swim
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+rules:
+  # Endpoint metadata and adapter-owned connection status.
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers/status"]
+    verbs: ["get", "update", "patch"]
+  # Declarative controller intent is read-only. Workers report through the
+  # status subresource and cannot modify spec, metadata, or finalizers.
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["networkcontrollerconfigs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["networkcontrollerconfigs/status"]
+    verbs: ["get", "update", "patch"]
+  # Network as Code payloads may be supplied by a same-namespace ConfigMap.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+  # Emit bounded reconciliation events.
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Credential Secrets are intentionally absent. The kubelet projects the
+  # administrator-approved Secret keys into the worker pod as read-only files.
+  # SWIM delegates API calls only: no device credentials or lease writes.
+  - apiGroups: ["cisco.vk"]
+    resources: ["ciscodevices"]
+    verbs: ["get"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["iosxesoftwareupgrades"]
+    verbs: ["get"]
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["catalystcenterswimhandoffs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["catalystcenterswimhandoffs/status"]
+    verbs: ["get", "update"]

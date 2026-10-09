@@ -1,0 +1,172 @@
+{
+  "date": "2026-10-08",
+  "controllerVersion": "3.2.3-75346.100",
+  "goldenImage": {
+    "id": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+    "version": "17.18.04.0.759",
+    "siteId": "14943839-d66c-450d-b65a-5552eb1af040",
+    "site": "Global/CVK/MUC07",
+    "productId": "286315874",
+    "role": "ACCESS"
+  },
+  "distributionSubmitted": false,
+  "activationSubmitted": false,
+  "devices": [
+    {
+      "address": "198.51.100.100",
+      "controllerDeviceId": "62248887-38a3-4b64-b061-44ee12f8f523",
+      "taskId": "01a11ad0-9f4f-716b-9cd7-dda06e7188dd",
+      "taskCompleted": true,
+      "taskIsError": false,
+      "readinessQualified": false,
+      "checks": [
+        {
+          "name": "Startup config check",
+          "status": "SUCCESS",
+          "id": "b2b1a464-d0e1-4773-8e4b-0d1d5cd64134",
+          "startTime": 1791451244557,
+          "endTime": 1791451264188
+        },
+        {
+          "name": "Config register check",
+          "status": "SUCCESS",
+          "id": "02a61069-d7da-4be1-a14e-ec67bafa4acc",
+          "startTime": 1791451244280,
+          "endTime": 1791451262904
+        },
+        {
+          "name": "Flash check",
+          "status": "SUCCESS",
+          "id": "01687dfc-6abf-423f-b13d-6c5d92daf9ef",
+          "startTime": 1791451244204,
+          "endTime": 1791451262268
+        },
+        {
+          "name": "File Transfer Check",
+          "status": "WARNING",
+          "id": "fd940acb-767e-4fc0-9c81-d62ab5734126",
+          "startTime": 1791451244167,
+          "endTime": 1791451262005
+        },
+        {
+          "name": "Image Version Support",
+          "status": "SUCCESS",
+          "id": "5120095e-05d9-4a4a-b8e9-ac603c415554",
+          "startTime": 1791451244084,
+          "endTime": 1791451253285
+        },
+        {
+          "name": "XFSU Compatibility Check",
+          "status": "WARNING",
+          "id": "1fd24e96-ae15-4bda-af6f-20cce9895b46",
+          "startTime": 1791451243841,
+          "endTime": 1791451251351
+        }
+      ]
+    },
+    {
+      "address": "198.51.100.101",
+      "controllerDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+      "taskId": "01a11ad0-a0a0-736c-a5e5-1c3510b51ea7",
+      "taskCompleted": true,
+      "taskIsError": false,
+      "readinessQualified": false,
+      "checks": [
+        {
+          "name": "Startup config check",
+          "status": "SUCCESS",
+          "id": "e6efd14f-cf81-4a4e-af65-04e6e8368bcd",
+          "startTime": 1791451246751,
+          "endTime": 1791451267385
+        },
+        {
+          "name": "Config register check",
+          "status": "SUCCESS",
+          "id": "969be36c-afbe-47c1-a0ac-9c1f956fde20",
+          "startTime": 1791451245975,
+          "endTime": 1791451265652
+        },
+        {
+          "name": "Flash check",
+          "status": "SUCCESS",
+          "id": "5de22c29-e947-4399-a947-0e12ebeb06bd",
+          "startTime": 1791451245850,
+          "endTime": 1791451264567
+        },
+        {
+          "name": "File Transfer Check",
+          "status": "WARNING",
+          "id": "9db251fe-f3e3-4ac5-adfc-2007e75393ed",
+          "startTime": 1791451245670,
+          "endTime": 1791451264190
+        },
+        {
+          "name": "Image Version Support",
+          "status": "SUCCESS",
+          "id": "976ab042-deb5-4d98-bc84-038e0ef8c15a",
+          "startTime": 1791451245455,
+          "endTime": 1791451255577
+        },
+        {
+          "name": "XFSU Compatibility Check",
+          "status": "SUCCESS",
+          "id": "eb88ab65-1865-4adc-9c3c-ba57252f9f8e",
+          "startTime": 1791451244856,
+          "endTime": 1791451254298
+        }
+      ]
+    },
+    {
+      "address": "198.51.100.103",
+      "controllerDeviceId": "b6817e2f-e7d8-41be-92e8-2201d99f855f",
+      "taskId": "01a11ad0-a1d5-7841-909b-2422678a5c4b",
+      "taskCompleted": true,
+      "taskIsError": false,
+      "readinessQualified": false,
+      "checks": [
+        {
+          "name": "Startup config check",
+          "status": "SUCCESS",
+          "id": "cb591d47-af9e-44f3-9e55-fc58715077cf",
+          "startTime": 1791451247264,
+          "endTime": 1791451267890
+        },
+        {
+          "name": "Config register check",
+          "status": "SUCCESS",
+          "id": "597931c2-5608-4c9a-9579-e53e14a08efa",
+          "startTime": 1791451246460,
+          "endTime": 1791451266161
+        },
+        {
+          "name": "Flash check",
+          "status": "WARNING",
+          "id": "8a260416-ea74-4fa0-80ab-5ce48891171e",
+          "startTime": 1791451246263,
+          "endTime": 1791451265410
+        },
+        {
+          "name": "File Transfer Check",
+          "status": "WARNING",
+          "id": "8f05a9c3-f15b-4533-8025-71ce7aad14e6",
+          "startTime": 1791451246152,
+          "endTime": 1791451264957
+        },
+        {
+          "name": "Image Version Support",
+          "status": "SUCCESS",
+          "id": "c22b4253-ec42-404a-ad76-4f656ca2bda1",
+          "startTime": 1791451245879,
+          "endTime": 1791451255972
+        },
+        {
+          "name": "XFSU Compatibility Check",
+          "status": "SUCCESS",
+          "id": "77a8e1d8-1f2d-4a9a-99ff-0b0e288b0245",
+          "startTime": 1791451245056,
+          "endTime": 1791451254767
+        }
+      ]
+    }
+  ]
+}

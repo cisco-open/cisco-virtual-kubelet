@@ -1,0 +1,18 @@
+[
+  {
+    "op": "test",
+    "path": "/metadata/resourceVersion",
+    "value": "11343258"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/control",
+    "value": {
+      "revision": 3,
+      "pause": false,
+      "requestedBy": "system:admin",
+      "requestedAt": "2026-10-08T16:35:41.037396Z",
+      "reason": "Resume after supervised exact-file cleanup verified 3281846272 free bytes; require a new CC readiness task before activation."
+    }
+  }
+]

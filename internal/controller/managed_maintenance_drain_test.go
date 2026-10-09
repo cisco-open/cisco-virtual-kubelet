@@ -693,3 +693,50 @@ func TestStaleDrainRecoveryRequiresExactOlderBindingAndRestoredGuard(t *testing.
 		})
 	}
 }
+
+func TestCancelledDrainTaintReleaseIsExplicitAndBounded(t *testing.T) {
+	now := time.Now()
+	deadline := metav1.NewTime(now.Add(time.Hour))
+	for _, variant := range []string{"valid", "absent", "wrong-session", "mutation", "active", "preexisting", "unfinished", "expired", "desired-taint", "not-cancelled"} {
+		t.Run(variant, func(t *testing.T) {
+			d := &ciskov1.CiscoDevice{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{cancelledDrainTaintReleaseAnnotation: "leaf/token"}}}
+			l := &opsv1alpha1.IOSXESoftwareUpgrade{}
+			l.Status.ManagerControl = &opsv1alpha1.UpgradeManagerControlStatus{Cancel: true}
+			s := &ciskov1.DeviceMaintenanceSessionStatus{Purpose: ciskov1.DeviceMaintenancePurposeWorkloadDrain, Phase: ciskov1.DeviceMaintenanceSessionRecovering, SessionToken: "token", Operation: ciskov1.DeviceMaintenanceObjectReference{UID: "leaf"}}
+			drain := &opsv1alpha1.UpgradeManagerDrainStatus{State: opsv1alpha1.UpgradeManagerDrainRecovering, RecoveryDeadline: &deadline, Pods: []opsv1alpha1.UpgradeDrainPodStatus{{Phase: opsv1alpha1.UpgradeDrainPodComplete}}}
+			switch variant {
+			case "absent":
+				d.Annotations = nil
+			case "wrong-session":
+				d.Annotations[cancelledDrainTaintReleaseAnnotation] = "leaf/other"
+			case "mutation":
+				l.Status.StagingRequested = true
+			case "active":
+				s.Phase = ciskov1.DeviceMaintenanceSessionActive
+			case "preexisting":
+				drain.MaintenanceTaintPresentBefore = true
+			case "unfinished":
+				drain.Pods[0].Phase = opsv1alpha1.UpgradeDrainPodProtected
+			case "expired":
+				drain.RecoveryDeadline = &metav1.Time{Time: now.Add(-time.Second)}
+			case "desired-taint":
+				d.Spec.Taints = []corev1.Taint{maintenanceGuardTaint()}
+			case "not-cancelled":
+				l.Status.ManagerControl.Cancel = false
+			}
+			allowed := cancelledDrainTaintReleaseRequested(d, l, s, drain, now)
+			if allowed != (variant == "valid") {
+				t.Fatalf("release eligibility = %v", allowed)
+			}
+			node := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{}}, Spec: corev1.NodeSpec{Taints: []corev1.Taint{maintenanceGuardTaint(), {Key: "operator", Value: "keep", Effect: corev1.TaintEffectNoSchedule}}}}
+			_, err := reconcileManagedDrainTaint(node, nil, nil, managedMaintenanceDecision{session: s, drain: drain, releaseCancelledDrainTaint: allowed})
+			if variant == "valid" {
+				if err != nil || hasDrainMaintenanceTaint(node.Spec.Taints) || len(node.Spec.Taints) != 1 || node.Spec.Taints[0].Key != "operator" {
+					t.Fatalf("scoped release: %v %v", node.Spec.Taints, err)
+				}
+			} else if !hasDrainMaintenanceTaint(node.Spec.Taints) {
+				t.Fatal("unauthorized taint removal")
+			}
+		})
+	}
+}

@@ -62,8 +62,8 @@ class ReleaseContractTests(unittest.TestCase):
         lint_dockerfile = (ROOT / "Dockerfile.config-lint").read_text(encoding="utf-8")
         release = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
         pinned_builder = (
-            "golang:1.26.7-alpine@sha256:"
-            "28d89ee9cc0ff9fec75c82ca201e6bf7fdf9a679d4b7b24dfa04f2bb766bb468"
+            "golang:1.26.9-alpine@sha256:"
+            "cdfd4fe2da6b225d8b40c6b7a105736e548e83ff56d5d8f9394446eeb5eb84e0"
         )
         self.assertIn(pinned_builder, dockerfile)
         self.assertIn(pinned_builder, lint_dockerfile)
@@ -73,7 +73,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertIn("main.BuildTime=${BUILD_TIME}", dockerfile)
         self.assertIn("github.com/google/go-licenses/v2@v2.0.1", dockerfile)
         self.assertIn("github.com/moby/spdystream/spdy/PATENTS", dockerfile)
-        self.assertIn("go-version: '1.26.7'", release)
+        self.assertIn("go-version: '1.26.9'", release)
         self.assertIn("version: v3.21.4", release)
         self.assertEqual(release.count("version: v0.36.1"), 2)
         self.assertEqual(
@@ -123,7 +123,7 @@ class ReleaseContractTests(unittest.TestCase):
         self.assertGreaterEqual(release.count(".target_commitish == $commit"), 3)
         self.assertNotIn("ubuntu-latest", release)
         self.assertNotIn("1.25", dockerfile + lint_dockerfile + release)
-        self.assertEqual((ROOT / "go.mod").read_text().splitlines()[2], "go 1.26.7")
+        self.assertEqual((ROOT / "go.mod").read_text().splitlines()[2], "go 1.26.9")
 
     def test_high_critical_image_scans_are_hard_gates(self) -> None:
         action = (
@@ -362,13 +362,13 @@ class ReleaseContractTests(unittest.TestCase):
             text=True,
         )
         text = installer.read_text(encoding="utf-8")
-        self.assertIn('PINNED_GO_VERSION="1.26.7"', text)
+        self.assertIn('PINNED_GO_VERSION="1.26.9"', text)
         for required in (
-            "ffb5f8de10c62550dfddab66b36b57030721e0a44a3218e9e1181d7b59f121ca",
-            "5a4ec883379d51ee9ce1040d5e87f8d35e20387574dd8c947feb01eabc3c1b37",
-            "675c26c449cbb18fc24b74650de1eabbae6e16f64326fd85a283fb3b58280685",
-            "51798d2c42d0e1c6ed7fd9f48728b4193abac9e8aad6dbac2fe96a81f5909bda",
-            "go1.26.7+ or go1.27.0+",
+            "42d158b4d8f7b61ac0a830567c940a86098fb7aac52e467a5ebec03ef5cc2f8d",
+            "4a97373d49fcacdcf3694fea368a500b00ee3e963974f3e7514132717632f052",
+            "ecbadb99091a3f46e31f5f934b068b1864eafa7995211b39eaddf76996045fe5",
+            "94f3e30b8e374bc285e7dadc11e0865726b9bc6e85b841ccceaabc0214c6b7c8",
+            "go1.26.9+ or go1.27.2+",
         ):
             self.assertIn(required, text)
         self.assertNotIn("1.25", text)
@@ -387,7 +387,7 @@ class ReleaseContractTests(unittest.TestCase):
             fake_go.write_text(
                 "#!/bin/sh\n"
                 'if [ "$1 $2" = "env GOVERSION" ]; then\n'
-                "  printf 'go1.26.7\\n'\n"
+                "  printf 'go1.26.9\\n'\n"
                 "  exit 0\n"
                 "fi\n"
                 "exit 64\n",
@@ -398,7 +398,7 @@ class ReleaseContractTests(unittest.TestCase):
             env.pop("GO_VERSION", None)
             env["PATH"] = f"{temp_dir}{os.pathsep}{env['PATH']}"
             explicit_override = subprocess.run(
-                ["bash", str(installer), "--go-version", "1.27.0"],
+                ["bash", str(installer), "--go-version", "1.27.2"],
                 cwd=ROOT,
                 env=env,
                 check=False,
@@ -407,7 +407,7 @@ class ReleaseContractTests(unittest.TestCase):
             )
         self.assertEqual(explicit_override.returncode, 1)
         self.assertIn(
-            "exact Go 1.27.0 was requested",
+            "exact Go 1.27.2 was requested",
             explicit_override.stdout,
         )
 
@@ -438,7 +438,7 @@ class ReleaseContractTests(unittest.TestCase):
             fake_go.write_text(
                 "#!/bin/sh\n"
                 'if [ "$1 $2" = "env GOVERSION" ]; then\n'
-                "  printf 'go1.26.7\\n'\n"
+                "  printf 'go1.26.9\\n'\n"
                 "  exit 0\n"
                 "fi\n"
                 "exit 64\n",
@@ -456,7 +456,7 @@ class ReleaseContractTests(unittest.TestCase):
                     + "\n"
                     + selection_function.group(0)
                     + "\n"
-                    + "GO_VERSION=1.27.0\n"
+                    + "GO_VERSION=1.27.2\n"
                     + "GO_VERSION_EXPLICIT=true\n"
                     + "MISSING_DEPS=false\n"
                     + "NEED_GO=false\n"
@@ -471,7 +471,7 @@ class ReleaseContractTests(unittest.TestCase):
                     + 'INSTALLED_GO_VERSION=""\n'
                     + missing_handler
                     + "\n"
-                    + 'test "$INSTALLED_GO_VERSION" = "1.27.0"\n'
+                    + 'test "$INSTALLED_GO_VERSION" = "1.27.2"\n'
                     + 'printf "installed=%s\\n" "$INSTALLED_GO_VERSION"\n',
                 ],
                 cwd=ROOT,
@@ -480,7 +480,7 @@ class ReleaseContractTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-        self.assertIn("installed=1.27.0", forced_install.stdout)
+        self.assertIn("installed=1.27.2", forced_install.stdout)
         # The privileged toolchain must always be replaced from the freshly
         # verified archive; an executable left by an earlier user is not a
         # trust signal. Keep the exact-target, root ownership, and no-group/
@@ -538,12 +538,13 @@ class ReleaseContractTests(unittest.TestCase):
         )
         self.assertIsNotNone(function)
         support_checks = """
-go_version_is_supported go1.26.7
+go_version_is_supported go1.26.9
 go_version_is_supported go1.26.99
-go_version_is_supported go1.27.0
+go_version_is_supported go1.27.2
 go_version_is_supported go1.27.9
 ! go_version_is_supported go1.25.14
-! go_version_is_supported go1.26.6
+! go_version_is_supported go1.26.8
+! go_version_is_supported go1.27.1
 ! go_version_is_supported go1.28.0
 ! go_version_is_supported devel
 """
@@ -841,7 +842,7 @@ go_version_is_supported go1.27.9
         self.assertNotIn("OSPO", runbook)
         self.assertIn("networkcontrollers.cisco.vk", runbook)
         self.assertIn("networkcontrollerconfigs.config.cisco.vk", runbook)
-        self.assertIn("go1.26.7", runbook)
+        self.assertIn("go1.26.9", runbook)
         self.assertNotIn("go1.25", runbook)
 
     def test_all_actions_are_commit_pinned(self) -> None:

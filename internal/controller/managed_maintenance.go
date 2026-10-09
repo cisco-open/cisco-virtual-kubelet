@@ -33,6 +33,7 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/controllerhandoff"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
@@ -40,15 +41,18 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard"
 )
 
+// +kubebuilder:rbac:groups=ops.cisco.vk,resources=catalystcenterswimhandoffs,verbs=get
+
 type managedMaintenanceDecision struct {
-	guard     bool
-	session   *ciskov1.DeviceMaintenanceSessionStatus
-	drain     *opsv1alpha1.UpgradeManagerDrainStatus
-	drainHold bool
-	status    metav1.ConditionStatus
-	reason    string
-	message   string
-	err       error
+	releaseCancelledDrainTaint bool
+	guard                      bool
+	session                    *ciskov1.DeviceMaintenanceSessionStatus
+	drain                      *opsv1alpha1.UpgradeManagerDrainStatus
+	drainHold                  bool
+	status                     metav1.ConditionStatus
+	reason                     string
+	message                    string
+	err                        error
 }
 
 const maxManagedMutationLeaseSeconds = int32((7*24*time.Hour + 26*time.Hour) / time.Second)
@@ -348,6 +352,9 @@ func (r *CiscoDeviceReconciler) managedCancellationWorkerRecoveryReady(
 		device.Status.TopologyLock == nil || device.Status.MaintenanceSession == nil {
 		return false, nil
 	}
+	if allowed, err := r.swimWorkerRecoveryReady(ctx, device, node); allowed || err != nil {
+		return allowed, err
+	}
 	session := device.Status.MaintenanceSession
 	if (session.Phase != ciskov1.DeviceMaintenanceSessionActive &&
 		session.Phase != ciskov1.DeviceMaintenanceSessionRecovering) ||
@@ -453,6 +460,68 @@ func (r *CiscoDeviceReconciler) managedCancellationWorkerRecoveryReady(
 		if expected == "" || leaf.Annotations[annotation] != expected {
 			return false, nil
 		}
+	}
+	return true, nil
+}
+
+// Permit the existing manager-owned worker repair path after verified
+// preparation cancellation, or during an explicit pause before any preparation
+// or controller submission. Preserve scheduling fences and canonical ownership;
+// this does not grant mutation authority or release the Lease.
+func (r *CiscoDeviceReconciler) swimWorkerRecoveryReady(ctx context.Context, device *ciskov1.CiscoDevice, node *corev1.Node) (bool, error) {
+	s := device.Status.MaintenanceSession
+	if device.Spec.Driver != ciskov1.DeviceDriverXE || s.Operation.Name == "" || s.Operation.UID == "" {
+		return false, nil
+	}
+	if s.Phase != ciskov1.DeviceMaintenanceSessionActive || s.AcknowledgedAt == nil || s.DeviceUID != string(device.UID) ||
+		s.NodeName != node.Name || s.NodeUID != string(node.UID) || s.Operation.Namespace != device.Namespace ||
+		device.Status.TopologyLock.State != ciskov1.DeviceTopologyLockActive {
+		return false, nil
+	}
+	var up opsv1alpha1.IOSXESoftwareUpgrade
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: s.Operation.Namespace, Name: s.Operation.Name}, &up); err != nil {
+		return false, err
+	}
+	a := up.Status.ManagerAdmission
+	if string(up.UID) != s.Operation.UID || up.Spec.DeviceRef.Name != device.Name || !up.DeletionTimestamp.IsZero() ||
+		!controllerhandoff.KnownExecution(&up) || !opsv1alpha1.ManagedUpgradeProtocolMatches(&up) || a == nil || up.Status.ManagerControl == nil || up.Status.ControllerHandoff == nil ||
+		a.DeviceUID != string(device.UID) || a.NodeUID != string(node.UID) || a.LeafUID != string(up.UID) ||
+		a.ControlRevision == nil || *a.ControlRevision != up.Status.ManagerControl.Revision || a.TopologyLockID != device.Status.TopologyLock.AcquisitionID {
+		return false, nil
+	}
+	lock := device.Status.TopologyLock
+	if a.TopologyLockID == "" || lock.DeviceUID != string(device.UID) || lock.NodeUID != string(node.UID) ||
+		lock.CampaignNamespace != up.Namespace || lock.CampaignUID != a.CampaignUID || lock.PlanHash != a.PlanHash || lock.ReservationID != a.ReservationID {
+		return false, nil
+	}
+	var h opsv1alpha1.CatalystCenterSWIMHandoff
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: up.Namespace, Name: up.Status.ControllerHandoff.Name}, &h); err != nil {
+		return false, err
+	}
+	settled := mutationguard.ControllerPreparationCancellationVerified(&up) && a.State == opsv1alpha1.UpgradeManagerAdmissionRevoked && h.Status.Phase == "PreparationCancelled" && controllerhandoff.PreparationCancellationSettled(&up, &h)
+	paused := a.State == opsv1alpha1.UpgradeManagerAdmissionGranted && controllerhandoff.PausedBeforePreparation(&up, &h)
+	if (!settled && !paused) || h.Spec.DeviceUID != string(device.UID) {
+		return false, nil
+	}
+	var lease coordv1.Lease
+	leaseNamespace := r.LeaseNamespace
+	if leaseNamespace == "" {
+		leaseNamespace = device.Namespace
+	}
+	if s.Lease.Namespace != leaseNamespace || s.Lease.Name != engine.LeaseName(devicecoordination.DeviceKey(device.Namespace, device.Name), devicecoordination.MutationLeaseFamily) || s.Lease.Holder != mutationguard.UpgradeHolderIdentity(&up) {
+		return false, nil
+	}
+	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: s.Lease.Namespace, Name: s.Lease.Name}, &lease); err != nil {
+		return false, err
+	}
+	annotations, labels := managedMutationLeaseMetadata(device, node.Name, string(node.UID), managedNetworkWorkerUsername(node))
+	if validateManagedMutationLeaseMetadata(&lease, annotations, labels) != nil || string(lease.UID) != s.Lease.UID ||
+		lease.Spec.HolderIdentity == nil || *lease.Spec.HolderIdentity != s.Lease.Holder || (settled && hasMaintenanceRequestAnnotations(lease.Annotations)) ||
+		validateManagedMutationLeaseSpec(&lease.Spec, s.Lease.Holder) != nil || !r.now().Before(lease.Spec.RenewTime.Add(time.Duration(*lease.Spec.LeaseDurationSeconds)*time.Second)) {
+		return false, nil
+	}
+	if paused && (lease.Annotations[managedprotocol.AnnotationMaintenanceOperationUID] != string(up.UID) || lease.Annotations[managedprotocol.AnnotationMaintenanceSessionToken] != s.SessionToken || lease.Annotations[managedprotocol.AnnotationMaintenancePurpose] != managedprotocol.MaintenancePurposeSoftwareMutation) {
+		return false, nil
 	}
 	return true, nil
 }

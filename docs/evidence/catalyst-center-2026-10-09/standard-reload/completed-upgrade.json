@@ -1,0 +1,212 @@
+{
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "IOSXESoftwareUpgrade",
+    "metadata": {
+        "annotations": {
+            "topology.cisco.vk/app-worker-config-revision": "sha256:4ab5c0a8f733fd1c61b1aeb7daa145b2f9224add0e9aee7bf419ac19552cb69b",
+            "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-7cd7c658d-2cljf",
+            "topology.cisco.vk/app-worker-pod-uid": "aeb09158-9829-4a2c-a880-9caa66ca4da3",
+            "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+            "topology.cisco.vk/campaign-name": "catc-auto-reload-20261009-101-r2",
+            "topology.cisco.vk/campaign-namespace": "cvk-live",
+            "topology.cisco.vk/campaign-uid": "f7d31c6b-a9b1-4f18-8232-d61982100023",
+            "topology.cisco.vk/device-generation": "6",
+            "topology.cisco.vk/device-name": "cat9k-lab-101",
+            "topology.cisco.vk/device-namespace": "cvk-live",
+            "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+            "topology.cisco.vk/ledger-uid": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+            "topology.cisco.vk/managed": "true",
+            "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-d4585c7cb-cj9mc",
+            "topology.cisco.vk/network-worker-pod-uid": "9c217d57-1e3c-4d39-ab8d-edf1c9945c12",
+            "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+            "topology.cisco.vk/node-name": "cat9k-lab-101",
+            "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+            "topology.cisco.vk/plan-hash": "sha256:41cdf562a2a80286b64f57a3b61cca2ee3fea6d101dd150722fb23ab905731f1",
+            "topology.cisco.vk/reservation-id": "81e081280fcc5a4e31ae293c0f0efc72",
+            "topology.cisco.vk/worker-protocol": "rollout-v1",
+            "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+        },
+        "creationTimestamp": "2026-10-09T04:24:17Z",
+        "finalizers": [
+            "ops.cisco.vk/iosxesoftwareupgrade-cleanup"
+        ],
+        "generation": 1,
+        "labels": {
+            "topology.cisco.vk/campaign-uid": "f7d31c6b-a9b1-4f18-8232-d61982100023"
+        },
+        "name": "catc-auto-reload-20261009-101-r2-cat9k-lab-101-81e08128",
+        "namespace": "cvk-live",
+        "resourceVersion": "11507485",
+        "uid": "ae945c1e-dd78-4e55-872c-6959723294a5"
+    },
+    "spec": {
+        "deviceRef": {
+            "name": "cat9k-lab-101"
+        },
+        "imageSource": {
+            "catalystCenter": {
+                "controllerName": "catc",
+                "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+                "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+                "imageID": "86159098-3ca1-47af-8456-ff2fc3e0d549",
+                "imageVersion": "26.02.01.0.263",
+                "preparation": {
+                    "name": "swim-reload-reserve-20261009",
+                    "sha256": "474c73311c49c45fed015da01fd50b344609cbd905db00e2c190f6e2a2ea7a6e",
+                    "uid": "be622ad4-e3ce-49a9-9e52-e55e6978d444"
+                },
+                "standardReloadProfile": "CatalystCenter323",
+                "transferFallbackAddress": "192.0.2.254"
+            }
+        },
+        "installTimeoutSeconds": 7200,
+        "maxRetries": 3,
+        "rebootTimeoutSeconds": 3600,
+        "requireNetworkEvidence": true,
+        "resumePolicy": "Retry",
+        "rollbackOnFailure": false,
+        "strategy": "Reload",
+        "targetVersion": "26.02.01"
+    },
+    "status": {
+        "activationStartTime": "2026-10-09T05:21:31Z",
+        "completionTime": "2026-10-09T05:33:31Z",
+        "conditions": [
+            {
+                "lastTransitionTime": "2026-10-09T05:33:31Z",
+                "message": "Catalyst Center upgrade completed and native device inventory verified",
+                "observedGeneration": 1,
+                "reason": "ControllerUpgradeVerified",
+                "status": "True",
+                "type": "Ready"
+            },
+            {
+                "lastTransitionTime": "2026-10-09T05:33:31Z",
+                "message": "Catalyst Center upgrade completed and native device inventory verified",
+                "observedGeneration": 1,
+                "reason": "OutcomeVerified",
+                "status": "True",
+                "type": "DeviceMutationSettled"
+            },
+            {
+                "lastTransitionTime": "2026-10-09T04:25:05Z",
+                "message": "claiming bounded Catalyst Center preparation and distribution",
+                "observedGeneration": 1,
+                "reason": "StagingRequested",
+                "status": "False",
+                "type": "Staged"
+            },
+            {
+                "lastTransitionTime": "2026-10-09T05:21:31Z",
+                "message": "claiming Catalyst Center distribution/activation",
+                "observedGeneration": 1,
+                "reason": "ControllerActivationClaimed",
+                "status": "False",
+                "type": "Activated"
+            }
+        ],
+        "controllerHandoff": {
+            "controlRevision": 8,
+            "expiresAt": "2026-10-09T05:23:34Z",
+            "name": "swim-c8004090f9ee96c4008edfea0d947cff",
+            "policyEpoch": 1,
+            "preparation": [
+                {
+                    "completedAt": "2026-10-09T04:44:37Z",
+                    "files": [],
+                    "freeBytesAfter": 4504436736,
+                    "freeBytesBefore": 4504436736,
+                    "id": "6f9a5cc4-e844-4ba9-b2c6-6950b0cc2422",
+                    "observedAt": "2026-10-09T04:44:34Z",
+                    "phase": "Complete",
+                    "planSHA256": "b8156495a5777b08457b484ec26e9d631ca4d2270ecd221f2db284e4350508e1",
+                    "policySHA256": "474c73311c49c45fed015da01fd50b344609cbd905db00e2c190f6e2a2ea7a6e",
+                    "stage": "ReadyToDistribute"
+                },
+                {
+                    "completedAt": "2026-10-09T05:17:27Z",
+                    "files": [],
+                    "freeBytesAfter": 3108274176,
+                    "freeBytesBefore": 3108274176,
+                    "id": "72e602c7-3c95-4e6c-ade6-bd0e11d53faa",
+                    "observedAt": "2026-10-09T05:17:21Z",
+                    "phase": "Complete",
+                    "planSHA256": "6a949d57825bbec3db6c21c5834ee2dd473b131fdd401b2f3f2e647dd583601b",
+                    "policySHA256": "474c73311c49c45fed015da01fd50b344609cbd905db00e2c190f6e2a2ea7a6e",
+                    "stage": "ReadyToActivate"
+                }
+            ],
+            "stage": "PrimaryActivation",
+            "token": "e7143257-3bea-4d45-9ac9-80dad746e5ab",
+            "uid": "ca67c4aa-9c13-4b6d-972c-4f9617f075d5",
+            "verifiedAt": "2026-10-09T05:33:31Z",
+            "verifiedVersion": "26.02.01.0.263.1790107665",
+            "workerPodUID": "9c217d57-1e3c-4d39-ab8d-edf1c9945c12"
+        },
+        "executionModel": "CatalystCenterReloadV1",
+        "failureReason": "ControllerUpgradeVerified",
+        "installStartTime": "2026-10-09T04:25:05Z",
+        "managedMutationClaims": [
+            {
+                "claimedAt": "2026-10-09T05:21:31Z",
+                "controlRevision": 8,
+                "policyEpoch": 1,
+                "reservationID": "81e081280fcc5a4e31ae293c0f0efc72",
+                "stage": "PrimaryActivation"
+            },
+            {
+                "claimedAt": "2026-10-09T04:25:05Z",
+                "controlRevision": 0,
+                "policyEpoch": 1,
+                "reservationID": "81e081280fcc5a4e31ae293c0f0efc72",
+                "stage": "Staging"
+            }
+        ],
+        "managerAdmission": {
+            "campaignUID": "f7d31c6b-a9b1-4f18-8232-d61982100023",
+            "controlRevision": 8,
+            "deviceGeneration": 6,
+            "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+            "leafUID": "ae945c1e-dd78-4e55-872c-6959723294a5",
+            "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+            "networkEvidenceHash": "sha256:0ec8db0a637171348429cb2ee95a5ac6dfa49e3159184332f63e898877ea221a",
+            "networkEvidenceNotAfter": "2026-10-09T05:37:44Z",
+            "networkEvidenceProducerRevision": "sha256:aff4e782826271adfce430d11e71983938d5c7c21d4f554f74879e1e5402e3de",
+            "networkEvidenceSampleSequence": 33,
+            "networkEvidenceWorkerPodUID": "9c217d57-1e3c-4d39-ab8d-edf1c9945c12",
+            "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+            "physicalIdentity": "foc2520l6h1",
+            "planHash": "sha256:41cdf562a2a80286b64f57a3b61cca2ee3fea6d101dd150722fb23ab905731f1",
+            "policyEpoch": 1,
+            "policyResourceVersion": "10532649",
+            "policyUID": "525ff87f-b74a-44c4-b54e-408e63a3a2e7",
+            "protocolVersion": "rollout-controller-reload-v1",
+            "reservationID": "81e081280fcc5a4e31ae293c0f0efc72",
+            "state": "Settled",
+            "topologyLockID": "3ec16099cdf3a3e07db3d29394d64d40",
+            "updatedAt": "2026-10-09T05:34:49Z"
+        },
+        "managerControl": {
+            "reason": "CampaignControl",
+            "revision": 8,
+            "updatedAt": "2026-10-09T05:16:45Z"
+        },
+        "message": "Catalyst Center upgrade completed and native device inventory verified",
+        "observedGeneration": 1,
+        "phase": "Succeeded",
+        "previousVersion": "17.18.04.0.759.1784396682",
+        "primarySupervisorActivationRequested": true,
+        "runningVersion": "26.02.01.0.263.1790107665",
+        "stagingRequested": true,
+        "startTime": "2026-10-09T04:25:03Z",
+        "workerControl": {
+            "effectiveState": "Settled",
+            "message": "managed upgrade has a terminal and conclusively settled worker outcome",
+            "observedAdmissionState": "Settled",
+            "observedControlRevision": 8,
+            "observedPolicyEpoch": 1,
+            "observedWorkerConfigRevision": "sha256:aff4e782826271adfce430d11e71983938d5c7c21d4f554f74879e1e5402e3de",
+            "updatedAt": "2026-10-09T05:34:50Z"
+        }
+    }
+}

@@ -1,0 +1,6 @@
+=== RUN   TestEnvtest_RolloutLeafSpecIsAPIRoundTripStable
+--- PASS: TestEnvtest_RolloutLeafSpecIsAPIRoundTripStable (6.35s)
+=== RUN   TestEnvtest_SWIMHandoffOwnership
+--- PASS: TestEnvtest_SWIMHandoffOwnership (5.42s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	12.769s

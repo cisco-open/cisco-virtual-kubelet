@@ -798,6 +798,19 @@ func (r *Reconciler) prepareManagedMutationClaim(
 	stage opsv1alpha1.UpgradeManagedMutationStage,
 	now time.Time,
 ) (bool, error) {
+	return r.prepareManagedMutation(ctx, up, current, stage, now, true)
+}
+
+// prepareManagedMutation reuses the same live gate when a delegated dispatcher
+// needs a fresh grant for an already durable claim. Existing direct callers
+// always append a new claim through prepareManagedMutationClaim.
+func (r *Reconciler) prepareManagedMutation(
+	ctx context.Context,
+	up, current *opsv1alpha1.IOSXESoftwareUpgrade,
+	stage opsv1alpha1.UpgradeManagedMutationStage,
+	now time.Time,
+	appendClaim bool,
+) (bool, error) {
 	decision := r.evaluateManagedLeaf(ctx, current)
 	if !decision.applies {
 		return true, nil
@@ -872,8 +885,25 @@ func (r *Reconciler) prepareManagedMutationClaim(
 		up.Status = *current.Status.DeepCopy()
 		return false, nil
 	}
-	if err := addManagedMutationClaim(current, stage, decision.policyEpoch, decision.controlRevision, now); err != nil {
-		return false, err
+	if appendClaim {
+		if err := addManagedMutationClaim(current, stage, decision.policyEpoch, decision.controlRevision, now); err != nil {
+			return false, err
+		}
+	} else {
+		// CC stage claims are historical at-most-once markers. A resumed
+		// dispatch gets fresh authority from ControllerHandoff, after all
+		// current gates above; never rewrite the original claim or replay a
+		// claimed remote request. Direct-device callers remain exact-revision.
+		found := false
+		for _, claim := range current.Status.ManagedMutationClaims {
+			if claim.Stage == stage && claim.PolicyEpoch == decision.policyEpoch && claim.ReservationID == current.Status.ManagerAdmission.ReservationID &&
+				(claim.ControlRevision == decision.controlRevision || (current.Spec.ImageSource.CatalystCenter != nil && claim.ControlRevision >= 0 && claim.ControlRevision < decision.controlRevision)) {
+				found = true
+			}
+		}
+		if !found {
+			return false, fmt.Errorf("delegated dispatch requires an existing claim for the stage, reservation and policy epoch")
+		}
 	}
 	decision.effectiveState = opsv1alpha1.UpgradeWorkerControlClaimed
 	decision.reason = "ManagedMutationClaimed"

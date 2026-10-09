@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/cisco/virtual-kubelet-cisco/internal/controllerhandoff"
 	"net/url"
 	"sort"
 	"strings"
@@ -593,6 +594,28 @@ func (r *IOSXESoftwareRolloutReconciler) freezeSource(
 	image opsv1alpha1.IOSXESoftwareRolloutImageSpec,
 	source opsv1alpha1.IOSXESoftwareRolloutSourceSpec,
 ) (opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot, error) {
+	if source.CatalystCenter != nil {
+		if source.URL != "" || source.URLSecretRef != nil {
+			return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, fmt.Errorf("controller source cannot include URL credentials")
+		}
+		if err := controllerhandoff.ValidateSource(source.CatalystCenter); err != nil {
+			return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, err
+		}
+		if ref := source.CatalystCenter.Preparation; ref != nil {
+			if _, err := controllerhandoff.ReadPreparationPolicy(ctx, r.reader(), namespace, ref); err != nil {
+				return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, err
+			}
+		}
+
+		var nc ciskov1.NetworkController
+		if err := r.reader().Get(ctx, types.NamespacedName{Namespace: namespace, Name: source.CatalystCenter.ControllerName}, &nc); err != nil {
+			return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, err
+		}
+		if string(nc.UID) != source.CatalystCenter.ControllerUID || nc.Spec.Type != controllerhandoff.ControllerType || nc.Spec.Paused || !nc.DeletionTimestamp.IsZero() {
+			return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, fmt.Errorf("controller source incarnation is unavailable")
+		}
+		return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{Name: source.Name, Priority: source.Priority, SHA256: image.SHA256, CatalystCenter: source.CatalystCenter.DeepCopy()}, nil
+	}
 	parsed, err := parseRolloutSourceURL(source.URL)
 	if err != nil {
 		return opsv1alpha1.IOSXESoftwareRolloutSourceSnapshot{}, err

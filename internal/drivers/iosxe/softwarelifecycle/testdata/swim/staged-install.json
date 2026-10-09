@@ -1,0 +1,1626 @@
+{
+  "Cisco-IOS-XE-install-oper:install-oper-data": {
+    "install-oper-hist": [
+      {
+        "start-time": "2026-10-08T16:49:55.805049+00:00",
+        "op-uuid": "2026_10_08_16_49_55_op_commit",
+        "op-id": 1,
+        "install-txn-sum-op-hist": [
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 1,
+            "start-time": "2026-10-08T16:49:55+00:00",
+            "end-time": "2026-10-08T16:49:55.836291+00:00",
+            "txn-cmd": "install-txn-commit-prechk",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 2,
+            "start-time": "2026-10-08T16:49:55+00:00",
+            "end-time": "2026-10-08T16:49:59.062892+00:00",
+            "txn-cmd": "install-txn-commit",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-08T16:49:55.839639+00:00",
+                "txn-sub-state": "install-img-commit-start"
+              },
+              {
+                "timestamp": "2026-10-08T16:49:59.06115+00:00",
+                "txn-sub-state": "install-img-commit-done"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 3,
+            "start-time": "2026-10-08T16:49:59+00:00",
+            "end-time": "2026-10-08T16:49:59.063439+00:00",
+            "txn-cmd": "install-txn-commit-postchk",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "none"
+          }
+        ],
+        "end-time": "2026-10-08T16:49:59.063484+00:00",
+        "op-status": "install-op-succ",
+        "op-done": "op-complete",
+        "pkg-type": "install-pkg-img",
+        "timeout": 960,
+        "op-intf": "op-intf-cli",
+        "commit-param": {
+          "create-chkpt": false
+        }
+      },
+      {
+        "start-time": "2026-10-08T18:48:32.041329+00:00",
+        "op-uuid": "ac294d6e-4e2b-4284-9b12-d85c50a745a9",
+        "op-id": 1,
+        "install-txn-sum-op-hist": [
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 1,
+            "start-time": "2026-10-08T18:48:32+00:00",
+            "end-time": "2026-10-08T18:48:32.071976+00:00",
+            "txn-cmd": "install-txn-sched",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 2,
+            "start-time": "2026-10-08T18:48:32+00:00",
+            "end-time": "2026-10-08T18:48:32.925416+00:00",
+            "txn-cmd": "install-txn-dwnld-precheck",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-download-start",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-08T18:48:32.101023+00:00",
+                "txn-sub-state": "install-download-start"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 3,
+            "start-time": "2026-10-08T18:48:32+00:00",
+            "end-time": "2026-10-08T18:51:08.670134+00:00",
+            "txn-cmd": "install-txn-download",
+            "txn-status": "install-txn-sts-fail",
+            "txn-sub-state": "install-download-fail",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-08T18:48:32.936582+00:00",
+                "txn-sub-state": "install-download-start"
+              },
+              {
+                "timestamp": "2026-10-08T18:51:08.668519+00:00",
+                "txn-sub-state": "install-download-fail"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 4,
+            "start-time": "2026-10-08T18:51:08+00:00",
+            "end-time": "2026-10-08T18:51:08.670556+00:00",
+            "txn-cmd": "install-txn-notify",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "none"
+          }
+        ],
+        "end-time": "2026-10-08T18:51:08.670602+00:00",
+        "op-status": "install-op-fail",
+        "op-done": "op-complete",
+        "pkg-type": "install-pkg-img",
+        "timeout": 2070,
+        "op-intf": "op-intf-ipc",
+        "download-param": {
+          "src-path": "https://192.0.2.254/api/v1/file/temporary/f30d743d-5980-4f28-aa6d-5bdc0f050222/file-transfer-check.tmp",
+          "dest-dir": "/mnt/sd3/user",
+          "dest-filename": "file-transfer-check.tmp",
+          "password-type": "pw-encryption-clear",
+          "vrf": "",
+          "timeout": 0,
+          "scheduled-start": "1970-01-01T00:00:00+00:00",
+          "scheduled-end": "1970-01-01T00:00:00+00:00"
+        }
+      },
+      {
+        "start-time": "2026-10-09T02:37:50.317573+00:00",
+        "op-uuid": "b3d11de7-6ef0-4a06-b0f0-8bcd5a1df111",
+        "op-id": 1,
+        "install-txn-sum-op-hist": [
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 1,
+            "start-time": "2026-10-09T02:37:50+00:00",
+            "end-time": "2026-10-09T02:37:50.318457+00:00",
+            "txn-cmd": "install-txn-sched",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 2,
+            "start-time": "2026-10-09T02:37:50+00:00",
+            "end-time": "2026-10-09T02:37:51.169484+00:00",
+            "txn-cmd": "install-txn-dwnld-precheck",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-download-start",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T02:37:50.321768+00:00",
+                "txn-sub-state": "install-download-start"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 3,
+            "start-time": "2026-10-09T02:37:51+00:00",
+            "end-time": "2026-10-09T02:38:06.656108+00:00",
+            "txn-cmd": "install-txn-download",
+            "txn-status": "install-txn-sts-fail",
+            "txn-sub-state": "install-download-fail",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T02:37:51.173035+00:00",
+                "txn-sub-state": "install-download-start"
+              },
+              {
+                "timestamp": "2026-10-09T02:38:06.654792+00:00",
+                "txn-sub-state": "install-download-fail"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 4,
+            "start-time": "2026-10-09T02:38:06+00:00",
+            "end-time": "2026-10-09T02:38:06.656514+00:00",
+            "txn-cmd": "install-txn-notify",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "none"
+          }
+        ],
+        "end-time": "2026-10-09T02:38:06.656554+00:00",
+        "op-status": "install-op-fail",
+        "op-done": "op-complete",
+        "pkg-type": "install-pkg-img",
+        "timeout": 2070,
+        "op-intf": "op-intf-ipc",
+        "download-param": {
+          "src-path": "https://192.0.2.254/api/v1/file/temporary/bd2e0c38-d16d-4426-baa4-d43bb690e216/file-transfer-check.tmp",
+          "dest-dir": "/mnt/sd3/user",
+          "dest-filename": "file-transfer-check.tmp",
+          "password-type": "pw-encryption-clear",
+          "vrf": "",
+          "timeout": 0,
+          "scheduled-start": "1970-01-01T00:00:00+00:00",
+          "scheduled-end": "1970-01-01T00:00:00+00:00"
+        }
+      },
+      {
+        "start-time": "2026-10-09T04:42:19.025324+00:00",
+        "op-uuid": "9733b94f-09e0-44a7-bbac-b1397355c87b",
+        "op-id": 1,
+        "install-txn-sum-op-hist": [
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 1,
+            "start-time": "2026-10-09T04:42:19+00:00",
+            "end-time": "2026-10-09T04:42:19.02619+00:00",
+            "txn-cmd": "install-txn-sched",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 2,
+            "start-time": "2026-10-09T04:42:19+00:00",
+            "end-time": "2026-10-09T04:42:19.898154+00:00",
+            "txn-cmd": "install-txn-dwnld-precheck",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-download-start",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T04:42:19.029861+00:00",
+                "txn-sub-state": "install-download-start"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 3,
+            "start-time": "2026-10-09T04:42:19+00:00",
+            "end-time": "2026-10-09T04:42:35.360963+00:00",
+            "txn-cmd": "install-txn-download",
+            "txn-status": "install-txn-sts-fail",
+            "txn-sub-state": "install-download-fail",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T04:42:19.901979+00:00",
+                "txn-sub-state": "install-download-start"
+              },
+              {
+                "timestamp": "2026-10-09T04:42:35.359632+00:00",
+                "txn-sub-state": "install-download-fail"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 4,
+            "start-time": "2026-10-09T04:42:35+00:00",
+            "end-time": "2026-10-09T04:42:35.361339+00:00",
+            "txn-cmd": "install-txn-notify",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "none"
+          }
+        ],
+        "end-time": "2026-10-09T04:42:35.361383+00:00",
+        "op-status": "install-op-fail",
+        "op-done": "op-complete",
+        "pkg-type": "install-pkg-img",
+        "timeout": 2070,
+        "op-intf": "op-intf-ipc",
+        "download-param": {
+          "src-path": "https://192.0.2.254/api/v1/file/temporary/dee3d078-5b8d-4a6a-bd16-d44d196818cd/file-transfer-check.tmp",
+          "dest-dir": "/mnt/sd3/user",
+          "dest-filename": "file-transfer-check.tmp",
+          "password-type": "pw-encryption-clear",
+          "vrf": "",
+          "timeout": 0,
+          "scheduled-start": "1970-01-01T00:00:00+00:00",
+          "scheduled-end": "1970-01-01T00:00:00+00:00"
+        }
+      },
+      {
+        "start-time": "2026-10-09T04:49:53.713544+00:00",
+        "op-uuid": "0de51ede-8e46-42fe-9906-a1fc1daaecc4",
+        "op-id": 2,
+        "install-txn-sum-op-hist": [
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 1,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.739884+00:00",
+            "txn-cmd": "install-txn-sched",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 2,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.767972+00:00",
+            "txn-cmd": "install-txn-add-prechk",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-add-wlc-query-done",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T04:49:53.761799+00:00",
+                "txn-sub-state": "install-add-prechk-done"
+              },
+              {
+                "timestamp": "2026-10-09T04:49:53.767585+00:00",
+                "txn-sub-state": "install-verify-pkg-done"
+              },
+              {
+                "timestamp": "2026-10-09T04:49:53.767773+00:00",
+                "txn-sub-state": "install-add-wlc-query-done"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 3,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.774815+00:00",
+            "txn-cmd": "install-txn-copy-setup",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 4,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.775152+00:00",
+            "txn-cmd": "install-txn-copy",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "none"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 5,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.783579+00:00",
+            "txn-cmd": "install-txn-verify",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-verify-pkg-done",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T04:49:53.783423+00:00",
+                "txn-sub-state": "install-verify-pkg-done"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 6,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:50:08.419392+00:00",
+            "txn-cmd": "install-txn-extract",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-pkg-extract-done",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T04:49:53.786762+00:00",
+                "txn-sub-state": "install-expanding-pkg"
+              },
+              {
+                "timestamp": "2026-10-09T04:50:07.69261+00:00",
+                "txn-sub-state": "install-expand-pkg-done"
+              },
+              {
+                "timestamp": "2026-10-09T04:50:08.419089+00:00",
+                "txn-sub-state": "install-pkg-extract-done"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 7,
+            "start-time": "2026-10-09T04:50:08+00:00",
+            "end-time": "2026-10-09T04:50:14.096824+00:00",
+            "txn-cmd": "install-txn-add-postchk",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-add-wlc-ntfy-done",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T04:50:14.096329+00:00",
+                "txn-sub-state": "install-add-mount-ap-img-done"
+              },
+              {
+                "timestamp": "2026-10-09T04:50:14.096577+00:00",
+                "txn-sub-state": "install-add-wlc-ntfy-done"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 8,
+            "start-time": "2026-10-09T04:50:14+00:00",
+            "end-time": "2026-10-09T04:50:14.097225+00:00",
+            "txn-cmd": "install-txn-notify",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "none"
+          }
+        ],
+        "end-time": "2026-10-09T04:50:14.097288+00:00",
+        "op-status": "install-op-succ",
+        "op-done": "op-complete",
+        "pkg-type": "install-pkg-img",
+        "timeout": 2070,
+        "op-intf": "op-intf-ipc",
+        "add-param": {
+          "src-filename": "",
+          "dest-dir": "/mnt/sd3/user",
+          "dest-filename": "cat9k_iosxe.26.02.01.SPA.bin",
+          "scheduled-start": "1970-01-01T00:00:00+00:00",
+          "scheduled-end": "1970-01-01T00:00:00+00:00"
+        }
+      },
+      {
+        "start-time": "2026-10-09T04:49:53.714022+00:00",
+        "op-uuid": "0de51ede-8e46-42fe-9906-a1fc1daaecc4",
+        "op-id": 1,
+        "install-txn-sum-op-hist": [
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 1,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.714826+00:00",
+            "txn-cmd": "install-txn-sched",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 2,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.715254+00:00",
+            "txn-cmd": "install-txn-dwnld-precheck",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-sub-state-undef"
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 3,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.739204+00:00",
+            "txn-cmd": "install-txn-download",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "install-download-done",
+            "install-txn-sub-sts-log": [
+              {
+                "timestamp": "2026-10-09T04:49:53.715626+00:00",
+                "txn-sub-state": "install-download-done"
+              }
+            ]
+          },
+          {
+            "fru": "fru-rp",
+            "slotnum": 0,
+            "baynum": 0,
+            "chassisnum": 1,
+            "txn-id": 4,
+            "start-time": "2026-10-09T04:49:53+00:00",
+            "end-time": "2026-10-09T04:49:53.73953+00:00",
+            "txn-cmd": "install-txn-notify",
+            "txn-status": "install-txn-sts-succ",
+            "txn-sub-state": "none"
+          }
+        ],
+        "end-time": "2026-10-09T04:49:53.739573+00:00",
+        "op-status": "install-op-succ",
+        "op-done": "op-complete",
+        "pkg-type": "install-pkg-img",
+        "timeout": 2070,
+        "op-intf": "op-intf-ipc",
+        "download-param": {
+          "src-path": "flash:cat9k_iosxe.26.02.01.SPA.bin",
+          "dest-dir": "",
+          "dest-filename": "cat9k_iosxe.26.02.01.SPA.bin",
+          "password-type": "pw-encryption-clear",
+          "vrf": "",
+          "timeout": 2000,
+          "scheduled-start": "1970-01-01T00:00:00+00:00",
+          "scheduled-end": "1970-01-01T00:00:00+00:00"
+        }
+      }
+    ],
+    "install-location-information": [
+      {
+        "fru": "fru-rp",
+        "slot": 0,
+        "bay": 0,
+        "chassis": 1,
+        "install-packages": [
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-lni.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-lni.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-lni.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-lni.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-lni.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "1d81d1663ff0ec43bbc4f6ec2b03694856b15cdf",
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-lni.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-lni.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-lni.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-09T04:50:07+00:00"
+            },
+            "cisco-image-name": "cat9k-lni.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-wlc.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-wlc.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-wlc.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-wlc.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-wlc.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "05076d514582ab85a6eebba6d21056329b09e20a",
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-wlc.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-wlc.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-wlc.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "9216",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-09T04:50:08+00:00"
+            },
+            "cisco-image-name": "cat9k-wlc.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-webui.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-webui.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "20403200",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-webui.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-webui.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-webui.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "98936e1e45a0f9b1bd4774109442fe871048bca5",
+              "pkg-size": "20403200",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-webui.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-webui.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-webui.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "20239360",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-09T04:50:08+00:00"
+            },
+            "cisco-image-name": "cat9k-webui.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k_iosxe.17.18.04.SPA.bin",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k_iosxe.17.18.04.SPA.bin",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "f787632ae8ed3a3b166e0afc9583a4ac5c6969b5",
+              "pkg-size": "1249489705",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T15:38:07+00:00"
+            },
+            "cisco-image-name": "cat9k_iosxe.17.18.04.SPA.bin",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k_iosxe.26.02.01.SPA.bin",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k_iosxe.26.02.01.SPA.bin",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "b2fb4153bf0b6c5169dd48840b3cf94fa5f28f7b",
+              "pkg-size": "1264266123",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-09T04:48:09+00:00"
+            },
+            "cisco-image-name": "cat9k_iosxe.26.02.01.SPA.bin",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-rpbase.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-rpbase.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "1094640640",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-rpbase.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-rpbase.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-rpbase.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "0f2babe3dfd0c938ecc2dfacef24ba5c0599e391",
+              "pkg-size": "1094751232",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-rpbase.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-rpbase.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-rpbase.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "1114727424",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-09T04:50:07+00:00"
+            },
+            "cisco-image-name": "cat9k-rpbase.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-rpboot.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-rpboot.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "66954283",
+              "verify-status": "install-package-verify-not-done",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-rpboot.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-rpboot.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-rpboot.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "",
+              "pkg-size": "66973473",
+              "verify-status": "install-package-verify-not-done",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-rpboot.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-rpboot.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-rpboot.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "66451331",
+              "verify-status": "install-package-verify-not-done",
+              "timestamp": "2026-10-09T04:50:08+00:00"
+            },
+            "cisco-image-name": "cat9k-rpboot.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-srdriver.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-srdriver.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "40883204",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-srdriver.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-srdriver.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-srdriver.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "8c47b5e49f66f6c20096a3ecd69a1ea592d057e4",
+              "pkg-size": "40883204",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-srdriver.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-srdriver.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-srdriver.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "36692996",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-09T04:50:08+00:00"
+            },
+            "cisco-image-name": "cat9k-srdriver.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-guestshell.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-guestshell.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "1963012",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-guestshell.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-guestshell.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-guestshell.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "c814540beb112b2a8535c1ce081c985c42227dff",
+              "pkg-size": "1963012",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-guestshell.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-guestshell.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-guestshell.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "1922052",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-09T04:50:07+00:00"
+            },
+            "cisco-image-name": "cat9k-guestshell.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-cc_srdriver.17.18.03.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-cc_srdriver.17.18.03.SPA.pkg",
+              "version": "17.18.03.0.5496.1776157760..IOSXE",
+              "checksum": "",
+              "pkg-size": "25166856",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-02T11:04:49+00:00"
+            },
+            "cisco-image-name": "cat9k-cc_srdriver.17.18.03.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-cc_srdriver.17.18.04.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-cc_srdriver.17.18.04.SPA.pkg",
+              "version": "17.18.04.0.759.1784396682..IOSXE",
+              "checksum": "7a01579e9d22d7da5103b436e02777ee7e620a9e",
+              "pkg-size": "25166856",
+              "verify-status": "install-package-verify-ok",
+              "timestamp": "2026-10-08T16:44:02+00:00"
+            },
+            "cisco-image-name": "cat9k-cc_srdriver.17.18.04.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          },
+          {
+            "pkg-dir": "/mnt/sd3/user",
+            "pkg-name": "cat9k-cc_srdriver.26.02.01.SPA.pkg",
+            "ios-dir": "flash:",
+            "pkg-data": {
+              "pkg-name": "cat9k-cc_srdriver.26.02.01.SPA.pkg",
+              "version": "26.02.01.0.263.1790107665..IOSXE",
+              "checksum": "",
+              "pkg-size": "24859656",
+              "verify-status": "install-package-verify-deferred",
+              "timestamp": "2026-10-09T04:50:07+00:00"
+            },
+            "cisco-image-name": "cat9k-cc_srdriver.26.02.01.SPA.pkg",
+            "pkg-action": "install-package-action-none"
+          }
+        ],
+        "install-version-info": [
+          {
+            "version": "17.18.04.0.759",
+            "version-extension": "1784396682",
+            "is-default": false,
+            "previous": "install-version-state-provisioned-uncommitted",
+            "current": "install-version-state-provisioned-committed",
+            "src-filename": "/mnt/sd3/user/cat9k_iosxe.17.18.04.SPA.bin",
+            "src-checksum": "f787632ae8ed3a3b166e0afc9583a4ac5c6969b5",
+            "install-package-state-info": [
+              {
+                "package-type": "install-pkg-img",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k_iosxe.17.18.04.SPA.bin",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-lni.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-wlc.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-webui.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-rpbase.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-rpboot.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-srdriver.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-guestshell.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-cc_srdriver.17.18.04.SPA.pkg",
+                "package-state": "install-state-committed"
+              }
+            ],
+            "ctrl-ver": "",
+            "commit-type": "install-commit-user",
+            "timestamp": "2026-10-08T16:46:07.503924+00:00",
+            "cisco-image-name": "cat9k_iosxe.17.18.04.SPA.bin"
+          },
+          {
+            "version": "26.02.01.0.263",
+            "version-extension": "1790107665",
+            "is-default": false,
+            "previous": "install-version-state-present",
+            "current": "install-version-state-in-progress",
+            "src-filename": "/mnt/sd3/user/cat9k_iosxe.26.02.01.SPA.bin",
+            "src-checksum": "b2fb4153bf0b6c5169dd48840b3cf94fa5f28f7b",
+            "install-package-state-info": [
+              {
+                "package-type": "install-pkg-img",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k_iosxe.26.02.01.SPA.bin",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-lni.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-wlc.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-webui.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-rpbase.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-rpboot.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-srdriver.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-guestshell.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-cc_srdriver.26.02.01.SPA.pkg",
+                "package-state": "install-state-added"
+              }
+            ],
+            "ctrl-ver": "",
+            "commit-type": "install-commit-pend",
+            "timestamp": "2026-10-09T04:47:49.50869+00:00",
+            "cisco-image-name": "cat9k_iosxe.26.02.01.SPA.bin"
+          },
+          {
+            "version": "17.18.03.0.5496",
+            "version-extension": "1776157760",
+            "is-default": false,
+            "previous": "install-version-state-present",
+            "current": "install-version-state-present",
+            "src-filename": "/mnt/sd3/user/gNOI_iosxe_17.18.03.0.5496.1776157760.bin",
+            "src-checksum": "60646cf4f48b5c17e353a0e0267aae28c8f612a8",
+            "install-package-state-info": [
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-lni.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-wlc.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-webui.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-rpbase.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-rpboot.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-srdriver.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-guestshell.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              },
+              {
+                "package-type": "install-pkg-pkg",
+                "pkg-dir": "/mnt/sd3/user",
+                "pkg-name": "cat9k-cc_srdriver.17.18.03.SPA.pkg",
+                "package-state": "install-state-new"
+              }
+            ],
+            "ctrl-ver": "",
+            "commit-type": "install-commit-pend",
+            "timestamp": "2026-10-08T16:46:49.378839+00:00",
+            "cisco-image-name": "cat9k_iosxe.17.18.03.SPA.bin"
+          }
+        ],
+        "install-version-state-info": [
+          {
+            "version-state": "install-version-state-provisioned-committed",
+            "version": "17.18.04.0.759",
+            "version-extension": "1784396682"
+          },
+          {
+            "version-state": "install-version-state-in-progress",
+            "version": "26.02.01.0.263",
+            "version-extension": "1790107665"
+          }
+        ],
+        "oper-state": {
+          "auto-abort-timer": {
+            "state": "install-timer-state-inactive"
+          },
+          "added-profile": "",
+          "sys-activity": "install-no-activity",
+          "sso-state": false,
+          "boot-mode": "install-boot-mode-install",
+          "ctrl-mode": false,
+          "op-mode": "iom-none"
+        },
+        "install-rbk-info": [
+          {
+            "rbk-id": 6,
+            "date-created": "2026-09-10T19:14:27+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 7,
+            "date-created": "2026-09-20T00:12:11+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 8,
+            "date-created": "2026-09-20T02:34:40+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 9,
+            "date-created": "2026-09-25T16:57:48+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 10,
+            "date-created": "2026-09-25T17:40:49+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 11,
+            "date-created": "2026-09-26T09:46:12+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 12,
+            "date-created": "2026-09-26T10:34:18+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 13,
+            "date-created": "2026-09-27T16:45:59+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 14,
+            "date-created": "2026-09-27T17:37:47+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 15,
+            "date-created": "2026-09-30T12:17:15+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 16,
+            "date-created": "2026-09-30T13:09:11+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 17,
+            "date-created": "2026-09-30T21:03:59+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 18,
+            "date-created": "2026-09-30T21:53:58+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 19,
+            "date-created": "2026-09-30T23:47:20+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 20,
+            "date-created": "2026-10-01T01:08:03+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 21,
+            "date-created": "2026-10-01T06:58:29+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 22,
+            "date-created": "2026-10-01T08:11:45+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 23,
+            "date-created": "2026-10-02T04:43:07+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 24,
+            "date-created": "2026-10-02T10:02:01+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.02.0.4112",
+              "version-extension": "1766116039"
+            }
+          },
+          {
+            "rbk-id": 25,
+            "date-created": "2026-10-02T11:03:00+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": true,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.03.0.5496",
+              "version-extension": "1776157760"
+            }
+          },
+          {
+            "rbk-id": 26,
+            "date-created": "2026-10-08T16:49:58+00:00",
+            "pkg-commit-type": "install-pkg-img",
+            "reload-required": false,
+            "is-valid": true,
+            "rbk-label": "",
+            "boot-mode": "install-mode-install",
+            "base-version": {
+              "version": "17.18.04.0.759",
+              "version-extension": "1784396682"
+            }
+          }
+        ],
+        "install-profile": [
+          {
+            "name": "rollback_pt_6",
+            "descr": "Profile for Rollback Point 6",
+            "rbk-profile-info": {
+              "rbk-id": 6
+            }
+          },
+          {
+            "name": "rollback_pt_7",
+            "descr": "Profile for Rollback Point 7",
+            "rbk-profile-info": {
+              "rbk-id": 7
+            }
+          },
+          {
+            "name": "rollback_pt_8",
+            "descr": "Profile for Rollback Point 8",
+            "rbk-profile-info": {
+              "rbk-id": 8
+            }
+          },
+          {
+            "name": "rollback_pt_9",
+            "descr": "Profile for Rollback Point 9",
+            "rbk-profile-info": {
+              "rbk-id": 9
+            }
+          },
+          {
+            "name": "rollback_pt_10",
+            "descr": "Profile for Rollback Point 10",
+            "rbk-profile-info": {
+              "rbk-id": 10
+            }
+          },
+          {
+            "name": "rollback_pt_11",
+            "descr": "Profile for Rollback Point 11",
+            "rbk-profile-info": {
+              "rbk-id": 11
+            }
+          },
+          {
+            "name": "rollback_pt_12",
+            "descr": "Profile for Rollback Point 12",
+            "rbk-profile-info": {
+              "rbk-id": 12
+            }
+          },
+          {
+            "name": "rollback_pt_13",
+            "descr": "Profile for Rollback Point 13",
+            "rbk-profile-info": {
+              "rbk-id": 13
+            }
+          },
+          {
+            "name": "rollback_pt_14",
+            "descr": "Profile for Rollback Point 14",
+            "rbk-profile-info": {
+              "rbk-id": 14
+            }
+          },
+          {
+            "name": "rollback_pt_15",
+            "descr": "Profile for Rollback Point 15",
+            "rbk-profile-info": {
+              "rbk-id": 15
+            }
+          },
+          {
+            "name": "rollback_pt_16",
+            "descr": "Profile for Rollback Point 16",
+            "rbk-profile-info": {
+              "rbk-id": 16
+            }
+          },
+          {
+            "name": "rollback_pt_17",
+            "descr": "Profile for Rollback Point 17",
+            "rbk-profile-info": {
+              "rbk-id": 17
+            }
+          },
+          {
+            "name": "rollback_pt_18",
+            "descr": "Profile for Rollback Point 18",
+            "rbk-profile-info": {
+              "rbk-id": 18
+            }
+          },
+          {
+            "name": "rollback_pt_19",
+            "descr": "Profile for Rollback Point 19",
+            "rbk-profile-info": {
+              "rbk-id": 19
+            }
+          },
+          {
+            "name": "rollback_pt_20",
+            "descr": "Profile for Rollback Point 20",
+            "rbk-profile-info": {
+              "rbk-id": 20
+            }
+          },
+          {
+            "name": "rollback_pt_21",
+            "descr": "Profile for Rollback Point 21",
+            "rbk-profile-info": {
+              "rbk-id": 21
+            }
+          },
+          {
+            "name": "rollback_pt_22",
+            "descr": "Profile for Rollback Point 22",
+            "rbk-profile-info": {
+              "rbk-id": 22
+            }
+          },
+          {
+            "name": "rollback_pt_23",
+            "descr": "Profile for Rollback Point 23",
+            "rbk-profile-info": {
+              "rbk-id": 23
+            }
+          },
+          {
+            "name": "rollback_pt_24",
+            "descr": "Profile for Rollback Point 24",
+            "rbk-profile-info": {
+              "rbk-id": 24
+            }
+          },
+          {
+            "name": "rollback_pt_25",
+            "descr": "Profile for Rollback Point 25",
+            "rbk-profile-info": {
+              "rbk-id": 25
+            }
+          },
+          {
+            "name": "rollback_pt_26",
+            "descr": "Profile for Rollback Point 26",
+            "rbk-profile-info": {
+              "rbk-id": 26
+            }
+          },
+          {
+            "name": "rollback_pt_committed",
+            "descr": "Profile for Last Committed Rollback Point",
+            "rbk-profile-info": {
+              "rbk-id": 25
+            }
+          }
+        ],
+        "issu-oper-state": {
+          "issu-cap": "install-issu-not-supported"
+        }
+      }
+    ]
+  }
+}

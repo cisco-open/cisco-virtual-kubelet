@@ -6,12 +6,13 @@ controller type is not usable until a product adapter registers itself, and
 the base scaffold contains no Catalyst Center, APIC, Meraki, or other
 product-specific API behavior.
 
-!!! warning "Alpha, zero-adapter, report-only foundation"
+!!! warning "Alpha, report-only foundation"
     `NetworkController` and `NetworkControllerConfig` provide the extension
-    boundary. The September image registers zero product adapters, so it never
-    creates a usable product worker or sends requests to an external
-    controller. Apply, pruning, remote deletion, and their mutation RBAC role
-    are not implemented; the current contract is report-only.
+    boundary. This branch registers Nexus Dashboard and Catalyst Center
+    adapters with endpoint health and read-only inventory. Apply, pruning,
+    remote deletion, and their mutation RBAC role are not implemented; the
+    current configuration contract is report-only. Catalyst Center SWIM is
+    not yet an executable operation.
 
     On upgrade, apply both controller CRDs before rolling out the new manager.
     If either is missing, CVK preserves its existing device reconcilers but
@@ -508,4 +509,5 @@ drivers, and transports building and behaving identically.
 
 ## Reference adapters
 
-- [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health only.
+- [Nexus Dashboard](controllers/nexus-dashboard.md): `nexus-dashboard`, health, inventory, and optional device adoption.
+- [Catalyst Center](controllers/catalyst-center.md): `catalyst-center`, health, inventory, and SWIM capability groundwork.

@@ -1,0 +1,36 @@
+{
+  "observation": {
+    "deviceUID": "example-device-uid",
+    "physicalIdentity": "example-serial",
+    "controllerUID": "example-controller-uid",
+    "targetImageID": "example-image-id",
+    "policyUID": "example-policy-uid",
+    "policyGeneration": 1,
+    "observedAt": "2026-10-08T00:00:00Z",
+    "revision": "example-observation-1",
+    "volume": "flash:",
+    "freeBytes": 2504589312,
+    "requiredFreeBytes": 2747269120,
+    "complete": {
+      "filesystem": false,
+      "install": false,
+      "boot": false,
+      "target": false,
+      "rollback": false,
+      "preparations": false,
+      "applications": false
+    },
+    "quiescent": false,
+    "files": [],
+    "unresolved": [
+      "Replace with authenticated complete native inventory and resolved preparation evidence."
+    ]
+  },
+  "limits": {
+    "maxFiles": 2,
+    "maxBytes": 3000000000,
+    "headroomBytes": 268435456,
+    "preserveRollbackImages": 1,
+    "maxAgeSeconds": 60
+  }
+}

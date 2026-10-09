@@ -1,0 +1,75 @@
+{{- if .Values.topology.enabled }}
+{{- $fullname := include "cisco-virtual-kubelet.fullname" . }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-swim-handoff
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["ops.cisco.vk"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["catalystcenterswimhandoffs", "catalystcenterswimhandoffs/status"]
+        scope: Namespaced
+  variables:
+    - name: journal
+      expression: "request.operation == 'DELETE' ? oldObject : object"
+    - name: boundPod
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-uid'].size() == 1
+    - name: creator
+      expression: >-
+        request.userInfo.username == variables.journal.spec.deviceWorkerUsername &&
+        variables.boundPod
+    - name: controller
+      expression: >-
+        request.userInfo.username == variables.journal.spec.controllerUsername &&
+        variables.boundPod
+  validations:
+    - expression: >-
+        request.operation == 'CREATE' ?
+          (variables.creator && (!has(request.subResource) || request.subResource == '') &&
+           request.userInfo.extra['authentication.kubernetes.io/pod-uid'][0] == object.spec.deviceWorkerPodUID &&
+           (!has(object.status) || !has(object.status.phase)) &&
+           (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences.size() == 0) &&
+           has(object.metadata.finalizers) && object.metadata.finalizers == ['ops.cisco.vk/swim-handoff-evidence']) :
+        request.operation == 'DELETE' ?
+          (variables.creator && has(oldObject.status) && oldObject.status.phase == 'Succeeded') :
+        (has(request.subResource) && request.subResource == 'status') ?
+          (variables.controller && object.spec == oldObject.spec &&
+           (has(object.metadata.labels) == has(oldObject.metadata.labels)) &&
+           (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+           (has(object.metadata.annotations) == has(oldObject.metadata.annotations)) &&
+           (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+           (has(object.metadata.finalizers) == has(oldObject.metadata.finalizers)) &&
+           (!has(object.metadata.finalizers) || object.metadata.finalizers == oldObject.metadata.finalizers) &&
+           (has(object.metadata.ownerReferences) == has(oldObject.metadata.ownerReferences)) &&
+           (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences == oldObject.metadata.ownerReferences)) :
+          (variables.creator && object.spec == oldObject.spec &&
+           (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences.size() == 0) &&
+           (has(object.status) == has(oldObject.status)) &&
+           (!has(object.status) || object.status == oldObject.status) &&
+           ((has(object.metadata.finalizers) && has(oldObject.metadata.finalizers) && object.metadata.finalizers == oldObject.metadata.finalizers) ||
+            (has(oldObject.status) && oldObject.status.phase == 'Succeeded')))
+      message: "SWIM journals are device-worker-created, controller-status-owned, and retained until verified success"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-swim-handoff
+  labels:
+    {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-swim-handoff
+  validationActions: [Deny]
+{{- end }}

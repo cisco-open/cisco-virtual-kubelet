@@ -310,7 +310,8 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 		// A replacement worker may be the only actor able to acknowledge a
 		// cancellation and retire an unused mutation Lease. Keep every scheduling
 		// and maintenance fence fail-closed. This path is reachable only for an
-		// exact, manager-cancelled, pre-mutation drain recovery; distinguish the
+		// exact manager-cancelled pre-mutation drain recovery or a verified SWIM
+		// preparation cancellation. Distinguish the
 		// successfully persisted failure so Reconcile can repair only the
 		// manager-authored worker substrate and its exact revision proof.
 		guardErr := r.guardBoundNode(ctx, device)

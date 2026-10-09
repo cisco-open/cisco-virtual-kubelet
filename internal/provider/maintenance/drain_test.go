@@ -1662,3 +1662,41 @@ func TestAcquireDrainDeleteRequiresAvailableCanonicalLease(t *testing.T) {
 		})
 	}
 }
+
+func TestCancelledNeverEvictedPodLaterDeletionUsesOrdinaryTeardown(t *testing.T) {
+	for _, partial := range []bool{false, true} {
+		t.Run("acceptedEviction="+strconv.FormatBool(partial), func(t *testing.T) {
+			c, objects := releasedDrainCompletionFixture(t, opsv1alpha1.UpgradeDrainPodComplete, func(o *drainFixtureObjects) {
+				setDrainFixtureRecovering(o, metav1.NewTime(time.Now().Add(time.Hour)))
+				p := &o.leaf.Status.ManagerDrain.Pods[0]
+				p.EvictionRequestedAt = nil
+				p.DeletionObservedAt = nil
+				p.DeviceCleanAt = nil
+				p.DeviceCleanInventoryRevision = 0
+				p.DeletionObservedInventoryRevision = 0
+				p.ReleasedAt = &metav1.Time{Time: o.pod.DeletionTimestamp.Add(-time.Second)}
+				if partial {
+					p.EvictionRequestedAt = &metav1.Time{Time: o.pod.DeletionTimestamp.Add(-2 * time.Second)}
+				}
+			})
+			resolved, disposition, err := c.ResolveDrainDeletePod(context.Background(), objects.pod.DeepCopy())
+			if partial {
+				if err == nil {
+					t.Fatal("partial eviction evidence fell back to ordinary teardown")
+				}
+				return
+			}
+			if err != nil || resolved == nil || disposition != PodDeleteOrdinary {
+				t.Fatalf("later ordinary deletion: disposition=%v err=%v", disposition, err)
+			}
+			// Routing must not release or acquire the existing canonical lease.
+			var lease coordv1.Lease
+			if err := c.Client.Get(context.Background(), client.ObjectKeyFromObject(objects.lease), &lease); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(lease.Spec, objects.lease.Spec) {
+				t.Fatal("routing changed lease authority")
+			}
+		})
+	}
+}

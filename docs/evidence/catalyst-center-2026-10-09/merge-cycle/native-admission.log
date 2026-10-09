@@ -1,0 +1,11 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk	2.319s
+Warning: resource 'nodes' is not namespace scoped
+
+Warning: resource 'nodes' is not namespace scoped
+
+Warning: resource 'nodes' is not namespace scoped
+
+Warning: 'topology' is not a standard resource verb
+Warning: resource 'nodes' is not namespace scoped
+
+managed topology real-API admission and default-scheduler contract passed

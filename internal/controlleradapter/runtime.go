@@ -30,6 +30,8 @@ const (
 	// DefaultWorkerClusterRole is the install-time-audited base role shipped by
 	// the Helm chart. Adapters that need only the shared APIs should select it
 	// in their Descriptor.
+	CatalystCenterWorkerClusterRole = "cisco-virtual-kubelet-controller-worker-swim"
+
 	DefaultWorkerClusterRole = "cisco-virtual-kubelet-controller-worker"
 
 	// DeviceAdoptionWorkerClusterRole is the base worker role plus create,

@@ -1,0 +1,18 @@
+[
+  {
+    "op": "test",
+    "path": "/metadata/resourceVersion",
+    "value": "11350465"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/control",
+    "value": {
+      "revision": 5,
+      "pause": false,
+      "requestedBy": "system:admin",
+      "requestedAt": "2026-10-08T16:42:51.548561Z",
+      "reason": "Resume after verified cleanup and successful device-correlated Catalyst Center inventory sync; fresh readiness required."
+    }
+  }
+]

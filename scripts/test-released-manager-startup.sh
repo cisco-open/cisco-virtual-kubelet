@@ -40,6 +40,16 @@ image="cvk-october-startup:probe-$$"
 docker build --platform "linux/$architecture" -t "$image" \
   -f "$root/scripts/testdata/released-manager.Dockerfile" "$work/image" >"$work/image-build.log" 2>&1
 kind load docker-image --name "${context#kind-}" "$image" >"$work/image-load.log" 2>&1
+# The disposable cluster is removed by the caller on failure. Keep the actual
+# startup error in CI output rather than only naming a runner-local evidence
+# file that disappears with the job. These probes contain no device credentials.
+probe_diagnostics() {
+  local name="$1"
+  printf '\nManager startup diagnostics for %s:\n' "$name" >&2
+  jq '{phase:.status.phase, conditions:.status.conditions, containers:[.status.containerStatuses[]? | {name,ready,restartCount,state,lastState}]}' \
+    "$work/${name}-pod.json" >&2
+  tail -n 100 "$work/${name}.log" >&2
+}
 # Run with the rendered manager account and its projected namespace/token.
 # A host process cannot exercise the unchanged in-cluster leader-election path.
 run_probe() {
@@ -113,6 +123,7 @@ if [ "$expected" = Failed ]; then
      [ -z "$denial" ] || ! grep -Fq "$denial" "$work/${name}.log" ||
      grep -Fq 'starting manager' "$work/${name}.log"; then
     printf 'FAIL: %s did not stop at admission preflight; inspect %s\n' "$name" "$work/${name}.log" >&2
+    probe_diagnostics "$name"
     return 1
   fi
   cmp "$work/${name}-authority-before.json" "$work/${name}-authority-after.json"
@@ -121,6 +132,7 @@ else
      ! jq -e --arg pod "$pod" '.spec.holderIdentity | startswith($pod + "_")' "$work/${name}-leader.json" >/dev/null ||
      ! grep -Fq 'starting manager' "$work/${name}.log"; then
     printf 'FAIL: %s did not start and acquire leadership; inspect %s\n' "$name" "$work/${name}.log" >&2
+    probe_diagnostics "$name"
     return 1
   fi
   # Observe a real manager with no device authority, then stop it gracefully.
@@ -148,17 +160,18 @@ kind load docker-image --name "${context#kind-}" "$lab_image" >"$work/lab-image-
 run_probe lab-new-contract "$lab_image" Failed 'has 9 validations, want exactly 7'
 
 # Older staged managers either drop caSecretRef or project its mutable Secret
-# directly. Both must stop at the exact current native public-CA contract.
+# directly. They also predate the SWIM-aware upgrade contract, which is checked
+# before public-CA policy. Require that exact earlier digest rejection; these
+# entrypoint probes establish fail-closed startup, not isolated CA validation.
 pre_ca_baseline=dfe02ae43bd9ce721ab481bde05d970fc6fe5100
 direct_ca_baseline=dbdbb4e7cbc4ce258fa3275b620ac01a2c409556
 for stage in pre-ca direct-ca; do
   if [ "$stage" = pre-ca ]; then
     revision="$pre_ca_baseline"
-    denial='has 2 validations, want exactly 1'
   else
     revision="$direct_ca_baseline"
-    denial='want sha256:5d1f9e89b84c9eda661a652fe78f9beda28e07f7f2e1a4952c212443f34f7270'
   fi
+  denial="${prefix}-managed-upgrade-leaf\": compiled contract digest is sha256:a249482434518d7d2d97f0a7739e08300d01a9baf86dac03bb0ce521ec5b0e3a, want sha256:80cedca07e67a45caa10fdedc9aaa174e39825b342af5d44b69a1334f6a6101a"
   git -C "$root" cat-file -e "$revision^{commit}"
   mkdir "$work/$stage-source" "$work/$stage-image"
   git -C "$root" archive "$revision" | tar -x -C "$work/$stage-source"

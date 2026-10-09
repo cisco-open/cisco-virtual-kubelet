@@ -1,0 +1,18 @@
+[
+  {
+    "op": "test",
+    "path": "/metadata/resourceVersion",
+    "value": "11350420"
+  },
+  {
+    "op": "replace",
+    "path": "/spec/control",
+    "value": {
+      "revision": 4,
+      "pause": true,
+      "requestedBy": "system:admin",
+      "requestedAt": "2026-10-08T16:40:16.513975Z",
+      "reason": "CC readiness still uses pre-cleanup cached flash inventory; synchronize controller inventory before final bounded readiness attempt."
+    }
+  }
+]

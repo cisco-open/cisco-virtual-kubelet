@@ -1,0 +1,18 @@
+# Opt-in, same-namespace policy for the qualified single-RP C9300 XE profile.
+# Create this first; pin its actual UID and exact policy.json SHA-256 in the
+# rollout image source before planning/approval. Never edit an approved plan.
+# Example reserve: 1.4 GB incoming archive + 1.4 GB extracted packages.
+# Qualify both bounds for the exact image/platform before using this policy.
+# This is additional to the 3,070,230,528-byte pre-activation floor; cached
+# images do not reduce the reserve. Insufficient eligible space blocks execution.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: swim-retired-archive-cleanup-v1
+  namespace: network-devices
+  labels:
+    ops.cisco.vk/swim-preparation-policy: "true"
+immutable: true
+data:
+  policy.json: |
+    {"profile":"RetiredCVKImageArchivesV1","requiredFreeBytes":2936012800,"headroomBytes":134217728,"distributionReserveBytes":2800000000,"maxFiles":1,"maxBytes":1610612736}

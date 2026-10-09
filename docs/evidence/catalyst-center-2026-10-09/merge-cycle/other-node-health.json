@@ -1,0 +1,50 @@
+{
+  "nodes": [
+    {
+      "name": "cat9k-lab-101",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "cat9k-lab-103",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "cat9k-live",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "cat9k-node",
+      "unschedulable": false,
+      "ready": "Unknown"
+    },
+    {
+      "name": "nexus9300v-live",
+      "unschedulable": false,
+      "ready": "True"
+    },
+    {
+      "name": "ubuntu16",
+      "unschedulable": false,
+      "ready": "True"
+    }
+  ],
+  "otherDeviceWorkloads": [
+    {
+      "namespace": "cvk-pr194-workloads",
+      "name": "cvk-topology-drain-a-0926-649c457fff-wrjds",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "ready": "True"
+    },
+    {
+      "namespace": "cvk-pr194-workloads",
+      "name": "cvk-topology-drain-b-0926-67ff7d64b-wrnff",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "ready": "True"
+    }
+  ]
+}

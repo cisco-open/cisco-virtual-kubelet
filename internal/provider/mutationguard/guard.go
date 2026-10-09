@@ -28,6 +28,7 @@ import (
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/controllerhandoff"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 )
 
@@ -237,7 +238,7 @@ func UpgradeMutationSubmitted(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 		return false
 	}
 	status := &up.Status
-	if status.ExecutionModel != "" && status.ExecutionModel != opsv1alpha1.UpgradeExecutionModelAtMostOnceV1 {
+	if status.ExecutionModel != "" && !controllerhandoff.KnownExecution(up) {
 		return true
 	}
 	if status.ExecutionModel == "" && upgradePhaseMayHaveDispatchedMutation(status.Phase) {
@@ -318,8 +319,22 @@ func upgradeQuarantineTTL(
 		return 0, false
 	}
 	if up.Status.ExecutionModel != "" &&
-		up.Status.ExecutionModel != opsv1alpha1.UpgradeExecutionModelAtMostOnceV1 {
+		!controllerhandoff.KnownExecution(up) {
 		return LegacyIOSXEQuarantineTTL, true
+	}
+	if up.Spec.ImageSource.CatalystCenter != nil && up.Status.StagingRequested {
+		// The XE worker may conclusively settle a cancelled preparation before
+		// controller distribution exists. This is a distinct, verified outcome;
+		// generic cancellation and incomplete cleanup still require quarantine.
+		if ControllerPreparationCancellationVerified(up) {
+			return 0, false
+		}
+		// Controller tasks can outlive transport deadlines and worker outages.
+		// An expired Lease is never evidence that this remote mutation stopped.
+		g := up.Status.ControllerHandoff
+		if up.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded || g == nil || g.VerifiedAt == nil || g.VerifiedVersion == "" {
+			return LegacyIOSXEQuarantineTTL, true
+		}
 	}
 	if up.Status.ExecutionModel != "" {
 		return 0, false
@@ -342,6 +357,37 @@ func upgradeQuarantineTTL(
 		// absent execution marker cannot prove that device work was not sent.
 		return LegacyIOSXEQuarantineTTL, true
 	}
+}
+
+// ControllerPreparationCancellationVerified recognizes the XE worker's conclusive
+// preparation-only cancellation receipt. It never authorizes a new mutation.
+func ControllerPreparationCancellationVerified(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	if up == nil || up.Spec.ImageSource.CatalystCenter == nil {
+		return false
+	}
+	if !controllerhandoff.KnownExecution(up) ||
+		up.Status.Phase != opsv1alpha1.UpgradePhaseCancelled || up.Status.FailureReason != "ControllerPreparationCancelled" ||
+		up.Status.CompletionTime == nil || up.Status.ManagerControl == nil || !up.Status.ManagerControl.Cancel ||
+		up.Spec.ImageSource.CatalystCenter.Preparation == nil || up.Status.ControllerHandoff == nil ||
+		up.Status.PrimarySupervisorActivationRequested || up.Status.StandbySupervisorActivationRequested || up.Status.RollbackActivationRequested {
+		return false
+	}
+	p := up.Status.ControllerHandoff.Preparation
+	if len(p) != 1 || p[0].Stage != "ReadyToDistribute" || p[0].Phase != "Complete" || p[0].CompletedAt == nil ||
+		p[0].PolicySHA256 != up.Spec.ImageSource.CatalystCenter.Preparation.SHA256 {
+		return false
+	}
+	for _, file := range p[0].Files {
+		if file.ClaimedAt == nil || file.RemovedAt == nil {
+			return false
+		}
+	}
+	for _, condition := range up.Status.Conditions {
+		if condition.Type == "DeviceMutationSettled" && condition.Status == metav1.ConditionTrue && condition.ObservedGeneration == up.Generation {
+			return true
+		}
+	}
+	return false
 }
 
 func remainingUpgradeQuarantine(

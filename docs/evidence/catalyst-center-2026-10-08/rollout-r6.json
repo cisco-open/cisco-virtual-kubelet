@@ -1,0 +1,86 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "IOSXESoftwareRollout",
+  "metadata": {
+    "name": "catc-handoff-20261008-101-r6",
+    "namespace": "cvk-live"
+  },
+  "spec": {
+    "plan": {
+      "requestedBy": "system:admin",
+      "requestedAt": "2026-10-08T14:35:16Z",
+      "targets": {
+        "selector": {
+          "matchLabels": {
+            "topology.cisco.vk/managed": "true",
+            "topology.cisco.vk/lab-set": "pr194-physical-c9k",
+            "topology.cisco.vk/lab-node": "cat9k-lab-101"
+          }
+        },
+        "allowAll": false,
+        "maxTargets": 1
+      },
+      "image": {
+        "sha256": "e1eecde5e78d7cc061c83d49e0e2bbb6405f447faaced9e6ba24f0815bcc1a9b",
+        "imageFamily": "cat9k",
+        "sources": [
+          {
+            "name": "catalyst-center",
+            "priority": 100,
+            "catalystCenter": {
+              "controllerName": "catc",
+              "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+              "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+              "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+              "imageVersion": "17.18.04.0.759",
+              "transferFallbackAddress": "192.0.2.254"
+            }
+          }
+        ]
+      },
+      "targetVersion": "17.18.04",
+      "strategy": "Reload",
+      "rollbackOnFailure": false,
+      "installTimeoutSeconds": 7200,
+      "rebootTimeoutSeconds": 3600,
+      "canaries": [
+        {
+          "name": "c9300-24p",
+          "devices": [
+            "cat9k-lab-101"
+          ]
+        }
+      ],
+      "pauseAfterCanary": false,
+      "budgets": {
+        "maxConcurrentTransfers": 1,
+        "maxUnavailable": 1,
+        "domains": [
+          {
+            "topologyKey": "distribution.cisco.vk/cache-domain",
+            "maxConcurrentTransfers": 1
+          },
+          {
+            "topologyKey": "operations.cisco.vk/redundancy-domain",
+            "maxUnavailable": 1
+          }
+        ]
+      },
+      "workloads": {
+        "policy": "BlockIfRunning"
+      },
+      "health": {
+        "maxObservationAgeSeconds": 300,
+        "canarySoakSeconds": 30,
+        "waveSoakSeconds": 30,
+        "network": {
+          "enabled": true,
+          "requireCompleteEvidence": true
+        }
+      }
+    },
+    "control": {
+      "revision": 0
+    }
+  }
+}

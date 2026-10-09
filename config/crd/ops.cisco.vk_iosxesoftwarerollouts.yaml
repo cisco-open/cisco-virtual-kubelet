@@ -436,6 +436,75 @@ spec:
                             endpoint-bound Secret. Redirects and URL credentials are not represented and
                             must remain disabled by the resolver.
                           properties:
+                            catalystCenter:
+                              description: |-
+                                CatalystCenterImageSource selects controller execution explicitly. It is a
+                                separate source union member so released workers reject it rather than
+                                silently performing a direct upgrade. All references are same-namespace.
+                              properties:
+                                controllerName:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                controllerUID:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                deviceID:
+                                  maxLength: 253
+                                  pattern: ^[A-Za-z0-9_-]{1,128}$
+                                  type: string
+                                imageID:
+                                  maxLength: 253
+                                  pattern: ^[A-Za-z0-9_-]{1,128}$
+                                  type: string
+                                imageVersion:
+                                  description: ImageVersion is the exact controller
+                                    inventory version.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                preparation:
+                                  description: |-
+                                    Preparation pins an immutable administrator-owned ConfigMap policy.
+                                    Omission preserves the existing controller execution profile.
+                                  properties:
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    sha256:
+                                      pattern: ^[a-f0-9]{64}$
+                                      type: string
+                                    uid:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - sha256
+                                  - uid
+                                  type: object
+                                standardReloadProfile:
+                                  description: |-
+                                    StandardReloadProfile opts into the release-qualified normal-reload contract.
+                                    It selects no optional activation features and permits only the narrowly
+                                    recognized xFSU version-path warning. Omission retains strict readiness.
+                                  enum:
+                                  - CatalystCenter323
+                                  type: string
+                                transferFallbackAddress:
+                                  description: TransferFallbackAddress qualifies only
+                                    the known positive HTTPS/SCP check.
+                                  maxLength: 253
+                                  type: string
+                              required:
+                              - controllerName
+                              - controllerUID
+                              - deviceID
+                              - imageID
+                              - imageVersion
+                              type: object
                             deviceSelector:
                               description: |-
                                 DeviceSelector optionally scopes this endpoint to CiscoDevice labels.
@@ -541,7 +610,6 @@ spec:
                           required:
                           - name
                           - priority
-                          - url
                           type: object
                           x-kubernetes-validations:
                           - message: urlSecretRef.name must not be empty
@@ -552,9 +620,12 @@ spec:
                               <= 253'
                           - message: urlSecretRef is supported only for sftp sources
                               in the managed rollout API
-                            rule: '!has(self.urlSecretRef) || self.url.startsWith(''sftp://'')'
+                            rule: '!has(self.urlSecretRef) || (has(self.url) && self.url.startsWith(''sftp://''))'
                           - message: sftp sources require an endpoint-bound urlSecretRef
-                            rule: '!self.url.startsWith(''sftp://'') || has(self.urlSecretRef)'
+                            rule: '!has(self.url) || !self.url.startsWith(''sftp://'')
+                              || has(self.urlSecretRef)'
+                          - message: select exactly one URL or Catalyst Center source
+                            rule: has(self.url) != has(self.catalystCenter)
                         maxItems: 16
                         minItems: 1
                         type: array
@@ -1587,6 +1658,75 @@ spec:
                             Source is the exact endpoint and Secret incarnation selected for this
                             target from the immutable campaign-wide image source set.
                           properties:
+                            catalystCenter:
+                              description: |-
+                                CatalystCenterImageSource selects controller execution explicitly. It is a
+                                separate source union member so released workers reject it rather than
+                                silently performing a direct upgrade. All references are same-namespace.
+                              properties:
+                                controllerName:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                controllerUID:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                deviceID:
+                                  maxLength: 253
+                                  pattern: ^[A-Za-z0-9_-]{1,128}$
+                                  type: string
+                                imageID:
+                                  maxLength: 253
+                                  pattern: ^[A-Za-z0-9_-]{1,128}$
+                                  type: string
+                                imageVersion:
+                                  description: ImageVersion is the exact controller
+                                    inventory version.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                preparation:
+                                  description: |-
+                                    Preparation pins an immutable administrator-owned ConfigMap policy.
+                                    Omission preserves the existing controller execution profile.
+                                  properties:
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    sha256:
+                                      pattern: ^[a-f0-9]{64}$
+                                      type: string
+                                    uid:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - sha256
+                                  - uid
+                                  type: object
+                                standardReloadProfile:
+                                  description: |-
+                                    StandardReloadProfile opts into the release-qualified normal-reload contract.
+                                    It selects no optional activation features and permits only the narrowly
+                                    recognized xFSU version-path warning. Omission retains strict readiness.
+                                  enum:
+                                  - CatalystCenter323
+                                  type: string
+                                transferFallbackAddress:
+                                  description: TransferFallbackAddress qualifies only
+                                    the known positive HTTPS/SCP check.
+                                  maxLength: 253
+                                  type: string
+                              required:
+                              - controllerName
+                              - controllerUID
+                              - deviceID
+                              - imageID
+                              - imageVersion
+                              type: object
                             name:
                               description: Name is the selected source's stable identity.
                               maxLength: 63
@@ -1627,14 +1767,15 @@ spec:
                           - name
                           - priority
                           - sha256
-                          - url
                           type: object
                           x-kubernetes-validations:
                           - message: sftp snapshots require an exact Secret incarnation;
                               HTTPS snapshots must not carry deferred HTTP credentials
-                            rule: 'self.url.startsWith(''sftp://'') ? (has(self.secretName)
-                              && has(self.secretUID)) : (!has(self.secretName) &&
-                              !has(self.secretUID))'
+                            rule: '(has(self.url) && self.url.startsWith(''sftp://''))
+                              ? (has(self.secretName) && has(self.secretUID)) : (!has(self.secretName)
+                              && !has(self.secretUID))'
+                          - message: select exactly one URL or Catalyst Center source
+                            rule: has(self.url) != has(self.catalystCenter)
                         topology:
                           description: Topology contains the sorted effective topology
                             and risk-domain values.

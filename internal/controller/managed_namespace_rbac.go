@@ -562,9 +562,13 @@ func (r *CiscoDeviceReconciler) inspectManagedWorkerNamespaceRBAC(ctx context.Co
 						client.ObjectKeyFromObject(binding), err)
 				}
 			}
+			trustedSWIM, err := r.trustedSWIMRoleBinding(ctx, binding, clusterRole, scope)
+			if err != nil {
+				return err
+			}
 			for ruleIndex, rule := range rules {
 				if capability := unsafeManagedNamespaceRule(rule, appSA, networkSA, scope,
-					trustedShared || trustedGenerated || trustedLegacyShared); capability != "" {
+					trustedShared || trustedGenerated || trustedLegacyShared || trustedSWIM); capability != "" {
 					return &namespaceRBACRisk{
 						binding: client.ObjectKeyFromObject(binding), roleRef: binding.RoleRef,
 						rule: ruleIndex + 1, capability: capability,
@@ -1147,4 +1151,45 @@ func (r *CiscoDeviceReconciler) mapNamespaceToCiscoDevices(ctx context.Context, 
 		requests = append(requests, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(&devices.Items[i])})
 	}
 	return requests
+}
+
+// A SWIM worker may read device identity only in a credential-reference-only
+// namespace. Trust the exact live controller incarnation, canonical subject and
+// compiled role; never exempt an arbitrary same-name or broadened binding.
+func (r *CiscoDeviceReconciler) trustedSWIMRoleBinding(ctx context.Context, binding *rbacv1.RoleBinding, role *rbacv1.ClusterRole, scope managedWorkerNameScope) (bool, error) {
+	if binding.RoleRef.Name != managedprotocol.CatalystCenterSWIMClusterRole || binding.RoleRef.Kind != "ClusterRole" {
+		return false, nil
+	}
+	if err := managedprotocol.ValidateCatalystCenterSWIMRole(role); err != nil {
+		return false, err
+	}
+	if scope.plaintextCredential {
+		return false, nil
+	}
+	name := binding.Annotations[networkControllerNameAnnotation]
+	if name == "" {
+		return false, nil
+	}
+	var controller ciskov1.NetworkController
+	if err := r.reader().Get(ctx, client.ObjectKey{Namespace: binding.Namespace, Name: name}, &controller); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	if controller.Spec.Type != "catalyst-center" || controller.UID == "" || !isNetworkControllerWorkerObject(binding, &controller) || binding.Name != networkControllerWorkerName(name) {
+		return false, nil
+	}
+	expected := []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Name: binding.Name, Namespace: binding.Namespace}}
+	if !reflect.DeepEqual(binding.Subjects, expected) {
+		return false, nil
+	}
+	var account corev1.ServiceAccount
+	if err := r.reader().Get(ctx, client.ObjectKey{Namespace: binding.Namespace, Name: binding.Name}, &account); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return isNetworkControllerWorkerObject(&account, &controller), nil
 }

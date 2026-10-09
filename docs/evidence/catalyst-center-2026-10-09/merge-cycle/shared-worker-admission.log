@@ -1,0 +1,42 @@
+Creating cluster "cvk-catc-shared-qualification" ...
+ • Ensuring node image (kindest/node:v1.35.0) 🖼  ...
+ ✓ Ensuring node image (kindest/node:v1.35.0) 🖼
+ • Preparing nodes 📦   ...
+ ✓ Preparing nodes 📦
+ • Writing configuration 📜  ...
+ ✓ Writing configuration 📜
+ • Starting control-plane 🕹️  ...
+ ✓ Starting control-plane 🕹️
+ • Installing CNI 🔌  ...
+ ✓ Installing CNI 🔌
+ • Installing StorageClass 💾  ...
+ ✓ Installing StorageClass 💾
+ • Waiting ≤ 2m0s for control-plane = Ready ⏳  ...
+ ✓ Waiting ≤ 2m0s for control-plane = Ready ⏳
+ • Ready after 18s 💚
+Set kubectl context to "kind-cvk-catc-shared-qualification"
+You can now use your cluster with:
+
+kubectl cluster-info --context kind-cvk-catc-shared-qualification
+
+Have a nice day! 👋
+PASS: manager startup boundary october-new-contract expected=Failed; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary lab-new-contract expected=Failed; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary pre-ca-new-contract expected=Failed; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary direct-ca-new-contract expected=Failed; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary candidate-warn-only expected=Failed; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary candidate-missing-binding expected=Failed; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary candidate-partial-policy expected=Failed; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary candidate-restored expected=Running; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: manager startup boundary candidate-restart expected=Running; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+PASS: released=cf33e51c8ffc6d47acb313857665366d74eefe6c lab=6f3686e98dad0ca4f30f8f21453d57683170537e pre-ca=dfe02ae43bd9ce721ab481bde05d970fc6fe5100 direct-ca=dbdbb4e7cbc4ce258fa3275b620ac01a2c409556 candidate-base=ef7cabef7dbd95707f63307bfe33479e29f27455 worktree=dirty binary-sha256=d48cd75fddb7f992ea98fd46455d11545b9e00167958714512a570c79a60d5ae startup/interrupted-policy/restart matrix; evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T//cvk-manager-startup.lJgD5G
+Set kubectl context to "kind-cvk-catc-shared-qualification"
+Set kubectl context to "kind-cvk-catc-shared-qualification"
+Set kubectl context to "kind-cvk-catc-shared-qualification"
+Set kubectl context to "kind-cvk-catc-shared-qualification"
+locked-namespace boundary confirmed: edit retains CONNECT and /scale; manager impersonation remains out of scope
+retained Lease bootstrap, metadata-only rotation, stale/cross-plane denial passed
+split app/network revisions, drain-only writes, protected rebinding and stale token denial passed
+native unhealthy-node status and taints preserve topology, identity and maintenance guards
+native foreground deletion of legacy direct-CA Deployment, ReplicaSet and Pod passed under current policy
+managed shared-worker admission integration test passed on v1.35.0

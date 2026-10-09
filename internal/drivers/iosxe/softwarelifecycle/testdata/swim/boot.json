@@ -1,0 +1,17 @@
+{
+  "Cisco-IOS-XE-native:boot": {
+    "system": {
+      "Cisco-IOS-XE-switch:switch": {
+        "all": {
+          "boot-container": {
+            "boot-filename": [
+              {
+                "filename": "flash:packages.conf"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

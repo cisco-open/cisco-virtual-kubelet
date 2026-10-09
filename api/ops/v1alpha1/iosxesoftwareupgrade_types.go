@@ -100,8 +100,9 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced,shortName=xeupgrade
 // +kubebuilder:subresource:status
-// +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !has(self.spec.requireNetworkEvidence) || !self.spec.requireNetworkEvidence || (has(self.status.managerAdmission.networkEvidenceHash) && self.status.managerAdmission.protocolVersion in ['rollout-network-evidence-v1', 'rollout-staged-activation-v1'])",message="network-gated grants require network evidence and a compatible worker protocol"
+// +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !has(self.spec.requireNetworkEvidence) || !self.spec.requireNetworkEvidence || (has(self.status.managerAdmission.networkEvidenceHash) && self.status.managerAdmission.protocolVersion in ['rollout-network-evidence-v1', 'rollout-staged-activation-v1', 'rollout-controller-swim-v1', 'rollout-controller-preparation-v1', 'rollout-controller-reload-v1'])",message="network-gated grants require network evidence and a compatible worker protocol"
 // +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || !(self.spec.strategy == 'PrepareOnly' || has(self.spec.imageSource.preinstalled)) || self.status.managerAdmission.protocolVersion == 'rollout-staged-activation-v1'",message="managed preparation and preinstalled activation require the staged lifecycle protocol before granting work"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.imageSource.catalystCenter) || !has(self.status) || !has(self.status.managerAdmission) || self.status.managerAdmission.state != 'Granted' || self.status.managerAdmission.protocolVersion == (has(self.spec.imageSource.catalystCenter.standardReloadProfile) ? 'rollout-controller-reload-v1' : has(self.spec.imageSource.catalystCenter.preparation) ? 'rollout-controller-preparation-v1' : 'rollout-controller-swim-v1')",message="controller SWIM requires its dedicated worker protocol"
 // +kubebuilder:printcolumn:name="Device",type=string,JSONPath=`.spec.deviceRef.name`
 // +kubebuilder:printcolumn:name="Target",type=string,JSONPath=`.spec.targetVersion`
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
@@ -236,7 +237,7 @@ type IOSXESoftwareUpgradeSpec struct {
 // resident on the device. LocalPath is retained only as a deprecated,
 // preinstalled-only compatibility form.
 //
-// +kubebuilder:validation:XValidation:rule="(has(self.url) ? 1 : 0) + (has(self.configMapRef) ? 1 : 0) + (has(self.preinstalled) ? 1 : 0) + (has(self.deviceFile) ? 1 : 0) + (has(self.localPath) ? 1 : 0) == 1",message="exactly one of url, configMapRef, preinstalled, deviceFile, or localPath must be set"
+// +kubebuilder:validation:XValidation:rule="(has(self.url) ? 1 : 0) + (has(self.configMapRef) ? 1 : 0) + (has(self.preinstalled) ? 1 : 0) + (has(self.deviceFile) ? 1 : 0) + (has(self.localPath) ? 1 : 0) + (has(self.catalystCenter) ? 1 : 0) == 1",message="exactly one of url, configMapRef, preinstalled, deviceFile, localPath, or catalystCenter must be set"
 // +kubebuilder:validation:XValidation:rule="has(self.url) == has(self.sha256)",message="sha256 must be set if and only if url is set"
 // +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || has(self.url)",message="urlSecretRef may be set only when url is set"
 // +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.urlSecretRef.name.size() > 0",message="urlSecretRef.name must not be empty"
@@ -245,6 +246,10 @@ type IOSXESoftwareUpgradeSpec struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.configMapRef) || self.configMapRef.name.size() > 0",message="configMapRef.name must not be empty"
 // +kubebuilder:validation:XValidation:rule="!has(self.localPathSHA256) || has(self.localPath)",message="localPathSHA256 may be set only when localPath is set"
 type UpgradeImageSource struct {
+	// CatalystCenter explicitly selects controller-managed SWIM.
+	// +optional
+	CatalystCenter *CatalystCenterImageSource `json:"catalystCenter,omitempty"`
+
 	// URL is a remote image URI the reconciler fetches before streaming
 	// the bytes to the device with gNOI OS.Install. Supported schemes are
 	// http, https, tftp, ftp, scp, and sftp. Required SHA256 verification
@@ -519,14 +524,17 @@ type UpgradeWindow struct {
 // ManagedUpgradeProtocolVersion identifies the manager/worker handshake that
 // gates every new device mutation for a campaign-created leaf.
 //
-// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1;rollout-staged-activation-v1;rollout-network-evidence-v1
+// +kubebuilder:validation:Enum=rollout-v1;rollout-byte-pacing-v1;rollout-staged-activation-v1;rollout-network-evidence-v1;rollout-controller-swim-v1;rollout-controller-preparation-v1;rollout-controller-reload-v1
 type ManagedUpgradeProtocolVersion string
 
 const (
-	ManagedUpgradeProtocolRolloutV1           ManagedUpgradeProtocolVersion = "rollout-v1"
-	ManagedUpgradeProtocolRolloutBytePacingV1 ManagedUpgradeProtocolVersion = "rollout-byte-pacing-v1"
-	ManagedUpgradeProtocolStagedActivationV1  ManagedUpgradeProtocolVersion = "rollout-staged-activation-v1"
-	ManagedUpgradeProtocolNetworkEvidenceV1   ManagedUpgradeProtocolVersion = "rollout-network-evidence-v1"
+	ManagedUpgradeProtocolControllerReloadV1      ManagedUpgradeProtocolVersion = "rollout-controller-reload-v1"
+	ManagedUpgradeProtocolControllerPreparationV1 ManagedUpgradeProtocolVersion = "rollout-controller-preparation-v1"
+	ManagedUpgradeProtocolControllerSWIMV1        ManagedUpgradeProtocolVersion = "rollout-controller-swim-v1"
+	ManagedUpgradeProtocolRolloutV1               ManagedUpgradeProtocolVersion = "rollout-v1"
+	ManagedUpgradeProtocolRolloutBytePacingV1     ManagedUpgradeProtocolVersion = "rollout-byte-pacing-v1"
+	ManagedUpgradeProtocolStagedActivationV1      ManagedUpgradeProtocolVersion = "rollout-staged-activation-v1"
+	ManagedUpgradeProtocolNetworkEvidenceV1       ManagedUpgradeProtocolVersion = "rollout-network-evidence-v1"
 )
 
 // ExpectedManagedUpgradeProtocol selects the narrowest manager/worker
@@ -546,6 +554,15 @@ func ExpectedManagedUpgradeProtocol(maxTransferBytesPerSecond int64) ManagedUpgr
 // strategy as Reload. Non-staged network gates have their own protocol so an
 // older worker cannot silently omit claim-time evidence validation.
 func RequiredManagedUpgradeProtocol(spec IOSXESoftwareUpgradeSpec) ManagedUpgradeProtocolVersion {
+	if spec.ImageSource.CatalystCenter != nil {
+		if spec.ImageSource.CatalystCenter.StandardReloadProfile != "" {
+			return ManagedUpgradeProtocolControllerReloadV1
+		}
+		if spec.ImageSource.CatalystCenter.Preparation != nil {
+			return ManagedUpgradeProtocolControllerPreparationV1
+		}
+		return ManagedUpgradeProtocolControllerSWIMV1
+	}
 	if spec.Strategy == UpgradeStrategyPrepareOnly || spec.ImageSource.Preinstalled != nil {
 		return ManagedUpgradeProtocolStagedActivationV1
 	}
@@ -1307,6 +1324,10 @@ type UpgradeManagedMutationClaimStatus struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.workerDrain) || (has(self.managerDrain) && self.workerDrain.protocolVersion == self.managerDrain.protocolVersion && self.workerDrain.observedSessionToken == self.managerDrain.sessionToken && self.workerDrain.observedPolicyEpoch == self.managerDrain.policyEpoch && self.workerDrain.observedControlRevision <= self.managerDrain.controlRevision)",message="workerDrain must bind the current manager drain session and may only lag its control revision"
 // +kubebuilder:validation:XValidation:rule="!has(self.workerDrain) || !has(self.workerDrain.remainingAuthorizedPodUIDs) || (has(self.managerDrain) && has(self.managerDrain.pods) && self.workerDrain.remainingAuthorizedPodUIDs.all(uid, self.managerDrain.pods.exists(p, p.uid == uid)))",message="workerDrain remaining Pod UIDs must be a subset of the frozen manager snapshot"
 type IOSXESoftwareUpgradeStatus struct {
+	// ControllerHandoff is device-worker-owned delegation and verification.
+	// +optional
+	ControllerHandoff *UpgradeControllerHandoffStatus `json:"controllerHandoff,omitempty"`
+
 	// Phase is the current state-machine position.
 	// +optional
 	Phase UpgradePhase `json:"phase,omitempty"`
