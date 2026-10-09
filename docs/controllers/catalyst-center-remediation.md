@@ -43,6 +43,17 @@ pre-activation floor must remain available. An archive-only reserve can pass
 the first gate and then stop safely at the second gate. The policy does not
 authorize deleting inactive target packages or unrelated application archives.
 
+After a successful distribution, Catalyst Center may reuse an already cached
+archive without issuing a new `install add`. XE can then report the target as
+`Present`, with retained packages in `new` state. Preparation accepts this
+separate quiescent shape only when the exact cat9k archive and every listed
+package have matching native filesystem sizes and no pending package action.
+All target references remain protected from cleanup. This establishes capacity
+and safe cleanup boundaries, not archive authenticity or install completion;
+Catalyst Center readiness/image validation and final native committed-version
+verification remain required. In-progress installation still requires the
+existing fresh completed-add correlation.
+
 Use `examples/configs/catalyst-center/swim-preparation-policy.yaml` with the
 `preparation` reference shown in `swim-rollout.yaml`. The source pins the immutable
 ConfigMap's name, UID and SHA-256 of its exact `policy.json` bytes. Create a new

@@ -147,3 +147,71 @@ func TestSWIMStagedTargetUsesNativeCompletedAdd(t *testing.T) {
 		})
 	}
 }
+
+func TestSWIMCachedTargetKeepsReferencesAndRequiresQuiescence(t *testing.T) {
+	install, err := os.ReadFile("testdata/swim/staged-install.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	install = []byte(strings.ReplaceAll(strings.ReplaceAll(string(install), "install-version-state-in-progress", "install-version-state-present"), "install-state-added", "install-state-new"))
+	boot, _ := os.ReadFile("testdata/swim/boot.json")
+	flash, _ := os.ReadFile("testdata/swim/flash.json")
+	root, err := decodeObject(install)
+	if err != nil {
+		t.Fatal(err)
+	}
+	locations, _, _ := collectNamedList(root, "install-location-information")
+	packages, _, _ := directNamedList(locations[0], "install-packages")
+	var fs map[string]any
+	if err := json.Unmarshal(flash, &fs); err != nil {
+		t.Fatal(err)
+	}
+	partition := fs["Cisco-IOS-XE-platform-software-oper:partitions"].([]any)[0].(map[string]any)
+	for _, pkg := range packages {
+		name := stringField(pkg, "pkg-name")
+		if !strings.Contains(name, "26.02.01") {
+			continue
+		}
+		data, _ := objectField(pkg, "pkg-data")
+		partition["partition-content"] = append(partition["partition-content"].([]any), map[string]any{"full-path": "/mnt/sd3/user/" + name, "size": stringField(data, "pkg-size"), "type": "file"})
+	}
+	flash, _ = json.Marshal(fs)
+	now := time.Now()
+	req := lifecycle.SWIMFlashRequest{RunningVersion: "17.18.04.0.759.1784396682", StagedTargetVersion: "26.02.01.0.263", DistributionStartedAt: now.Add(-time.Minute)}
+	for _, kind := range []string{"valid", "deferred", "missing-package", "busy", "bad-verification", "added-package", "wrong-size", "uncommitted", "wrong-target"} {
+		t.Run(kind, func(t *testing.T) {
+			raw, files, request := install, flash, req
+			switch kind {
+			case "deferred":
+				raw = []byte(strings.ReplaceAll(string(raw), "install-package-verify-ok", "install-package-verify-deferred"))
+			case "missing-package":
+				files = []byte(strings.ReplaceAll(string(files), "cat9k-rpbase.26.02.01.SPA.pkg", "missing.pkg"))
+			case "busy":
+				raw = []byte(strings.ReplaceAll(string(raw), "install-no-activity", "install-activity"))
+			case "bad-verification":
+				raw = []byte(strings.ReplaceAll(string(raw), "install-package-verify-ok", "install-package-verify-failed"))
+			case "added-package":
+				raw = []byte(strings.ReplaceAll(string(raw), "install-state-new", "install-state-added"))
+			case "wrong-size":
+				files = []byte(strings.ReplaceAll(string(files), "1264266123", "1264266122"))
+			case "uncommitted":
+				raw = []byte(strings.ReplaceAll(string(raw), "install-version-state-present", "install-version-state-provisioned-uncommitted"))
+			case "wrong-target":
+				request.StagedTargetVersion = "26.02.02"
+			}
+			snapshot, err := swimFlashForRequest(raw, boot, files, request, now, now)
+			if kind == "valid" || kind == "deferred" {
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, name := range []string{"cat9k_iosxe.26.02.01.SPA.bin", "cat9k-rpbase.26.02.01.SPA.pkg"} {
+					if !strings.Contains(snapshot.NativeReferences, name) || snapshot.ArchiveOnlyVersions["flash:"+name] != "" {
+						t.Fatal("cached target lost deletion protection")
+					}
+				}
+			} else if err == nil {
+				t.Fatalf("accepted unsafe cached target: %s", kind)
+			}
+		})
+	}
+}

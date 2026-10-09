@@ -132,19 +132,30 @@ func swimFlashForRequest(install, boot, flash []byte, request lifecycle.SWIMFlas
 			return out, fmt.Errorf("staged SWIM observation requires target, distribution interval and device clock")
 		}
 		target, err := inventoryImageFromNode(root, request.StagedTargetVersion)
-		if err != nil || target.Version == running || (target.State != lifecycle.InventoryStateInProgress && !target.State.Activatable()) {
+		if err != nil || target.Version == running || (target.State != lifecycle.InventoryStatePresent && target.State != lifecycle.InventoryStateInProgress && !target.State.Activatable()) {
 			return out, fmt.Errorf("staged SWIM target is absent, ambiguous or not inactive")
 		}
 		size := out.Files["flash:"+installSourceName(target.SourcePath)]
 		if size == 0 || size > 16<<30 {
 			return out, fmt.Errorf("staged SWIM target archive is missing or invalid")
 		}
-		retirement.TargetVersion = target.Version
-		retirement.SourceSize = int64(size)
-		retirement.InstallStartedAt = request.DistributionStartedAt
-		retirement.PreparedAt = localTime
-		if err := corroborateRetirement(root, target, retirement, deviceTime, localTime); err != nil {
-			return out, err
+		if target.State == lifecycle.InventoryStatePresent {
+			// A successful controller distribution can reuse a cached archive
+			// without install-add. This is only a quiescent preparation snapshot,
+			// never proof of installation, content verification or activation.
+			// Keep every target reference protected. The ordinary baseline
+			// quiescence checks below and subsequent SWIM readiness still apply.
+			if err := validateCachedSWIMTarget(locations[0], target, out.Files); err != nil {
+				return out, err
+			}
+		} else {
+			retirement.TargetVersion = target.Version
+			retirement.SourceSize = int64(size)
+			retirement.InstallStartedAt = request.DistributionStartedAt
+			retirement.PreparedAt = localTime
+			if err := corroborateRetirement(root, target, retirement, deviceTime, localTime); err != nil {
+				return out, err
+			}
 		}
 	}
 	if _, err := preparationRetirementFromJSON(install, retirement, deviceTime, localTime); err != nil {
@@ -188,6 +199,74 @@ func swimFlashForRequest(install, boot, flash []byte, request lifecycle.SWIMFlas
 	out.NativeReferences = string(native) + string(boot)
 	out.EvidenceHash = fmt.Sprintf("%x", sha256.Sum256(append(append(append([]byte{}, install...), boot...), flash...)))
 	return out, nil
+}
+
+// Qualify retained cat9k archive/package metadata, not archive authenticity.
+// Catalyst Center owns image validation. Unlike removable retired archives,
+// these cached target files are never removed from NativeReferences.
+func validateCachedSWIMTarget(location map[string]any, target lifecycle.InventoryImage, files map[string]uint64) error {
+	bad := fmt.Errorf("cached SWIM target requires complete retained archive/package evidence")
+	parts := strings.Split(target.Version, ".")
+	if len(parts) < 3 {
+		return bad
+	}
+	base := strings.Join(parts[:3], ".")
+	archive := "cat9k_iosxe." + base + ".SPA.bin"
+	if target.SourcePath != "/mnt/sd3/user/"+archive || files["flash:"+archive] == 0 {
+		return bad
+	}
+	versions, found, err := directNamedList(location, "install-version-info")
+	if err != nil || !found {
+		return bad
+	}
+	packages, found, err := directNamedList(location, "install-packages")
+	if err != nil || !found {
+		return bad
+	}
+	for _, v := range versions {
+		if (inventoryVersion{Version: stringField(v, "version"), VersionExtension: stringField(v, "version-extension")}).identity() != target.Version {
+			continue
+		}
+		if v["is-default"] != false || stringField(v, "current") != "install-version-state-present" {
+			return bad
+		}
+		states, found, err := directNamedList(v, "install-package-state-info")
+		if err != nil || !found || len(states) < 2 {
+			return bad
+		}
+		seen := map[string]bool{}
+		for _, state := range states {
+			name := stringField(state, "pkg-name")
+			kind := stringField(state, "package-type")
+			if seen[name] || files["flash:"+name] == 0 || stringField(state, "pkg-dir") != "/mnt/sd3/user" || stringField(state, "package-state") != "install-state-new" ||
+				!((kind == "install-pkg-img" && name == archive) || (kind == "install-pkg-pkg" && strings.HasPrefix(name, "cat9k-") && strings.HasSuffix(name, "."+base+".SPA.pkg") && path.Base(name) == name)) {
+				return bad
+			}
+			seen[name] = true
+			matches := 0
+			for _, pkg := range packages {
+				if stringField(pkg, "pkg-name") != name {
+					continue
+				}
+				matches++
+				data, ok := objectField(pkg, "pkg-data")
+				size, err := strconv.ParseUint(stringField(data, "pkg-size"), 10, 64)
+				verification := stringField(data, "verify-status")
+				if !ok || err != nil || size != files["flash:"+name] || stringField(pkg, "pkg-dir") != "/mnt/sd3/user" || stringField(pkg, "pkg-action") != "install-package-action-none" ||
+					(verification != "install-package-verify-ok" && verification != "install-package-verify-deferred" && verification != "install-package-verify-not-done") {
+					return bad
+				}
+			}
+			if matches != 1 {
+				return bad
+			}
+		}
+		if !seen[archive] {
+			return bad
+		}
+		return nil
+	}
+	return bad
 }
 
 func (a *Adapter) ReadRetiredArchive(ctx context.Context, path string, size int64, dst io.Writer) error {

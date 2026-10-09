@@ -166,7 +166,16 @@ func (r *Reconciler) runControllerHandoff(ctx context.Context, up *ops.IOSXESoft
 			if err != nil || !ready {
 				return wait, err
 			}
-			return r.runSWIMPreparation(ctx, up, h)
+			result, err := r.runSWIMPreparation(ctx, up, h)
+			if err != nil {
+				// Surface the current preparation blocker instead of leaving an
+				// earlier, transient admission message in the parent status.
+				return r.updateStatus(ctx, up, func(cur *ops.IOSXESoftwareUpgrade) {
+					cur.Status.Message = boundedWorkerMessage("Catalyst Center preparation blocked: " + err.Error())
+					r.setReady(cur, metav1.ConditionFalse, "SWIMPreparationBlocked", cur.Status.Message, now)
+				}, wait)
+			}
+			return result, nil
 		}
 	}
 	stage := "Readiness"

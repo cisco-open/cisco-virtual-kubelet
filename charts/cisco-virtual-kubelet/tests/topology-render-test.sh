@@ -248,6 +248,15 @@ grep -Fq -- '- --app-hosting-access-mode=readWrite' "$managed_render"
 grep -Fq -- '- --network-management-service-account=cvk-cisco-virtual-kubelet-network-management' "$managed_render"
 grep -Fq -- '- --network-management-access-mode=readOnly' "$managed_render"
 
+# The live admission contract is discovered by the Helm release label. A
+# rendered-but-unlabelled SWIM policy would be omitted from that inventory.
+swim_admission_render="$scratch_dir/swim-admission.yaml"
+helm template cvk "$chart_dir" --namespace cisco-vk-system \
+  --kube-version 1.35.0 --set topology.enabled=true \
+  --set controller.leaderElect=true --set rbac.profile=strict \
+  --show-only templates/swim-handoff-admission.yaml >"$swim_admission_render"
+test "$(grep -c '^    app.kubernetes.io/instance: cvk$' "$swim_admission_render")" -eq 2
+
 # Derived names reserve suffix space before truncation, so long release names
 # cannot collapse the two cluster-reserved identities onto the same DNS label.
 long_name_render="$scratch_dir/long-name.yaml"
