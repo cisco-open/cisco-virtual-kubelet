@@ -908,8 +908,13 @@
       "type": "sdwan_service_route_policy_feature",
       "name": "service_route_policy_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "route-policies",
+        "route-policy-references"
+      ]
     },
     {
       "type": "sdwan_service_switchport_feature",
@@ -1158,8 +1163,13 @@
       "type": "sdwan_transport_route_policy_feature",
       "name": "transport_route_policy_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "route-policies",
+        "route-policy-references"
+      ]
     },
     {
       "type": "sdwan_transport_tracker_group_feature",

@@ -436,4 +436,8 @@ folder.mkdir(exist_ok=True)
     family: json.loads((args.provider / "gen/models/profile_parcels" / f"{family}_ipv6_acl.json").read_text())["request"]["properties"]["data"]
     for family in ("service", "transport")
 }, indent=2, sort_keys=True) + "\n")
+(folder / "route-policy-schemas.json").write_text(json.dumps({
+    family: json.loads((args.provider / "gen/models/profile_parcels" / f"{family}_route_policy.json").read_text())["request"]["properties"]["data"]
+    for family in ("service", "transport")
+}, indent=2, sort_keys=True) + "\n")
 (folder / "LICENSE").write_text((args.provider / "LICENSE").read_text())

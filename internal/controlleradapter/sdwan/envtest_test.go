@@ -65,7 +65,7 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 			"topology-mesh.yaml":       {"network_hierarchy", "feature_profiles"},
 			"topology-hubspoke.yaml":   {"network_hierarchy", "feature_profiles"},
 		}
-		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular", "transport-trackers", "routing-ospf", "routing-eigrp", "zscaler-sse", "service-switchport", "service-multicast", "system-device-access", "ipv4-acls", "ipv6-acls", "policy-profile", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse"} {
+		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular", "transport-trackers", "routing-ospf", "routing-eigrp", "zscaler-sse", "service-switchport", "service-multicast", "system-device-access", "ipv4-acls", "ipv6-acls", "route-policies", "policy-profile", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse"} {
 			sections[name+".yaml"] = []string{"feature_profiles"}
 		}
 		for _, name := range []string{"templates", "cellular", "bfd", "igmp", "ntp", "omp", "pim", "applications", "dhcp", "ipsec", "snmp", "logging", "gre", "sig-credentials", "security", "ospf", "svi", "cellular-interface", "switchport"} {

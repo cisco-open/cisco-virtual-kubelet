@@ -114,6 +114,11 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		return nil, err
 	}
 	out = append(out, ipv6ACLs...)
+	routePolicies, err := compileRoutePolicies(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, routePolicies...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any
