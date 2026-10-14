@@ -71,6 +71,8 @@ def property_schema(node, name):
         return {"oneOf": candidates}
     if len(candidates) > 1 and key.startswith(("service_routing_", "transport_routing_")):
         return {"oneOf":candidates}
+    if len(candidates) > 1 and key == "service_multicast" and all("optionType" in x.get("properties", {}) and "value" in x.get("properties", {}) for x in candidates):
+        return {"oneOf":candidates}
     if len(candidates) != 1:
         raise SystemExit(f"Ambiguous or missing schema property {name} in {key}")
     return candidates[0]
@@ -284,6 +286,7 @@ reviewed += [("transport", f, "tracker", "transport_" + f) for f in ("tracker", 
 reviewed += [("sse", "cisco", "cisco", "sse_cisco"), ("system", "ca_certificate", "ca_certificate", "ca_certificate")]
 reviewed += [(family, feature, "ospf", family+"_"+feature) for family, feature in [("service","routing_ospf"),("service","routing_ospfv3_ipv4"),("service","routing_ospfv3_ipv6"),("transport","routing_ospf")]]
 reviewed += [("service", "routing_eigrp", "eigrp", "service_routing_eigrp"), ("sse", "zscaler", "zscaler", "sse_zscaler"), ("service", "switchport", "switchport", "service_switchport")]
+reviewed += [("service", "multicast", "multicast", "service_multicast")]
 for family, feature, alias, key in reviewed:
     hcl = (args.module / ("sdwan_policy_objects.tf" if family == "policy_object" else "sdwan_features_" + family + ".tf")).read_text()
     resource = "sdwan_" + family + "_" + feature + ("" if family == "policy_object" else "_feature")

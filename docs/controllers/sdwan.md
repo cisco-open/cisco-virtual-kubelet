@@ -7,7 +7,7 @@ schemas, defaults and API behavior. Terraform is not a build, test or deployment
 dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 102 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 103 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -47,6 +47,7 @@ parity**. The pinned upstream module has 226 resource declarations. 102 resource
 | `examples/configs/sdwan/classic-switchport.yaml` | Classic switchport template | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/routing-eigrp.yaml` | Service EIGRP parcel | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/service-switchport.yaml` | Service switchport parcel | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/service-multicast.yaml` | Service multicast parcel | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/zscaler-sse.yaml` | Zscaler SSE parcel | Native lifecycle, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
@@ -62,7 +63,7 @@ An additional 35 declarations have native implementations but remain unqualified
 the policy-object profile and all 32 modern policy-object collections, system
 CA certificates, and custom applications (the lab lacks SD-AVC). SIG credential creation now passes after fixing the global flag
 and variable-secret payloads.
-88 declarations remain pending and TrustSec remains compatibility-blocked.
+87 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 

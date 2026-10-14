@@ -827,8 +827,11 @@
       "type": "sdwan_service_multicast_feature",
       "name": "service_multicast_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "service-multicast.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; VPN association and device activation excluded"
     },
     {
       "type": "sdwan_service_tracker_group_feature",

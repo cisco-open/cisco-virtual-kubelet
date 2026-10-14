@@ -1,0 +1,23 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: service-multicast-fixture
+  namespace: sdwan-lab
+spec:
+  controllerRef:
+    name: sdwan-lab
+  scope: global
+  managedSections: [feature_profiles]
+  modelSource:
+    format: netascode-sdwan
+    modelVersion: 1.5.0
+    resolved: true
+    sourceRevision: fixture-service-multicast-v1
+  source:
+    configMapRef:
+      name: sdwan-service-multicast-fixture
+      key: model.yaml
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 30s

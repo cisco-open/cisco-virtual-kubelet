@@ -341,5 +341,13 @@ task completion, post-task ID lookup, readback, update and deletion. The real
 Manager rejected creation with HTTP 400 `POLICYVALIDATION0001`: “SD-AVC is not
 enabled on any vManage.” Read-only inventory showed the fixture absent after
 the failed attempt. Live lifecycle and Kubernetes reconciliation remain
-pending until SD-AVC is enabled in a test lab. Status: **102 qualified, 35
-implemented but unqualified, 88 pending, one compatibility-blocked**.
+pending until SD-AVC is enabled in a test lab. Status: **103 qualified, 35
+implemented but unqualified, 87 pending, one compatibility-blocked**.
+
+## Service multicast fixture
+
+`service-multicast.yaml` passed native create/read/update/read with cleanup
+(6.78s) and live Kubernetes reconciliation (12.38s). The fixture includes
+nested IGMP join groups, PIM interfaces and source-specific multicast. The
+provider schema requires an access list for static RP rows; that branch was
+not part of this fixture. No VPN association or router activation was tested.

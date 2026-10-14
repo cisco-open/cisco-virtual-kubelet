@@ -5,13 +5,13 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 102 |
+| Fixture-qualified against live Manager | 103 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 88 |
+| Implementation still pending | 87 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies six more declarations: classic SVI, cellular and
-switchport templates, service EIGRP, service switchport, and Zscaler SSE. Each passed native live
+The latest increment qualifies seven more declarations: classic SVI, cellular and
+switchport templates, service EIGRP, service switchport, service multicast, and Zscaler SSE. Each passed native live
 create/read/update/read with cleanup and Kubernetes reconciliation. Qualification
 covers unattached fixture attributes, not router behavior or full parity. The
 previous increment qualified six routing/security declarations and six earlier
@@ -92,7 +92,7 @@ All examples have report-mode companion `NetworkControllerConfig` manifests.
 
 ## Implementation still required
 
-These 88 declarations are not merely waiting for live tests. Their native mapping
+These 87 declarations are not merely waiting for live tests. Their native mapping
 and/or lifecycle implementation remains unfinished. They must not be counted as parity.
 
 ### sdwan_centralized_policies.tf
@@ -152,7 +152,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_service_lan_vpn_interface_ipsec_feature.service_lan_vpn_interface_ipsec_feature`
 - `sdwan_service_lan_vpn_interface_svi_feature.service_lan_vpn_interface_svi_feature`
 - `sdwan_service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature.service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature`
-- `sdwan_service_multicast_feature.service_multicast_feature`
 - `sdwan_service_route_policy_feature.service_route_policy_feature`
 - `sdwan_service_ipv6_acl_feature.service_ipv6_acl_feature`
 

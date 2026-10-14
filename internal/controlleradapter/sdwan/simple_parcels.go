@@ -97,11 +97,11 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 	if (p.OSPFv3IPv4 != nil || p.OSPFv3IPv6 != nil) && collection != "service" {
 		return nil, errors.New("OSPFv3 requires a service profile")
 	}
-	if (p.EIGRP != nil || p.Switchports != nil) && collection != "service" {
-		return nil, errors.New("EIGRP and switchport require a service profile")
+	if (p.EIGRP != nil || p.Switchports != nil || p.Multicasts != nil) && collection != "service" {
+		return nil, errors.New("EIGRP, switchport and multicast require a service profile")
 	}
 	var registry struct{ Parcels map[string]scalarDefinition }
-	if len(p.OSPF)+len(p.OSPFv3IPv4)+len(p.OSPFv3IPv6)+len(p.EIGRP)+len(p.Switchports) > 0 {
+	if len(p.OSPF)+len(p.OSPFv3IPv4)+len(p.OSPFv3IPv6)+len(p.EIGRP)+len(p.Switchports)+len(p.Multicasts) > 0 {
 		if json.Unmarshal(scalarDefinitions, &registry) != nil {
 			return nil, ErrResponse
 		}
@@ -115,6 +115,7 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		{"ospfv3_ipv6_features", "service_routing_ospfv3_ipv6", "routing/ospfv3/ipv6", p.OSPFv3IPv6},
 		{"eigrp_features", "service_routing_eigrp", "routing/eigrp", p.EIGRP},
 		{"switchport_features", "service_switchport", "switchport", p.Switchports},
+		{"multicast_features", "service_multicast", "routing/multicast", p.Multicasts},
 	} {
 		for _, input := range routing.inputs {
 			meta, data, err := scalarParcelData(routing.kind, input)
