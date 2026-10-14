@@ -223,6 +223,13 @@ func equalModern(r Resource, o map[string]any) (bool, error) {
 	var w map[string]any
 	json.Unmarshal(want, &w)
 	normalized := map[string]any{"name": payload["name"], "description": payload["description"], "data": payload["data"]}
+	// Manager 20.18 adds this disabled feature flag on application lists even
+	// though the pinned provider and NaC model do not expose it.
+	if r.Type == "policy_object_application_list" {
+		if data, ok := normalized["data"].(map[string]any); ok && data["saasApp"] == false {
+			delete(data, "saasApp")
+		}
+	}
 	if normalized["description"] == nil {
 		normalized["description"] = ""
 	}

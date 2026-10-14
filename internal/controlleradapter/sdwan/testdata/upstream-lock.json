@@ -1695,31 +1695,33 @@
       "type": "sdwan_policy_object_app_probe_class",
       "name": "policy_object_app_probe_class",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-dependencies"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_application_list",
       "name": "policy_object_application_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_as_path_list",
       "name": "policy_object_as_path_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1729,9 +1731,9 @@
       "type": "sdwan_policy_object_class_map",
       "name": "policy_object_class_map",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile",
         "policy-dependencies"
@@ -1742,9 +1744,9 @@
       "type": "sdwan_policy_object_color_list",
       "name": "policy_object_color_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1754,42 +1756,45 @@
       "type": "sdwan_policy_object_data_ipv4_prefix_list",
       "name": "policy_object_data_ipv4_prefix_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-prefixes"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_data_ipv6_prefix_list",
       "name": "policy_object_data_ipv6_prefix_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-prefixes"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_expanded_community_list",
       "name": "policy_object_expanded_community_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-prefixes"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_extended_community_list",
       "name": "policy_object_extended_community_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1799,31 +1804,33 @@
       "type": "sdwan_policy_object_ipv4_prefix_list",
       "name": "policy_object_ipv4_prefix_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-prefixes"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_ipv6_prefix_list",
       "name": "policy_object_ipv6_prefix_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-prefixes"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_mirror",
       "name": "policy_object_mirror",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1833,9 +1840,9 @@
       "type": "sdwan_policy_object_policer",
       "name": "policy_object_policer",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1845,20 +1852,21 @@
       "type": "sdwan_policy_object_preferred_color_group",
       "name": "policy_object_preferred_color_group",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_security_data_ipv4_prefix_list",
       "name": "policy_object_security_data_ipv4_prefix_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1868,9 +1876,9 @@
       "type": "sdwan_policy_object_security_fqdn_list",
       "name": "policy_object_security_fqdn_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1880,44 +1888,47 @@
       "type": "sdwan_policy_object_security_geolocation_list",
       "name": "policy_object_security_geolocation_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_security_ips_signature",
       "name": "policy_object_security_ips_signature",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-prefixes",
         "policy-dependencies",
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_security_local_application_list",
       "name": "policy_object_security_local_application_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_security_local_domain_list",
       "name": "policy_object_security_local_domain_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1927,9 +1938,9 @@
       "type": "sdwan_policy_object_security_port_list",
       "name": "policy_object_security_port_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1939,9 +1950,9 @@
       "type": "sdwan_policy_object_security_protocol_list",
       "name": "policy_object_security_protocol_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1951,9 +1962,9 @@
       "type": "sdwan_policy_object_security_url_allow_list",
       "name": "policy_object_security_url_allow_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile",
         "policy-security"
@@ -1964,9 +1975,9 @@
       "type": "sdwan_policy_object_security_url_block_list",
       "name": "policy_object_security_url_block_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -1976,42 +1987,45 @@
       "type": "sdwan_policy_object_security_zone",
       "name": "policy_object_security_zone",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_unified_url_filtering",
       "name": "policy_object_unified_url_filtering",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_sla_class_list",
       "name": "policy_object_sla_class_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-dependencies"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_standard_community_list",
       "name": "policy_object_standard_community_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -2021,9 +2035,9 @@
       "type": "sdwan_policy_object_tloc_list",
       "name": "policy_object_tloc_list",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "reason": "Compiler fixtures and Terraform plan checks only; lab already has the singleton policy-object profile. Live tests require a controlled read-only-parent workflow or an empty Manager.",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture.",
       "fixtures": [
         "policy-profile"
       ],
@@ -2033,36 +2047,39 @@
       "type": "sdwan_policy_object_unified_advanced_inspection_profile",
       "name": "policy_object_unified_advanced_inspection_profile",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_unified_advanced_malware_protection",
       "name": "policy_object_unified_advanced_malware_protection",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-prefixes",
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_policy_object_unified_intrusion_prevention",
       "name": "policy_object_unified_intrusion_prevention",
       "source": "sdwan_policy_objects.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "fixtures": [
         "policy-dependencies",
         "policy-security"
       ],
-      "local_tested": true
+      "local_tested": true,
+      "reason": "Native child create/read/update/delete passed on Manager 20.18 under its existing policy-object profile; original parent child IDs were restored after each fixture."
     },
     {
       "type": "sdwan_zone_based_firewall_policy_definition",

@@ -5,8 +5,8 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 186 |
-| Implemented with local fixtures; live tests outstanding | 39 |
+| Fixture-qualified against live Manager | 218 |
+| Implemented with local fixtures; live tests outstanding | 7 |
 | Implementation still pending | 0 |
 | Compatibility-blocked (TrustSec) | 1 |
 
@@ -26,9 +26,7 @@ followed by Kubernetes reconciliation with the selected fixture. Include depende
 creation order, missing-reference behavior and resolved IDs for reference-bearing
 parcels. Do not attach these fixtures to routers as part of object qualification.
 
-All 32 policy-object declarations and their profile need live qualification. The
-current lab already has its singleton profile; an empty test Manager or an explicitly
-implemented existing-parent workflow is needed. CVK does not adopt that profile.
+All 32 policy-object child declarations passed native create/read/update/delete under the existing Manager policy-object profile using isolated CVK names. The original parent child-ID set was verified after cleanup for each fixture. The singleton profile itself remains unqualified: CVK does not adopt or update the existing lab profile, so its creation still needs an empty test Manager.
 
 | Upstream declaration | Native model path (under `sdwan`) | Fixture(s) | Prerequisite |
 |---|---|---|---|
@@ -36,38 +34,6 @@ implemented existing-parent workflow is needed. CVK does not adopt that profile.
 | `sdwan_custom_application` | `application_catalog.custom_applications` | [custom-applications.yaml](../../examples/configs/sdwan/custom-applications.yaml) | Enable SD-AVC on a test vManage; current Manager returns `POLICYVALIDATION0001` before creating the object |
 | `sdwan_policy_object_feature_profile` | `feature_profiles.policy_object_profile` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Manager permits only one policy-object profile |
 | `sdwan_system_ca_certificate_feature` | `feature_profiles.system_profiles.ca_certificate` | [ca-certificate.yaml](../../examples/configs/sdwan/ca-certificate.yaml) | Replace placeholder certificate ID with an existing lab certificate |
-| `sdwan_policy_object_app_probe_class` | `feature_profiles.policy_object_profile.app_probe_classes` | [policy-dependencies.yaml](../../examples/configs/sdwan/policy-dependencies.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_application_list` | `feature_profiles.policy_object_profile.application_lists` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_as_path_list` | `feature_profiles.policy_object_profile.as_path_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_class_map` | `feature_profiles.policy_object_profile.forwarding_classes` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml), [policy-dependencies.yaml](../../examples/configs/sdwan/policy-dependencies.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_color_list` | `feature_profiles.policy_object_profile.color_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_data_ipv4_prefix_list` | `feature_profiles.policy_object_profile.ipv4_data_prefix_lists` | [policy-prefixes.yaml](../../examples/configs/sdwan/policy-prefixes.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_data_ipv6_prefix_list` | `feature_profiles.policy_object_profile.ipv6_data_prefix_lists` | [policy-prefixes.yaml](../../examples/configs/sdwan/policy-prefixes.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_expanded_community_list` | `feature_profiles.policy_object_profile.expanded_community_lists` | [policy-prefixes.yaml](../../examples/configs/sdwan/policy-prefixes.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_extended_community_list` | `feature_profiles.policy_object_profile.extended_community_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_ipv4_prefix_list` | `feature_profiles.policy_object_profile.ipv4_prefix_lists` | [policy-prefixes.yaml](../../examples/configs/sdwan/policy-prefixes.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_ipv6_prefix_list` | `feature_profiles.policy_object_profile.ipv6_prefix_lists` | [policy-prefixes.yaml](../../examples/configs/sdwan/policy-prefixes.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_mirror` | `feature_profiles.policy_object_profile.mirrors` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_policer` | `feature_profiles.policy_object_profile.policers` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_preferred_color_group` | `feature_profiles.policy_object_profile.preferred_color_groups` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_data_ipv4_prefix_list` | `feature_profiles.policy_object_profile.security_data_ipv4_prefix_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_fqdn_list` | `feature_profiles.policy_object_profile.security_fqdn_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_geolocation_list` | `feature_profiles.policy_object_profile.security_geo_location_lists` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_ips_signature` | `feature_profiles.policy_object_profile.security_ips_signature_lists` | [policy-prefixes.yaml](../../examples/configs/sdwan/policy-prefixes.yaml), [policy-dependencies.yaml](../../examples/configs/sdwan/policy-dependencies.yaml), [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_local_application_list` | `feature_profiles.policy_object_profile.security_local_application_lists` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_local_domain_list` | `feature_profiles.policy_object_profile.security_local_domain_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_port_list` | `feature_profiles.policy_object_profile.security_port_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_protocol_list` | `feature_profiles.policy_object_profile.security_protocol_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_url_allow_list` | `feature_profiles.policy_object_profile.security_url_allow_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml), [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_url_block_list` | `feature_profiles.policy_object_profile.security_url_block_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_security_zone` | `feature_profiles.policy_object_profile.security_zones` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_unified_url_filtering` | `feature_profiles.policy_object_profile.security_url_filtering_profiles` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_sla_class_list` | `feature_profiles.policy_object_profile.sla_classes` | [policy-dependencies.yaml](../../examples/configs/sdwan/policy-dependencies.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_standard_community_list` | `feature_profiles.policy_object_profile.standard_community_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_tloc_list` | `feature_profiles.policy_object_profile.tloc_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_unified_advanced_inspection_profile` | `feature_profiles.policy_object_profile.security_advanced_inspection_profiles` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_unified_advanced_malware_protection` | `feature_profiles.policy_object_profile.security_advanced_malware_protection_profiles` | [policy-prefixes.yaml](../../examples/configs/sdwan/policy-prefixes.yaml), [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
-| `sdwan_policy_object_unified_intrusion_prevention` | `feature_profiles.policy_object_profile.security_intrusion_prevention_profiles` | [policy-dependencies.yaml](../../examples/configs/sdwan/policy-dependencies.yaml), [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
 
 The security-zone VPN entries follow the upstream string-valued VPN names. The
 fixture uses an interface zone; testing VPN-name references needs declared service
@@ -83,6 +49,12 @@ fixtures. Select one fixture at a time, starting with absent fixture names.
 CVK_SDWAN_LIVE=1 CVK_SDWAN_MUTATE=1 \
 CVK_SDWAN_PENDING_FIXTURE=transport-trackers \
 go test ./internal/controlleradapter/sdwan -run "^TestLivePendingLifecycle$" -count=1 -v
+
+# On a Manager with one existing policy-object profile, child fixtures can
+# be tested without creating or updating that parent. Run one fixture at a time.
+CVK_SDWAN_LIVE=1 CVK_SDWAN_MUTATE=1 \
+CVK_SDWAN_POLICY_FIXTURE=policy-security \
+go test ./internal/controlleradapter/sdwan -run "^TestLiveExistingPolicyObjectChildren$" -count=1 -v
 
 # KUBEBUILDER_ASSETS points to the Kubernetes 1.35.0 envtest binaries.
 CVK_SDWAN_LIVE=1 CVK_SDWAN_ENVTEST_LIVE=1 \

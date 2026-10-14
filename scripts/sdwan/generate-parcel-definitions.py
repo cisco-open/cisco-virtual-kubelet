@@ -406,6 +406,13 @@ for family, feature, alias, key in reviewed:
         generated["collection"] = re.search(r'feature_profiles.policy_object_profile\.(\w+)', source).group(1)
         generated["path"] = re.search(r'/policy-object/%v/([^" ]+)', model).group(1)
         generated["ignore_description"] = not bool(re.search(r'description\s*=\s*try\(each.value.description', source))
+        provider_definition = yaml.safe_load((args.provider / "gen/definitions/profile_parcels" / (family + "_" + feature + ".yaml")).read_text())
+        type_value = provider_definition.get("type_value")
+        if type_value is not None:
+            expected = 'sjson.Set(body, "data.type", ' + json.dumps(type_value) + ')'
+            if expected not in body:
+                raise SystemExit("Policy-object type discriminator changed: " + key)
+            put(generated["defaults"], "type", type_value)
     # Reviewed NaC numeric fields whose provider schema encodes strings.
     # Public constraints: netascode.cisco.com/docs/data_models/sdwan/policy_objects/{class_map,tloc_list}/
     if key == "policy_object_class_map":

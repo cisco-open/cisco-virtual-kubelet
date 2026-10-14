@@ -19,6 +19,7 @@ func TestLiveWANEdgeInventory(t *testing.T) {
 		"/dataservice/template/device/",
 		"/dataservice/v1/config-group",
 		"/dataservice/v1/policy-group",
+		"/dataservice/v1/feature-profile/sdwan/policy-object",
 		"/dataservice/template/policy/vsmart/",
 		"/dataservice/v1/topology-group",
 	}

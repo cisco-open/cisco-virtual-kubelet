@@ -120,10 +120,10 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
-An additional 39 declarations have native implementations but remain unqualified:
-the policy-object profile and all 32 modern policy-object collections, system
+An additional 7 declarations have native implementations but remain unqualified:
+the policy-object singleton profile, system
 CA certificates, custom applications (the lab lacks SD-AVC), cloud-provider settings (the lab already has the singleton), device-template attachment, centralized policy activation and topology-group activation. SIG credential creation now passes after fixing the global flag and variable-secret payloads.
-Site/router tag association passed live on BR-2-WAN with removal and cleanup. Configuration and policy group association also passed live on that router, but device deployment has not been pushed. No resource declarations remain pending; TrustSec remains compatibility-blocked. This inventory does not imply full field-level parity or router deployment qualification.
+Site/router tag association passed live on BR-2-WAN with removal and cleanup. Configuration and policy group association also passed live on that router, but device deployment has not been pushed. All 32 policy-object child declarations passed native lifecycle on Manager 20.18 under its existing singleton profile, with the original child-ID set restored after each fixture. The profile itself remains unqualified because the lab already has one. No resource declarations remain pending; TrustSec remains compatibility-blocked. This inventory does not imply full field-level parity or router deployment qualification.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 
@@ -288,14 +288,13 @@ work and does not count toward qualified coverage.
 
 ### Policy-object profile qualification
 
-`policy-profile.yaml` defines the singular policy-object profile and the original
-fifteen policy parcels. `policy-prefixes.yaml`, `policy-dependencies.yaml` and
-`policy-security.yaml` exercise the remaining seventeen modern policy-object
-declarations. All have passed local compiler and dependency tests. Live qualification is pending: Manager already has its singleton
-policy-object profile and rejects creation of another. Existing resources were
-not adopted or changed. The inventory marks these definitions
-`implemented-unqualified`.
-A read-only-parent workflow or an empty Manager is needed for live qualification.
+`policy-profile.yaml` defines the singular policy-object profile and fifteen
+policy parcels. `policy-prefixes.yaml`, `policy-dependencies.yaml` and
+`policy-security.yaml` exercise the remaining modern policy-object declarations.
+All 32 child declarations passed native lifecycle under the lab's existing
+singleton profile; every fixture restored the original child-ID set. CVK did
+not update or adopt the parent. Creating the singleton profile itself remains
+unqualified because the lab already has one; that test needs an empty Manager.
 
 The pinned module uses `forwarding_classes` where the current documentation calls
 this collection `class_maps`. This branch follows the pinned module's name.

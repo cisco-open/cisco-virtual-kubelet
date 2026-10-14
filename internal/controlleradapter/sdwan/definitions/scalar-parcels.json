@@ -7012,7 +7012,9 @@
     "policy_object_security_url_allow_list": {
       "collection": "security_url_allow_lists",
       "computed_defaults": {},
-      "defaults": {},
+      "defaults": {
+        "type": "urlallowed"
+      },
       "fields": {},
       "ignore_description": true,
       "lists": {
@@ -7050,7 +7052,9 @@
     "policy_object_security_url_block_list": {
       "collection": "security_url_block_lists",
       "computed_defaults": {},
-      "defaults": {},
+      "defaults": {
+        "type": "urlblocked"
+      },
       "fields": {},
       "ignore_description": true,
       "lists": {
