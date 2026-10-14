@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"strings"
 )
 
 var ErrDependencyPending = errors.New("SD-WAN profile dependency is not yet present")
@@ -43,7 +44,11 @@ func (c *Client) collection(ctx context.Context, r Resource) (string, error) {
 	if id == "" {
 		return "", ErrDependencyPending
 	}
-	return r.Collection + "/" + url.PathEscape(id) + "/banner", nil
+	parcel := r.ParcelPath
+	if parcel == "" {
+		parcel = "banner"
+	}
+	return r.Collection + "/" + url.PathEscape(id) + "/" + parcel, nil
 }
 func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, error) {
 	path, e := c.collection(ctx, r)
@@ -59,6 +64,31 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 	id := ""
 	if r.Kind == "profile" {
 		id, e = c.profileID(ctx, path, r.Name)
+	} else if r.Kind == "policy-parcel" {
+		var profile struct {
+			Count   *int `json:"profileParcelCount"`
+			Parcels []struct {
+				ID      string `json:"parcelId"`
+				Type    string `json:"parcelType"`
+				Payload struct {
+					Name string `json:"name"`
+				} `json:"payload"`
+			} `json:"associatedProfileParcels"`
+		}
+		if e = c.Request(ctx, "GET", strings.TrimSuffix(path, "/"+r.ParcelPath), nil, &profile); e != nil {
+			return nil, e
+		}
+		if profile.Parcels == nil && (profile.Count == nil || *profile.Count != 0) {
+			return nil, ErrResponse
+		}
+		for _, p := range profile.Parcels {
+			if p.Payload.Name == r.Name {
+				if id != "" || p.Type != r.ParcelPath || !validID.MatchString(p.ID) {
+					return nil, ErrResponse
+				}
+				id = p.ID
+			}
+		}
 	} else {
 		var result struct {
 			Data []struct {
@@ -97,6 +127,12 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 	return &Observation{ID: id, Body: body}, nil
 }
 func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
+	if r.Kind == "hierarchy" {
+		return c.createHierarchy(ctx, r)
+	}
+	if e := c.resolvePolicyRefs(ctx, r); e != nil {
+		return "", e
+	}
 	if r.Kind == "group" {
 		if e := c.resolveGroup(ctx, r); e != nil {
 			return "", e
@@ -111,6 +147,9 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 		return "", e
 	}
 	key := "id"
+	if r.Kind == "policy-list" {
+		key = "listId"
+	}
 	if r.Kind == "parcel" {
 		key = "parcelId"
 	}
@@ -121,6 +160,12 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 	return id, nil
 }
 func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) error {
+	if r.Kind == "hierarchy" {
+		return c.updateHierarchy(ctx, r, o)
+	}
+	if e := c.resolvePolicyRefs(ctx, r); e != nil {
+		return e
+	}
 	if r.Kind == "group" {
 		if e := c.resolveGroup(ctx, r); e != nil {
 			return e

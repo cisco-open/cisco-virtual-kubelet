@@ -30,8 +30,53 @@ provider runs inside the CVK worker. Native and upstream fixture cycles are
 separate, avoiding simultaneous writers. All observed fixture cleanup calls
 succeeded.
 
-Only the four listed resource types and the checked fixture attributes have
-live parity evidence. The full 226-resource module surface is not qualified.
+The expanded oracles passed for 54 resource declarations (48 distinct types) and
+the checked fixture attributes. The full 226-resource module surface is not qualified.
 The real-API-server tests exercise reconcilers directly; they do not claim a
 container-image rollout or Helm installation into the user's existing cluster.
 No asynchronous device deployment or recovery is claimed.
+
+## Expanded fixture run
+
+The pinned Terraform plan contained 44 SD-WAN objects plus its `terraform_data`
+input resource. Hierarchy prerequisites were applied first, followed by the full
+fixture plan. All native differential tests passed; targeted region-list cleanup
+and the remaining Terraform destroy completed successfully.
+
+Additional live evidence:
+
+- All 24 classic policy-object collections: native create/read/update/read/delete.
+- Seven hierarchy nodes: three groups, three regions, one unassigned site;
+  dependency-ordered creation, readback and reverse cleanup.
+- Eight additional feature-profile containers and their implicit application-priority
+  settings parcel: native create/read, changed-value update/read, cleanup.
+- Full Go regression suite and focused race checks passed after these mappings.
+- Delayed accepted-create readback has a regression test preventing duplicate POSTs.
+
+The first policy fixture run found two Manager behaviors: long names are rewritten,
+while some type labels change capitalization. Short fixture names and explicit
+case normalization resolved these mismatches. Region lists require hierarchy
+regions; the fixture now supplies those prerequisites. An absent tertiary color
+preference was rejected by this Manager; the working fixture supplies all three
+preferences. The upstream plan also exposed the application-priority settings
+parcel that is created even when settings are omitted from YAML.
+
+The combined 44-resource Kubernetes/live reconciliation test passed in 730.69s,
+including idempotent convergence and receipt-based reverse cleanup. No device attachment, policy activation or router-level behavior
+is claimed. Untested upstream fields and resources remain visible in the coverage
+inventory instead of being counted as complete.
+
+## System/CLI feature extension
+
+A separate upstream fixture set creates 12 objects: two isolated profiles plus ten
+feature parcels. Native lifecycle and upstream differential comparison passed for
+CLI config, system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed
+and performance monitoring. Both cycles cleaned up their created resources.
+Basic/global/OMP/NTP/logging definitions are reproducibly generated from pinned
+upstream mapping expressions, API value schemas and provider defaults. Unsupported
+mapping expressions or validation keywords fail generation. Nested-list and union
+schema validation have regression coverage; schema bounds rejected invalid fixture
+values before any controller write.
+
+The separate 12-object Kubernetes/live reconciliation passed in 108.06s,
+including convergence and receipt-bound cleanup.

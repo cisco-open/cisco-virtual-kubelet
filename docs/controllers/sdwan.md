@@ -5,13 +5,16 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. Four resource
-types have live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 54 resource declarations (48 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
 | `examples/configs/sdwan/banner.yaml` | Classic Cisco banner feature template | Create, read, update, cleanup, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/system-profile.yaml` | System feature profile, system banner parcel, unattached configuration group | Dependency order, create, read, cleanup, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup, upstream equivalence |
+| `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup, upstream equivalence |
+| `examples/configs/sdwan/feature-profiles.yaml` | Eight other profile containers and implicit application-priority policy settings | Create, read, changed-value update, cleanup, upstream equivalence |
+| `examples/configs/sdwan/system-features.yaml` | CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring | Create, read, update, cleanup, upstream equivalence |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -29,12 +32,30 @@ The public model remains the upstream `sdwan` document. The format is
 
 - `edge_feature_templates.banner_templates`: name, description, device types,
   login/MOTD literals and variables, including upstream device-type defaults.
-- `feature_profiles.system_profiles`: profile name/description and the banner
-  feature, including upstream newline and variable encoding.
+- `feature_profiles.system_profiles`: profile name/description, banner, basic,
+  BFD, global, OMP, NTP, logging, MRF, flexible port speed and performance monitoring.
+  `feature_profiles.cli_profiles.config` supports native CLI parcels.
+  Scalar and nested-list definitions for basic/global/OMP/NTP/logging are generated
+  from pinned module mappings and provider defaults/value schemas. Regenerate with
+  `scripts/sdwan/generate-parcel-definitions.py MODULE_CHECKOUT PROVIDER_CHECKOUT`.
+  Generated metadata retains the upstream MPL-2.0 license in `definitions/LICENSE`.
 - `configuration_groups`: name/description and references to declared system,
   transport, service, CLI or other profiles. Device associations are not enabled.
-- Name/description mappings for the other profile collections in `profiles.go`
-  are implemented but have no live deployment qualification yet.
+- Name/description mappings for the other eight profile collections, plus the
+  automatically created application-priority settings parcel and visibility flags.
+- All 24 classic `policy_objects` collections, including named SLA probe references.
+  Policy names are limited to 32 characters because this Manager rewrites longer names.
+- `network_hierarchy` groups/regions through levels 0–2 and unassigned sites with
+  the 20.18 location/GPS model. Global collectors remain unsupported.
+
+`deployment.yaml` combines the qualified fixtures under one config and five
+managed sections. Use `deployment-config.yaml` with its resolved output instead
+of installing individual configs that would compete for the same section Lease.
+The combined fixture includes hierarchy prerequisites for region lists. For
+`policy-objects-config.yaml`, resolve `policy-deployment.yaml` so that the region
+prerequisite is included. `system-features-config.yaml` uses `system-features.yaml`
+as an alternative feature-profile section owner. The
+compiler allows up to 512 resources, bounded to 128 per section by journal capacity.
 
 Unknown fields and unsupported sections fail before mutation. Credentials and
 intent Secret injection are separate concerns: endpoint credentials work through
@@ -122,20 +143,22 @@ and the appropriate TLS setting, then run:
 
 ```bash
 python3 scripts/sdwan/oracle.py --terraform terraform --execute
+python3 scripts/sdwan/oracle.py --terraform terraform --fixture-set system-features --execute
 ```
 
 The script checks fixture names are absent, pins dependencies, checks the plan
-contains exactly the four allowed SD-WAN resource creations, applies upstream,
+contains exactly the selected fixture set (44 core objects or 12 system/CLI objects), applies upstream,
 compares native observations, and destroys the upstream fixtures. It never
-attaches devices. Run it without `--execute` for plan validation only. Do not run
+attaches devices. It stages hierarchy creation before region lists because the
+upstream module does not express that dependency, and destroys region lists first. Run it without `--execute` for plan validation only. Do not run
 the oracle while CVK is managing those same fixture names. Terraform state and
 plans stay ignored; do not add them to Git.
 
 ## Remaining deployment parity
 
 The remaining resource mappings, full upstream schema/default coverage, classic
-device templates, routing and transport/service features, policy objects and
-policies, network hierarchy, topology/policy groups, settings, device variables,
+device templates, routing and transport/service features, modern policy-object parcels and
+policy definitions, global hierarchy collectors, topology/policy groups, settings, device variables,
 attachment/deployment, asynchronous activation recovery, pruning and import are
 not complete. Reproducible device-level qualification also needs explicit WAN-edge
 targets and a restoration policy. Inventory visibility does not authorize choosing

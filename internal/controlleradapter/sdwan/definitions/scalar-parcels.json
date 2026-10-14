@@ -1,0 +1,2287 @@
+{
+  "license": "MPL-2.0",
+  "module_commit": "5fbf037ea57368c7e6e77694c81330b6f7b16666",
+  "parcels": {
+    "basic": {
+      "defaults": {
+        "adminTechOnFailure": {
+          "optionType": "default",
+          "value": true
+        },
+        "affinityGroupNumber": {
+          "optionType": "default"
+        },
+        "affinityGroupPreference": {
+          "optionType": "default"
+        },
+        "affinityPerVrf": [],
+        "affinityPreferenceAuto": {
+          "optionType": "default",
+          "value": false
+        },
+        "clock": {
+          "timezone": {
+            "optionType": "default",
+            "value": "UTC"
+          }
+        },
+        "consoleBaudRate": {
+          "optionType": "default",
+          "value": "9600"
+        },
+        "controlSessionPps": {
+          "optionType": "default",
+          "value": 300
+        },
+        "controllerGroupList": {
+          "optionType": "default"
+        },
+        "description": {
+          "optionType": "default"
+        },
+        "deviceGroups": {
+          "optionType": "default"
+        },
+        "epfr": {
+          "optionType": "default",
+          "value": "disabled"
+        },
+        "gpsLocation": {
+          "geoFencing": {
+            "enable": {
+              "optionType": "default",
+              "value": false
+            },
+            "range": {
+              "optionType": "default",
+              "value": 100
+            },
+            "sms": {
+              "enable": {
+                "optionType": "default",
+                "value": false
+              },
+              "mobileNumber": []
+            }
+          },
+          "latitude": {
+            "optionType": "default"
+          },
+          "longitude": {
+            "optionType": "default"
+          }
+        },
+        "idleTimeout": {
+          "optionType": "default"
+        },
+        "location": {
+          "optionType": "default"
+        },
+        "maxOmpSessions": {
+          "optionType": "default"
+        },
+        "multiTenant": {
+          "optionType": "default",
+          "value": false
+        },
+        "onDemand": {
+          "onDemandEnable": {
+            "optionType": "default",
+            "value": false
+          },
+          "onDemandIdleTimeout": {
+            "optionType": "default",
+            "value": 10
+          }
+        },
+        "overlayId": {
+          "optionType": "default",
+          "value": 1
+        },
+        "portHop": {
+          "optionType": "default",
+          "value": true
+        },
+        "portOffset": {
+          "optionType": "default",
+          "value": 0
+        },
+        "siteType": {
+          "optionType": "default"
+        },
+        "trackDefaultGateway": {
+          "optionType": "default",
+          "value": true
+        },
+        "trackInterfaceTag": {
+          "optionType": "default"
+        },
+        "trackTransport": {
+          "optionType": "default",
+          "value": true
+        },
+        "trackerDiaStabilizeStatus": {
+          "optionType": "default",
+          "value": false
+        },
+        "transportGateway": {
+          "optionType": "default",
+          "value": false
+        }
+      },
+      "fields": {
+        "admin_tech_on_failure": {
+          "path": "adminTechOnFailure",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "admin_tech_on_failure_variable"
+        },
+        "affinity_group_number": {
+          "path": "affinityGroupNumber",
+          "schema": {
+            "maximum": 63,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "affinity_group_number_variable"
+        },
+        "affinity_group_preferences": {
+          "path": "affinityGroupPreference",
+          "schema": {
+            "items": {
+              "maximum": 63,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "maxItems": 12,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "Set",
+          "variable": "affinity_group_preferences_variable"
+        },
+        "affinity_preference_auto": {
+          "path": "affinityPreferenceAuto",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "affinity_preference_auto_variable"
+        },
+        "console_baud_rate": {
+          "path": "consoleBaudRate",
+          "schema": {
+            "default": "9600",
+            "enum": [
+              "1200",
+              "2400",
+              "4800",
+              "9600",
+              "19200",
+              "38400",
+              "57600",
+              "115200"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "console_baud_rate_variable"
+        },
+        "control_session_pps": {
+          "path": "controlSessionPps",
+          "schema": {
+            "default": 300,
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "control_session_pps_variable"
+        },
+        "controller_groups": {
+          "path": "controllerGroupList",
+          "schema": {
+            "additionalProperties": false,
+            "items": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "Set",
+          "variable": "controller_groups_variable"
+        },
+        "device_groups": {
+          "path": "deviceGroups",
+          "schema": {
+            "additionalProperties": false,
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "Set",
+          "variable": "device_groups_variable"
+        },
+        "enhanced_app_aware_routing": {
+          "path": "epfr",
+          "schema": {
+            "default": "disabled",
+            "enum": [
+              "disabled",
+              "aggressive",
+              "moderate",
+              "conservative"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "enhanced_app_aware_routing_variable"
+        },
+        "geo_fencing_enable": {
+          "path": "gpsLocation.geoFencing.enable",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool"
+        },
+        "geo_fencing_range": {
+          "path": "gpsLocation.geoFencing.range",
+          "schema": {
+            "default": 100,
+            "maximum": 10000,
+            "minimum": 100,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "geo_fencing_range_variable"
+        },
+        "geo_fencing_sms_enable": {
+          "path": "gpsLocation.geoFencing.sms.enable",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool"
+        },
+        "idle_timeout": {
+          "path": "idleTimeout",
+          "schema": {
+            "maximum": 300,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "idle_timeout_variable"
+        },
+        "latitude": {
+          "path": "gpsLocation.latitude",
+          "schema": {
+            "maximum": 90,
+            "minimum": -90,
+            "multipleOf": 1e-06,
+            "type": "number"
+          },
+          "type": "Float64",
+          "variable": "latitude_variable"
+        },
+        "location": {
+          "path": "location",
+          "schema": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "location_variable"
+        },
+        "longitude": {
+          "path": "gpsLocation.longitude",
+          "schema": {
+            "maximum": 180,
+            "minimum": -180,
+            "multipleOf": 1e-06,
+            "type": "number"
+          },
+          "type": "Float64",
+          "variable": "longitude_variable"
+        },
+        "max_omp_sessions": {
+          "path": "maxOmpSessions",
+          "schema": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "max_omp_sessions_variable"
+        },
+        "multitenant": {
+          "path": "multiTenant",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "multitenant_variable"
+        },
+        "on_demand_tunnel": {
+          "path": "onDemand.onDemandEnable",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "on_demand_tunnel_variable"
+        },
+        "on_demand_tunnel_idle_timeout": {
+          "path": "onDemand.onDemandIdleTimeout",
+          "schema": {
+            "default": 10,
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "on_demand_tunnel_idle_timeout_variable"
+        },
+        "overlay_id": {
+          "path": "overlayId",
+          "schema": {
+            "default": 1,
+            "maximum": 4294967295,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "overlay_id_variable"
+        },
+        "port_hopping": {
+          "path": "portHop",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "port_hopping_variable"
+        },
+        "port_offset": {
+          "path": "portOffset",
+          "schema": {
+            "default": 0,
+            "maximum": 19,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "port_offset_variable"
+        },
+        "site_types": {
+          "path": "siteType",
+          "schema": {
+            "items": {
+              "enum": [
+                "type-1",
+                "type-2",
+                "type-3",
+                "cloud",
+                "branch",
+                "br",
+                "spoke"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "Set",
+          "variable": "site_types_variable"
+        },
+        "system_description": {
+          "path": "description",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "system_description_variable"
+        },
+        "timezone": {
+          "path": "clock.timezone",
+          "schema": {
+            "enum": [
+              "Europe/Andorra",
+              "Asia/Dubai",
+              "Asia/Kabul",
+              "America/Antigua",
+              "America/Anguilla",
+              "Europe/Tirane",
+              "Asia/Yerevan",
+              "Africa/Luanda",
+              "Antarctica/McMurdo",
+              "Antarctica/Rothera",
+              "Antarctica/Palmer",
+              "Antarctica/Mawson",
+              "Antarctica/Davis",
+              "Antarctica/Casey",
+              "Antarctica/Vostok",
+              "Antarctica/DumontDUrville",
+              "Antarctica/Syowa",
+              "America/Argentina/Buenos_Aires",
+              "America/Argentina/Cordoba",
+              "America/Argentina/Salta",
+              "America/Argentina/Jujuy",
+              "America/Argentina/Tucuman",
+              "America/Argentina/Catamarca",
+              "America/Argentina/La_Rioja",
+              "America/Argentina/San_Juan",
+              "America/Argentina/Mendoza",
+              "America/Argentina/San_Luis",
+              "America/Argentina/Rio_Gallegos",
+              "America/Argentina/Ushuaia",
+              "Pacific/Pago_Pago",
+              "Europe/Vienna",
+              "Australia/Lord_Howe",
+              "Antarctica/Macquarie",
+              "Australia/Hobart",
+              "Australia/Currie",
+              "Australia/Melbourne",
+              "Australia/Sydney",
+              "Australia/Broken_Hill",
+              "Australia/Brisbane",
+              "Australia/Lindeman",
+              "Australia/Adelaide",
+              "Australia/Darwin",
+              "Australia/Perth",
+              "Australia/Eucla",
+              "America/Aruba",
+              "Europe/Mariehamn",
+              "Asia/Baku",
+              "Europe/Sarajevo",
+              "America/Barbados",
+              "Asia/Dhaka",
+              "Europe/Brussels",
+              "Africa/Ouagadougou",
+              "Europe/Sofia",
+              "Asia/Bahrain",
+              "Africa/Bujumbura",
+              "Africa/Porto-Novo",
+              "America/St_Barthelemy",
+              "Atlantic/Bermuda",
+              "Asia/Brunei",
+              "America/La_Paz",
+              "America/Kralendijk",
+              "America/Noronha",
+              "America/Belem",
+              "America/Fortaleza",
+              "America/Recife",
+              "America/Araguaina",
+              "America/Maceio",
+              "America/Bahia",
+              "America/Sao_Paulo",
+              "America/Campo_Grande",
+              "America/Cuiaba",
+              "America/Santarem",
+              "America/Porto_Velho",
+              "America/Boa_Vista",
+              "America/Manaus",
+              "America/Eirunepe",
+              "America/Rio_Branco",
+              "America/Nassau",
+              "Asia/Thimphu",
+              "Africa/Gaborone",
+              "Europe/Minsk",
+              "America/Belize",
+              "America/St_Johns",
+              "America/Halifax",
+              "America/Glace_Bay",
+              "America/Moncton",
+              "America/Goose_Bay",
+              "America/Blanc-Sablon",
+              "America/Toronto",
+              "America/Nipigon",
+              "America/Thunder_Bay",
+              "America/Iqaluit",
+              "America/Pangnirtung",
+              "America/Resolute",
+              "America/Atikokan",
+              "America/Rankin_Inlet",
+              "America/Winnipeg",
+              "America/Rainy_River",
+              "America/Regina",
+              "America/Swift_Current",
+              "America/Edmonton",
+              "America/Cambridge_Bay",
+              "America/Yellowknife",
+              "America/Inuvik",
+              "America/Creston",
+              "America/Dawson_Creek",
+              "America/Vancouver",
+              "America/Whitehorse",
+              "America/Dawson",
+              "Indian/Cocos",
+              "Africa/Kinshasa",
+              "Africa/Lubumbashi",
+              "Africa/Bangui",
+              "Africa/Brazzaville",
+              "Europe/Zurich",
+              "Africa/Abidjan",
+              "Pacific/Rarotonga",
+              "America/Santiago",
+              "Pacific/Easter",
+              "Africa/Douala",
+              "Asia/Shanghai",
+              "Asia/Harbin",
+              "Asia/Chongqing",
+              "Asia/Urumqi",
+              "Asia/Kashgar",
+              "America/Bogota",
+              "America/Costa_Rica",
+              "America/Havana",
+              "Atlantic/Cape_Verde",
+              "America/Curacao",
+              "Indian/Christmas",
+              "Asia/Nicosia",
+              "Europe/Prague",
+              "Europe/Berlin",
+              "Europe/Busingen",
+              "Africa/Djibouti",
+              "Europe/Copenhagen",
+              "America/Dominica",
+              "America/Santo_Domingo",
+              "Africa/Algiers",
+              "America/Guayaquil",
+              "Pacific/Galapagos",
+              "Europe/Tallinn",
+              "Africa/Cairo",
+              "Africa/El_Aaiun",
+              "Africa/Asmara",
+              "Europe/Madrid",
+              "Africa/Ceuta",
+              "Atlantic/Canary",
+              "Africa/Addis_Ababa",
+              "Europe/Helsinki",
+              "Pacific/Fiji",
+              "Atlantic/Stanley",
+              "Pacific/Chuuk",
+              "Pacific/Pohnpei",
+              "Pacific/Kosrae",
+              "Atlantic/Faroe",
+              "Europe/Paris",
+              "Africa/Libreville",
+              "Europe/London",
+              "America/Grenada",
+              "Asia/Tbilisi",
+              "America/Cayenne",
+              "Europe/Guernsey",
+              "Africa/Accra",
+              "Europe/Gibraltar",
+              "America/Godthab",
+              "America/Danmarkshavn",
+              "America/Scoresbysund",
+              "America/Thule",
+              "Africa/Banjul",
+              "Africa/Conakry",
+              "America/Guadeloupe",
+              "Africa/Malabo",
+              "Europe/Athens",
+              "Atlantic/South_Georgia",
+              "America/Guatemala",
+              "Pacific/Guam",
+              "Africa/Bissau",
+              "America/Guyana",
+              "Asia/Hong_Kong",
+              "America/Tegucigalpa",
+              "Europe/Zagreb",
+              "America/Port-au-Prince",
+              "Europe/Budapest",
+              "Asia/Jakarta",
+              "Asia/Pontianak",
+              "Asia/Makassar",
+              "Asia/Jayapura",
+              "Europe/Dublin",
+              "Asia/Jerusalem",
+              "Europe/Isle_of_Man",
+              "Asia/Kolkata",
+              "Indian/Chagos",
+              "Asia/Baghdad",
+              "Asia/Tehran",
+              "Atlantic/Reykjavik",
+              "Europe/Rome",
+              "Europe/Jersey",
+              "America/Jamaica",
+              "Asia/Amman",
+              "Asia/Tokyo",
+              "Africa/Nairobi",
+              "Asia/Bishkek",
+              "Asia/Phnom_Penh",
+              "Pacific/Tarawa",
+              "Pacific/Enderbury",
+              "Pacific/Kiritimati",
+              "Indian/Comoro",
+              "America/St_Kitts",
+              "Asia/Pyongyang",
+              "Asia/Seoul",
+              "Asia/Kuwait",
+              "America/Cayman",
+              "Asia/Almaty",
+              "Asia/Qyzylorda",
+              "Asia/Aqtobe",
+              "Asia/Aqtau",
+              "Asia/Oral",
+              "Asia/Vientiane",
+              "Asia/Beirut",
+              "America/St_Lucia",
+              "Europe/Vaduz",
+              "Asia/Colombo",
+              "Africa/Monrovia",
+              "Africa/Maseru",
+              "Europe/Vilnius",
+              "Europe/Luxembourg",
+              "Europe/Riga",
+              "Africa/Tripoli",
+              "Africa/Casablanca",
+              "Europe/Monaco",
+              "Europe/Chisinau",
+              "Europe/Podgorica",
+              "America/Marigot",
+              "Indian/Antananarivo",
+              "Pacific/Majuro",
+              "Pacific/Kwajalein",
+              "Europe/Skopje",
+              "Africa/Bamako",
+              "Asia/Rangoon",
+              "Asia/Ulaanbaatar",
+              "Asia/Hovd",
+              "Asia/Choibalsan",
+              "Asia/Macau",
+              "Pacific/Saipan",
+              "America/Martinique",
+              "Africa/Nouakchott",
+              "America/Montserrat",
+              "Europe/Malta",
+              "Indian/Mauritius",
+              "Indian/Maldives",
+              "Africa/Blantyre",
+              "America/Mexico_City",
+              "America/Cancun",
+              "America/Merida",
+              "America/Monterrey",
+              "America/Matamoros",
+              "America/Mazatlan",
+              "America/Chihuahua",
+              "America/Ojinaga",
+              "America/Hermosillo",
+              "America/Tijuana",
+              "America/Santa_Isabel",
+              "America/Bahia_Banderas",
+              "Asia/Kuala_Lumpur",
+              "Asia/Kuching",
+              "Africa/Maputo",
+              "Africa/Windhoek",
+              "Pacific/Noumea",
+              "Africa/Niamey",
+              "Pacific/Norfolk",
+              "Africa/Lagos",
+              "America/Managua",
+              "Europe/Amsterdam",
+              "Europe/Oslo",
+              "Asia/Kathmandu",
+              "Pacific/Nauru",
+              "Pacific/Niue",
+              "Pacific/Auckland",
+              "Pacific/Chatham",
+              "Asia/Muscat",
+              "America/Panama",
+              "America/Lima",
+              "Pacific/Tahiti",
+              "Pacific/Marquesas",
+              "Pacific/Gambier",
+              "Pacific/Port_Moresby",
+              "Asia/Manila",
+              "Asia/Karachi",
+              "Europe/Warsaw",
+              "America/Miquelon",
+              "Pacific/Pitcairn",
+              "America/Puerto_Rico",
+              "Asia/Gaza",
+              "Asia/Hebron",
+              "Europe/Lisbon",
+              "Atlantic/Madeira",
+              "Atlantic/Azores",
+              "Pacific/Palau",
+              "America/Asuncion",
+              "Asia/Qatar",
+              "Indian/Reunion",
+              "Europe/Bucharest",
+              "Europe/Belgrade",
+              "Europe/Kaliningrad",
+              "Europe/Moscow",
+              "Europe/Volgograd",
+              "Europe/Samara",
+              "Asia/Yekaterinburg",
+              "Asia/Omsk",
+              "Asia/Novosibirsk",
+              "Asia/Novokuznetsk",
+              "Asia/Krasnoyarsk",
+              "Asia/Irkutsk",
+              "Asia/Yakutsk",
+              "Asia/Khandyga",
+              "Asia/Vladivostok",
+              "Asia/Sakhalin",
+              "Asia/Ust-Nera",
+              "Asia/Magadan",
+              "Asia/Kamchatka",
+              "Asia/Anadyr",
+              "Africa/Kigali",
+              "Asia/Riyadh",
+              "Pacific/Guadalcanal",
+              "Indian/Mahe",
+              "Africa/Khartoum",
+              "Europe/Stockholm",
+              "Asia/Singapore",
+              "Atlantic/St_Helena",
+              "Europe/Ljubljana",
+              "Arctic/Longyearbyen",
+              "Europe/Bratislava",
+              "Africa/Freetown",
+              "Europe/San_Marino",
+              "Africa/Dakar",
+              "Africa/Mogadishu",
+              "America/Paramaribo",
+              "Africa/Juba",
+              "Africa/Sao_Tome",
+              "America/El_Salvador",
+              "America/Lower_Princes",
+              "Asia/Damascus",
+              "Africa/Mbabane",
+              "America/Grand_Turk",
+              "Africa/Ndjamena",
+              "Indian/Kerguelen",
+              "Africa/Lome",
+              "Asia/Bangkok",
+              "Asia/Dushanbe",
+              "Pacific/Fakaofo",
+              "Asia/Dili",
+              "Asia/Ashgabat",
+              "Africa/Tunis",
+              "Pacific/Tongatapu",
+              "Europe/Istanbul",
+              "America/Port_of_Spain",
+              "Pacific/Funafuti",
+              "Asia/Taipei",
+              "Africa/Dar_es_Salaam",
+              "Europe/Kiev",
+              "Europe/Uzhgorod",
+              "Europe/Zaporozhye",
+              "Europe/Simferopol",
+              "Africa/Kampala",
+              "Pacific/Johnston",
+              "Pacific/Midway",
+              "Pacific/Wake",
+              "America/New_York",
+              "America/Detroit",
+              "America/Kentucky/Louisville",
+              "America/Kentucky/Monticello",
+              "America/Indiana/Indianapolis",
+              "America/Indiana/Vincennes",
+              "America/Indiana/Winamac",
+              "America/Indiana/Marengo",
+              "America/Indiana/Petersburg",
+              "America/Indiana/Vevay",
+              "America/Chicago",
+              "America/Indiana/Tell_City",
+              "America/Indiana/Knox",
+              "America/Menominee",
+              "America/North_Dakota/Center",
+              "America/North_Dakota/New_Salem",
+              "America/North_Dakota/Beulah",
+              "America/Denver",
+              "America/Boise",
+              "America/Phoenix",
+              "America/Los_Angeles",
+              "America/Anchorage",
+              "America/Juneau",
+              "America/Sitka",
+              "America/Yakutat",
+              "America/Nome",
+              "America/Adak",
+              "America/Metlakatla",
+              "Pacific/Honolulu",
+              "America/Montevideo",
+              "Asia/Samarkand",
+              "Asia/Tashkent",
+              "Europe/Vatican",
+              "America/St_Vincent",
+              "America/Caracas",
+              "America/Tortola",
+              "America/St_Thomas",
+              "Asia/Ho_Chi_Minh",
+              "Pacific/Efate",
+              "Pacific/Wallis",
+              "Pacific/Apia",
+              "Asia/Aden",
+              "Indian/Mayotte",
+              "Africa/Johannesburg",
+              "Africa/Lusaka",
+              "Africa/Harare",
+              "UTC"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "timezone_variable"
+        },
+        "track_default_gateway": {
+          "path": "trackDefaultGateway",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "track_default_gateway_variable"
+        },
+        "track_interface_tag": {
+          "path": "trackInterfaceTag",
+          "schema": {
+            "maximum": 4294967295,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "track_interface_tag_variable"
+        },
+        "track_transport": {
+          "path": "trackTransport",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "track_transport_variable"
+        },
+        "tracker_dia_stabilize_status": {
+          "path": "trackerDiaStabilizeStatus",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "tracker_dia_stabilize_status_variable"
+        },
+        "transport_gateway": {
+          "path": "transportGateway",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "transport_gateway_variable"
+        }
+      },
+      "lists": {
+        "affinity_per_vrfs": {
+          "definition": {
+            "defaults": {
+              "affinityGroupNumber": {
+                "optionType": "default"
+              },
+              "vrfRange": {
+                "optionType": "default"
+              }
+            },
+            "fields": {
+              "affinity_group_number": {
+                "path": "affinityGroupNumber",
+                "schema": {
+                  "maximum": 63,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "affinity_group_number_variable"
+              },
+              "vrf_range": {
+                "path": "vrfRange",
+                "schema": {
+                  "maxLength": 11,
+                  "minLength": 1,
+                  "oneOf": [
+                    {
+                      "pattern": "^([1-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[01])$"
+                    },
+                    {
+                      "pattern": "^(([1-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[01])-([1-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[01]))$"
+                    }
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "vrf_range_variable"
+              }
+            },
+            "lists": {}
+          },
+          "path": "affinityPerVrf"
+        },
+        "geo_fencing_sms_mobile_numbers": {
+          "definition": {
+            "defaults": {},
+            "fields": {
+              "number": {
+                "path": "number",
+                "schema": {
+                  "maxLength": 20,
+                  "minLength": 7,
+                  "pattern": "[+][0-9]*",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "number_variable"
+              }
+            },
+            "lists": {}
+          },
+          "path": "gpsLocation.geoFencing.sms.mobileNumber"
+        }
+      }
+    },
+    "global": {
+      "defaults": {
+        "services_global": {
+          "services_ip": {
+            "bgpCommunityNewFormat": {
+              "optionType": "default",
+              "value": false
+            },
+            "etherchannelFlowLoadBalance": {
+              "optionType": "default"
+            },
+            "etherchannelVlanLoadBalance": {
+              "optionType": "default",
+              "value": false
+            },
+            "globalOtherSettingsConsoleLogging": {
+              "optionType": "default",
+              "value": true
+            },
+            "globalOtherSettingsIPSourceRoute": {
+              "optionType": "default",
+              "value": false
+            },
+            "globalOtherSettingsIgnoreBootp": {
+              "optionType": "default",
+              "value": true
+            },
+            "globalOtherSettingsSnmpIfindexPersist": {
+              "optionType": "default",
+              "value": true
+            },
+            "globalOtherSettingsTcpKeepalivesIn": {
+              "optionType": "default",
+              "value": true
+            },
+            "globalOtherSettingsTcpKeepalivesOut": {
+              "optionType": "default",
+              "value": true
+            },
+            "globalOtherSettingsTcpSmallServers": {
+              "optionType": "default",
+              "value": false
+            },
+            "globalOtherSettingsUdpSmallServers": {
+              "optionType": "default",
+              "value": false
+            },
+            "globalOtherSettingsVtyLineLogging": {
+              "optionType": "default",
+              "value": false
+            },
+            "globalSettingsHttpAuthentication": {
+              "optionType": "default"
+            },
+            "globalSettingsNat64TcpTimeout": {
+              "optionType": "default",
+              "value": 3600
+            },
+            "globalSettingsNat64UdpTimeout": {
+              "optionType": "default",
+              "value": 300
+            },
+            "globalSettingsSSHVersion": {
+              "optionType": "default"
+            },
+            "lacpSystemPriority": {
+              "optionType": "default"
+            },
+            "servicesGlobalServicesIpArpProxy": {
+              "optionType": "default",
+              "value": false
+            },
+            "servicesGlobalServicesIpCdp": {
+              "optionType": "default",
+              "value": true
+            },
+            "servicesGlobalServicesIpDomainLookup": {
+              "optionType": "default",
+              "value": false
+            },
+            "servicesGlobalServicesIpFtpPassive": {
+              "optionType": "default",
+              "value": false
+            },
+            "servicesGlobalServicesIpHttpServer": {
+              "optionType": "default",
+              "value": false
+            },
+            "servicesGlobalServicesIpHttpsServer": {
+              "optionType": "default",
+              "value": false
+            },
+            "servicesGlobalServicesIpLineVty": {
+              "optionType": "default",
+              "value": false
+            },
+            "servicesGlobalServicesIpLldp": {
+              "optionType": "default",
+              "value": true
+            },
+            "servicesGlobalServicesIpRcmd": {
+              "optionType": "default",
+              "value": false
+            },
+            "servicesGlobalServicesIpSourceIntrf": {
+              "optionType": "default"
+            }
+          }
+        }
+      },
+      "fields": {
+        "arp_proxy": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpArpProxy",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "arp_proxy_variable"
+        },
+        "bgp_community_new_format": {
+          "path": "services_global.services_ip.bgpCommunityNewFormat",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "bgp_community_new_format_variable"
+        },
+        "cdp": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpCdp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "cdp_variable"
+        },
+        "console_logging": {
+          "path": "services_global.services_ip.globalOtherSettingsConsoleLogging",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "console_logging_variable"
+        },
+        "domain_lookup": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpDomainLookup",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "domain_lookup_variable"
+        },
+        "etherchannel_flow_load_balance": {
+          "path": "services_global.services_ip.etherchannelFlowLoadBalance",
+          "schema": {
+            "default": "src-dst-ip",
+            "enum": [
+              "src-ip",
+              "dst-ip",
+              "src-dst-ip",
+              "src-mac",
+              "dst-mac",
+              "src-dst-mac",
+              "src-dst-mixed-ip-port",
+              "sdwan"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "etherchannel_flow_load_balance_variable"
+        },
+        "etherchannel_vlan_load_balance": {
+          "path": "services_global.services_ip.etherchannelVlanLoadBalance",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "etherchannel_vlan_load_balance_variable"
+        },
+        "ftp_passive": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpFtpPassive",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "ftp_passive_variable"
+        },
+        "http_authentication": {
+          "path": "services_global.services_ip.globalSettingsHttpAuthentication",
+          "schema": {
+            "enum": [
+              "local",
+              "aaa"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "http_authentication_variable"
+        },
+        "http_server": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpHttpServer",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "http_server_variable"
+        },
+        "https_server": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpHttpsServer",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "https_server_variable"
+        },
+        "ignore_bootp": {
+          "path": "services_global.services_ip.globalOtherSettingsIgnoreBootp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "ignore_bootp_variable"
+        },
+        "ip_source_routing": {
+          "path": "services_global.services_ip.globalOtherSettingsIPSourceRoute",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "ip_source_routing_variable"
+        },
+        "lacp_system_priority": {
+          "path": "services_global.services_ip.lacpSystemPriority",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "lacp_system_priority_variable"
+        },
+        "lldp": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpLldp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "lldp_variable"
+        },
+        "nat64_tcp_timeout": {
+          "path": "services_global.services_ip.globalSettingsNat64TcpTimeout",
+          "schema": {
+            "default": 3600,
+            "maximum": 536870,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "nat64_tcp_timeout_variable"
+        },
+        "nat64_udp_timeout": {
+          "path": "services_global.services_ip.globalSettingsNat64UdpTimeout",
+          "schema": {
+            "default": 300,
+            "maximum": 536870,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "nat64_udp_timeout_variable"
+        },
+        "rsh_rcp": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpRcmd",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "rsh_rcp_variable"
+        },
+        "snmp_ifindex_persist": {
+          "path": "services_global.services_ip.globalOtherSettingsSnmpIfindexPersist",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "snmp_ifindex_persist_variable"
+        },
+        "source_interface": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpSourceIntrf",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 3,
+            "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "source_interface_variable"
+        },
+        "ssh_version": {
+          "path": "services_global.services_ip.globalSettingsSSHVersion",
+          "schema": {
+            "enum": [
+              "2"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "ssh_version_variable"
+        },
+        "tcp_keepalives_in": {
+          "path": "services_global.services_ip.globalOtherSettingsTcpKeepalivesIn",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "tcp_keepalives_in_variable"
+        },
+        "tcp_keepalives_out": {
+          "path": "services_global.services_ip.globalOtherSettingsTcpKeepalivesOut",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "tcp_keepalives_out_variable"
+        },
+        "tcp_small_servers": {
+          "path": "services_global.services_ip.globalOtherSettingsTcpSmallServers",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "tcp_small_servers_variable"
+        },
+        "telnet_outbound": {
+          "path": "services_global.services_ip.servicesGlobalServicesIpLineVty",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "telnet_outbound_variable"
+        },
+        "udp_small_servers": {
+          "path": "services_global.services_ip.globalOtherSettingsUdpSmallServers",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "udp_small_servers_variable"
+        },
+        "vty_logging": {
+          "path": "services_global.services_ip.globalOtherSettingsVtyLineLogging",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "vty_logging_variable"
+        }
+      },
+      "lists": {}
+    },
+    "logging": {
+      "defaults": {
+        "disk": {
+          "diskEnable": {
+            "optionType": "default",
+            "value": true
+          },
+          "file": {
+            "diskFileRotate": {
+              "optionType": "default",
+              "value": 10
+            },
+            "diskFileSize": {
+              "optionType": "default",
+              "value": 10
+            }
+          }
+        },
+        "ipv6Server": [],
+        "server": [],
+        "tlsProfile": []
+      },
+      "fields": {
+        "disk_file_rotate": {
+          "path": "disk.file.diskFileRotate",
+          "schema": {
+            "default": 10,
+            "maximum": 10,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "disk_file_rotate_variable"
+        },
+        "disk_file_size": {
+          "path": "disk.file.diskFileSize",
+          "schema": {
+            "default": 10,
+            "maximum": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "disk_file_size_variable"
+        }
+      },
+      "lists": {
+        "ipv4_servers": {
+          "definition": {
+            "defaults": {
+              "priority": {
+                "optionType": "default",
+                "value": "informational"
+              },
+              "sourceInterface": {
+                "optionType": "default"
+              },
+              "tlsEnable": {
+                "optionType": "default",
+                "value": false
+              },
+              "tlsPropertiesCustomProfile": {
+                "optionType": "default",
+                "value": false
+              },
+              "tlsPropertiesProfile": {
+                "optionType": "default"
+              },
+              "vpn": {
+                "optionType": "default",
+                "value": 0
+              }
+            },
+            "fields": {
+              "hostname_ip": {
+                "path": "name",
+                "schema": {
+                  "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "hostname_ip_variable"
+              },
+              "severity": {
+                "path": "priority",
+                "schema": {
+                  "default": "informational",
+                  "enum": [
+                    "informational",
+                    "debugging",
+                    "notice",
+                    "warn",
+                    "error",
+                    "critical",
+                    "alert",
+                    "emergency"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "severity_variable"
+              },
+              "source_interface": {
+                "path": "sourceInterface",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "source_interface_variable"
+              },
+              "tls_enable": {
+                "path": "tlsEnable",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "tls_enable_variable"
+              },
+              "tls_properties_custom_profile": {
+                "path": "tlsPropertiesCustomProfile",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "tls_properties_custom_profile_variable"
+              },
+              "tls_properties_profile": {
+                "path": "tlsPropertiesProfile",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "tls_properties_profile_variable"
+              },
+              "vpn_id": {
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_id_variable"
+              }
+            },
+            "lists": {}
+          },
+          "path": "server"
+        },
+        "ipv6_servers": {
+          "definition": {
+            "defaults": {
+              "priority": {
+                "optionType": "default",
+                "value": "informational"
+              },
+              "sourceInterface": {
+                "optionType": "default"
+              },
+              "tlsEnable": {
+                "optionType": "default",
+                "value": false
+              },
+              "tlsPropertiesCustomProfile": {
+                "optionType": "default",
+                "value": false
+              },
+              "tlsPropertiesProfile": {
+                "optionType": "default"
+              },
+              "vpn": {
+                "optionType": "default",
+                "value": 0
+              }
+            },
+            "fields": {
+              "hostname_ip": {
+                "path": "name",
+                "schema": {
+                  "format": "ipv6",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "hostname_ip_variable"
+              },
+              "severity": {
+                "path": "priority",
+                "schema": {
+                  "default": "informational",
+                  "enum": [
+                    "informational",
+                    "debugging",
+                    "notice",
+                    "warn",
+                    "error",
+                    "critical",
+                    "alert",
+                    "emergency"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "severity_variable"
+              },
+              "source_interface": {
+                "path": "sourceInterface",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "source_interface_variable"
+              },
+              "tls_enable": {
+                "path": "tlsEnable",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "tls_enable_variable"
+              },
+              "tls_properties_custom_profile": {
+                "path": "tlsPropertiesCustomProfile",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "tls_properties_custom_profile_variable"
+              },
+              "tls_properties_profile": {
+                "path": "tlsPropertiesProfile",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "tls_properties_profile_variable"
+              },
+              "vpn_id": {
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_id_variable"
+              }
+            },
+            "lists": {}
+          },
+          "path": "ipv6Server"
+        },
+        "tls_profiles": {
+          "definition": {
+            "defaults": {
+              "cipherSuiteList": {
+                "optionType": "default"
+              },
+              "tlsVersion": {
+                "optionType": "default",
+                "value": "TLSv1.1"
+              }
+            },
+            "fields": {
+              "cipher_suites": {
+                "path": "cipherSuiteList",
+                "schema": {
+                  "items": {
+                    "additionalProperties": false,
+                    "enum": [
+                      "aes-128-cbc-sha",
+                      "aes-256-cbc-sha",
+                      "dhe-aes-cbc-sha2",
+                      "dhe-aes-gcm-sha2",
+                      "ecdhe-ecdsa-aes-gcm-sha2",
+                      "ecdhe-rsa-aes-cbc-sha2",
+                      "ecdhe-rsa-aes-gcm-sha2",
+                      "rsa-aes-cbc-sha2",
+                      "rsa-aes-gcm-sha2"
+                    ],
+                    "type": "string",
+                    "uniqueItems": true
+                  },
+                  "type": "array"
+                },
+                "type": "Set",
+                "variable": "cipher_suites_variable"
+              },
+              "name": {
+                "path": "profile",
+                "schema": {
+                  "maxLength": 30,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "name_variable"
+              },
+              "tls_version": {
+                "path": "tlsVersion",
+                "schema": {
+                  "default": "TLSv1.1",
+                  "enum": [
+                    "TLSv1.1",
+                    "TLSv1.2"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "tls_version_variable"
+              }
+            },
+            "lists": {}
+          },
+          "path": "tlsProfile"
+        }
+      }
+    },
+    "ntp": {
+      "defaults": {
+        "authentication": {
+          "authenticationKeys": [],
+          "trustedKeys": {
+            "optionType": "default"
+          }
+        },
+        "leader": {
+          "enable": {
+            "optionType": "default",
+            "value": false
+          },
+          "source": {
+            "optionType": "default"
+          },
+          "stratum": {
+            "optionType": "default"
+          }
+        },
+        "server": []
+      },
+      "fields": {
+        "authoritative_ntp_server": {
+          "path": "leader.enable",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "authoritative_ntp_server_variable"
+        },
+        "authoritative_ntp_server_source_interface": {
+          "path": "leader.source",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 3,
+            "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "authoritative_ntp_server_source_interface_variable"
+        },
+        "authoritative_ntp_server_stratum": {
+          "path": "leader.stratum",
+          "schema": {
+            "maximum": 15,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "authoritative_ntp_server_stratum_variable"
+        },
+        "trusted_keys": {
+          "path": "authentication.trustedKeys",
+          "schema": {
+            "additionalProperties": false,
+            "items": {
+              "maximum": 65535,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "Set",
+          "variable": "trusted_keys_variable"
+        }
+      },
+      "lists": {
+        "authentication_keys": {
+          "definition": {
+            "defaults": {},
+            "fields": {
+              "cmac_aes128_value": {
+                "path": "cmacAes128Value",
+                "schema": {
+                  "description": "CMAC-AES-128 (digest length = 128 bits, key length = [16 or 32] bytes)",
+                  "maxLength": 32,
+                  "minLength": 16,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "cmac_aes128_value_variable"
+              },
+              "hmac_sha2_value": {
+                "path": "hmacSha2Value",
+                "schema": {
+                  "description": "HMAC-SHA2-256 (digest length = 256 bits, key length = [1-32] bytes)",
+                  "pattern": "^\\S{1,32}$",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "hmac_sha2_value_variable"
+              },
+              "id": {
+                "path": "keyId",
+                "schema": {
+                  "maximum": 4294967295,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "id_variable"
+              },
+              "md5_value": {
+                "path": "md5Value",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string",
+                  "x-attributeMetadata": {
+                    "insecureConfiguration": {
+                      "attributeJsonPath": "$.data.authentication.authenticationKeys[*].md5Value",
+                      "description": "NTP authentication using MD5 - vulnerable to collision attacks and should use stronger algorithms",
+                      "reason": "Configuration employs an Insecure method for password storage",
+                      "remediation": "Transition to more secure algorithms like SHA and AES"
+                    }
+                  }
+                },
+                "type": "String",
+                "variable": "md5_value_variable"
+              }
+            },
+            "lists": {}
+          },
+          "path": "authentication.authenticationKeys"
+        },
+        "servers": {
+          "definition": {
+            "defaults": {
+              "key": {
+                "optionType": "default"
+              },
+              "name": {
+                "optionType": "default"
+              },
+              "prefer": {
+                "optionType": "default",
+                "value": false
+              },
+              "sourceInterface": {
+                "optionType": "default"
+              },
+              "version": {
+                "optionType": "default",
+                "value": 4
+              },
+              "vpn": {
+                "optionType": "default",
+                "value": 0
+              }
+            },
+            "fields": {
+              "authentication_key": {
+                "path": "key",
+                "schema": {
+                  "maximum": 4294967295,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "authentication_key_variable"
+              },
+              "hostname_ip": {
+                "path": "name",
+                "schema": {
+                  "oneOf": [
+                    {
+                      "format": "ipv6",
+                      "type": "string"
+                    },
+                    {
+                      "format": "hostname",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "String",
+                "variable": "hostname_ip_variable"
+              },
+              "ntp_version": {
+                "path": "version",
+                "schema": {
+                  "default": 4,
+                  "maximum": 4,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "ntp_version_variable"
+              },
+              "prefer": {
+                "path": "prefer",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "prefer_variable"
+              },
+              "source_interface": {
+                "path": "sourceInterface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 3,
+                  "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "source_interface_variable"
+              },
+              "vpn_id": {
+                "path": "vpn",
+                "schema": {
+                  "default": 0,
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_id_variable"
+              }
+            },
+            "lists": {}
+          },
+          "path": "server"
+        }
+      }
+    },
+    "omp": {
+      "defaults": {
+        "advertiseIpv4": {
+          "bgp": {
+            "optionType": "default",
+            "value": false
+          },
+          "connected": {
+            "optionType": "default",
+            "value": true
+          },
+          "eigrp": {
+            "optionType": "default",
+            "value": false
+          },
+          "isis": {
+            "optionType": "default",
+            "value": false
+          },
+          "lisp": {
+            "optionType": "default",
+            "value": false
+          },
+          "ospf": {
+            "optionType": "default",
+            "value": false
+          },
+          "ospfv3": {
+            "optionType": "default",
+            "value": false
+          },
+          "static": {
+            "optionType": "default",
+            "value": true
+          }
+        },
+        "advertiseIpv6": {
+          "bgp": {
+            "optionType": "default",
+            "value": false
+          },
+          "connected": {
+            "optionType": "default",
+            "value": true
+          },
+          "eigrp": {
+            "optionType": "default",
+            "value": false
+          },
+          "isis": {
+            "optionType": "default",
+            "value": false
+          },
+          "lisp": {
+            "optionType": "default",
+            "value": false
+          },
+          "ospf": {
+            "optionType": "default",
+            "value": false
+          },
+          "static": {
+            "optionType": "default",
+            "value": true
+          }
+        },
+        "advertisementInterval": {
+          "optionType": "default",
+          "value": 1
+        },
+        "aspathAutoTranslation": {
+          "optionType": "default",
+          "value": false
+        },
+        "ecmpLimit": {
+          "optionType": "default",
+          "value": 4
+        },
+        "eorTimer": {
+          "optionType": "default",
+          "value": 300
+        },
+        "gracefulRestart": {
+          "optionType": "default",
+          "value": true
+        },
+        "gracefulRestartTimer": {
+          "optionType": "default",
+          "value": 43200
+        },
+        "holdtime": {
+          "optionType": "default",
+          "value": 300
+        },
+        "ignoreRegionPathLength": {
+          "optionType": "default",
+          "value": false
+        },
+        "ompAdminDistanceIpv4": {
+          "optionType": "default",
+          "value": 251
+        },
+        "ompAdminDistanceIpv6": {
+          "optionType": "default",
+          "value": 251
+        },
+        "overlayAs": {
+          "optionType": "default"
+        },
+        "sendPathLimit": {
+          "optionType": "default",
+          "value": 4
+        },
+        "shutdown": {
+          "optionType": "default",
+          "value": false
+        },
+        "siteTypes": {
+          "optionType": "default"
+        },
+        "siteTypesForTransportGateway": {
+          "optionType": "default"
+        },
+        "transportGateway": {
+          "optionType": "default"
+        }
+      },
+      "fields": {
+        "advertise_ipv4_bgp": {
+          "path": "advertiseIpv4.bgp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_bgp_variable"
+        },
+        "advertise_ipv4_connected": {
+          "path": "advertiseIpv4.connected",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_connected_variable"
+        },
+        "advertise_ipv4_eigrp": {
+          "path": "advertiseIpv4.eigrp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_eigrp_variable"
+        },
+        "advertise_ipv4_isis": {
+          "path": "advertiseIpv4.isis",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_isis_variable"
+        },
+        "advertise_ipv4_lisp": {
+          "path": "advertiseIpv4.lisp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_lisp_variable"
+        },
+        "advertise_ipv4_ospf": {
+          "path": "advertiseIpv4.ospf",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_ospf_variable"
+        },
+        "advertise_ipv4_ospf_v3": {
+          "path": "advertiseIpv4.ospfv3",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_ospf_v3_variable"
+        },
+        "advertise_ipv4_static": {
+          "path": "advertiseIpv4.static",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv4_static_variable"
+        },
+        "advertise_ipv6_bgp": {
+          "path": "advertiseIpv6.bgp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv6_bgp_variable"
+        },
+        "advertise_ipv6_connected": {
+          "path": "advertiseIpv6.connected",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv6_connected_variable"
+        },
+        "advertise_ipv6_eigrp": {
+          "path": "advertiseIpv6.eigrp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv6_eigrp_variable"
+        },
+        "advertise_ipv6_isis": {
+          "path": "advertiseIpv6.isis",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv6_isis_variable"
+        },
+        "advertise_ipv6_lisp": {
+          "path": "advertiseIpv6.lisp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv6_lisp_variable"
+        },
+        "advertise_ipv6_ospf": {
+          "path": "advertiseIpv6.ospf",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv6_ospf_variable"
+        },
+        "advertise_ipv6_static": {
+          "path": "advertiseIpv6.static",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "advertise_ipv6_static_variable"
+        },
+        "advertisement_interval": {
+          "path": "advertisementInterval",
+          "schema": {
+            "default": 1,
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "advertisement_interval_variable"
+        },
+        "aspath_auto_translation": {
+          "path": "aspathAutoTranslation",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "aspath_auto_translation_variable"
+        },
+        "ecmp_limit": {
+          "path": "ecmpLimit",
+          "schema": {
+            "default": 4,
+            "maximum": 16,
+            "minimum": 1,
+            "type": "number"
+          },
+          "type": "Int64",
+          "variable": "ecmp_limit_variable"
+        },
+        "eor_timer": {
+          "path": "eorTimer",
+          "schema": {
+            "default": 300,
+            "maximum": 3600,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "eor_timer_variable"
+        },
+        "graceful_restart": {
+          "path": "gracefulRestart",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "graceful_restart_variable"
+        },
+        "graceful_restart_timer": {
+          "path": "gracefulRestartTimer",
+          "schema": {
+            "default": 43200,
+            "maximum": 31556952,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "graceful_restart_timer_variable"
+        },
+        "holdtime": {
+          "path": "holdtime",
+          "schema": {
+            "anyOf": [
+              {
+                "default": 0,
+                "maximum": 0,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "default": 300,
+                "maximum": 65535,
+                "minimum": 3,
+                "type": "integer"
+              }
+            ]
+          },
+          "type": "Int64",
+          "variable": "holdtime_variable"
+        },
+        "ignore_region_path_length": {
+          "path": "ignoreRegionPathLength",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "ignore_region_path_length_variable"
+        },
+        "omp_admin_distance_ipv4": {
+          "path": "ompAdminDistanceIpv4",
+          "schema": {
+            "default": 251,
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "omp_admin_distance_ipv4_variable"
+        },
+        "omp_admin_distance_ipv6": {
+          "path": "ompAdminDistanceIpv6",
+          "schema": {
+            "default": 251,
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "omp_admin_distance_ipv6_variable"
+        },
+        "overlay_as": {
+          "path": "overlayAs",
+          "schema": {
+            "maximum": 4294967295,
+            "minimum": 1,
+            "type": "number"
+          },
+          "type": "Int64",
+          "variable": "overlay_as_variable"
+        },
+        "send_path_limit": {
+          "path": "sendPathLimit",
+          "schema": {
+            "default": 4,
+            "maximum": 16,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "send_path_limit_variable"
+        },
+        "shutdown": {
+          "path": "shutdown",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "shutdown_variable"
+        },
+        "site_types": {
+          "path": "siteTypesForTransportGateway",
+          "schema": {
+            "items": {
+              "enum": [
+                "type-1",
+                "type-2",
+                "type-3",
+                "cloud",
+                "branch",
+                "br",
+                "spoke"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "Set",
+          "variable": "site_types_variable"
+        },
+        "transport_gateway": {
+          "path": "transportGateway",
+          "schema": {
+            "enum": [
+              "prefer",
+              "ecmp-with-direct-path"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "transport_gateway_variable"
+        }
+      },
+      "lists": {}
+    }
+  },
+  "provider_commit": "d3194b612c3f24421ec1727b6fa6e9c0bc98b07f"
+}

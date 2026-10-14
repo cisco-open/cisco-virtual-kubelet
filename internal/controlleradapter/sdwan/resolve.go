@@ -37,13 +37,25 @@ func Resolve(data []byte) ([]byte, error) {
 		}
 	}
 	if profiles, ok := stripe["feature_profiles"].(map[string]any); ok {
-		for _, collection := range profiles {
+		for profileKind, collection := range profiles {
 			items, ok := collection.([]any)
 			if !ok {
 				continue
 			}
 			for _, item := range items {
 				p := item.(map[string]any)
+				if profileKind == "application_priority_profiles" {
+					settings, ok := p["settings"].(map[string]any)
+					if !ok {
+						settings = map[string]any{}
+						p["settings"] = settings
+					}
+					for _, field := range []string{"ipv4_application_visibility", "ipv6_application_visibility", "ipv4_flow_visibility", "ipv6_flow_visibility"} {
+						if _, ok := settings[field]; !ok {
+							settings[field] = false
+						}
+					}
+				}
 				if _, ok := p["description"]; !ok {
 					p["description"] = ""
 				}
@@ -65,6 +77,30 @@ func Resolve(data []byte) ([]byte, error) {
 				g["description"] = ""
 			}
 		}
+	}
+	if hierarchy, ok := stripe["network_hierarchy"].(map[string]any); ok {
+		var resolve func(map[string]any)
+		resolve = func(node map[string]any) {
+			for _, kind := range []string{"groups", "regions", "sites"} {
+				items, _ := node[kind].([]any)
+				for _, item := range items {
+					child := item.(map[string]any)
+					if kind == "regions" {
+						if _, ok := child["is_secondary"]; !ok {
+							child["is_secondary"] = false
+						}
+					}
+					if kind == "sites" {
+						if _, ok := child["location"]; !ok {
+							child["location"] = "Undisclosed"
+						}
+					} else {
+						resolve(child)
+					}
+				}
+			}
+		}
+		resolve(hierarchy)
 	}
 	delete(root, "defaults")
 	return json.MarshalIndent(root, "", "  ")

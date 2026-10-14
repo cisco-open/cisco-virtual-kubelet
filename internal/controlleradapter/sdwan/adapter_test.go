@@ -34,6 +34,7 @@ type fixtureAPI struct {
 	body         map[string]any
 	posts, puts  int
 	loseResponse bool
+	hideReadback bool
 }
 
 func (f *fixtureAPI) serve(w http.ResponseWriter, r *http.Request) {
@@ -46,7 +47,7 @@ func (f *fixtureAPI) serve(w http.ResponseWriter, r *http.Request) {
 	case strings.HasSuffix(r.URL.Path, "/device"):
 		fmt.Fprint(w, `{"data":[]}`)
 	case r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/feature"):
-		if f.body == nil {
+		if f.body == nil || f.hideReadback {
 			fmt.Fprint(w, `{"data":[]}`)
 		} else {
 			json.NewEncoder(w).Encode(map[string]any{"data": []any{map[string]any{"templateId": "fixture-id", "templateName": f.body["templateName"], "templateType": "cisco_banner"}}})
@@ -167,5 +168,20 @@ func TestReconcilePauseFencesRequests(t *testing.T) {
 	reconcileFixture(t, a, cfg)
 	if api.posts != 0 {
 		t.Fatal("paused mutation")
+	}
+}
+
+func TestReconcileAcceptedCreateWaitsForReadback(t *testing.T) {
+	api := &fixtureAPI{hideReadback: true}
+	a, cfg := testAdapter(t, api)
+	cfg = reconcileFixture(t, a, cfg)
+	cfg = reconcileFixture(t, a, cfg)
+	if api.posts != 1 || api.puts != 0 {
+		t.Fatal("replayed accepted create")
+	}
+	api.hideReadback = false
+	cfg = reconcileFixture(t, a, cfg)
+	if cfg.Status.Phase != "InSync" {
+		t.Fatal("did not settle accepted receipt", cfg.Status.Conditions)
 	}
 }

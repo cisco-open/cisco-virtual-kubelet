@@ -25,7 +25,7 @@ import (
 const TypeName = "sdwan"
 
 func Descriptor() controlleradapter.Descriptor {
-	return controlleradapter.Descriptor{Type: TypeName, DisplayName: "Catalyst SD-WAN", NetAsCode: cvkv1.NetworkControllerNetAsCodeStatus{Format: "netascode-sdwan", Stripe: "sdwan", ModelVersions: []string{ModelVersion}, Sections: []string{"edge_feature_templates", "feature_profiles", "configuration_groups"}}, Capabilities: []string{"health", "inventory", "config"}, WorkerClusterRole: controlleradapter.SDWANWorkerClusterRole}
+	return controlleradapter.Descriptor{Type: TypeName, DisplayName: "Catalyst SD-WAN", NetAsCode: cvkv1.NetworkControllerNetAsCodeStatus{Format: "netascode-sdwan", Stripe: "sdwan", ModelVersions: []string{ModelVersion}, Sections: []string{"edge_feature_templates", "feature_profiles", "configuration_groups", "policy_objects", "network_hierarchy"}}, Capabilities: []string{"health", "inventory", "config"}, WorkerClusterRole: controlleradapter.SDWANWorkerClusterRole}
 }
 func init() {
 	controlleradapter.Register(controlleradapter.Registration{Descriptor: Descriptor(), Factory: newAdapter})
@@ -311,9 +311,16 @@ func (a *adapter) reconcile(ctx context.Context, cfg *configv1.NetworkController
 			fail("UnownedResource")
 			return
 		}
-		if o != nil && o.Attached {
-			fail("AttachedTemplateUnsupported")
+		if o == nil && receipt.State == "Accepted" {
+			a.publish(ctx, cfg, configv1.NetworkControllerConfigPhaseApplying, "AwaitingReadback", len(resources))
 			return
+		}
+		if o != nil && o.Attached {
+			same, err := Equal(r, o.Body)
+			if err != nil || !same {
+				fail("AttachedResourceUnsupported")
+				return
+			}
 		}
 	}
 	for i, r := range resources {

@@ -19,6 +19,12 @@ type Observation struct {
 }
 
 func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) {
+	if r.Kind == "hierarchy" {
+		return c.observeHierarchy(ctx, r)
+	}
+	if r.Kind == "policy-list" {
+		return c.observePolicyList(ctx, r)
+	}
 	if r.Kind != "" {
 		return c.observeModern(ctx, r)
 	}

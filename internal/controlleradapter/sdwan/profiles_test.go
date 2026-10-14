@@ -30,7 +30,7 @@ func TestProfileSchemaAndVariableMapping(t *testing.T) {
 	if data["login"].(map[string]any)["value"] != "hello\\n" || data["motd"].(map[string]any)["value"] != "{{message}}" {
 		t.Fatal("upstream variable/newline mapping")
 	}
-	if _, e = Compile([]byte("sdwan:\n  feature_profiles:\n    system_profiles:\n      - name: system\n        basic: {}\n")); e == nil {
+	if _, e = Compile([]byte("sdwan:\n  feature_profiles:\n    system_profiles:\n      - name: system\n        unknown_feature: {}\n")); e == nil {
 		t.Fatal("unsupported feature silently accepted")
 	}
 }

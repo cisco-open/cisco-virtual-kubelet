@@ -30,6 +30,8 @@ type Defaults struct {
 	} `json:"sdwan"`
 }
 type SDWAN struct {
+	NetworkHierarchy     *NetworkHierarchy          `json:"network_hierarchy,omitempty"`
+	PolicyObjects        map[string]json.RawMessage `json:"policy_objects,omitempty"`
 	ConfigurationGroups  []ConfigurationGroup       `json:"configuration_groups,omitempty"`
 	FeatureProfiles      map[string]json.RawMessage `json:"feature_profiles,omitempty"`
 	EdgeFeatureTemplates struct {
@@ -49,6 +51,7 @@ type Banner struct {
 var defaultBannerDevices = []string{"C8000V", "C8300-1N1S-4T2X", "C8300-1N1S-6T", "C8300-2N2S-6T", "C8300-2N2S-4T2X", "C8500-12X4QC", "C8500-12X", "C8500-20X6C", "C8500L-8S4X", "C8200-1N-4T", "C8200L-1N-4T"}
 
 type Resource struct {
+	ParcelPath                   string
 	Key, Name, Section, Type     string
 	Kind, Collection, ParentName string
 	ProfileRefs                  map[string]string
@@ -101,6 +104,16 @@ func Compile(data []byte) ([]Resource, error) {
 		body := map[string]any{"deviceType": mapped, "factoryDefault": false, "templateDescription": *b.Description, "templateMinVersion": "15.0.0", "templateName": b.Name, "templateType": "cisco_banner", "templateDefinition": map[string]any{"login": bannerValue(b.Login, b.LoginVariable), "motd": bannerValue(b.MOTD, b.MOTDVariable)}}
 		out = append(out, Resource{Key: "edge_feature_templates/banner_templates/" + b.Name, Name: b.Name, Section: "edge_feature_templates", Type: "cisco_banner", Body: body})
 	}
+	hierarchy, err := compileHierarchy(doc.SDWAN.NetworkHierarchy)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, hierarchy...)
+	policies, err := compilePolicyObjects(doc.SDWAN.PolicyObjects)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, policies...)
 	profiles, err := compileProfiles(doc.SDWAN.FeatureProfiles)
 	if err != nil {
 		return nil, err
@@ -115,6 +128,9 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, errors.New("SD-WAN document has no supported resources")
 	}
 	sort.Slice(out, func(i, j int) bool {
+		if (out[i].Kind == "hierarchy") != (out[j].Kind == "hierarchy") {
+			return out[i].Kind == "hierarchy"
+		}
 		if (out[i].Kind == "group") != (out[j].Kind == "group") {
 			return out[j].Kind == "group"
 		}
@@ -126,8 +142,15 @@ func Compile(data []byte) ([]Resource, error) {
 		}
 		return out[i].Key < out[j].Key
 	})
-	if len(out) > 32 {
-		return nil, errors.New("SD-WAN fixture exceeds 32 resource limit")
+	if len(out) > 512 {
+		return nil, errors.New("SD-WAN document exceeds 512 resource limit")
+	}
+	counts := map[string]int{}
+	for _, r := range out {
+		counts[r.Section]++
+		if counts[r.Section] > 128 {
+			return nil, errors.New("SD-WAN section exceeds journal capacity")
+		}
 	}
 	return out, nil
 }

@@ -21,5 +21,9 @@ provider "sdwan" {
 }
 module "sdwan" {
   source = "git::https://github.com/netascode/terraform-sdwan-nac-sdwan.git?ref=5fbf037ea57368c7e6e77694c81330b6f7b16666"
-  yaml_files = ["${path.module}/../banner.yaml", "${path.module}/../system-profile.yaml"]
+  yaml_files = [for file in var.fixture_files : "${path.module}/${file}"]
+}
+variable "fixture_files" {
+  type = list(string)
+  default = ["../banner.yaml", "../system-profile.yaml", "../policy-objects.yaml", "../network-hierarchy.yaml", "../feature-profiles.yaml"]
 }

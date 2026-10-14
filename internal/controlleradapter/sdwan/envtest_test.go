@@ -55,8 +55,17 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		if fixture == "" {
 			fixture = "banner.yaml"
 		}
-		if fixture != "banner.yaml" && fixture != "system-profile.yaml" {
+		if fixture != "banner.yaml" && fixture != "system-profile.yaml" && fixture != "policy-objects.yaml" && fixture != "deployment.yaml" && fixture != "system-features.yaml" {
 			t.Fatal("unsupported fixture")
+		}
+		if fixture == "system-features.yaml" {
+			cfg.Spec.ManagedSections = []string{"feature_profiles"}
+		}
+		if fixture == "deployment.yaml" {
+			cfg.Spec.ManagedSections = []string{"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"}
+		}
+		if fixture == "policy-objects.yaml" {
+			cfg.Spec.ManagedSections = []string{"policy_objects"}
 		}
 		if fixture == "system-profile.yaml" {
 			cfg.Spec.ManagedSections = []string{"feature_profiles", "configuration_groups"}
@@ -75,11 +84,13 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		}
 		savedGuard := a.remote.Guard
 		a.remote.Guard = nil
-		existing, e := a.remote.Observe(ctx, rs[0])
-		a.remote.Guard = savedGuard
-		if e != nil || existing != nil {
-			t.Fatal("live fixture name must be absent", e)
+		for _, r := range rs {
+			existing, e := a.remote.Observe(ctx, r)
+			if e != nil || existing != nil {
+				t.Fatal("live fixture name must be absent", r.Name, e)
+			}
 		}
+		a.remote.Guard = savedGuard
 
 		t.Cleanup(func() {
 			a.remote.Guard = nil
@@ -116,8 +127,14 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 	if e = k.Create(ctx, cfg); e != nil {
 		t.Fatal(e)
 	}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 64; i++ {
 		cfg = reconcileFixture(t, a, cfg)
+		if i%5 == 0 {
+			t.Logf("reconciliation pass %d: %s", i+1, cfg.Status.Phase)
+		}
+		if cfg.Status.Phase == configv1.NetworkControllerConfigPhaseInSync {
+			break
+		}
 	}
 	if cfg.Status.Phase != configv1.NetworkControllerConfigPhaseInSync {
 		t.Fatalf("reconciliation: %s %v", cfg.Status.Phase, cfg.Status.Conditions)

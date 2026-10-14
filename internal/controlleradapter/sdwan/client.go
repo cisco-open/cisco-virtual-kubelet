@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -195,7 +196,8 @@ func (c *Client) raw(ctx context.Context, method, path string, body []byte, cont
 // Request serializes session refresh and requests. Only GET may retry after 401;
 // a mutation with an uncertain outcome must be recovered by its durable journal.
 func (c *Client) Request(ctx context.Context, method, path string, input, output any) error {
-	if !strings.HasPrefix(path, "/dataservice/") || strings.ContainsAny(path, "?#") || strings.Contains(path, "..") {
+	hierarchyQuery := method == "GET" && regexp.MustCompile(`^/dataservice/v1/network-hierarchy\?offset=[0-9]+&limit=1500$`).MatchString(path)
+	if !strings.HasPrefix(path, "/dataservice/") || (!hierarchyQuery && strings.ContainsAny(path, "?#")) || strings.Contains(path, "..") {
 		return errors.New("invalid SD-WAN API path")
 	}
 	var b []byte

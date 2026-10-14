@@ -11,9 +11,26 @@ import (
 )
 
 type FeatureProfile struct {
-	Name        string         `json:"name"`
-	Description string         `json:"description,omitempty"`
-	Banner      *ProfileBanner `json:"banner,omitempty"`
+	NTP                   map[string]any               `json:"ntp,omitempty"`
+	Logging               map[string]any               `json:"logging,omitempty"`
+	Basic                 map[string]any               `json:"basic,omitempty"`
+	Global                map[string]any               `json:"global,omitempty"`
+	OMP                   map[string]any               `json:"omp,omitempty"`
+	BFD                   *BFD                         `json:"bfd,omitempty"`
+	Config                *CLIConfig                   `json:"config,omitempty"`
+	FlexiblePortSpeed     *FlexiblePortSpeed           `json:"flexible_port_speed,omitempty"`
+	MRF                   *MRF                         `json:"mrf,omitempty"`
+	PerformanceMonitoring *PerformanceMonitoring       `json:"performance_monitoring,omitempty"`
+	Settings              *ApplicationPrioritySettings `json:"settings,omitempty"`
+	Name                  string                       `json:"name"`
+	Description           string                       `json:"description,omitempty"`
+	Banner                *ProfileBanner               `json:"banner,omitempty"`
+}
+type ApplicationPrioritySettings struct {
+	IPv4App  bool `json:"ipv4_application_visibility"`
+	IPv6App  bool `json:"ipv6_application_visibility"`
+	IPv4Flow bool `json:"ipv4_flow_visibility"`
+	IPv6Flow bool `json:"ipv6_flow_visibility"`
 }
 type ProfileBanner struct {
 	Name          *string `json:"name,omitempty"`
@@ -45,6 +62,25 @@ func compileProfiles(raw map[string]json.RawMessage) ([]Resource, error) {
 			seen[p.Name] = true
 			key := "feature_profiles/" + section + "/" + p.Name
 			out = append(out, Resource{Key: key, Name: p.Name, Section: "feature_profiles", Kind: "profile", Type: collection, Collection: "/dataservice/v1/feature-profile/sdwan/" + collection, Body: map[string]any{"name": p.Name, "description": p.Description}})
+			parcels, e := simpleParcels(p, collection, key)
+			if e != nil {
+				return nil, e
+			}
+			out = append(out, parcels...)
+			if p.Settings != nil && collection != "application-priority" {
+				return nil, errors.New("settings require application priority profile")
+			}
+			if collection == "application-priority" {
+				settings := p.Settings
+				if settings == nil {
+					settings = &ApplicationPrioritySettings{}
+				}
+				data := map[string]any{"cflowd": map[string]any{"optionType": "network-settings", "value": true}}
+				for key, value := range map[string]bool{"appVisibility": settings.IPv4App, "appVisibilityIPv6": settings.IPv6App, "flowVisibility": settings.IPv4Flow, "flowVisibilityIPv6": settings.IPv6Flow} {
+					data[key] = map[string]any{"optionType": "global", "value": value}
+				}
+				out = append(out, Resource{Key: key + "/policy-settings", Name: p.Name + "_settings", Section: "feature_profiles", Kind: "policy-parcel", Type: "application_priority_policy_settings", Collection: "/dataservice/v1/feature-profile/sdwan/application-priority", ParentName: p.Name, ParcelPath: "policy-settings", Body: map[string]any{"name": p.Name + "_settings", "description": "", "data": data}})
+			}
 			if b := p.Banner; b != nil {
 				if collection != "system" {
 					return nil, errors.New("banner is only valid in a system profile")
@@ -72,6 +108,12 @@ func profileBannerValue(v, variable *string) map[string]any {
 	return map[string]any{"optionType": "default", "value": ""}
 }
 func equalModern(r Resource, o map[string]any) (bool, error) {
+	if r.Kind == "hierarchy" {
+		return equalHierarchy(r, o)
+	}
+	if r.Kind == "policy-list" {
+		return equalPolicyList(r, o)
+	}
 	if r.Kind == "group" {
 		return equalGroup(r, o)
 	}
