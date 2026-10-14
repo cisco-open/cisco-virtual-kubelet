@@ -5,25 +5,12 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 113 |
+| Fixture-qualified against live Manager | 115 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 77 |
+| Implementation still pending | 75 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies service and transport route-policy parcels
-with native lifecycle and live Kubernetes reconciliation. Policy-object route
-match references compile locally; live qualification needs an unowned
-policy-object profile. The preceding increment qualified IPv6 ACLs. The preceding increment
-qualified their IPv4 counterparts. Policy-object prefix, mirror and
-policer references compile and order locally but remain live-unqualified on this
-lab because its policy-object profile is already owned. Topology hub-and-spoke
-passed the same live checks in the preceding increment. Topology mesh passed the same
-checks in the preceding increment. The previous increment qualified
-two system device-access declarations, IPv4 and
-IPv6. Both passed native lifecycle and live Kubernetes reconciliation with inline
-prefixes. Prefix-list references passed compiler and dependency-order tests but
-need a lab where CVK can create the singleton policy-object profile; this lab
-already has one.
+The latest increment qualifies the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
 
 The previous increment qualified seven declarations: classic SVI, cellular and
 switchport templates, service EIGRP, service switchport, service multicast, and Zscaler SSE. Each passed native live
@@ -189,9 +176,7 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_transport_routing_bgp_feature.transport_routing_bgp_feature`
 - `sdwan_transport_ipv4_acl_feature.transport_ipv4_acl_feature`
 - `sdwan_transport_route_policy_feature.transport_route_policy_feature`
-- `sdwan_transport_management_vpn_feature.transport_management_vpn_feature`
 - `sdwan_transport_management_vpn_interface_ethernet_feature.transport_management_vpn_interface_ethernet_feature`
-- `sdwan_transport_wan_vpn_feature.transport_wan_vpn_feature`
 - `sdwan_transport_wan_vpn_feature_associate_routing_bgp_feature.transport_wan_vpn_feature_associate_routing_bgp_feature`
 - `sdwan_transport_wan_vpn_feature_associate_routing_ospf_feature.transport_wan_vpn_feature_associate_routing_ospf_feature`
 - `sdwan_transport_wan_vpn_interface_cellular_feature.transport_wan_vpn_interface_cellular_feature`

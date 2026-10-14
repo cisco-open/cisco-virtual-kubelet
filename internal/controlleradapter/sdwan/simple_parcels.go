@@ -119,6 +119,16 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		return nil, err
 	}
 	out = append(out, routePolicies...)
+	managementVPN, err := compileManagementVPN(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, managementVPN...)
+	wanVPN, err := compileWANVPN(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, wanVPN...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any
