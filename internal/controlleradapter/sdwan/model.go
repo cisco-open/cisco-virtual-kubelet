@@ -61,6 +61,7 @@ type ParcelReference struct {
 type Resource struct {
 	ParcelRefs                   []ParcelReference
 	HierarchySites, SiteGroups   []string
+	HubSpoke                     *hubSpokeInput
 	ParcelPath                   string
 	Key, Name, Section, Type     string
 	Kind, Collection, ParentName string
@@ -166,6 +167,9 @@ func Compile(data []byte) ([]Resource, error) {
 	}
 	out = append(out, profiles...)
 	if err := prepareMeshPolicies(out, doc.SDWAN.ManagerVersion); err != nil {
+		return nil, err
+	}
+	if err := prepareHubSpokePolicies(out, doc.SDWAN.ManagerVersion); err != nil {
 		return nil, err
 	}
 	groups, err := compileGroups(doc.SDWAN.ConfigurationGroups, profiles)

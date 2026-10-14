@@ -64,6 +64,21 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		if r.HubSpoke != nil && r.HubSpoke.UUIDMode {
+			for _, site := range r.HubSpoke.names() {
+				found := -1
+				for j, candidate := range resources {
+					if candidate.Kind == "hierarchy" && candidate.Type == "site" && candidate.Name == site {
+						found = j
+						break
+					}
+				}
+				if found < 0 {
+					return nil, errors.New("hub-spoke site is not declared")
+				}
+				dependencies[i] = append(dependencies[i], found)
+			}
+		}
 		for _, site := range r.HierarchySites {
 			if r.Type != "topology_mesh" {
 				continue

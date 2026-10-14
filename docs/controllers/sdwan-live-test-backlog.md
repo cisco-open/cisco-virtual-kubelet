@@ -5,13 +5,14 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 106 |
+| Fixture-qualified against live Manager | 107 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 84 |
+| Implementation still pending | 83 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies topology mesh with network-hierarchy site UUID
-resolution and live Kubernetes reconciliation. The previous increment qualified
+The latest increment qualifies topology hub-and-spoke with nested site UUID
+resolution and live Kubernetes reconciliation. Topology mesh passed the same
+checks in the preceding increment. The previous increment qualified
 two system device-access declarations, IPv4 and
 IPv6. Both passed native lifecycle and live Kubernetes reconciliation with inline
 prefixes. Prefix-list references passed compiler and dependency-order tests but

@@ -11,7 +11,7 @@ import (
 )
 
 func TestPendingNativeFixtures(t *testing.T) {
-	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2, "system-device-access": 3, "system-device-access-references": 6, "topology-mesh": 4} {
+	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2, "system-device-access": 3, "system-device-access-references": 6, "topology-mesh": 4, "topology-hubspoke": 6} {
 		t.Run(fixture, func(t *testing.T) {
 			rs := parcelFixtures(t, fixture)
 			if len(rs) != count {
@@ -129,17 +129,55 @@ func TestTopologyMeshSiteModes(t *testing.T) {
 	}
 }
 
+func TestTopologyHubSpokeSiteModes(t *testing.T) {
+	resources := parcelFixtures(t, "topology-hubspoke")
+	var policy Resource
+	for _, r := range resources {
+		if r.Type == "topology_hubspoke" {
+			policy = r
+		}
+	}
+	if policy.HubSpoke == nil || !policy.HubSpoke.UUIDMode || len(policy.HubSpoke.Spokes) != 1 || len(policy.HubSpoke.Spokes[0].Sites) != 1 || policy.HubSpoke.Spokes[0].Sites[0] != "CVK-SPOKE-SITE" {
+		t.Fatal("hub-spoke group expansion changed")
+	}
+	data := policy.Body["data"].(map[string]any)
+	if data["selectedHierarchyHubs"] == nil || data["selectedHubs"] != nil {
+		t.Fatal("20.18+ must use hierarchy UUIDs")
+	}
+	raw, err := os.ReadFile("../../../examples/configs/sdwan/topology-hubspoke.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := strings.Replace(string(raw), "sdwan:\n", "sdwan:\n  manager_version: 20.15\n", 1)
+	compiled, err := Compile([]byte(legacy))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range compiled {
+		if r.Type == "topology_hubspoke" {
+			data := r.Body["data"].(map[string]any)
+			if data["selectedHubs"] == nil || data["selectedHierarchyHubs"] != nil {
+				t.Fatal("legacy site-name mode changed")
+			}
+		}
+	}
+	bad := strings.Replace(string(raw), "spoke_site_groups: [CVK-SPOKE-GROUP]", "spoke_site_groups: [MISSING]", 1)
+	if _, err := Compile([]byte(bad)); err == nil {
+		t.Fatal("unknown spoke group accepted")
+	}
+}
+
 // These opt-in entry points exercise native Manager APIs only. They are not
 // executed by the normal local suite and do not imply live qualification.
 func TestLivePendingNamesAbsent(t *testing.T) {
-	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh"} {
+	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh", "topology-hubspoke"} {
 		t.Run(fixture, func(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, fixture)) })
 	}
 }
 func TestLivePendingLifecycle(t *testing.T) {
 	fixture := os.Getenv("CVK_SDWAN_PENDING_FIXTURE")
 	switch fixture {
-	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh":
+	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh", "topology-hubspoke":
 		liveParcelLifecycle(t, parcelFixtures(t, fixture))
 	default:
 		t.Skip("select a pending fixture with CVK_SDWAN_PENDING_FIXTURE")

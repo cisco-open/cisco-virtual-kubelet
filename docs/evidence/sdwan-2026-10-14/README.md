@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 106 resource declarations
+Native fixture coverage now includes 107 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -381,3 +381,14 @@ now finds the parcel in its parent profile and reads it by ID. The fixture
 resolved the declared site to the live hierarchy UUID. A local test also
 checks legacy site-name mode and rejects unknown site groups. No policy was
 activated or attached to a device.
+
+## Topology hub-and-spoke
+
+`topology-hubspoke.yaml` creates two isolated hierarchy groups and sites, a
+topology profile, and a hub-and-spoke policy with a selected hub, a spoke
+site-group, and a nested hub preference. Native create/read/update/read and
+reverse cleanup passed in 15.20s. Real Kubernetes reconciliation passed in
+32.92s, including status/Lease persistence, idempotence, and cleanup. The
+Manager received hierarchy UUIDs for all three target arrays. Local tests
+verify group expansion, legacy name mode, and rejection of unknown groups.
+No policy was activated or attached to a device.

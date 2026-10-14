@@ -425,4 +425,7 @@ folder.mkdir(exist_ok=True)
 (folder / "topology-mesh-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/topology_mesh.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "topology-hubspoke-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/topology_hubspoke.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
 (folder / "LICENSE").write_text((args.provider / "LICENSE").read_text())

@@ -1082,8 +1082,12 @@
       "type": "sdwan_topology_hub_spoke_feature",
       "name": "topology_hub_spoke_feature",
       "source": "sdwan_features_topology.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "topology-hubspoke"
+      ]
     },
     {
       "type": "sdwan_topology_mesh_feature",

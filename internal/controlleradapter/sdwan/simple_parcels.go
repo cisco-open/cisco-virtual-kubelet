@@ -99,6 +99,11 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		return nil, err
 	}
 	out = append(out, mesh...)
+	hubSpoke, err := compileHubSpokePolicies(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, hubSpoke...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any
