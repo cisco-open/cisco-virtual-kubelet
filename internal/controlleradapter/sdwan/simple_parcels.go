@@ -144,6 +144,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, dualRouterHA...)
+	associations, err := compileVPNRoutingAssociations(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, associations...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any

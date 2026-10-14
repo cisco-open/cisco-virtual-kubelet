@@ -155,7 +155,7 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 		return nil, nil
 	}
 	var body map[string]any
-	if e = c.Request(ctx, "GET", path+"/"+url.PathEscape(id), nil, &body); e != nil {
+	if e = c.Request(ctx, "GET", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(id), nil, &body); e != nil {
 		return nil, e
 	}
 	if e := c.resolveParcelRefs(ctx, r); e != nil {
@@ -202,7 +202,7 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 	if r.Kind == "policy-list" {
 		key = "listId"
 	}
-	if r.Kind == "parcel" {
+	if r.Kind == "parcel" || r.Kind == "association" {
 		key = "parcelId"
 	}
 	id, ok := result[key].(string)
@@ -221,6 +221,9 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 	if e := c.resolveHubSpokeSites(ctx, r); e != nil {
 		return e
 	}
+	if r.Kind == "association" && o != nil && o.ID == r.Body["parcelId"] {
+		return nil
+	}
 	if r.Kind == "hierarchy" {
 		return c.updateHierarchy(ctx, r, o)
 	}
@@ -236,7 +239,7 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 	if e != nil {
 		return e
 	}
-	return c.Request(ctx, "PUT", path+"/"+url.PathEscape(o.ID), r.Body, nil)
+	return c.Request(ctx, "PUT", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(o.ID), r.Body, nil)
 }
 func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id string) error {
 	if r.Kind == "" {
@@ -252,5 +255,5 @@ func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id strin
 	if e != nil {
 		return e
 	}
-	return c.Request(ctx, "DELETE", path+"/"+url.PathEscape(id), nil, nil)
+	return c.Request(ctx, "DELETE", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(id), nil, nil)
 }

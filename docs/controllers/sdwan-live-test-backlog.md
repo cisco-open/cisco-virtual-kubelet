@@ -5,12 +5,12 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 118 |
+| Fixture-qualified against live Manager | 124 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 72 |
+| Implementation still pending | 66 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies the core service LAN VPN parent and dual-router HA with a resolved VPN reference. The LAN VPN compiler currently accepts ID, name, OMP distance, DNS, host mapping, and IPv4/IPv6 next-hop and null-route fields; NAT, advertisements, route leaking and child interfaces are still outstanding. The preceding increment qualified the transport management VPN Ethernet child and its nested Manager path. The preceding increment qualified the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
+The latest increment qualifies six service and transport VPN routing associations: OSPF, EIGRP, multicast, and service OSPFv3 IPv4/IPv6. Each resolved its parent VPN and referenced routing parcel IDs through the Manager before association. The preceding increment qualified the core service LAN VPN parent and dual-router HA with a resolved VPN reference. The LAN VPN compiler currently accepts ID, name, OMP distance, DNS, host mapping, and IPv4/IPv6 next-hop and null-route fields; NAT, advertisements, route leaking and child interfaces are still outstanding. The preceding increment qualified the transport management VPN Ethernet child and its nested Manager path. The preceding increment qualified the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
 
 The previous increment qualified seven declarations: classic SVI, cellular and
 switchport templates, service EIGRP, service switchport, service multicast, and Zscaler SSE. Each passed native live
@@ -138,11 +138,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_service_routing_bgp_feature.service_routing_bgp_feature`
 - `sdwan_service_ipv4_acl_feature.service_ipv4_acl_feature`
 - `sdwan_service_lan_vpn_feature_associate_routing_bgp_feature.service_lan_vpn_feature_associate_routing_bgp_feature`
-- `sdwan_service_lan_vpn_feature_associate_routing_eigrp_feature.service_lan_vpn_feature_associate_routing_eigrp_feature`
-- `sdwan_service_lan_vpn_feature_associate_multicast_feature.service_lan_vpn_feature_associate_multicast_feature`
-- `sdwan_service_lan_vpn_feature_associate_routing_ospf_feature.service_lan_vpn_feature_associate_routing_ospf_feature`
-- `sdwan_service_lan_vpn_feature_associate_routing_ospfv3_ipv4_feature.service_lan_vpn_feature_associate_routing_ospfv3_ipv4_feature`
-- `sdwan_service_lan_vpn_feature_associate_routing_ospfv3_ipv6_feature.service_lan_vpn_feature_associate_routing_ospfv3_ipv6_feature`
 - `sdwan_service_lan_vpn_interface_ethernet_feature.service_lan_vpn_interface_ethernet_member_link_feature`
 - `sdwan_service_lan_vpn_interface_ethernet_feature.service_lan_vpn_interface_ethernet_feature`
 - `sdwan_service_lan_vpn_interface_ethernet_feature_associate_dhcp_server_feature.service_lan_vpn_interface_ethernet_feature_associate_dhcp_server_feature`
@@ -175,7 +170,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_transport_ipv4_acl_feature.transport_ipv4_acl_feature`
 - `sdwan_transport_route_policy_feature.transport_route_policy_feature`
 - `sdwan_transport_wan_vpn_feature_associate_routing_bgp_feature.transport_wan_vpn_feature_associate_routing_bgp_feature`
-- `sdwan_transport_wan_vpn_feature_associate_routing_ospf_feature.transport_wan_vpn_feature_associate_routing_ospf_feature`
 - `sdwan_transport_wan_vpn_interface_cellular_feature.transport_wan_vpn_interface_cellular_feature`
 - `sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_feature.transport_wan_vpn_interface_cellular_feature_associate_tracker_feature`
 - `sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature.transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature`

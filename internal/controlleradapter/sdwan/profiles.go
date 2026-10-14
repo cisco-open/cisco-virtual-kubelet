@@ -173,6 +173,13 @@ func equalModern(r Resource, o map[string]any) (bool, error) {
 		description, _ := o["description"].(string)
 		return name == r.Name && description == r.Body["description"], nil
 	}
+	if r.Kind == "association" {
+		parcelID, ok := o["parcelId"].(string)
+		if !ok || !validID.MatchString(parcelID) {
+			return false, ErrResponse
+		}
+		return parcelID == r.Body["parcelId"], nil
+	}
 	payload, ok := o["payload"].(map[string]any)
 	if !ok {
 		return false, ErrResponse

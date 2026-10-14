@@ -1,0 +1,15 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-VPN-OSPF-PROFILE
+        ospf_features:
+          - name: CVK-SERVICE-VPN-OSPF
+            router_id: 192.0.2.6
+            areas:
+              - number: 0
+                interfaces:
+                  - name: GigabitEthernet6
+        lan_vpns:
+          - name: CVK-SERVICE-VPN-OSPF-VPN
+            vpn_id: 113
+            ospf: CVK-SERVICE-VPN-OSPF
