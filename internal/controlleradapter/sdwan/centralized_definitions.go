@@ -19,9 +19,10 @@ type CentralizedPolicies struct {
 	FeaturePolicies []CentralizedFeaturePolicy `json:"feature_policies,omitempty"`
 	Definitions     struct {
 		ControlPolicy struct {
-			VPNMembership       []CentralizedVPNMembership `json:"vpn_membership,omitempty"`
-			MeshTopology        []CentralizedMeshTopology  `json:"mesh_topology,omitempty"`
-			HubAndSpokeTopology []CentralizedHubAndSpoke   `json:"hub_and_spoke_topology,omitempty"`
+			CustomControlTopology []CentralizedCustomControl `json:"custom_control_topology,omitempty"`
+			VPNMembership         []CentralizedVPNMembership `json:"vpn_membership,omitempty"`
+			MeshTopology          []CentralizedMeshTopology  `json:"mesh_topology,omitempty"`
+			HubAndSpokeTopology   []CentralizedHubAndSpoke   `json:"hub_and_spoke_topology,omitempty"`
 		} `json:"control_policy"`
 		DataPolicy struct {
 			Cflowd                  []CentralizedCflowd                  `json:"cflowd,omitempty"`
@@ -29,6 +30,21 @@ type CentralizedPolicies struct {
 			ApplicationAwareRouting []CentralizedApplicationAwareRouting `json:"application_aware_routing,omitempty"`
 		} `json:"data_policy"`
 	} `json:"definitions"`
+}
+type CentralizedCustomControl struct {
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	DefaultActionType string `json:"default_action_type,omitempty"`
+	Sequences         []struct {
+		ID            int    `json:"id"`
+		Name          string `json:"name"`
+		Type          string `json:"type,omitempty"`
+		IPType        string `json:"ip_type,omitempty"`
+		BaseAction    string `json:"base_action,omitempty"`
+		MatchCriteria struct {
+			OMPTag *int `json:"omp_tag,omitempty"`
+		} `json:"match_criterias"`
+	} `json:"sequences"`
 }
 type CentralizedApplicationAwareRouting struct {
 	Name        string `json:"name"`
@@ -139,6 +155,56 @@ func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) 
 	}
 	out := []Resource{}
 	seen := map[string]bool{}
+	for _, p := range input.Definitions.ControlPolicy.CustomControlTopology {
+		if p.Name == "" || p.Description == "" || seen["control/"+p.Name] {
+			return nil, errors.New("invalid or duplicate custom-control definition")
+		}
+		seen["control/"+p.Name] = true
+		defaultAction := p.DefaultActionType
+		if defaultAction == "" {
+			defaultAction = "reject"
+		}
+		if defaultAction != "accept" && defaultAction != "reject" {
+			return nil, errors.New("invalid custom-control default action")
+		}
+		sequences, ids := []any{}, map[int]bool{}
+		for _, s := range p.Sequences {
+			if s.ID < 1 || s.ID > 65535 || ids[s.ID] || s.Name == "" {
+				return nil, errors.New("invalid custom-control sequence")
+			}
+			ids[s.ID] = true
+			typ := s.Type
+			if typ == "" {
+				typ = "route"
+			}
+			if typ != "route" && typ != "tloc" {
+				return nil, errors.New("invalid custom-control sequence type")
+			}
+			ipType := s.IPType
+			if ipType == "" {
+				ipType = "ipv4"
+			}
+			if ipType != "ipv4" && ipType != "ipv6" && ipType != "all" {
+				return nil, errors.New("invalid custom-control IP type")
+			}
+			base := s.BaseAction
+			if base == "" {
+				base = "accept"
+			}
+			if base != "accept" && base != "reject" {
+				return nil, errors.New("invalid custom-control base action")
+			}
+			matches := []any{}
+			if s.MatchCriteria.OMPTag != nil {
+				if *s.MatchCriteria.OMPTag < 0 {
+					return nil, errors.New("invalid custom-control OMP tag")
+				}
+				matches = append(matches, map[string]any{"field": "ompTag", "value": strconv.Itoa(*s.MatchCriteria.OMPTag)})
+			}
+			sequences = append(sequences, map[string]any{"sequenceId": s.ID, "sequenceName": s.Name, "sequenceType": typ, "sequenceIpType": ipType, "baseAction": base, "match": map[string]any{"entries": matches}, "actions": []any{}})
+		}
+		out = append(out, Resource{Key: "centralized_policies/definitions/control_policy/custom_control_topology/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "custom_control_topology_policy_definition", Collection: "/dataservice/template/policy/definition/control/", Body: map[string]any{"type": "control", "name": p.Name, "description": p.Description, "defaultAction": map[string]any{"type": defaultAction}, "sequences": sequences}})
+	}
 	for _, p := range input.Definitions.ControlPolicy.VPNMembership {
 		if p.Name == "" || p.Description == "" || seen["vpnMembershipGroup/"+p.Name] {
 			return nil, errors.New("invalid or duplicate VPN membership definition")
