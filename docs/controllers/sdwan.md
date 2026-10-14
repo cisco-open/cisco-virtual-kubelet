@@ -104,11 +104,11 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
-An additional 36 declarations have native implementations but remain unqualified:
+An additional 37 declarations have native implementations but remain unqualified:
 the policy-object profile and all 32 modern policy-object collections, system
-CA certificates, custom applications (the lab lacks SD-AVC), and cloud-provider settings (the lab already has the singleton). SIG credential creation now passes after fixing the global flag
+CA certificates, custom applications (the lab lacks SD-AVC), device tags awaiting a selected router, and cloud-provider settings (the lab already has the singleton). SIG credential creation now passes after fixing the global flag
 and variable-secret payloads.
-10 declarations remain pending and TrustSec remains compatibility-blocked.
+9 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 

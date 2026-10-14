@@ -197,7 +197,10 @@ func (c *Client) raw(ctx context.Context, method, path string, body []byte, cont
 // a mutation with an uncertain outcome must be recovered by its durable journal.
 func (c *Client) Request(ctx context.Context, method, path string, input, output any) error {
 	hierarchyQuery := method == "GET" && regexp.MustCompile(`^/dataservice/v1/network-hierarchy\?offset=[0-9]+&limit=1500$`).MatchString(path)
-	if !strings.HasPrefix(path, "/dataservice/") || (!hierarchyQuery && strings.ContainsAny(path, "?#")) || strings.Contains(path, "..") {
+	tagDeleteQuery := method == "DELETE" && regexp.MustCompile(`^/dataservice/v1/tags\?tagId=[A-Za-z0-9_-]{1,128}$`).MatchString(path)
+	tagAssociateQuery := method == "POST" && path == "/dataservice/v1/tags/associate?operationType=DELETE"
+	deviceTagQuery := method == "GET" && regexp.MustCompile(`^/dataservice/system/device/vedges\?uuid=[A-Za-z0-9_-]{1,128}$`).MatchString(path)
+	if !strings.HasPrefix(path, "/dataservice/") || (!(hierarchyQuery || tagDeleteQuery || tagAssociateQuery || deviceTagQuery) && strings.ContainsAny(path, "?#")) || strings.Contains(path, "..") {
 		return errors.New("invalid SD-WAN API path")
 	}
 	var b []byte

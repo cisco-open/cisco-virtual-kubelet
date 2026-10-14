@@ -1502,8 +1502,13 @@
       "type": "sdwan_tag",
       "name": "tag",
       "source": "sdwan_inventory.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "implemented-unqualified",
+      "live_tested": false,
+      "local_tested": true,
+      "fixtures": [
+        "tags"
+      ],
+      "reason": "NetAsCode site/router tags compile and local overlapping-association test passes; unassigned tag lifecycle passed live, but device association needs an authorized lab router."
     },
     {
       "type": "sdwan_qos_map_policy_definition",

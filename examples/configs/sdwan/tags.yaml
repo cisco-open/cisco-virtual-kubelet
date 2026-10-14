@@ -1,0 +1,8 @@
+sdwan:
+  sites:
+    - id: 4294967000
+      routers:
+        - chassis_id: CVK-TEST-ROUTER-1
+          tags: [CVK-TAG-A, CVK-TAG-B]
+        - chassis_id: CVK-TEST-ROUTER-2
+          tags: [CVK-TAG-A]

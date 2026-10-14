@@ -178,6 +178,9 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 	return &Observation{ID: id, Body: body}, nil
 }
 func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
+	if r.Kind == "tag" {
+		return c.createTag(ctx, r)
+	}
 	if r.Kind == "cloud-setting" {
 		return c.createCloudSettings(ctx, r)
 	}
@@ -232,6 +235,9 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 	return id, nil
 }
 func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) error {
+	if r.Kind == "tag" {
+		return c.updateTag(ctx, r, o)
+	}
 	if r.Kind == "cloud-setting" {
 		return c.updateCloudSettings(ctx, r)
 	}
@@ -271,6 +277,9 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 	return c.Request(ctx, "PUT", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(o.ID), r.Body, nil)
 }
 func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id string) error {
+	if r.Kind == "tag" {
+		return c.deleteTag(ctx, r, id)
+	}
 	if r.Kind == "cloud-setting" {
 		return nil
 	} // Manager has no delete endpoint for this singleton.
