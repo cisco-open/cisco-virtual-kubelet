@@ -164,6 +164,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, sviAssociations...)
+	ethernetTrackers, err := compileServiceEthernetTrackerAssociations(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, ethernetTrackers...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any
