@@ -372,13 +372,21 @@ func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 	if description, _ := o["description"].(string); description != r.Body["description"] {
 		return false, nil
 	}
-	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" || r.Type == "vpn_membership_policy_definition" || r.Type == "mesh_topology_policy_definition" {
+	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" || r.Type == "vpn_membership_policy_definition" || r.Type == "mesh_topology_policy_definition" || r.Type == "cflowd_policy_definition" {
 		actual, ok := o["definition"].(map[string]any)
 		if !ok {
 			return false, ErrResponse
 		}
 		want := r.Body["definition"].(map[string]any)
-		for key, expected := range want {
+		encoded, err := json.Marshal(want)
+		if err != nil {
+			return false, ErrResponse
+		}
+		var normalized map[string]any
+		if json.Unmarshal(encoded, &normalized) != nil {
+			return false, ErrResponse
+		}
+		for key, expected := range normalized {
 			if !reflect.DeepEqual(actual[key], expected) {
 				return false, nil
 			}
