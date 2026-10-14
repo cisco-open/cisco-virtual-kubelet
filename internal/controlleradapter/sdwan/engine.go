@@ -19,6 +19,9 @@ type Observation struct {
 }
 
 func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) {
+	if r.Kind == "group-deployment" {
+		return c.observeGroupDeployment(ctx, r)
+	}
 	if r.Kind == "device-attachment" {
 		return c.observeDeviceAttachment(ctx, r)
 	}
@@ -101,6 +104,9 @@ func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) 
 	return &Observation{ID: id, Body: body, Attached: attached}, nil
 }
 func (c *Client) Create(ctx context.Context, r Resource) (string, error) {
+	if r.Kind == "group-deployment" {
+		return c.applyGroupDeployment(ctx, r)
+	}
 	if r.Kind == "device-attachment" {
 		return c.attachDeviceTemplate(ctx, r, false)
 	}
@@ -135,6 +141,10 @@ func (c *Client) Update(ctx context.Context, r Resource, o *Observation) error {
 		return errors.New("SD-WAN update requires a qualified unattached resource")
 	}
 	if r.Kind != "" {
+		if r.Kind == "group-deployment" {
+			_, err := c.applyGroupDeployment(ctx, r)
+			return err
+		}
 		if r.Kind == "device-attachment" {
 			_, err := c.attachDeviceTemplate(ctx, r, true)
 			return err

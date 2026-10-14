@@ -26,7 +26,7 @@ func compileDeviceAttachments(sites []SDWANSite, templates []EdgeDeviceTemplate)
 	for _, site := range sites {
 		for _, router := range site.Routers {
 			if router.DeviceTemplate == "" {
-				if len(router.DeviceVariables) != 0 {
+				if len(router.DeviceVariables) != 0 && router.ConfigurationGroup == "" {
 					return nil, errors.New("device variables require a device template")
 				}
 				continue

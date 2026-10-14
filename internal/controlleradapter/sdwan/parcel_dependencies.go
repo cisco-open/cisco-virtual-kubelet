@@ -65,6 +65,19 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		if r.Kind == "group-deployment" {
+			found := -1
+			for j, candidate := range resources {
+				if candidate.Kind == "group" && candidate.Type == r.Type && candidate.Name == r.Name {
+					found = j
+					break
+				}
+			}
+			if found < 0 {
+				return nil, errors.New("group deployment parent is not declared")
+			}
+			dependencies[i] = append(dependencies[i], found)
+		}
 		if r.Kind == "device-attachment" {
 			found := -1
 			for j, candidate := range resources {

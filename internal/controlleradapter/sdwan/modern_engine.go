@@ -283,6 +283,9 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 	return c.Request(ctx, "PUT", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(o.ID), r.Body, nil)
 }
 func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id string) error {
+	if r.Kind == "group-deployment" || r.Kind == "device-attachment" || r.Kind == "activation" {
+		return errors.New("device deployment fixture cleanup requires a saved restoration state")
+	}
 	if r.Kind == "device-template" {
 		return c.deleteDeviceTemplate(ctx, id)
 	}

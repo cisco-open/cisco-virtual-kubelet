@@ -26,6 +26,12 @@ type TemplateDefaults struct {
 type Defaults struct {
 	SDWAN struct {
 		EdgeFeatureTemplates map[string]TemplateDefaults `json:"edge_feature_templates"`
+		Sites                struct {
+			Routers struct {
+				ConfigurationGroupDeploy *bool `json:"configuration_group_deploy,omitempty"`
+				PolicyGroupDeploy        *bool `json:"policy_group_deploy,omitempty"`
+			} `json:"routers,omitempty"`
+		} `json:"sites,omitempty"`
 	} `json:"sdwan"`
 }
 type SDWAN struct {
@@ -80,6 +86,7 @@ type Resource struct {
 	TagDevices                         []string
 	DeviceTemplateRefs                 []DeviceTemplateReference
 	DevicePolicyRefs                   []DevicePolicyReference
+	GroupDevices                       []GroupDeviceTarget
 	AttachDevices                      []DeviceAttachmentTarget
 	ParcelPath                         string
 	ParentParcelPath, ParentParcelName string
@@ -234,6 +241,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, policyGroups...)
+	groupDeployments, err := compileGroupDeployments(doc.SDWAN.Sites, doc.SDWAN.ConfigurationGroups, doc.SDWAN.PolicyGroups, doc.Defaults)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, groupDeployments...)
 	localized, err := compileLocalizedPolicies(doc.SDWAN.LocalizedPolicies)
 	if err != nil {
 		return nil, err

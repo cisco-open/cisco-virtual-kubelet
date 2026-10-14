@@ -1,0 +1,26 @@
+sdwan:
+  feature_profiles:
+    system_profiles:
+      - name: CVK-GROUP-DEPLOY-SYSTEM
+        description: CVK isolated system profile for group deployment
+    application_priority_profiles:
+      - name: CVK-GROUP-DEPLOY-APP
+  configuration_groups:
+    - name: CVK-GROUP-DEPLOY-CONFIG
+      description: CVK isolated configuration group
+      system_profile: CVK-GROUP-DEPLOY-SYSTEM
+  policy_groups:
+    - name: CVK-GROUP-DEPLOY-POLICY
+      description: CVK isolated policy group
+      application_priority: CVK-GROUP-DEPLOY-APP
+  sites:
+    - id: 101
+      routers:
+        - chassis_id: CVK-GROUP-DEPLOY-ROUTER
+          configuration_group: CVK-GROUP-DEPLOY-CONFIG
+          topology_label: cvk-lab
+          device_variables:
+            region_id: "1"
+          policy_group: CVK-GROUP-DEPLOY-POLICY
+          policy_variables:
+            cvkPolicyVariable: value

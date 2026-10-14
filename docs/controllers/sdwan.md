@@ -19,6 +19,7 @@ parity**. The pinned upstream module has 226 resource declarations. 181 resource
 | `examples/configs/sdwan/classic-device-template-policies.yaml` | Unattached classic device template with localized/security policy and container-profile bindings | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-device-template-vpns.yaml` | Unattached classic device template with transport, management and service VPNs, plus logging, NTP and DHCP references | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-device-template-peripherals.yaml` | Unattached classic device template with switchport and cellular controller/profile references | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/group-device-deployment.yaml` | Site router associations to configuration and policy groups with variables and deploy flags | Local model/API lifecycle; live router deployment needs selected chassis and restoration state |
 | `examples/configs/sdwan/classic-device-attachment.yaml` | Site router to classic device template with device variables | Local model and API lifecycle; live router attachment pending scoped lab target |
 | `examples/configs/sdwan/topology-group-activation.yaml` | Topology group activation | Local model and API task lifecycle; live activation pending scoped lab target |
 | `examples/configs/sdwan/classic-centralized-activation.yaml` | Centralized feature policy activation | Local model and API task lifecycle; live activation pending scoped lab target |
