@@ -3,6 +3,12 @@ sdwan:
     system_profiles:
       - name: CVK-SYS-FEATURES
         description: CVK system feature parcel fixtures
+        security:
+          anti_replay_window: "512"
+          extended_anti_replay_window: 256
+          integrity_types: [ip-udp-esp]
+          ipsec_pairwise_keying: false
+          rekey_time: 86400
         ntp:
           servers:
             - hostname_ip: time.example.com

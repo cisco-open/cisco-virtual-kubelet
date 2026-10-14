@@ -1,0 +1,16 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-FEATURES
+        gps_features:
+          - name: CVK-GPS
+            gps_mode: standalone
+            nmea_enable: false
+    other_profiles:
+      - name: CVK-OTHER-FEATURES
+        ucse:
+          slot: 1
+          bay: 0
+          cimc_access_port_dedicated: true
+          cimc_ipv4_address: 192.0.2.10/24
+          cimc_default_gateway: 192.0.2.1

@@ -601,22 +601,23 @@
       "type": "sdwan_other_thousandeyes_feature",
       "name": "other_thousandeyes_feature",
       "source": "sdwan_features_other.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_other_trustsec_feature",
       "name": "other_trustsec_feature",
       "source": "sdwan_features_other.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "compatibility-blocked",
+      "live_tested": false,
+      "reason": "Manager 20.18.2.2 requires sxpNodeId, absent from provider 0.11.5; provider default empty devicePassword is also rejected."
     },
     {
       "type": "sdwan_other_ucse_feature",
       "name": "other_ucse_feature",
       "source": "sdwan_features_other.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_service_routing_bgp_feature",
@@ -960,8 +961,8 @@
       "type": "sdwan_system_security_feature",
       "name": "system_security_feature",
       "source": "sdwan_features_system.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_system_snmp_feature",
@@ -1016,8 +1017,8 @@
       "type": "sdwan_transport_gps_feature",
       "name": "transport_gps_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_transport_ipv4_acl_feature",

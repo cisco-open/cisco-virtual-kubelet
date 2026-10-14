@@ -5,7 +5,7 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 54 resource declarations (48 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 58 resource declarations (52 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -14,7 +14,9 @@ parity**. The pinned upstream module has 226 resource declarations. 54 resource 
 | `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup, upstream equivalence |
 | `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup, upstream equivalence |
 | `examples/configs/sdwan/feature-profiles.yaml` | Eight other profile containers and implicit application-priority policy settings | Create, read, changed-value update, cleanup, upstream equivalence |
-| `examples/configs/sdwan/system-features.yaml` | CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring | Create, read, update, cleanup, upstream equivalence |
+| `examples/configs/sdwan/system-features.yaml` | CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security | Create, read, update, cleanup, upstream equivalence |
+| `examples/configs/sdwan/peripheral-features.yaml` | Transport GPS and other-profile UCSE | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/thousandeyes-feature.yaml` | Unattached ThousandEyes parcel using a token variable | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -33,12 +35,15 @@ The public model remains the upstream `sdwan` document. The format is
 - `edge_feature_templates.banner_templates`: name, description, device types,
   login/MOTD literals and variables, including upstream device-type defaults.
 - `feature_profiles.system_profiles`: profile name/description, banner, basic,
-  BFD, global, OMP, NTP, logging, MRF, flexible port speed and performance monitoring.
+  BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring and security.
   `feature_profiles.cli_profiles.config` supports native CLI parcels.
-  Scalar and nested-list definitions for basic/global/OMP/NTP/logging are generated
+  Scalar and nested-list definitions for basic/global/OMP/NTP/logging/security are generated
   from pinned module mappings and provider defaults/value schemas. Regenerate with
   `scripts/sdwan/generate-parcel-definitions.py MODULE_CHECKOUT PROVIDER_CHECKOUT`.
   Generated metadata retains the upstream MPL-2.0 license in `definitions/LICENSE`.
+- `feature_profiles.transport_profiles.gps_features` and `other_profiles.ucse` /
+  `other_profiles.thousandeyes`, including the NaC GPS enable default and the
+  ThousandEyes virtual-application wrapper. These fixtures are unattached.
 - `configuration_groups`: name/description and references to declared system,
   transport, service, CLI or other profiles. Device associations are not enabled.
 - Name/description mappings for the other eight profile collections, plus the
@@ -166,3 +171,12 @@ an arbitrary existing router as the test target.
 
 See [the qualification record](../evidence/sdwan-2026-10-14/README.md) for measured
 results and limits.
+
+### Manager 20.18 TrustSec incompatibility
+
+The pinned provider's TrustSec payload is rejected because `data.sxpNodeId` is
+required by this Manager but absent from the provider model. Its default empty
+`devicePassword` is also rejected. The reproducible fixture is under
+`examples/configs/sdwan/unqualified/trustsec.yaml`; the compiler rejects TrustSec
+before mutation. Generated TrustSec metadata is retained for further compatibility
+work and does not count toward qualified coverage.

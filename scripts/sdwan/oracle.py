@@ -13,14 +13,16 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--terraform", default="terraform")
 parser.add_argument("--execute", action="store_true")
-parser.add_argument("--fixture-set", choices=["core", "system-features"], default="core")
+parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature"], default="core")
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[2]
 oracle = root / "examples/configs/sdwan/oracle"
 sets = {
+ "thousandeyes-feature": {"files": ["thousandeyes-feature"], "count": 2, "absent": "ThousandEyes", "oracle": "ThousandEyes"},
+ "peripheral-features": {"files": ["peripheral-features"], "count": 4, "absent": "Peripheral", "oracle": "Peripheral"},
     "core": {"files": ["banner", "system-profile", "policy-objects", "network-hierarchy", "feature-profiles"], "count": 44,
              "absent": "Fixture|Policy|Hierarchy|Family", "oracle": "Banner|SystemProfile|Policy|Hierarchy|Family"},
-    "system-features": {"files": ["system-features"], "count": 12, "absent": "Extra", "oracle": "Extra"},
+    "system-features": {"files": ["system-features"], "count": 13, "absent": "Extra", "oracle": "Extra"},
 }
 selected = sets[args.fixture_set]
 variables = ["-var=fixture_files=" + json.dumps(["../" + x + ".yaml" for x in selected["files"]])]
@@ -53,6 +55,9 @@ allowed = {
     'sdwan_mirror_policy_object',
     'sdwan_network_hierarchy_node',
     'sdwan_other_feature_profile',
+    'sdwan_other_ucse_feature',
+    'sdwan_other_thousandeyes_feature',
+    'sdwan_transport_gps_feature',
     'sdwan_policer_policy_object',
     'sdwan_port_list_policy_object',
     'sdwan_preferred_color_group_policy_object',
@@ -72,6 +77,7 @@ allowed = {
     'sdwan_system_mrf_feature',
     'sdwan_system_ntp_feature',
     'sdwan_system_omp_feature',
+    'sdwan_system_security_feature',
     'sdwan_system_performance_monitoring_feature',
     'sdwan_tloc_list_policy_object',
     'sdwan_topology_feature_profile',

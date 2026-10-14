@@ -11,6 +11,11 @@ import (
 )
 
 type FeatureProfile struct {
+	ThousandEyes          map[string]any               `json:"thousandeyes,omitempty"`
+	GPS                   []map[string]any             `json:"gps_features,omitempty"`
+	TrustSec              map[string]any               `json:"trustsec,omitempty"`
+	UCSE                  map[string]any               `json:"ucse,omitempty"`
+	Security              map[string]any               `json:"security,omitempty"`
 	NTP                   map[string]any               `json:"ntp,omitempty"`
 	Logging               map[string]any               `json:"logging,omitempty"`
 	Basic                 map[string]any               `json:"basic,omitempty"`

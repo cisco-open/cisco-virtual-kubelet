@@ -923,7 +923,10 @@
                 "variable": "vrf_range_variable"
               }
             },
-            "lists": {}
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
           },
           "path": "affinityPerVrf"
         },
@@ -943,11 +946,17 @@
                 "variable": "number_variable"
               }
             },
-            "lists": {}
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
           },
           "path": "gpsLocation.geoFencing.sms.mobileNumber"
         }
-      }
+      },
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
     },
     "global": {
       "defaults": {
@@ -1306,7 +1315,10 @@
           "variable": "vty_logging_variable"
         }
       },
-      "lists": {}
+      "lists": {},
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
     },
     "logging": {
       "defaults": {
@@ -1455,7 +1467,10 @@
                 "variable": "vpn_id_variable"
               }
             },
-            "lists": {}
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
           },
           "path": "server"
         },
@@ -1559,7 +1574,10 @@
                 "variable": "vpn_id_variable"
               }
             },
-            "lists": {}
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
           },
           "path": "ipv6Server"
         },
@@ -1623,11 +1641,17 @@
                 "variable": "tls_version_variable"
               }
             },
-            "lists": {}
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
           },
           "path": "tlsProfile"
         }
-      }
+      },
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
     },
     "ntp": {
       "defaults": {
@@ -1751,7 +1775,10 @@
                 "variable": "md5_value_variable"
               }
             },
-            "lists": {}
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
           },
           "path": "authentication.authenticationKeys"
         },
@@ -1850,11 +1877,17 @@
                 "variable": "vpn_id_variable"
               }
             },
-            "lists": {}
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
           },
           "path": "server"
         }
-      }
+      },
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
     },
     "omp": {
       "defaults": {
@@ -2280,7 +2313,1093 @@
           "variable": "transport_gateway_variable"
         }
       },
-      "lists": {}
+      "lists": {},
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "other_thousandeyes": {
+      "defaults": {
+        "virtualApplication": []
+      },
+      "fields": {},
+      "lists": {},
+      "public_defaults": {},
+      "required": [],
+      "wrappers": [
+        {
+          "definition": {
+            "defaults": {
+              "hostname": {
+                "optionType": "default"
+              },
+              "nameServer": {
+                "optionType": "default"
+              },
+              "vpn": {
+                "optionType": "default"
+              }
+            },
+            "fields": {
+              "account_group_token": {
+                "path": "token",
+                "schema": {
+                  "maxLength": 210,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "account_group_token_variable"
+              },
+              "agent_default_gateway": {
+                "path": "teVpgIp",
+                "schema": {
+                  "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "agent_default_gateway_variable"
+              },
+              "hostname": {
+                "path": "hostname",
+                "schema": {
+                  "maxLength": 235,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "hostname_variable"
+              },
+              "management_ip": {
+                "path": "teMgmtIp",
+                "schema": {
+                  "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "management_ip_variable"
+              },
+              "management_subnet_mask": {
+                "path": "teMgmtSubnetMask",
+                "schema": {
+                  "enum": [
+                    "255.255.255.255",
+                    "255.255.255.254",
+                    "255.255.255.252",
+                    "255.255.255.248",
+                    "255.255.255.240",
+                    "255.255.255.224",
+                    "255.255.255.192",
+                    "255.255.255.128",
+                    "255.255.255.0",
+                    "255.255.254.0",
+                    "255.255.252.0",
+                    "255.255.248.0",
+                    "255.255.240.0",
+                    "255.255.224.0",
+                    "255.255.192.0",
+                    "255.255.128.0",
+                    "255.255.0.0",
+                    "255.254.0.0",
+                    "255.252.0.0",
+                    "255.240.0.0",
+                    "255.224.0.0",
+                    "255.192.0.0",
+                    "255.128.0.0",
+                    "255.0.0.0",
+                    "254.0.0.0",
+                    "252.0.0.0",
+                    "248.0.0.0",
+                    "240.0.0.0",
+                    "224.0.0.0",
+                    "192.0.0.0",
+                    "128.0.0.0",
+                    "0.0.0.0"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "management_subnet_mask_variable"
+              },
+              "name_server_ip": {
+                "path": "nameServer",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "name_server_ip_variable"
+              },
+              "pac_proxy_url": {
+                "path": "proxyConfig.pacUrl",
+                "schema": {
+                  "maxLength": 183,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "pac_proxy_url_variable"
+              },
+              "proxy_type": {
+                "path": "proxyConfig.proxyType",
+                "schema": {
+                  "anyOf": [
+                    {
+                      "const": "static"
+                    },
+                    {
+                      "const": "pac"
+                    },
+                    {
+                      "const": "none"
+                    }
+                  ]
+                },
+                "type": "String"
+              },
+              "static_proxy_host": {
+                "path": "proxyConfig.proxyHost",
+                "schema": {
+                  "maxLength": 174,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "static_proxy_host_variable"
+              },
+              "static_proxy_port": {
+                "path": "proxyConfig.proxyPort",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "static_proxy_port_variable"
+              },
+              "vpn_id": {
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_id_variable"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "path": "virtualApplication"
+        }
+      ]
+    },
+    "other_trustsec": {
+      "defaults": {
+        "deviceId": {
+          "optionType": "default",
+          "value": ""
+        },
+        "devicePassword": {
+          "optionType": "default",
+          "value": ""
+        },
+        "deviceSgt": {
+          "optionType": "global"
+        },
+        "enableEnforcement": {
+          "optionType": "default",
+          "value": false
+        },
+        "enableSxp": {
+          "optionType": "default",
+          "value": false
+        },
+        "listenerHoldTimeMax": {
+          "optionType": "default",
+          "value": 180
+        },
+        "listenerHoldTimeMin": {
+          "optionType": "default",
+          "value": 90
+        },
+        "speakerHoldTime": {
+          "optionType": "default",
+          "value": 120
+        },
+        "sxpConnectionList": [],
+        "sxpDefaultPassword": {
+          "optionType": "default",
+          "value": ""
+        },
+        "sxpKeyChain": {
+          "optionType": "default",
+          "value": ""
+        },
+        "sxpLogBindingChanges": {
+          "optionType": "default",
+          "value": false
+        },
+        "sxpReconciliationPeriod": {
+          "optionType": "default",
+          "value": 120
+        },
+        "sxpRetryPeriod": {
+          "optionType": "default",
+          "value": 120
+        },
+        "sxpSourceIp": {
+          "optionType": "default",
+          "value": ""
+        }
+      },
+      "fields": {
+        "device_id": {
+          "path": "deviceId",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "device_id_variable"
+        },
+        "device_password": {
+          "path": "devicePassword",
+          "schema": {
+            "maxLength": 24,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "device_password_variable"
+        },
+        "device_sgt": {
+          "path": "deviceSgt",
+          "schema": {
+            "maximum": 65519,
+            "minimum": 2,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "device_sgt_variable"
+        },
+        "enable_enforcement": {
+          "path": "enableEnforcement",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "enable_enforcement_variable"
+        },
+        "enable_sxp": {
+          "path": "enableSxp",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool"
+        },
+        "listener_hold_time_max": {
+          "path": "listenerHoldTimeMax",
+          "schema": {
+            "maximum": 65534,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "listener_hold_time_max_variable"
+        },
+        "listener_hold_time_min": {
+          "path": "listenerHoldTimeMin",
+          "schema": {
+            "maximum": 65534,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "listener_hold_time_min_variable"
+        },
+        "speaker_hold_time": {
+          "path": "speakerHoldTime",
+          "schema": {
+            "maximum": 65534,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "speaker_hold_time_variable"
+        },
+        "sxp_default_password": {
+          "path": "sxpDefaultPassword",
+          "schema": {
+            "maxLength": 24,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "sxp_default_password_variable"
+        },
+        "sxp_key_chain": {
+          "path": "sxpKeyChain",
+          "schema": {
+            "maxLength": 256,
+            "minLength": 0,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "sxp_key_chain_variable"
+        },
+        "sxp_log_binding_changes": {
+          "path": "sxpLogBindingChanges",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "sxp_log_binding_changes_variable"
+        },
+        "sxp_reconciliation_period": {
+          "path": "sxpReconciliationPeriod",
+          "schema": {
+            "maximum": 64000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "sxp_reconciliation_period_variable"
+        },
+        "sxp_retry_period": {
+          "path": "sxpRetryPeriod",
+          "schema": {
+            "maximum": 64000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "sxp_retry_period_variable"
+        },
+        "sxp_source_ip": {
+          "path": "sxpSourceIp",
+          "schema": {
+            "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "sxp_source_ip_variable"
+        }
+      },
+      "lists": {
+        "sxp_connections": {
+          "definition": {
+            "defaults": {
+              "connectionMaxHoldTime": {
+                "optionType": "default",
+                "value": 0
+              },
+              "connectionMinHoldTime": {
+                "optionType": "default",
+                "value": 0
+              },
+              "connectionMode": {
+                "optionType": "default",
+                "value": "local"
+              },
+              "connectionModeType": {
+                "optionType": "default",
+                "value": "speaker"
+              },
+              "connectionPresharedKey": {
+                "optionType": "default",
+                "value": "none"
+              },
+              "connectionVpnId": {
+                "optionType": "default",
+                "value": 0
+              }
+            },
+            "fields": {
+              "max_hold_time": {
+                "path": "connectionMaxHoldTime",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "max_hold_time_variable"
+              },
+              "min_hold_time": {
+                "path": "connectionMinHoldTime",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "min_hold_time_variable"
+              },
+              "mode": {
+                "path": "connectionMode",
+                "schema": {
+                  "enum": [
+                    "local",
+                    "peer"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "mode_type": {
+                "path": "connectionModeType",
+                "schema": {
+                  "enum": [
+                    "speaker",
+                    "listener",
+                    "both"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "peer_ip": {
+                "path": "connectionPeerIp",
+                "schema": {
+                  "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "peer_ip_variable"
+              },
+              "preshared_key": {
+                "path": "connectionPresharedKey",
+                "schema": {
+                  "enum": [
+                    "password",
+                    "none",
+                    "key chain"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "source_ip": {
+                "path": "connectionSourceIp",
+                "schema": {
+                  "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "source_ip_variable"
+              },
+              "vpn_id": {
+                "path": "connectionVpnId",
+                "schema": {
+                  "maximum": 65527,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_id_variable"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "path": "sxpConnectionList"
+        }
+      },
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "other_ucse": {
+      "defaults": {
+        "imc": {
+          "access-port": {
+            "dedicated": {
+              "optionType": "default",
+              "value": true
+            }
+          },
+          "ip": {
+            "defaultGateway": {
+              "optionType": "default"
+            }
+          },
+          "vlan": {
+            "priority": {
+              "optionType": "default"
+            },
+            "vlanId": {
+              "optionType": "default"
+            }
+          }
+        },
+        "interface": []
+      },
+      "fields": {
+        "bay": {
+          "path": "bay",
+          "schema": {
+            "maximum": 2,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64"
+        },
+        "cimc_access_port_dedicated": {
+          "path": "imc.access-port.dedicated",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool"
+        },
+        "cimc_access_port_shared_failover_type": {
+          "path": "imc.access-port.sharedLom.failOverType",
+          "schema": {
+            "enum": [
+              "ge2",
+              "te2"
+            ],
+            "type": "string"
+          },
+          "type": "String"
+        },
+        "cimc_access_port_shared_type": {
+          "path": "imc.access-port.sharedLom.lomType",
+          "schema": {
+            "enum": [
+              "ge1",
+              "ge2",
+              "ge3",
+              "te2",
+              "te3",
+              "console",
+              "failover"
+            ],
+            "type": "string"
+          },
+          "type": "String"
+        },
+        "cimc_assign_priority": {
+          "path": "imc.vlan.priority",
+          "schema": {
+            "maximum": 7,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "cimc_assign_priority_variable"
+        },
+        "cimc_default_gateway": {
+          "path": "imc.ip.defaultGateway",
+          "schema": {
+            "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)",
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "cimc_default_gateway_variable"
+        },
+        "cimc_ipv4_address": {
+          "path": "imc.ip.address",
+          "schema": {
+            "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\/)([0-2]?[0-9]$|[3]?[0-2])",
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "cimc_ipv4_address_variable"
+        },
+        "cimc_vlan_id": {
+          "path": "imc.vlan.vlanId",
+          "schema": {
+            "maximum": 4095,
+            "minimum": 2,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "cimc_vlan_id_variable"
+        },
+        "slot": {
+          "path": "slot",
+          "schema": {
+            "maximum": 3,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "Int64"
+        }
+      },
+      "lists": {
+        "interfaces": {
+          "definition": {
+            "defaults": {
+              "ifName": {
+                "optionType": "default"
+              },
+              "ucseInterfaceVpn": {
+                "optionType": "default"
+              }
+            },
+            "fields": {
+              "interface_name": {
+                "path": "ifName",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 3,
+                  "pattern": "(ucse)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "interface_name_variable"
+              },
+              "ipv4_address": {
+                "path": "address",
+                "schema": {
+                  "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\/)([0-2]?[0-9]$|[3]?[0-2])",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "ipv4_address_variable"
+              },
+              "vpn_id": {
+                "path": "ucseInterfaceVpn",
+                "schema": {
+                  "maximum": 65527,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_id_variable"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "path": "interface"
+        }
+      },
+      "public_defaults": {},
+      "required": [
+        "bay",
+        "slot"
+      ],
+      "wrappers": []
+    },
+    "security": {
+      "defaults": {
+        "extendedArWindow": {
+          "optionType": "default",
+          "value": 256
+        },
+        "key": [],
+        "keychain": [],
+        "pairwiseKeying": {
+          "optionType": "default",
+          "value": false
+        },
+        "rekey": {
+          "optionType": "default",
+          "value": 86400
+        },
+        "replayWindow": {
+          "optionType": "default",
+          "value": "512"
+        }
+      },
+      "fields": {
+        "anti_replay_window": {
+          "path": "replayWindow",
+          "schema": {
+            "default": "512",
+            "enum": [
+              "64",
+              "128",
+              "256",
+              "512",
+              "1024",
+              "2048",
+              "4096",
+              "8192"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "anti_replay_window_variable"
+        },
+        "extended_anti_replay_window": {
+          "path": "extendedArWindow",
+          "schema": {
+            "default": 256,
+            "maximum": 2048,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "extended_anti_replay_window_variable"
+        },
+        "integrity_types": {
+          "path": "integrityType",
+          "schema": {
+            "default": [
+              "ip-udp-esp",
+              "esp"
+            ],
+            "items": {
+              "enum": [
+                "esp",
+                "ip-udp-esp",
+                "none",
+                "ip-udp-esp-no-id"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "Set",
+          "variable": "integrity_types_variable"
+        },
+        "ipsec_pairwise_keying": {
+          "path": "pairwiseKeying",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "ipsec_pairwise_keying_variable"
+        },
+        "rekey_time": {
+          "path": "rekey",
+          "schema": {
+            "default": 86400,
+            "maximum": 63113904,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "rekey_time_variable"
+        }
+      },
+      "lists": {
+        "key_chains": {
+          "definition": {
+            "defaults": {},
+            "fields": {
+              "key_id": {
+                "path": "id",
+                "schema": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64"
+              },
+              "name": {
+                "path": "name",
+                "schema": {
+                  "maxLength": 236,
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "name",
+              "key_id"
+            ],
+            "wrappers": []
+          },
+          "path": "keychain"
+        },
+        "keys": {
+          "definition": {
+            "defaults": {
+              "acceptAoMismatch": {
+                "optionType": "default",
+                "value": false
+              },
+              "acceptLifetime": {
+                "local": {
+                  "optionType": "default",
+                  "value": false
+                }
+              },
+              "includeTcpOptions": {
+                "optionType": "default",
+                "value": false
+              },
+              "sendLifetime": {
+                "local": {
+                  "optionType": "default",
+                  "value": false
+                }
+              }
+            },
+            "fields": {
+              "accept_ao_mismatch": {
+                "path": "acceptAoMismatch",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "accept_ao_mismatch_variable"
+              },
+              "accept_life_time_duration": {
+                "path": "acceptLifetime.oneOfendChoice.duration",
+                "schema": {
+                  "maximum": 2147483646,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64"
+              },
+              "accept_life_time_exact": {
+                "path": "acceptLifetime.oneOfendChoice.exact",
+                "schema": {
+                  "type": "number"
+                },
+                "type": "Int64"
+              },
+              "accept_life_time_infinite": {
+                "path": "acceptLifetime.oneOfendChoice.infinite",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool"
+              },
+              "accept_life_time_local": {
+                "path": "acceptLifetime.local",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "accept_life_time_local_variable"
+              },
+              "accept_life_time_start_epoch": {
+                "path": "acceptLifetime.startEpoch",
+                "schema": {
+                  "type": "number"
+                },
+                "type": "Int64"
+              },
+              "crypto_algorithm": {
+                "path": "tcp",
+                "schema": {
+                  "enum": [
+                    "aes-128-cmac",
+                    "hmac-sha-1",
+                    "hmac-sha-256"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "id": {
+                "path": "id",
+                "schema": {
+                  "type": "integer"
+                },
+                "type": "Int64"
+              },
+              "include_tcp_options": {
+                "path": "includeTcpOptions",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "include_tcp_options_variable"
+              },
+              "key_chain_name": {
+                "path": "name",
+                "schema": {
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "key_string": {
+                "path": "keyString",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "key_string_variable"
+              },
+              "receiver_id": {
+                "path": "recvId",
+                "schema": {
+                  "default": 0,
+                  "maximum": 255,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "receiver_id_variable"
+              },
+              "send_id": {
+                "path": "sendId",
+                "schema": {
+                  "default": 0,
+                  "maximum": 255,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "send_id_variable"
+              },
+              "send_life_time_duration": {
+                "path": "sendLifetime.oneOfendChoice.duration",
+                "schema": {
+                  "maximum": 2147483646,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64"
+              },
+              "send_life_time_exact": {
+                "path": "sendLifetime.oneOfendChoice.exact",
+                "schema": {
+                  "type": "number"
+                },
+                "type": "Int64"
+              },
+              "send_life_time_infinite": {
+                "path": "sendLifetime.oneOfendChoice.infinite",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool"
+              },
+              "send_life_time_local": {
+                "path": "sendLifetime.local",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "send_life_time_local_variable"
+              },
+              "send_life_time_start_epoch": {
+                "path": "sendLifetime.startEpoch",
+                "schema": {
+                  "type": "number"
+                },
+                "type": "Int64"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "crypto_algorithm",
+              "id",
+              "key_chain_name"
+            ],
+            "wrappers": []
+          },
+          "path": "key"
+        }
+      },
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "transport_gps": {
+      "defaults": {
+        "destinationAddress": {
+          "optionType": "default"
+        },
+        "destinationPort": {
+          "optionType": "default"
+        },
+        "enable": {
+          "optionType": "default",
+          "value": false
+        },
+        "mode": {
+          "optionType": "default",
+          "value": "ms-based"
+        },
+        "nmea": {
+          "optionType": "default",
+          "value": false
+        },
+        "sourceAddress": {
+          "optionType": "default"
+        }
+      },
+      "fields": {
+        "gps_enable": {
+          "path": "enable",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "gps_enable_variable"
+        },
+        "gps_mode": {
+          "path": "mode",
+          "schema": {
+            "default": "ms-based",
+            "enum": [
+              "ms-based",
+              "standalone"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "gps_mode_variable"
+        },
+        "nmea_destination_address": {
+          "path": "destinationAddress",
+          "schema": {
+            "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "nmea_destination_address_variable"
+        },
+        "nmea_destination_port": {
+          "path": "destinationPort",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "nmea_destination_port_variable"
+        },
+        "nmea_enable": {
+          "path": "nmea",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "nmea_enable_variable"
+        },
+        "nmea_source_address": {
+          "path": "sourceAddress",
+          "schema": {
+            "pattern": "^((25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)\\.){3}(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)$",
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "nmea_source_address_variable"
+        }
+      },
+      "lists": {},
+      "public_defaults": {
+        "gps_enable": true
+      },
+      "required": [],
+      "wrappers": []
     }
   },
   "provider_commit": "d3194b612c3f24421ec1727b6fa6e9c0bc98b07f"

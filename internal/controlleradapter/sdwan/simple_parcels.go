@@ -65,6 +65,41 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		out = append(out, Resource{Key: key + "/" + field, Name: name, Section: "feature_profiles", Kind: "parcel", Type: collection + "_" + field, Collection: "/dataservice/v1/feature-profile/sdwan/" + collection, ParentName: p.Name, ParcelPath: path, Body: map[string]any{"name": name, "description": meta.Description, "data": data}})
 		return nil
 	}
+	if p.GPS != nil && collection != "transport" {
+		return nil, errors.New("GPS requires transport profile")
+	}
+	seenGPS := map[string]bool{}
+	for _, input := range p.GPS {
+		meta, data, e := scalarParcelData("transport_gps", input)
+		if e != nil {
+			return nil, e
+		}
+		if meta.Name == nil || *meta.Name == "" || seenGPS[*meta.Name] {
+			return nil, errors.New("GPS requires unique names")
+		}
+		seenGPS[*meta.Name] = true
+		if e = add("gps/"+*meta.Name, "gps", meta, data); e != nil {
+			return nil, e
+		}
+	}
+	if p.TrustSec != nil {
+		return nil, errors.New("TrustSec is not qualified: the pinned provider omits Manager 20.18 sxpNodeId")
+	}
+	if (p.ThousandEyes != nil || p.UCSE != nil) && collection != "other" {
+		return nil, errors.New("ThousandEyes and UCSE require other profile")
+	}
+	for kind, input := range map[string]map[string]any{"thousandeyes": p.ThousandEyes, "ucse": p.UCSE} {
+		if input == nil {
+			continue
+		}
+		meta, data, e := scalarParcelData("other_"+kind, input)
+		if e != nil {
+			return nil, e
+		}
+		if e = add(kind, kind, meta, data); e != nil {
+			return nil, e
+		}
+	}
 	if p.Config != nil {
 		if collection != "cli" {
 			return nil, errors.New("config requires CLI profile")
@@ -76,10 +111,10 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 			return nil, e
 		}
 	}
-	if (p.NTP != nil || p.Logging != nil || p.Basic != nil || p.Global != nil || p.OMP != nil || p.BFD != nil || p.FlexiblePortSpeed != nil || p.MRF != nil || p.PerformanceMonitoring != nil) && collection != "system" {
+	if (p.Security != nil || p.NTP != nil || p.Logging != nil || p.Basic != nil || p.Global != nil || p.OMP != nil || p.BFD != nil || p.FlexiblePortSpeed != nil || p.MRF != nil || p.PerformanceMonitoring != nil) && collection != "system" {
 		return nil, errors.New("system feature requires system profile")
 	}
-	for kind, input := range map[string]map[string]any{"ntp": p.NTP, "logging": p.Logging, "basic": p.Basic, "global": p.Global, "omp": p.OMP} {
+	for kind, input := range map[string]map[string]any{"security": p.Security, "ntp": p.NTP, "logging": p.Logging, "basic": p.Basic, "global": p.Global, "omp": p.OMP} {
 		if input != nil {
 			meta, data, e := scalarParcelData(kind, input)
 			if e != nil {

@@ -28,9 +28,12 @@ type scalarList struct {
 	Definition scalarDefinition
 }
 type scalarDefinition struct {
-	Lists    map[string]scalarList
-	Defaults map[string]any
-	Fields   map[string]scalarField
+	Wrappers       []scalarList
+	PublicDefaults map[string]any `json:"public_defaults"`
+	Required       []string
+	Lists          map[string]scalarList
+	Defaults       map[string]any
+	Fields         map[string]scalarField
 }
 
 func scalarParcelData(kind string, input map[string]any) (ParcelMetadata, map[string]any, error) {
@@ -61,6 +64,14 @@ func scalarParcelData(kind string, input map[string]any) (ParcelMetadata, map[st
 	return metadata, body, e
 }
 func applyScalarDefinition(definition scalarDefinition, input map[string]any, metadata bool) (map[string]any, error) {
+	values := make(map[string]any, len(input)+len(definition.PublicDefaults))
+	for key, value := range definition.PublicDefaults {
+		values[key] = value
+	}
+	for key, value := range input {
+		values[key] = value
+	}
+	input = values
 	b, e := json.Marshal(definition.Defaults)
 	if e != nil {
 		return nil, e
@@ -70,6 +81,11 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 		return nil, ErrResponse
 	}
 	definition.Defaults = copy
+	for _, key := range definition.Required {
+		if input[key] == nil {
+			return nil, fmt.Errorf("%s is required", key)
+		}
+	}
 	allowed := map[string]bool{}
 	if metadata {
 		allowed["name"] = true
@@ -145,6 +161,32 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 			setScalarPath(definition.Defaults, list.Path, out)
 		}
 	}
+	for _, wrapper := range definition.Wrappers {
+		subset := map[string]any{}
+		for public, field := range wrapper.Definition.Fields {
+			allowed[public] = true
+			if value, ok := input[public]; ok {
+				subset[public] = value
+			}
+			if field.Variable != "" {
+				allowed[field.Variable] = true
+				if value, ok := input[field.Variable]; ok {
+					subset[field.Variable] = value
+				}
+			}
+		}
+		for public := range wrapper.Definition.Lists {
+			allowed[public] = true
+			if value, ok := input[public]; ok {
+				subset[public] = value
+			}
+		}
+		mapped, err := applyScalarDefinition(wrapper.Definition, subset, false)
+		if err != nil {
+			return nil, err
+		}
+		setScalarPath(definition.Defaults, wrapper.Path, []any{mapped})
+	}
 	for key := range input {
 		if !allowed[key] {
 			return nil, fmt.Errorf("unsupported parcel field %s", key)
@@ -171,6 +213,9 @@ func setScalarPath(root map[string]any, path string, value any) {
 // The generated value schemas use these scalar/array constraints. Unsupported
 // schema keywords that affect validation are rejected by the generator.
 func validScalarValue(value any, schema map[string]any) bool {
+	if constant, exists := schema["const"]; exists && !reflect.DeepEqual(value, constant) {
+		return false
+	}
 	if alternatives, ok := schema["oneOf"].([]any); ok {
 		count := 0
 		for _, alternative := range alternatives {
@@ -237,9 +282,9 @@ func validScalarValue(value any, schema map[string]any) bool {
 		}
 		if format, ok := schema["format"].(string); ok {
 			switch format {
-			case "ipv6":
+			case "ipv4", "ipv6":
 				address, e := netip.ParseAddr(v)
-				if e != nil || !address.Is6() {
+				if e != nil || (format == "ipv6" && !address.Is6()) || (format == "ipv4" && !address.Is4()) {
 					return false
 				}
 			case "hostname":

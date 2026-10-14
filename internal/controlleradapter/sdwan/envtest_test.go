@@ -55,10 +55,10 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		if fixture == "" {
 			fixture = "banner.yaml"
 		}
-		if fixture != "banner.yaml" && fixture != "system-profile.yaml" && fixture != "policy-objects.yaml" && fixture != "deployment.yaml" && fixture != "system-features.yaml" {
+		if fixture != "banner.yaml" && fixture != "system-profile.yaml" && fixture != "policy-objects.yaml" && fixture != "deployment.yaml" && fixture != "system-features.yaml" && fixture != "peripheral-features.yaml" && fixture != "thousandeyes-feature.yaml" {
 			t.Fatal("unsupported fixture")
 		}
-		if fixture == "system-features.yaml" {
+		if fixture == "system-features.yaml" || fixture == "peripheral-features.yaml" || fixture == "thousandeyes-feature.yaml" {
 			cfg.Spec.ManagedSections = []string{"feature_profiles"}
 		}
 		if fixture == "deployment.yaml" {

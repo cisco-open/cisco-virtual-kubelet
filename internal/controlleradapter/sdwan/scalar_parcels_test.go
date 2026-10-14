@@ -69,3 +69,57 @@ func TestScalarSchemaCombinators(t *testing.T) {
 		t.Fatal("IPv6 validation")
 	}
 }
+
+func TestSecurityNestedRequiredFields(t *testing.T) {
+	input := map[string]any{"key_chains": []any{map[string]any{"name": "CVK-chain", "key_id": float64(10)}}}
+	_, data, err := scalarParcelData("security", input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	chains := data["keychain"].([]any)
+	chain := chains[0].(map[string]any)
+	if chain["name"].(map[string]any)["value"] != "CVK-chain" {
+		t.Fatal("nested name lost as metadata")
+	}
+	for _, invalid := range []map[string]any{
+		{"key_chains": []any{map[string]any{"key_id": float64(10)}}},
+		{"keys": []any{map[string]any{"key_chain_name": "chain"}}},
+		{"anti_replay_window": float64(512)},
+		{"extended_anti_replay_window": false},
+	} {
+		if _, _, err := scalarParcelData("security", invalid); err == nil {
+			t.Fatal("invalid security input accepted")
+		}
+	}
+}
+func TestGPSModuleDefaultAndUCSERequiredFields(t *testing.T) {
+	_, data, err := scalarParcelData("transport_gps", map[string]any{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if data["enable"].(map[string]any)["value"] != true || data["enable"].(map[string]any)["optionType"] != "global" {
+		t.Fatal("NaC GPS default missing")
+	}
+	if _, _, err := scalarParcelData("other_ucse", map[string]any{"slot": float64(1)}); err == nil {
+		t.Fatal("missing bay accepted")
+	}
+	if _, _, err := scalarParcelData("other_ucse", map[string]any{"slot": float64(1), "bay": float64(0)}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestThousandEyesWrapperAndChoices(t *testing.T) {
+	_, data, err := scalarParcelData("other_thousandeyes", map[string]any{"account_group_token_variable": "te_token", "proxy_type": "none", "name_server_ip": "192.0.2.53"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	app := data["virtualApplication"].([]any)[0].(map[string]any)
+	if app["token"].(map[string]any)["value"] != "{{te_token}}" {
+		t.Fatal("wrapper variable mapping lost")
+	}
+	for _, bad := range []map[string]any{{"proxy_type": "wrong"}, {"name_server_ip": "192.0.2.999"}, {"unsupported": true}} {
+		if _, _, err := scalarParcelData("other_thousandeyes", bad); err == nil {
+			t.Fatal("invalid wrapper input accepted")
+		}
+	}
+}
