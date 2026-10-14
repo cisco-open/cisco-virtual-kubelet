@@ -75,6 +75,8 @@ func liveParcelLifecycle(t *testing.T, resources []Resource) {
 				servers := data["highSpeedLogging"].([]any)
 				servers[0].(map[string]any)["port"] = globalOption(2056)
 			}
+		} else if r.Kind == "device-template" {
+			r.Body["templateDescription"] = "CVK updated isolated fixture"
 		} else if r.Kind == "" {
 			r.Body["templateDescription"] = "CVK updated isolated fixture"
 		} else {

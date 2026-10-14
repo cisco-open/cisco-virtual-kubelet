@@ -25,7 +25,7 @@ import (
 const TypeName = "sdwan"
 
 func Descriptor() controlleradapter.Descriptor {
-	return controlleradapter.Descriptor{Type: TypeName, DisplayName: "Catalyst SD-WAN", NetAsCode: cvkv1.NetworkControllerNetAsCodeStatus{Format: "netascode-sdwan", Stripe: "sdwan", ModelVersions: []string{ModelVersion}, Sections: []string{"edge_feature_templates", "feature_profiles", "configuration_groups", "topology_groups", "policy_groups", "localized_policies", "centralized_policies", "security_policies", "policy_objects", "network_hierarchy", "application_catalog", "settings", "sites"}}, Capabilities: []string{"health", "inventory", "config"}, WorkerClusterRole: controlleradapter.SDWANWorkerClusterRole}
+	return controlleradapter.Descriptor{Type: TypeName, DisplayName: "Catalyst SD-WAN", NetAsCode: cvkv1.NetworkControllerNetAsCodeStatus{Format: "netascode-sdwan", Stripe: "sdwan", ModelVersions: []string{ModelVersion}, Sections: []string{"edge_feature_templates", "edge_device_templates", "feature_profiles", "configuration_groups", "topology_groups", "policy_groups", "localized_policies", "centralized_policies", "security_policies", "policy_objects", "network_hierarchy", "application_catalog", "settings", "sites"}}, Capabilities: []string{"health", "inventory", "config"}, WorkerClusterRole: controlleradapter.SDWANWorkerClusterRole}
 }
 func init() {
 	controlleradapter.Register(controlleradapter.Registration{Descriptor: Descriptor(), Factory: newAdapter})

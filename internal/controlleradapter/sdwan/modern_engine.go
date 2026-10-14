@@ -178,6 +178,9 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 	return &Observation{ID: id, Body: body}, nil
 }
 func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
+	if r.Kind == "device-template" {
+		return c.createDeviceTemplate(ctx, r)
+	}
 	if r.Kind == "tag" {
 		return c.createTag(ctx, r)
 	}
@@ -235,6 +238,9 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 	return id, nil
 }
 func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) error {
+	if r.Kind == "device-template" {
+		return c.updateDeviceTemplate(ctx, r, o)
+	}
 	if r.Kind == "tag" {
 		return c.updateTag(ctx, r, o)
 	}
@@ -277,6 +283,9 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 	return c.Request(ctx, "PUT", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(o.ID), r.Body, nil)
 }
 func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id string) error {
+	if r.Kind == "device-template" {
+		return c.deleteDeviceTemplate(ctx, id)
+	}
 	if r.Kind == "tag" {
 		return c.deleteTag(ctx, r, id)
 	}

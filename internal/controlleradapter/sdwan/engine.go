@@ -19,6 +19,9 @@ type Observation struct {
 }
 
 func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) {
+	if r.Kind == "device-template" {
+		return c.observeDeviceTemplate(ctx, r)
+	}
 	if r.Kind == "tag" {
 		return c.observeTag(ctx, r)
 	}

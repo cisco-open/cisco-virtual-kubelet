@@ -290,8 +290,12 @@
       "type": "sdwan_feature_device_template",
       "name": "feature_device_template",
       "source": "sdwan_device_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "classic-device-template"
+      ]
     },
     {
       "type": "sdwan_attach_feature_device_template",

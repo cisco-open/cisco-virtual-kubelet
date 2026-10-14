@@ -158,6 +158,9 @@ func profileBannerValue(v, variable *string) map[string]any {
 	return map[string]any{"optionType": "default", "value": ""}
 }
 func equalModern(r Resource, o map[string]any) (bool, error) {
+	if r.Kind == "device-template" {
+		return equalDeviceTemplate(r, o)
+	}
 	if r.Kind == "tag" {
 		return equalTag(r, o)
 	}
