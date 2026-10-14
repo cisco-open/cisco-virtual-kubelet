@@ -1,0 +1,27 @@
+sdwan:
+  edge_feature_templates:
+    svi_interface_templates:
+      - name: CVK-CLASSIC-SVI
+        description: Unattached SVI interface fixture
+        interface_name: Vlan100
+        ipv4_address: 192.0.2.1/24
+        ipv6_address: 2001:db8:100::1/64
+        mtu: 1500
+        ipv4_ingress_access_list_variable: svi_ipv4_acl
+        ipv6_egress_access_list_variable: svi_ipv6_acl
+        ipv4_secondary_addresses:
+          - address: 192.0.3.1/24
+        ipv6_secondary_addresses:
+          - address: 2001:db8:101::1/64
+        ipv4_vrrp_groups:
+          - id: 10
+            address: 192.0.2.254
+            priority: 110
+            secondary_addresses:
+              - address: 192.0.2.253
+        ipv6_vrrp_groups:
+          - id: 20
+            link_local_address: fe80::20
+            global_prefix: 2001:db8:100::fe/64
+            secondary_addresses:
+              - address: 2001:db8:101::fe/64

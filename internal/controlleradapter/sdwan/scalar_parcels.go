@@ -244,6 +244,12 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 					}
 				} else if field.Encode == "enum-map" {
 					value = field.Values[value.(string)]
+				} else if field.Encode == "comma-join" {
+					parts := []string{}
+					for _, item := range value.([]any) {
+						parts = append(parts, strconv.FormatFloat(item.(float64), 'f', 0, 64))
+					}
+					value = strings.Join(parts, ",")
 				} else {
 					return nil, errors.New("unsupported scalar encoding")
 				}
@@ -557,9 +563,9 @@ func validScalarValue(value any, schema map[string]any) bool {
 						return false
 					}
 				}
-			case "ipv4-prefix":
+			case "ipv4-prefix", "ipv6-prefix":
 				prefix, e := netip.ParsePrefix(v)
-				if e != nil || !prefix.Addr().Is4() {
+				if e != nil || format == "ipv4-prefix" && !prefix.Addr().Is4() || format == "ipv6-prefix" && !prefix.Addr().Is6() {
 					return false
 				}
 			case "hostname":

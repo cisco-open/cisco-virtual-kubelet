@@ -62,6 +62,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
     fields = {tf: (name, typ) for name, typ, tf in re.findall(r'(\w+)\s+types\.(\w+)\s+`tfsdk:"([^"]+)"`', struct_body)}
     inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}
     predicates = {}
+    conditional_trees = []
     for tf, expression in re.findall(r'^' + ' ' * indent + r'(\w+)\s*=\s*(.*)$', source, re.M):
         if indent == 2 and tf in {"for_each", "name", "description", "device_types", "depends_on"}:
             continue
@@ -108,7 +109,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             inputs[tf] = "$derived:" + tf
             predicates[tf] = {"field":"area_type", "equals":area_type, "boolean":"no_summary"}
             continue
-        if expression == alias:
+        if expression == alias or expression == 'try(' + alias + ', null)':
             inputs[tf] = "$value"
             required.append("$value")
             continue
@@ -137,7 +138,23 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             if direct:
                 required.append(direct.group(1))
             continue
-        array = re.search(r'\[for (\w+) in ' + re.escape(alias) + r'\.(\w+) : \{', expression)
+        conditional = re.fullmatch(r'try\((.+), null\) == null \? null : \[\{', expression)
+        if conditional:
+            triggers = [part.removeprefix(alias + ".") for part in conditional.group(1).split(", ")]
+            if not triggers or any("." in trigger for trigger in triggers):
+                raise SystemExit("Unreviewed classic conditional trigger: " + tf)
+            item_source = block(source, source.index("{", source.index(expression)))
+            go_name, child_struct = re.search(r'(\w+)\s+\[\](\w+)\s+`tfsdk:"' + tf + '"`', struct_body).groups()
+            loop = re.search(r'for _, (\w+) := range ' + receiver + r'\.' + go_name + r' \{', body)
+            item_body = block(body, loop.end()-1)
+            item_receiver = loop.group(1)
+            item_target = re.search(r'(\w+) := ""', item_body).group(1)
+            path = re.search(r'sjson.SetRaw\(' + target + ', ' + prefix + r'"([^" ]+)\."\+"vipValue\.-1", ' + item_target + r'\)', item_body).group(1)
+            leaf = leaves[path]
+            child = definition(item_source, alias, indent+2, model, item_body, leaf["children"], item_receiver, item_target, child_struct)
+            conditional_trees.append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":triggers})
+            continue
+        array = re.search(r'\[for (\w+) in (?:try\()?' + re.escape(alias) + r'\.(\w+)(?:, \[\]\))? : \{', expression)
         if not array:
             raise SystemExit(f"Unreviewed classic expression: {tf}")
         item_alias, public = array.groups()
@@ -159,12 +176,12 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if tf.endswith("_variable"):
             continue
         name, typ = fields[tf]
-        if tf in ("stub", "nssa", "default_information_originate"):
+        if tf in ("stub", "nssa", "default_information_originate", "nat") and typ == "Bool" and tf not in literals and (tf != "nat" or target == "body"):
             # These booleans enable a container rather than a vipValue leaf.
             expected_path = "ospf.default-information.originate" if tf == "default_information_originate" else tf
             if not re.search(r'sjson.Set\(' + target + ', ' + prefix + '"' + re.escape(expected_path) + r'", map\[string\]interface\{\}\{\}\)', body):
-                raise SystemExit("Unreviewed classic container marker: " + tf)
-            mapping[public] = {"path":expected_path, "container":True, "object_type":"node-only" if tf == "default_information_originate" else ""}
+                raise SystemExit(f"Unreviewed classic container marker: {tf} in {receiver}/{target}, alias={alias}, expression={expression}, public={public}, literal={literals.get(tf)}")
+            mapping[public] = {"path":expected_path, "container":True, "object_type":"node-only" if tf in ("default_information_originate", "nat") else ""}
             if tf in predicates:
                 mapping[public]["predicate"] = predicates[tf]
             continue
@@ -179,7 +196,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if leaf["objectType"] not in ("object", "node-only", "list"):
             raise SystemExit("Unreviewed classic leaf type")
         datatype = leaf["dataType"]
-        if datatype["type"] not in ("string", "boolean", "number", "enum", "ipv4", "ipv4-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "label", "range"}:
+        if datatype["type"] not in ("string", "boolean", "number", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range"}:
             raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
         value_type = {"String": "string", "Bool": "boolean", "Int64": "integer"}.get(typ)
         if typ in ("Set", "List"):
@@ -194,6 +211,8 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             # Manager UI datetime hints are not wire constraints: provider sends
             # the model epoch string verbatim and declares no date validator.
             value_schema["description"] = "Manager datetime epoch string"
+        if "regex" in datatype:
+            value_schema["pattern"] = datatype["regex"]
         if "range" in datatype:
             alternatives = []
             for part in datatype["range"].split(","):
@@ -207,12 +226,12 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             value_schema["anyOf"] = alternatives
         if datatype["type"] == "ip":
             value_schema["format"] = "ip"
-        if datatype["type"] == "ipv4":
-            value_schema["format"] = "ipv4"
+        if datatype["type"] in ("ipv4", "ipv6"):
+            value_schema["format"] = datatype["type"]
         if datatype["type"] in ("ipv4Range", "mac"):
             value_schema["format"] = datatype["type"]
-        if datatype["type"] == "ipv4-prefix":
-            value_schema["format"] = "ipv4-prefix"
+        if datatype["type"] in ("ipv4-prefix", "ipv6-prefix"):
+            value_schema["format"] = datatype["type"]
         if datatype["type"] == "radioButtonList":
             value_schema["enum"] = [x["value"] for x in datatype["values"]]
         if datatype["type"] in ("enum", "enumList"):
@@ -248,12 +267,15 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             mapping[public].update(derived=True, when=conditions[tf][0], derived_value=conditions[tf][1])
         if tf + "_variable" in inputs:
             mapping[public]["variable"] = inputs[tf + "_variable"]
-    return {"fields": mapping, "required": required, "defaults": baseline, "trees": trees, "optional": optional, "unavailable_inputs": unavailable}
+    result = {"fields": mapping, "required": required, "defaults": baseline, "trees": trees, "optional": optional, "unavailable_inputs": unavailable}
+    if conditional_trees:
+        result["conditional_trees"] = conditional_trees
+    return result
 
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
     ospf_policy_source = None
     if resource == "sdwan_cisco_ospf_feature_template":
@@ -261,6 +283,14 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         end = source.index("  }]", start) + len("  }]")
         ospf_policy_source = source[start:end]
         source = source[:start] + source[end:]
+    if resource == "sdwan_switchport_feature_template":
+        expected = 'switchport_trunk_allowed_vlans                    = length(concat(try(interface.trunk_allowed_vlans, []), try(interface.trunk_allowed_vlans_ranges, []))) > 0 ? join(",", concat([for p in try(interface.trunk_allowed_vlans, []) : p], [for r in try(interface.trunk_allowed_vlans_ranges, []) : "${r.from}-${r.to}"])) : null'
+        if expected not in source:
+            raise SystemExit("Switchport VLAN range mapping changed")
+        source = source.replace(expected, 'switchport_trunk_allowed_vlans = try(interface.trunk_allowed_vlans, null)')
+        mac_expr = 'mac_address          = try(sma.mac_address, null) == null ? null : format("%s.%s.%s", substr(replace(sma.mac_address, ":", ""), 0, 4), substr(replace(sma.mac_address, ":", ""), 4, 4), substr(replace(sma.mac_address, ":", ""), 8, 4))'
+        if mac_expr not in source: raise SystemExit("Switchport MAC mapping changed")
+        source = source.replace(mac_expr, 'mac_address = try(sma.mac_address, null)')
     if resource == "sdwan_cisco_security_feature_template":
         start = source.index("  authentication_type =")
         end = source.index("  a]", start) + len("  a]")
@@ -268,6 +298,31 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         if source[start:end] != expected:
             raise SystemExit("Security authentication translation changed")
         source = source[:start] + '  authentication_type = try(each.value.authentication_types, null)' + source[end:]
+    svi_acl_sources = []
+    if resource in ("sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template"):
+        for family in ("ipv4", "ipv6"):
+            start = source.index("  " + family + "_access_lists =")
+            end = source.index("  ])", start) + len("  ])")
+            acl_source = source[start:end]
+            if not acl_source.strip().startswith(f'{family}_access_lists = try('):
+                raise SystemExit("SVI ACL condition changed")
+            svi_acl_sources.append((family, acl_source))
+            source = source[:start] + source[end:]
+    cellular_encapsulation_source = None
+    if resource == "sdwan_vpn_interface_cellular_feature_template":
+        start = source.index("  tunnel_interface_encapsulations =")
+        end = source.index("  ])", start) + len("  ])")
+        cellular_encapsulation_source = source[start:end]
+        expected = 'tunnel_interface_encapsulations = try(each.value.tunnel_interface.gre_encapsulation, each.value.tunnel_interface.ipsec_encapsulation, null) == null ? null : flatten(['
+        if not cellular_encapsulation_source.strip().startswith(expected):
+            raise SystemExit("Cellular encapsulation condition changed")
+        source = source[:start] + source[end:]
+    cellular_policer_source = None
+    if resource == "sdwan_vpn_interface_cellular_feature_template":
+        start = source.index("  policers =")
+        end = source.index("  ])", start) + len("  ])")
+        cellular_policer_source = source[start:end]
+        source = source[:start] + source[end:]
     gre_acl_source = None
     if resource == "sdwan_cisco_vpn_interface_gre_feature_template":
         start = source.index("  access_lists =")
@@ -342,11 +397,58 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
             item_source = block(gre_acl_source, match.end() - 1)
             child = definition(item_source, "each.value", 6, model, item_body, leaf["children"], "item", "itemBody", child_struct)
             generated["conditional_trees"].append({"path":path, "primary_keys":leaf["primaryKeys"], "definition":child, "triggers":["ipv4_"+direction+"_access_list", "ipv4_"+direction+"_access_list_variable"]})
+    if cellular_encapsulation_source:
+        loop = re.search(r'for _, item := range data.TunnelInterfaceEncapsulations \{', body)
+        item_body = block(body, loop.end()-1)
+        path = re.search(r'sjson.SetRaw\(body, path\+"([^" ]+)\."\+"vipValue\.-1", itemBody\)', item_body).group(1)
+        leaf = next(x for x in schema["fields"] if ".".join(x["dataPath"]+[x["key"]]) == path)
+        child_struct = re.search(r'TunnelInterfaceEncapsulations\s+\[\](\w+)', model).group(1)
+        children = list(re.finditer(r'\[\] : \[\{', cellular_encapsulation_source))
+        if len(children) != 2:
+            raise SystemExit("Cellular encapsulation rows changed")
+        for match, kind in zip(children, ("gre", "ipsec")):
+            item_source = block(cellular_encapsulation_source, match.end()-1)
+            child = definition(item_source, "each.value", 6, model, item_body, leaf["children"], "item", "itemBody", child_struct)
+            generated.setdefault("conditional_trees",[]).append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":["tunnel_interface."+kind+"_encapsulation"]})
+    if cellular_policer_source:
+        loop = re.search(r'for _, item := range data.Policers \{', body)
+        item_body = block(body, loop.end()-1)
+        path = re.search(r'sjson.SetRaw\(body, path\+"([^" ]+)\."\+"vipValue\.-1", itemBody\)', item_body).group(1)
+        leaf = next(x for x in schema["fields"] if ".".join(x["dataPath"]+[x["key"]]) == path)
+        child_struct = re.search(r'Policers\s+\[\](\w+)', model).group(1)
+        children = list(re.finditer(r'\[\] : \[\{', cellular_policer_source))
+        if len(children) != 2: raise SystemExit("Cellular policer rows changed")
+        for match, direction in zip(children, ("ingress", "egress")):
+            item_source = block(cellular_policer_source, match.end()-1)
+            child = definition(item_source, "each.value", 6, model, item_body, leaf["children"], "item", "itemBody", child_struct)
+            generated.setdefault("conditional_trees",[]).append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":[direction+"_policer_name",direction+"_policer_name_variable"]})
+        generated.setdefault("unavailable_inputs",{})["ingress_policer_name_variable"] = "Pinned module only passes a name to the provider's policer row"
+        generated["unavailable_inputs"]["egress_policer_name_variable"] = "Pinned module only passes a name to the provider's policer row"
+    for family, acl_source in svi_acl_sources:
+        loop = re.search(r'for _, item := range data.' + family.title() + r'AccessLists \{', body)
+        item_body = block(body, loop.end()-1)
+        path = re.search(r'sjson.SetRaw\(body, path\+"([^" ]+)\."\+"vipValue\.-1", itemBody\)', item_body).group(1)
+        leaf = next(x for x in schema["fields"] if ".".join(x["dataPath"]+[x["key"]]) == path)
+        child_struct = re.search(family.title()+r'AccessLists\s+\[\](\w+)', model).group(1)
+        children = list(re.finditer(r'\[\] : \[\{', acl_source))
+        if len(children) != 2:
+            raise SystemExit("SVI ACL rows changed")
+        for match, direction in zip(children, ("ingress", "egress")):
+            item_source = block(acl_source, match.end()-1)
+            child = definition(item_source, "each.value", 6, model, item_body, leaf["children"], "item", "itemBody", child_struct)
+            generated.setdefault("conditional_trees",[]).append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":[family+"_"+direction+"_access_list",family+"_"+direction+"_access_list_variable"]})
     if resource == "sdwan_cisco_vpn_interface_ipsec_feature_template":
         # NaC's published example uses numeric DH groups; Terraform coerces to String.
         field = generated["fields"]["ike.group"]
         field["input_schema"] = {"anyOf": [field["schema"], {"type":"integer", "enum":[int(v) for v in field["schema"]["enum"]]}]}
         field["decimal_string"] = True
+    if resource == "sdwan_switchport_feature_template":
+        field = generated["trees"]["interfaces"]["definition"]["fields"]["trunk_allowed_vlans"]
+        field["joined_ranges"] = "trunk_allowed_vlans_ranges"
+        mac = generated["trees"]["static_mac_addresses"]["definition"]["fields"]["mac_address"]
+        mac["mac_format"] = "cisco-dot"
+        mac["input_schema"] = {"type":"string","format":"mac"}
+        field["input_schema"] = {"type":"array","items":{"type":"integer","minimum":1,"maximum":4094}}
     if resource == "sdwan_cisco_security_feature_template":
         field = generated["fields"]["replay_window"]
         field["input_schema"] = {"anyOf":[field["schema"], {"type":"integer", "enum":[int(v) for v in field["schema"]["enum"]]}]}

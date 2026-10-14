@@ -5,16 +5,17 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 96 |
+| Fixture-qualified against live Manager | 102 |
 | Implemented with local fixtures; live tests outstanding | 34 |
-| Implementation still pending | 95 |
+| Implementation still pending | 89 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment implements six previously pending declarations: classic security
-and OSPF templates plus service OSPF, service OSPFv3 IPv4/IPv6 and transport OSPF.
-All six passed native live CRUD and Kubernetes reconciliation. Six earlier definitions
-(transport IPv4/IPv6 trackers and groups, Cisco SSE and SIG credentials) also passed those tests.
-Qualification covers unattached fixture attributes, not router behavior or full parity.
+The latest increment qualifies six more declarations: classic SVI, cellular and
+switchport templates, service EIGRP, service switchport, and Zscaler SSE. Each passed native live
+create/read/update/read with cleanup and Kubernetes reconciliation. Qualification
+covers unattached fixture attributes, not router behavior or full parity. The
+previous increment qualified six routing/security declarations and six earlier
+tracker/SSE/SIG definitions.
 
 ## Live tests required for implemented definitions
 
@@ -90,7 +91,7 @@ All examples have report-mode companion `NetworkControllerConfig` manifests.
 
 ## Implementation still required
 
-These 95 declarations are not merely waiting for live tests. Their native mapping
+These 89 declarations are not merely waiting for live tests. Their native mapping
 and/or lifecycle implementation remains unfinished. They must not be counted as parity.
 
 ### sdwan_application_catalog.tf
@@ -122,9 +123,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_cisco_system_feature_template.cisco_system_feature_template`
 - `sdwan_cisco_vpn_feature_template.cisco_vpn_feature_template`
 - `sdwan_cisco_vpn_interface_feature_template.cisco_vpn_interface_feature_template`
-- `sdwan_switchport_feature_template.switchport_feature_template`
-- `sdwan_vpn_interface_svi_feature_template.vpn_interface_svi_feature_template`
-- `sdwan_vpn_interface_cellular_feature_template.vpn_interface_cellular_feature_template`
 
 ### sdwan_features_application_priority.tf
 
@@ -140,7 +138,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 
 - `sdwan_service_routing_bgp_feature.service_routing_bgp_feature`
 - `sdwan_service_dual_router_ha_feature.service_dual_router_ha_feature`
-- `sdwan_service_routing_eigrp_feature.service_routing_eigrp_feature`
 - `sdwan_service_ipv4_acl_feature.service_ipv4_acl_feature`
 - `sdwan_service_lan_vpn_feature.service_lan_vpn_feature`
 - `sdwan_service_lan_vpn_feature_associate_routing_bgp_feature.service_lan_vpn_feature_associate_routing_bgp_feature`
@@ -160,12 +157,10 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature.service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature`
 - `sdwan_service_multicast_feature.service_multicast_feature`
 - `sdwan_service_route_policy_feature.service_route_policy_feature`
-- `sdwan_service_switchport_feature.service_switchport_feature`
 - `sdwan_service_ipv6_acl_feature.service_ipv6_acl_feature`
 
 ### sdwan_features_sse.tf
 
-- `sdwan_sse_zscaler_feature.sse_zscaler_feature`
 
 ### sdwan_features_system.tf
 

@@ -283,6 +283,7 @@ reviewed += [("policy_object", f, "", "policy_object_" + f) for f in policy_feat
 reviewed += [("transport", f, "tracker", "transport_" + f) for f in ("tracker", "ipv6_tracker", "tracker_group", "ipv6_tracker_group")]
 reviewed += [("sse", "cisco", "cisco", "sse_cisco"), ("system", "ca_certificate", "ca_certificate", "ca_certificate")]
 reviewed += [(family, feature, "ospf", family+"_"+feature) for family, feature in [("service","routing_ospf"),("service","routing_ospfv3_ipv4"),("service","routing_ospfv3_ipv6"),("transport","routing_ospf")]]
+reviewed += [("service", "routing_eigrp", "eigrp", "service_routing_eigrp"), ("sse", "zscaler", "zscaler", "sse_zscaler"), ("service", "switchport", "switchport", "service_switchport")]
 for family, feature, alias, key in reviewed:
     hcl = (args.module / ("sdwan_policy_objects.tf" if family == "policy_object" else "sdwan_features_" + family + ".tf")).read_text()
     resource = "sdwan_" + family + "_" + feature + ("" if family == "policy_object" else "_feature")
@@ -336,6 +337,11 @@ for family, feature, alias, key in reviewed:
         if source.count(expr) != 1:
             raise SystemExit("Object tracker type expression changed")
         source = source.replace(expr, "each.value.tracker.type")
+    if key == "service_switchport":
+        expr = 'length(try(interface.trunk_allowed_vlans, [])) > 0 ? join(",", try(interface.trunk_allowed_vlans, [])) : null'
+        if source.count(expr) != 1:
+            raise SystemExit("Service switchport VLAN join changed")
+        source = source.replace(expr, 'try(interface.trunk_allowed_vlans, null)')
     if key == "snmp":
         # Upstream typo is unreachable for a string-valued group.view. Do not
         # expose a supposedly working variable field that the module cannot use.
@@ -370,6 +376,16 @@ for family, feature, alias, key in reviewed:
     if key == "policy_object_unified_advanced_malware_protection":
         for field in ("tg_cloud_region", "file_analysis_alert_log_level", "file_analysis_file_types"):
             generated["fields"][field].update(condition_field="file_analysis", condition_value=True)
+    if key == "sse_zscaler":
+        # Manager 20.18.2.2 rejects these omissions even though the pinned
+        # provider's request schema marks them optional.
+        if "tracker_source_ip" not in generated["fields"] or "tunnel_source_interface" not in generated["lists"]["interfaces"]["definition"]["fields"]:
+            raise SystemExit("Zscaler Manager-required fields changed")
+        generated["required"].append("tracker_source_ip")
+        generated["lists"]["interfaces"]["definition"]["required"].append("tunnel_source_interface")
+    if key == "service_switchport":
+        field = generated["lists"]["interfaces"]["definition"]["fields"]["trunk_allowed_vlans"]
+        field.update(encode="comma-join", input_schema={"type":"array", "items":{"type":"integer", "minimum":1, "maximum":4094}})
     if key in ("transport_tracker", "transport_ipv6_tracker"):
         generated["fields"]["endpoint_ip"]["alternate"] = "endpoint_tcp_udp_ip"
         ip_prefix = "ipv6-" if key == "transport_ipv6_tracker" else ""

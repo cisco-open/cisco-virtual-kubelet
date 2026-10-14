@@ -544,15 +544,21 @@
       "type": "sdwan_switchport_feature_template",
       "name": "switchport_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "classic-switchport.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; associations and device activation excluded"
     },
     {
       "type": "sdwan_vpn_interface_svi_feature_template",
       "name": "vpn_interface_svi_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "classic-svi.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; associations and device activation excluded"
     },
     {
       "type": "sdwan_security_app_hosting_feature_template",
@@ -590,8 +596,11 @@
       "type": "sdwan_vpn_interface_cellular_feature_template",
       "name": "vpn_interface_cellular_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "classic-cellular-interface.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; associations and device activation excluded"
     },
     {
       "type": "sdwan_application_priority_policy_settings_policy",
@@ -684,8 +693,11 @@
       "type": "sdwan_service_routing_eigrp_feature",
       "name": "service_routing_eigrp_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "routing-eigrp.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; associations and device activation excluded"
     },
     {
       "type": "sdwan_service_ipv4_acl_feature",
@@ -890,8 +902,11 @@
       "type": "sdwan_service_switchport_feature",
       "name": "service_switchport_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "service-switchport.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; associations and device activation excluded"
     },
     {
       "type": "sdwan_service_ipv6_acl_feature",
@@ -904,8 +919,11 @@
       "type": "sdwan_sse_zscaler_feature",
       "name": "sse_zscaler_feature",
       "source": "sdwan_features_sse.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "zscaler-sse.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; associations and device activation excluded"
     },
     {
       "type": "sdwan_sse_cisco_feature",

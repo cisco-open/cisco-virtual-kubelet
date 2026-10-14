@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 96 resource declarations (90 distinct types)
+Native fixture coverage now includes 102 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -307,3 +307,27 @@ must be absent before testing; existing global templates must not be adopted.
 Both source generators reproduced metadata byte-for-byte. Previously qualified
 metadata is unchanged. `go test ./...` passed; adapter race checks passed. Terraform was not executed or added as a
 dependency.
+
+## Classic interfaces, switchport, EIGRP and Zscaler continuation
+
+Six additional declarations passed native create/read/update/read with cleanup
+and Kubernetes reconciliation through local API server/etcd 1.35.0 and the live
+Manager:
+
+| Fixture | Native lifecycle | Live Kubernetes reconciliation |
+|---|---:|---:|
+| `classic-svi.yaml` | Passed, 3.33s | Passed, 8.52s |
+| `classic-cellular-interface.yaml` | Passed, 3.17s | Passed, 8.76s |
+| `classic-switchport.yaml` | Passed, 3.32s | Passed, 9.13s |
+| `routing-eigrp.yaml` | Passed, 6.50s | Passed, 12.88s |
+| `zscaler-sse.yaml` | Passed, 6.71s | Passed, 12.95s |
+| `service-switchport.yaml` | Passed, 6.51s | Passed, 13.55s |
+
+The Zscaler Manager rejected the initial fixture because it required
+`data.trackerSrcIp`; a nested interface also required `tunnelSourceInterface`.
+The fixture supplies both and passed with nested interface and tracker rows.
+The temporary diagnostic response logging used to identify those missing
+attributes was removed. Existing generated mappings were unchanged.
+All five fixtures are unattached; router forwarding and feature associations
+remain outside this evidence. Status: **102 fixture-qualified, 34 implemented
+but unqualified, 89 pending implementation, one compatibility-blocked**.

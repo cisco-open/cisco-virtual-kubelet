@@ -72,6 +72,7 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 	}{
 		{"ca_certificate", "system", "ca_certificate", "ca-cert", p.CACertificate},
 		{"cisco", "sse", "sse_cisco", "cisco", p.CiscoSSE},
+		{"zscaler", "sse", "sse_zscaler", "zscaler", p.ZscalerSSE},
 	} {
 		if feature.input == nil {
 			continue
@@ -83,8 +84,8 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		if err != nil {
 			return nil, err
 		}
-		if feature.kind == "sse_cisco" && meta.Name == nil {
-			return nil, errors.New("Cisco SSE requires a name")
+		if (feature.kind == "sse_cisco" || feature.kind == "sse_zscaler") && meta.Name == nil {
+			return nil, errors.New("SSE feature requires a name")
 		}
 		if err := add(feature.public, feature.path, meta, data); err != nil {
 			return nil, err
@@ -96,8 +97,11 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 	if (p.OSPFv3IPv4 != nil || p.OSPFv3IPv6 != nil) && collection != "service" {
 		return nil, errors.New("OSPFv3 requires a service profile")
 	}
+	if (p.EIGRP != nil || p.Switchports != nil) && collection != "service" {
+		return nil, errors.New("EIGRP and switchport require a service profile")
+	}
 	var registry struct{ Parcels map[string]scalarDefinition }
-	if len(p.OSPF)+len(p.OSPFv3IPv4)+len(p.OSPFv3IPv6) > 0 {
+	if len(p.OSPF)+len(p.OSPFv3IPv4)+len(p.OSPFv3IPv6)+len(p.EIGRP)+len(p.Switchports) > 0 {
 		if json.Unmarshal(scalarDefinitions, &registry) != nil {
 			return nil, ErrResponse
 		}
@@ -109,6 +113,8 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		{"ospf_features", collection + "_routing_ospf", "routing/ospf", p.OSPF},
 		{"ospfv3_ipv4_features", "service_routing_ospfv3_ipv4", "routing/ospfv3/ipv4", p.OSPFv3IPv4},
 		{"ospfv3_ipv6_features", "service_routing_ospfv3_ipv6", "routing/ospfv3/ipv6", p.OSPFv3IPv6},
+		{"eigrp_features", "service_routing_eigrp", "routing/eigrp", p.EIGRP},
+		{"switchport_features", "service_switchport", "switchport", p.Switchports},
 	} {
 		for _, input := range routing.inputs {
 			meta, data, err := scalarParcelData(routing.kind, input)

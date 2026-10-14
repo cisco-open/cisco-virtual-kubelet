@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"net"
 	"net/netip"
 	"sort"
 	"strconv"
@@ -20,6 +22,8 @@ type classicPredicate struct {
 	Field, Equals, Boolean string
 }
 type classicField struct {
+	JoinedRanges           string  `json:"joined_ranges"`
+	MacFormat              string  `json:"mac_format"`
 	VariableValue          *string `json:"variable_value"`
 	VariableValueFromInput bool    `json:"variable_value_from_input"`
 	ConstantVariableName   bool    `json:"constant_variable_name"`
@@ -276,6 +280,41 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 				value = field.BooleanChoice
 			}
 		}
+		if field.JoinedRanges != "" {
+			allowed[field.JoinedRanges] = true
+			parts := []string{}
+			if value != nil {
+				if !validScalarValue(value, field.InputSchema) {
+					return nil, fmt.Errorf("invalid %s VLAN list", public)
+				}
+				for _, item := range value.([]any) {
+					parts = append(parts, strconv.FormatFloat(item.(float64), 'f', 0, 64))
+				}
+			}
+			if raw := classicInput(input, field.JoinedRanges); raw != nil {
+				rows, ok := raw.([]any)
+				if !ok {
+					return nil, fmt.Errorf("%s must be an array", field.JoinedRanges)
+				}
+				for _, item := range rows {
+					row, ok := item.(map[string]any)
+					if !ok || len(row) != 2 {
+						return nil, errors.New("VLAN range requires from and to")
+					}
+					lo, lok := row["from"].(float64)
+					hi, hok := row["to"].(float64)
+					if !lok || !hok || lo != math.Trunc(lo) || hi != math.Trunc(hi) || lo < 1 || hi > 4094 || lo > hi {
+						return nil, errors.New("invalid VLAN range")
+					}
+					parts = append(parts, strconv.FormatFloat(lo, 'f', 0, 64)+"-"+strconv.FormatFloat(hi, 'f', 0, 64))
+				}
+			}
+			value = nil
+			if len(parts) > 0 {
+				value = strings.Join(parts, ",")
+			}
+			field.InputSchema = nil
+		}
 		leaf := map[string]any{"vipObjectType": field.ObjectType}
 		if variable != nil {
 			v, ok := variable.(string)
@@ -332,6 +371,13 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 					}
 					continue
 				}
+			}
+			if field.MacFormat == "cisco-dot" {
+				mac, err := net.ParseMAC(value.(string))
+				if err != nil || len(mac) != 6 {
+					return nil, fmt.Errorf("invalid %s MAC", public)
+				}
+				value = fmt.Sprintf("%02x%02x.%02x%02x.%02x%02x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
 			}
 			if field.DecimalString {
 				if n, ok := value.(float64); ok {
@@ -435,21 +481,22 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 		for public, field := range tree.Definition.Fields {
 			if field.Literal == nil && !field.Derived {
 				allowed[public] = true
-				if value, exists := input[public]; exists {
-					selected[public] = value
+				if value := classicInput(input, public); value != nil {
+					setScalarPath(selected, public, value)
 				}
 			}
 			if field.Variable != "" {
 				allowed[field.Variable] = true
-				if value, exists := input[field.Variable]; exists {
-					selected[field.Variable] = value
+				if value := classicInput(input, field.Variable); value != nil {
+					setScalarPath(selected, field.Variable, value)
 				}
 			}
 		}
 		enabled := false
 		for _, field := range tree.Triggers {
-			if value, exists := input[field]; exists {
-				enabled = value != nil
+			allowed[field] = true
+			if value := classicInput(input, field); value != nil {
+				enabled = true
 				break
 			}
 		}

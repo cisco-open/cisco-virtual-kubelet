@@ -14,10 +14,13 @@ type FeatureProfile struct {
 	OSPF                  []map[string]any             `json:"ospf_features,omitempty"`
 	OSPFv3IPv4            []map[string]any             `json:"ospfv3_ipv4_features,omitempty"`
 	OSPFv3IPv6            []map[string]any             `json:"ospfv3_ipv6_features,omitempty"`
+	EIGRP                 []map[string]any             `json:"eigrp_features,omitempty"`
+	Switchports           []map[string]any             `json:"switchport_features,omitempty"`
 	IPv6Trackers          []map[string]any             `json:"ipv6_trackers,omitempty"`
 	IPv6TrackerGroups     []map[string]any             `json:"ipv6_tracker_groups,omitempty"`
 	CACertificate         map[string]any               `json:"ca_certificate,omitempty"`
 	CiscoSSE              map[string]any               `json:"cisco,omitempty"`
+	ZscalerSSE            map[string]any               `json:"zscaler,omitempty"`
 	IPv4TrackerGroups     []map[string]any             `json:"ipv4_tracker_groups,omitempty"`
 	ObjectTrackerGroups   []map[string]any             `json:"object_tracker_groups,omitempty"`
 	CellularControllers   []map[string]any             `json:"cellular_controllers,omitempty"`
