@@ -25,6 +25,45 @@ type TopologyGroup struct {
 	TopologyProfile string `json:"topology_profile"`
 }
 
+type PolicyGroup struct {
+	Name                string `json:"name"`
+	Description         string `json:"description,omitempty"`
+	ApplicationPriority string `json:"application_priority,omitempty"`
+	NGFWSecurity        string `json:"ngfw_security,omitempty"`
+	SSE                 string `json:"sse,omitempty"`
+}
+
+func compilePolicyGroups(groups []PolicyGroup, profiles []Resource) ([]Resource, error) {
+	known := map[string]bool{}
+	for _, p := range profiles {
+		if p.Kind == "profile" {
+			known[p.Type+"/"+p.Name] = true
+		}
+	}
+	seen := map[string]bool{}
+	out := make([]Resource, 0, len(groups))
+	for _, g := range groups {
+		if g.Name == "" || len(g.Name) > 128 || seen[g.Name] {
+			return nil, errors.New("invalid or duplicate policy group")
+		}
+		seen[g.Name] = true
+		refs := map[string]string{}
+		for kind, name := range map[string]string{"application-priority": g.ApplicationPriority, "embedded-security": g.NGFWSecurity, "sse": g.SSE} {
+			if name != "" {
+				if !known[kind+"/"+name] {
+					return nil, errors.New("policy group references undeclared profile")
+				}
+				refs[kind] = name
+			}
+		}
+		if len(refs) == 0 {
+			return nil, errors.New("policy group requires a feature profile")
+		}
+		out = append(out, Resource{Key: "policy_groups/" + g.Name, Name: g.Name, Section: "policy_groups", Kind: "group", Type: "policy_group", Collection: "/dataservice/v1/policy-group", ProfileRefs: refs, Body: map[string]any{"name": g.Name, "description": g.Description, "solution": "sdwan", "profiles": []any{}}})
+	}
+	return out, nil
+}
+
 func compileTopologyGroups(groups []TopologyGroup, profiles []Resource) ([]Resource, error) {
 	known := map[string]bool{}
 	for _, p := range profiles {

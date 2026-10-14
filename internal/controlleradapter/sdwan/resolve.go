@@ -97,7 +97,7 @@ func Resolve(data []byte) ([]byte, error) {
 			}
 		}
 	}
-	for _, groupKind := range []string{"configuration_groups", "topology_groups"} {
+	for _, groupKind := range []string{"configuration_groups", "topology_groups", "policy_groups"} {
 		groups, ok := stripe[groupKind].([]any)
 		if !ok {
 			continue
