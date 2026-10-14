@@ -79,6 +79,7 @@ type Resource struct {
 	CustomControlSites                 map[string][]string
 	TagDevices                         []string
 	DeviceTemplateRefs                 []DeviceTemplateReference
+	DevicePolicyRefs                   []DevicePolicyReference
 	AttachDevices                      []DeviceAttachmentTarget
 	ParcelPath                         string
 	ParentParcelPath, ParentParcelName string

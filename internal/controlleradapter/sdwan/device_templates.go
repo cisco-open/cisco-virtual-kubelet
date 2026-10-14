@@ -13,6 +13,8 @@ type EdgeDeviceTemplate struct {
 	Name                        string                    `json:"name"`
 	Description                 string                    `json:"description"`
 	DeviceModel                 string                    `json:"device_model"`
+	LocalizedPolicy             string                    `json:"localized_policy,omitempty"`
+	SecurityPolicy              *DeviceSecurityPolicyRef  `json:"security_policy,omitempty"`
 	SystemTemplate              string                    `json:"system_template,omitempty"`
 	AAATemplate                 string                    `json:"aaa_template,omitempty"`
 	BFDTemplate                 string                    `json:"bfd_template,omitempty"`
@@ -30,6 +32,10 @@ type EdgeDeviceTemplate struct {
 	VPNServiceTemplates         []DeviceVPNReference      `json:"vpn_service_templates,omitempty"`
 	SwitchportTemplates         []DeviceNamedReference    `json:"switchport_templates,omitempty"`
 	CellularControllerTemplates []DeviceCellularReference `json:"cellular_controller_templates,omitempty"`
+}
+type DeviceSecurityPolicyRef struct {
+	Name             string `json:"name"`
+	ContainerProfile string `json:"container_profile,omitempty"`
 }
 type DeviceNamedReference struct {
 	Name               string `json:"name"`
@@ -58,6 +64,9 @@ type DeviceTemplateReference struct {
 	Name, Type string
 	Index      int
 	Path       []int
+}
+type DevicePolicyReference struct {
+	Kind, Name, Field, Collection string
 }
 
 const deviceTemplatePath = "/dataservice/template/device/"
@@ -131,6 +140,9 @@ func compileDeviceTemplates(items []EdgeDeviceTemplate) ([]Resource, error) {
 			return nil, errors.New("invalid or duplicate edge device template")
 		}
 		seen[item.Name] = true
+		if item.SecurityPolicy != nil && item.SecurityPolicy.Name == "" {
+			return nil, errors.New("security policy reference requires a name")
+		}
 		if item.SystemTemplate == "" && (item.LoggingTemplate != "" || item.NTPTemplate != "") {
 			return nil, errors.New("logging and NTP require a system template")
 		}
@@ -138,6 +150,9 @@ func compileDeviceTemplates(items []EdgeDeviceTemplate) ([]Resource, error) {
 			return nil, errors.New("edge device template needs a feature template")
 		}
 		nodes := []deviceFeatureNode{}
+		if item.SecurityPolicy != nil && item.SecurityPolicy.ContainerProfile != "" {
+			nodes = append(nodes, deviceFeatureNode{name: item.SecurityPolicy.ContainerProfile, kind: "virtual-application-utd"})
+		}
 		appendOne := func(name, kind string) {
 			if name != "" {
 				nodes = append(nodes, deviceFeatureNode{name: name, kind: kind})
@@ -216,12 +231,48 @@ func compileDeviceTemplates(items []EdgeDeviceTemplate) ([]Resource, error) {
 			return nil, errors.New("edge device template needs a feature template")
 		}
 		body := map[string]any{"configType": "template", "factoryDefault": false, "featureTemplateUidRange": []any{}, "templateName": item.Name, "templateDescription": item.Description, "deviceType": "vedge-" + item.DeviceModel, "deviceRole": "sdwan-edge", "policyId": "", "generalTemplates": general}
-		out = append(out, Resource{Key: "edge_device_templates/" + item.Name, Name: item.Name, Section: "edge_device_templates", Type: "feature_device_template", Kind: "device-template", DeviceTemplateRefs: refs, Body: body})
+		policyRefs := []DevicePolicyReference{}
+		if item.LocalizedPolicy != "" {
+			policyRefs = append(policyRefs, DevicePolicyReference{Kind: "localized-policy", Name: item.LocalizedPolicy, Field: "policyId", Collection: "/dataservice/template/policy/vedge/"})
+		}
+		if item.SecurityPolicy != nil {
+			body["securityPolicyId"] = ""
+			policyRefs = append(policyRefs, DevicePolicyReference{Kind: "security-policy", Name: item.SecurityPolicy.Name, Field: "securityPolicyId", Collection: "/dataservice/template/policy/security/"})
+		}
+		out = append(out, Resource{Key: "edge_device_templates/" + item.Name, Name: item.Name, Section: "edge_device_templates", Type: "feature_device_template", Kind: "device-template", DeviceTemplateRefs: refs, DevicePolicyRefs: policyRefs, Body: body})
 	}
 	return out, nil
 }
 
 func (c *Client) resolveDeviceTemplateRefs(ctx context.Context, r Resource) error {
+	for _, ref := range r.DevicePolicyRefs {
+		var list struct {
+			Data *[]struct {
+				ID   string `json:"policyId"`
+				Name string `json:"policyName"`
+				Type string `json:"policyType"`
+			} `json:"data"`
+		}
+		if e := c.Request(ctx, "GET", ref.Collection, nil, &list); e != nil {
+			return e
+		}
+		if list.Data == nil {
+			return ErrResponse
+		}
+		id := ""
+		for _, item := range *list.Data {
+			if item.Name == ref.Name {
+				if id != "" || item.Type != "feature" || !validID.MatchString(item.ID) {
+					return ErrResponse
+				}
+				id = item.ID
+			}
+		}
+		if id == "" {
+			return ErrDependencyPending
+		}
+		r.Body[ref.Field] = id
+	}
 	var list struct {
 		Data *[]struct {
 			ID   string `json:"templateId"`
@@ -327,6 +378,9 @@ func equalDeviceTemplate(r Resource, body map[string]any) (bool, error) {
 		if body[key] != r.Body[key] {
 			return false, nil
 		}
+	}
+	if wanted, present := r.Body["securityPolicyId"]; present && body["securityPolicyId"] != wanted {
+		return false, nil
 	}
 	want := r.Body["generalTemplates"].([]any)
 	got, ok := body["generalTemplates"].([]any)

@@ -108,6 +108,19 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 			}
 			dependencies[i] = append(dependencies[i], found)
 		}
+		for _, ref := range r.DevicePolicyRefs {
+			found := -1
+			for j, candidate := range resources {
+				if candidate.Kind == ref.Kind && candidate.Name == ref.Name {
+					found = j
+					break
+				}
+			}
+			if found < 0 {
+				return nil, fmt.Errorf("device template policy %s/%s is not declared", ref.Kind, ref.Name)
+			}
+			dependencies[i] = append(dependencies[i], found)
+		}
 		for _, ref := range r.PolicyListRefs {
 			spec, ok := policyLists[ref.Section]
 			if !ok {

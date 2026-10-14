@@ -77,6 +77,8 @@ func liveParcelLifecycle(t *testing.T, resources []Resource) {
 			}
 		} else if r.Kind == "device-template" {
 			r.Body["templateDescription"] = "CVK updated isolated fixture"
+		} else if r.Kind == "localized-policy" || r.Kind == "centralized-policy" || r.Kind == "security-policy" {
+			r.Body["policyDescription"] = "CVK updated isolated fixture"
 		} else if r.Kind == "" {
 			r.Body["templateDescription"] = "CVK updated isolated fixture"
 		} else {

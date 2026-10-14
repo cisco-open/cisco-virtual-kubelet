@@ -299,7 +299,8 @@
       "local_tested": true,
       "fixtures": [
         "classic-device-template",
-        "classic-device-template-nested"
+        "classic-device-template-nested",
+        "classic-device-template-policies"
       ]
     },
     {
