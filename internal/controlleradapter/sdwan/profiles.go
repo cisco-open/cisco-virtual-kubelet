@@ -22,6 +22,7 @@ type FeatureProfile struct {
 	IPv6DeviceAccess      map[string]any               `json:"ipv6_device_access_policy,omitempty"`
 	MeshPolicies          []map[string]any             `json:"mesh_policies,omitempty"`
 	CustomPolicies        []map[string]any             `json:"custom_policies,omitempty"`
+	QoSPolicies           []map[string]any             `json:"qos_policies,omitempty"`
 	HubSpokePolicies      []map[string]any             `json:"hub_spoke_policies,omitempty"`
 	IPv4ACLs              []map[string]any             `json:"ipv4_acls,omitempty"`
 	IPv6ACLs              []map[string]any             `json:"ipv6_acls,omitempty"`

@@ -618,8 +618,8 @@
       "type": "sdwan_application_priority_qos_policy",
       "name": "application_priority_qos_policy",
       "source": "sdwan_features_application_priority.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_application_priority_traffic_policy_policy",

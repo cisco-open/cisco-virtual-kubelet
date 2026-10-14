@@ -1,0 +1,221 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "qosMap": {
+      "additionalProperties": false,
+      "description": "qos-map",
+      "properties": {
+        "qosSchedulers": {
+          "additionalProperties": false,
+          "description": "qosSchedulers",
+          "items": {
+            "properties": {
+              "bandwidthPercent": {
+                "description": "bandwidthPercent",
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "global"
+                        ],
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "optionType",
+                      "value"
+                    ]
+                  }
+                ],
+                "type": "object"
+              },
+              "classMapRef": {
+                "additionalProperties": false,
+                "description": "classMapRef",
+                "properties": {
+                  "refId": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "global"
+                        ],
+                        "type": "string"
+                      },
+                      "value": {
+                        "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "optionType",
+                      "value"
+                    ]
+                  }
+                },
+                "required": [
+                  "refId"
+                ],
+                "type": "object"
+              },
+              "drops": {
+                "description": "drops",
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "global"
+                        ],
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "optionType",
+                      "value"
+                    ]
+                  }
+                ],
+                "type": "object"
+              },
+              "queue": {
+                "description": "queue",
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "global"
+                        ],
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "optionType",
+                      "value"
+                    ]
+                  }
+                ],
+                "type": "object"
+              },
+              "scheduling": {
+                "description": "scheduling",
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "optionType": {
+                        "enum": [
+                          "global"
+                        ],
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "optionType",
+                      "value"
+                    ]
+                  }
+                ],
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "target": {
+      "additionalProperties": false,
+      "description": "Interfaces",
+      "properties": {
+        "interfaces": {
+          "description": "interfaces",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": false,
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "additionalProperties": false,
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "interfaces"
+      ],
+      "type": "object"
+    }
+  },
+  "type": "object"
+}

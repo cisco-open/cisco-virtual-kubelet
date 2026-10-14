@@ -104,6 +104,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, customControl...)
+	qos, err := compileQoSPolicies(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, qos...)
 	hubSpoke, err := compileHubSpokePolicies(p, collection, key)
 	if err != nil {
 		return nil, err
