@@ -1,0 +1,49 @@
+sdwan:
+  edge_feature_templates:
+    system_templates:
+      - name: CVK-PERIPHERAL-DEVICE-SYSTEM
+        description: CVK isolated peripheral device system
+        device_types: [C8000V]
+        hostname_variable: cvkHostname
+        system_ip_variable: cvkSystemIP
+        site_id_variable: cvkSiteID
+    switchport_templates:
+      - name: CVK-PERIPHERAL-DEVICE-SWITCHPORT
+        description: CVK isolated device switchport
+        module_type: "4"
+        slot: 0
+        sub_slot: 0
+        interfaces:
+          - name: GigabitEthernet0/0/1
+            mode: trunk
+            trunk_native_vlan: 100
+            trunk_allowed_vlans: [100, 200]
+            dot1x:
+              enable: true
+              port_control_mode: auto
+    cellular_controller_templates:
+      - name: CVK-PERIPHERAL-DEVICE-CONTROLLER
+        description: CVK isolated device cellular controller
+        cellular_interface_id: 0/1/0
+        primary_sim_slot: 0
+        sim_failover_retries: 10
+        sim_failover_timeout: 5
+    cellular_profile_templates:
+      - name: CVK-PERIPHERAL-DEVICE-PROFILE
+        description: CVK isolated device cellular profile
+        profile_id: 1
+        access_point_name: example.invalid
+        authentication_type: none
+        packet_data_network_type: ipv4v6
+        no_overwrite: true
+  edge_device_templates:
+    - name: CVK-PERIPHERAL-DEVICE-TEMPLATE
+      description: CVK isolated peripheral device template
+      device_model: C8000V
+      system_template: CVK-PERIPHERAL-DEVICE-SYSTEM
+      switchport_templates:
+        - name: CVK-PERIPHERAL-DEVICE-SWITCHPORT
+      cellular_controller_templates:
+        - name: CVK-PERIPHERAL-DEVICE-CONTROLLER
+          cellular_profile_templates:
+            - name: CVK-PERIPHERAL-DEVICE-PROFILE

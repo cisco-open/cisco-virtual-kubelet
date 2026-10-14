@@ -7,6 +7,12 @@ sdwan:
         hostname_variable: cvkHostname
         system_ip_variable: cvkSystemIP
         site_id_variable: cvkSiteID
+    secure_app_hosting_templates:
+      - name: CVK-POLICY-DEVICE-CONTAINER
+        description: CVK isolated security container profile
+        device_types: [C8000V]
+        nat: false
+        resource_profile: low
   localized_policies:
     feature_policies:
       - name: CVK-POLICY-DEVICE-LOCALIZED
@@ -34,3 +40,4 @@ sdwan:
       localized_policy: CVK-POLICY-DEVICE-LOCALIZED
       security_policy:
         name: CVK-POLICY-DEVICE-SECURITY
+        container_profile: CVK-POLICY-DEVICE-CONTAINER

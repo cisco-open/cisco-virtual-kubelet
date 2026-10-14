@@ -16,7 +16,9 @@ parity**. The pinned upstream module has 226 resource declarations. 181 resource
 | `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup |
 | `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup |
 | `examples/configs/sdwan/classic-device-template-nested.yaml` | Unattached classic device template with nested service VPN, BGP and Ethernet references | Native lifecycle, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-device-template-policies.yaml` | Unattached classic device template with localized and security policy bindings | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-device-template-policies.yaml` | Unattached classic device template with localized/security policy and container-profile bindings | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-device-template-vpns.yaml` | Unattached classic device template with transport, management and service VPNs, plus logging, NTP and DHCP references | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-device-template-peripherals.yaml` | Unattached classic device template with switchport and cellular controller/profile references | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-device-attachment.yaml` | Site router to classic device template with device variables | Local model and API lifecycle; live router attachment pending scoped lab target |
 | `examples/configs/sdwan/topology-group-activation.yaml` | Topology group activation | Local model and API task lifecycle; live activation pending scoped lab target |
 | `examples/configs/sdwan/classic-centralized-activation.yaml` | Centralized feature policy activation | Local model and API task lifecycle; live activation pending scoped lab target |
@@ -115,11 +117,10 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
-An additional 37 declarations have native implementations but remain unqualified:
+An additional 40 declarations have native implementations but remain unqualified:
 the policy-object profile and all 32 modern policy-object collections, system
-CA certificates, custom applications (the lab lacks SD-AVC), device tags awaiting a selected router, and cloud-provider settings (the lab already has the singleton). SIG credential creation now passes after fixing the global flag
-and variable-secret payloads.
-7 declarations remain pending and TrustSec remains compatibility-blocked.
+CA certificates, custom applications (the lab lacks SD-AVC), device tags awaiting a selected router, cloud-provider settings (the lab already has the singleton), device-template attachment, centralized policy activation and topology-group activation. SIG credential creation now passes after fixing the global flag and variable-secret payloads.
+No resource declarations remain pending; TrustSec remains compatibility-blocked. This inventory does not imply full field-level parity or router deployment qualification.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 
@@ -241,7 +242,7 @@ raw controller payloads. Never clear the journal merely to retry a timed-out POS
 `Retain` is the supported prune/deletion policy. Deleting intent retains remote
 objects and its ownership journal; deletion does not transfer ownership to a new
 config UID. Remote pruning, explicit adoption/import, ownership release and
-device attachment/activation are still pending. The fixture test harness cleans
+live qualification of device attachment/activation is still pending. The fixture test harness cleans
 up only its own created IDs in reverse dependency order.
 
 ## Native CVK tests
@@ -266,11 +267,7 @@ These tests exercise CVK's native compiler, API client and reconciliation.
 
 ## Remaining deployment parity
 
-The remaining resource mappings, full upstream schema/default coverage, classic
-device templates, routing and transport/service features, live qualification of modern
-policy-object parcels, policy definitions, global hierarchy collectors, topology/policy groups, settings, device variables,
-attachment/deployment, asynchronous activation recovery, pruning and import are
-not complete. Reproducible device-level qualification also needs explicit WAN-edge
+Although all pinned resource declarations have CVK implementations, full upstream field/default coverage, advanced classic device-template children, routing and transport/service branches, live qualification of modern policy-object parcels, device attachment/deployment, asynchronous activation recovery, pruning and import are not complete. Reproducible device-level qualification also needs explicit WAN-edge
 targets and a restoration policy. Inventory visibility does not authorize choosing
 an arbitrary existing router as the test target.
 

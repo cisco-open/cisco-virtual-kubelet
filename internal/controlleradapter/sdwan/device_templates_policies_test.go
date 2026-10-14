@@ -23,10 +23,11 @@ func policyDeviceTemplateFixture(t *testing.T) []Resource {
 
 func TestPolicyDeviceTemplateFixture(t *testing.T) {
 	resources := policyDeviceTemplateFixture(t)
-	if len(resources) != 5 || resources[4].Kind != "device-template" || len(resources[4].DevicePolicyRefs) != 2 {
+	device := resources[len(resources)-1]
+	if len(resources) != 6 || device.Kind != "device-template" || len(device.DevicePolicyRefs) != 2 || len(device.DeviceTemplateRefs) != 2 {
 		t.Fatal("device policy dependencies missing")
 	}
-	if resources[4].DevicePolicyRefs[0].Kind != "localized-policy" || resources[4].DevicePolicyRefs[1].Kind != "security-policy" {
+	if device.DevicePolicyRefs[0].Kind != "localized-policy" || device.DevicePolicyRefs[1].Kind != "security-policy" {
 		t.Fatal("device policy references misordered")
 	}
 	raw, _ := os.ReadFile("../../../examples/configs/sdwan/classic-device-template-policies.yaml")
