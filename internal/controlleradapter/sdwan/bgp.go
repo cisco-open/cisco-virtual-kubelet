@@ -50,7 +50,7 @@ func bgpData(input map[string]any, family string) (map[string]any, error) {
 		{"always_compare_med", "alwaysCompare", false, true}, {"deterministic_med", "deterministic", false, true}, {"missing_as_worst", "missingAsWorst", false, true}, {"compare_router_id", "compareRouterId", false, true}, {"multipath_relax", "multipathRelax", false, true},
 		{"propagate_aspath", "propagateAspath", false, true}, {"propagate_community", "propagateCommunity", false, true},
 	}
-	allowed := map[string]bool{"name": true, "description": true}
+	allowed := map[string]bool{"name": true, "description": true, "ipv4_neighbors": true, "ipv6_neighbors": true}
 	for _, spec := range fields {
 		allowed[spec.source] = true
 		allowed[spec.source+"_variable"] = true
@@ -71,8 +71,25 @@ func bgpData(input map[string]any, family string) (map[string]any, error) {
 		}
 		data[spec.api] = value
 	}
-	data["neighbor"] = []any{}
-	data["ipv6Neighbor"] = []any{}
+	for _, spec := range []struct{ source, api string }{{"ipv4_neighbors", "neighbor"}, {"ipv6_neighbors", "ipv6Neighbor"}} {
+		rows, err := vpnRows(input, spec.source)
+		if err != nil {
+			return nil, err
+		}
+		items := []any{}
+		for _, row := range rows {
+			neighbor, ok := row.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("%s neighbor must be object", spec.source)
+			}
+			item, err := bgpNeighborData(neighbor)
+			if err != nil {
+				return nil, err
+			}
+			items = append(items, item)
+		}
+		data[spec.api] = items
+	}
 	var schemas map[string]map[string]any
 	var normalized any
 	encoded, _ := json.Marshal(data)
@@ -89,4 +106,30 @@ func bgpData(input map[string]any, family string) (map[string]any, error) {
 		return nil, errors.New("BGP intent violates provider schema")
 	}
 	return data, nil
+}
+
+func bgpNeighborData(input map[string]any) (map[string]any, error) {
+	fields := []struct{ source, api string }{{"address", "address"}, {"remote_as", "remoteAs"}, {"description", "description"}, {"shutdown", "shutdown"}, {"local_as", "localAs"}, {"keepalive_time", "keepalive"}, {"hold_time", "holdtime"}, {"next_hop_self", "nextHopSelf"}, {"send_community", "sendCommunity"}, {"send_extended_community", "sendExtCommunity"}, {"ebgp_multihop", "ebgpMultihop"}, {"password", "password"}}
+	allowed := map[string]bool{}
+	item := map[string]any{}
+	for _, spec := range fields {
+		allowed[spec.source] = true
+		allowed[spec.source+"_variable"] = true
+		value, err := vpnOptional(input, spec.source)
+		if err != nil {
+			return nil, err
+		}
+		if value != nil {
+			item[spec.api] = value
+		}
+	}
+	for field := range input {
+		if !allowed[field] {
+			return nil, fmt.Errorf("unsupported BGP neighbor field %s", field)
+		}
+	}
+	if item["address"] == nil || item["remoteAs"] == nil {
+		return nil, errors.New("BGP neighbor requires address and remote_as")
+	}
+	return item, nil
 }

@@ -6,6 +6,9 @@ sdwan:
           - name: CVK-SERVICE-BGP
             as_number: 65010
             router_id: 192.0.2.10
+            ipv4_neighbors:
+              - address: 192.0.2.20
+                remote_as: 65020
         lan_vpns:
           - name: CVK-SERVICE-BGP-VPN
             vpn_id: 126
