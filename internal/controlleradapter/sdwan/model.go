@@ -259,6 +259,9 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, errors.New("SD-WAN document has no supported resources")
 	}
 	sort.Slice(out, func(i, j int) bool {
+		if (out[i].Kind == "activation") != (out[j].Kind == "activation") {
+			return out[j].Kind == "activation"
+		}
 		if (out[i].Kind == "hierarchy") != (out[j].Kind == "hierarchy") {
 			return out[i].Kind == "hierarchy"
 		}

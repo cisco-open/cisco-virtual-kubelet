@@ -200,7 +200,8 @@ func (c *Client) Request(ctx context.Context, method, path string, input, output
 	tagDeleteQuery := method == "DELETE" && regexp.MustCompile(`^/dataservice/v1/tags\?tagId=[A-Za-z0-9_-]{1,128}$`).MatchString(path)
 	tagAssociateQuery := method == "POST" && path == "/dataservice/v1/tags/associate?operationType=DELETE"
 	deviceTagQuery := method == "GET" && regexp.MustCompile(`^/dataservice/system/device/vedges\?uuid=[A-Za-z0-9_-]{1,128}$`).MatchString(path)
-	if !strings.HasPrefix(path, "/dataservice/") || (!(hierarchyQuery || tagDeleteQuery || tagAssociateQuery || deviceTagQuery) && strings.ContainsAny(path, "?#")) || strings.Contains(path, "..") {
+	centralizedActivationQuery := method == "POST" && regexp.MustCompile(`^/dataservice/template/policy/vsmart/activate/[A-Za-z0-9_-]{1,128}\?confirm=true$`).MatchString(path)
+	if !strings.HasPrefix(path, "/dataservice/") || (!(hierarchyQuery || tagDeleteQuery || tagAssociateQuery || deviceTagQuery || centralizedActivationQuery) && strings.ContainsAny(path, "?#")) || strings.Contains(path, "..") {
 		return errors.New("invalid SD-WAN API path")
 	}
 	var b []byte

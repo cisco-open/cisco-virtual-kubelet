@@ -16,6 +16,7 @@ type PolicyListReference struct {
 }
 
 type CentralizedPolicies struct {
+	ActivatedPolicy string                     `json:"activated_policy,omitempty"`
 	FeaturePolicies []CentralizedFeaturePolicy `json:"feature_policies,omitempty"`
 	Definitions     struct {
 		ControlPolicy struct {
@@ -496,6 +497,12 @@ func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) 
 			return nil, errors.New("centralized cflowd policy binding is not yet implemented")
 		}
 		out = append(out, Resource{Key: "centralized_policies/feature_policies/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "centralized-policy", Type: "centralized_policy", Collection: "/dataservice/template/policy/vsmart/", ClassicDefinitionRefs: refs, Body: map[string]any{"policyType": "feature", "policyName": p.Name, "policyDescription": p.Description, "policyDefinition": map[string]any{"assembly": assembly}}})
+	}
+	if input.ActivatedPolicy != "" {
+		if !seen["feature/"+input.ActivatedPolicy] {
+			return nil, errors.New("activated policy must reference a declared centralized feature policy")
+		}
+		out = append(out, Resource{Key: "centralized_policies/activated_policy", Name: input.ActivatedPolicy, Section: "centralized_policies", Kind: "activation", Type: "centralized-policy", Body: map[string]any{"activated": true}})
 	}
 	return out, nil
 }

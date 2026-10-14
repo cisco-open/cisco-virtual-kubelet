@@ -26,8 +26,12 @@
       "type": "sdwan_activate_centralized_policy",
       "name": "activate_centralized_policy",
       "source": "sdwan_centralized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "implemented-unqualified",
+      "live_tested": false,
+      "local_tested": true,
+      "fixtures": [
+        "classic-centralized-activation"
+      ]
     },
     {
       "type": "sdwan_centralized_policy",

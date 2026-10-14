@@ -65,6 +65,23 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		if r.Kind == "activation" {
+			parentKind := "centralized-policy"
+			if r.Type == "topology-group" {
+				parentKind = "group"
+			}
+			found := -1
+			for j, candidate := range resources {
+				if candidate.Kind == parentKind && candidate.Name == r.Name && (r.Type != "topology-group" || candidate.Type == "topology_group") {
+					found = j
+					break
+				}
+			}
+			if found < 0 {
+				return nil, errors.New("activation parent is not declared")
+			}
+			dependencies[i] = append(dependencies[i], found)
+		}
 		for _, ref := range r.DeviceTemplateRefs {
 			found := -1
 			for j, candidate := range resources {
