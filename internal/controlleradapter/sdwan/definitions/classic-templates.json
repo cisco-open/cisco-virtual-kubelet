@@ -10987,6 +10987,1990 @@
           "application-type"
         ]
       }
+    },
+    "vpn_templates": {
+      "defaults": {
+        "dns": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "dns-addr"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "dns-ipv6": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "dns-addr"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "ecmp-hash-key": {
+          "layer4": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "host": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "hostname"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "ip": {
+          "gre-route": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "prefix"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "ipsec-route": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "prefix"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "route": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "prefix"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "service-route": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "prefix"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          }
+        },
+        "ipv6": {
+          "route": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "prefix"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          }
+        },
+        "name": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "nat": {
+          "natpool": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "name"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "port-forward": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "source-port",
+              "translate-port",
+              "source-ip",
+              "translate-ip",
+              "proto"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "static": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "source-ip",
+              "translate-ip"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "subnet-static": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "source-ip-subnet",
+              "translate-ip-subnet"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          }
+        },
+        "nat64": {
+          "v4": {
+            "pool": {
+              "vipObjectType": "tree",
+              "vipPrimaryKey": [
+                "name"
+              ],
+              "vipType": "ignore",
+              "vipValue": []
+            }
+          }
+        },
+        "omp": {
+          "advertise": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "protocol"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "ipv6-advertise": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "protocol"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          }
+        },
+        "omp-admin-distance-ipv4": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "omp-admin-distance-ipv6": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "route-export": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "protocol"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "route-import": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "protocol"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "route-import-from": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "source-vpn",
+            "protocol"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "service": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "svc-type"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "enhance_ecmp_keying": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ecmp-hash-key.layer4",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "enhance_ecmp_keying_variable"
+        },
+        "omp_admin_distance_ipv4": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "omp-admin-distance-ipv4",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "omp_admin_distance_ipv4_variable"
+        },
+        "omp_admin_distance_ipv6": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "omp-admin-distance-ipv6",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "omp_admin_distance_ipv6_variable"
+        },
+        "vpn_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "vpn-id",
+          "schema": {
+            "maximum": 65527,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false
+        },
+        "vpn_name": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "name",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "vpn_name_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "ipv4_static_gre_routes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "interface": {
+                "vipObjectType": "list",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "$literal:vpn_id": {
+                "boolean_string": false,
+                "literal": 0,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 0,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "interfaces": {
+                "boolean_string": false,
+                "object_type": "list",
+                "omit_null": false,
+                "path": "interface",
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "set": false,
+                "variable": "interfaces_variable"
+              },
+              "prefix": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "prefix",
+                "schema": {
+                  "format": "ipv4-prefix",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "prefix_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "prefix",
+              "vpn",
+              "interface"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "ip.gre-route",
+          "primary_keys": [
+            "prefix"
+          ],
+          "primitive": false
+        },
+        "ipv4_static_ipsec_routes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "interface": {
+                "vipObjectType": "list",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "$literal:vpn_id": {
+                "boolean_string": false,
+                "literal": 0,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 0,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "interfaces": {
+                "boolean_string": false,
+                "object_type": "list",
+                "omit_null": false,
+                "path": "interface",
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "set": false,
+                "variable": "interfaces_variable"
+              },
+              "prefix": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "prefix",
+                "schema": {
+                  "format": "ipv4-prefix",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "prefix_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "prefix",
+              "vpn",
+              "interface"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "ip.ipsec-route",
+          "primary_keys": [
+            "prefix"
+          ],
+          "primitive": false
+        },
+        "ipv4_static_routes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "next_hop_dhcp": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "dhcp",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "next_hop_dia": {
+                "boolean_string": false,
+                "boolean_zero": true,
+                "input_schema": {
+                  "type": "boolean"
+                },
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn",
+                "schema": {
+                  "anyOf": [
+                    {
+                      "const": 0
+                    }
+                  ],
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "next_hop_null0": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "null0",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "next_hop_null0_distance": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "distance",
+                "schema": {
+                  "maximum": 255,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "next_hop_null0_distance_variable"
+              },
+              "prefix": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "prefix",
+                "schema": {
+                  "format": "ipv4-prefix",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "prefix_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "prefix",
+              "null0",
+              "distance",
+              "vpn",
+              "dhcp",
+              "next-hop",
+              "next-hop-with-track"
+            ],
+            "required": [],
+            "trees": {
+              "next_hops": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "distance": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "address": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "address",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "address_variable"
+                    },
+                    "distance": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "distance",
+                      "schema": {
+                        "maximum": 255,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "distance_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "address",
+                    "distance"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "next-hop",
+                "primary_keys": [
+                  "address"
+                ],
+                "primitive": false
+              },
+              "track_next_hops": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "distance": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "address": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "address",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "address_variable"
+                    },
+                    "distance": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "distance",
+                      "schema": {
+                        "maximum": 255,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "distance_variable"
+                    },
+                    "tracker": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "tracker",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "tracker_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "address",
+                    "distance",
+                    "tracker"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "next-hop-with-track",
+                "primary_keys": [
+                  "address"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "ip.route",
+          "primary_keys": [
+            "prefix"
+          ],
+          "primitive": false
+        },
+        "ipv4_static_service_routes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "service": {
+                "vipObjectType": "object",
+                "vipType": "notIgnore",
+                "vipValue": "sig"
+              }
+            },
+            "fields": {
+              "$literal:vpn_id": {
+                "boolean_string": false,
+                "literal": 0,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 0,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "prefix": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "prefix",
+                "schema": {
+                  "format": "ipv4-prefix",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "prefix_variable"
+              },
+              "service": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "service",
+                "schema": {
+                  "enum": [
+                    "sig"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "prefix",
+              "vpn",
+              "service"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "ip.service-route",
+          "primary_keys": [
+            "prefix"
+          ],
+          "primitive": false
+        },
+        "ipv6_static_routes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "nat": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "nat",
+                "schema": {
+                  "enum": [
+                    "NAT64",
+                    "NAT66"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "nat_variable"
+              },
+              "next_hop_null0": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "null0",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "prefix": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "prefix",
+                "schema": {
+                  "format": "ipv6-prefix",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "prefix_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "prefix",
+              "null0",
+              "vpn",
+              "nat",
+              "next-hop"
+            ],
+            "required": [],
+            "trees": {
+              "next_hops": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "distance": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "address": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "address",
+                      "schema": {
+                        "format": "ipv6",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "address_variable"
+                    },
+                    "distance": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "distance",
+                      "schema": {
+                        "maximum": 255,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "distance_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "address",
+                    "distance"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "next-hop",
+                "primary_keys": [
+                  "address"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "ipv6.route",
+          "primary_keys": [
+            "prefix"
+          ],
+          "primitive": false
+        },
+        "nat64_pools": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "overload": {
+                "vipObjectType": "node-only",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "name_variable"
+              },
+              "overload": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": false,
+                "path": "overload",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "overload_variable"
+              },
+              "range_end": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "end-address",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "range_end_variable"
+              },
+              "range_start": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "start-address",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "range_start_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "name",
+              "start-address",
+              "end-address",
+              "overload",
+              "leak_from_global",
+              "leak_from_global_protocol",
+              "leak_to_global"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "nat64.v4.pool",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        },
+        "nat_pools": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "overload": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "tracker-id": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "direction": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "direction",
+                "schema": {
+                  "enum": [
+                    "inside",
+                    "outside"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "direction_variable"
+              },
+              "id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maximum": 31,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "id_variable"
+              },
+              "overload": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "overload",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "overload_variable"
+              },
+              "prefix_length": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "prefix-length",
+                "schema": {
+                  "maximum": 32,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "prefix_length_variable"
+              },
+              "range_end": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "range-end",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "range_end_variable"
+              },
+              "range_start": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "range-start",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "range_start_variable"
+              },
+              "tracker_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tracker-id",
+                "schema": {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "tracker_id_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "name",
+              "prefix-length",
+              "range-start",
+              "range-end",
+              "overload",
+              "direction",
+              "tracker-id"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "nat.natpool",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        },
+        "omp_advertise_ipv4_routes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "prefix-list": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "prefix-entry"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "protocol": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "protocol-sub-type": {
+                "vipObjectType": "list",
+                "vipType": "ignore"
+              },
+              "route-policy": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "protocol",
+                "schema": {
+                  "enum": [
+                    "bgp",
+                    "ospf",
+                    "ospfv3",
+                    "connected",
+                    "static",
+                    "network",
+                    "aggregate",
+                    "eigrp",
+                    "lisp",
+                    "isis"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "protocol_variable"
+              },
+              "route_policy_variable": {
+                "object_type": "object",
+                "omit_null": true,
+                "path": "route-policy",
+                "schema": {
+                  "type": "string"
+                },
+                "variable": "route_policy_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "protocol",
+              "route-policy",
+              "protocol-sub-type",
+              "prefix-list"
+            ],
+            "required": [],
+            "trees": {
+              "networks": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "aggregate-only": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "aggregate_only": {
+                      "boolean_string": true,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "aggregate-only",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "aggregate_only_variable"
+                    },
+                    "prefix": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "prefix-entry",
+                      "schema": {
+                        "format": "ipv4-prefix",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "prefix_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "prefix-entry",
+                    "aggregate-only"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "prefix-list",
+                "primary_keys": [
+                  "prefix-entry"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "omp.advertise",
+          "primary_keys": [
+            "protocol"
+          ],
+          "primitive": false
+        },
+        "omp_advertise_ipv6_routes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "prefix-list": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "prefix-entry"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "protocol": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "protocol-sub-type": {
+                "vipObjectType": "list",
+                "vipType": "ignore"
+              },
+              "route-policy": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "protocol",
+                "schema": {
+                  "enum": [
+                    "bgp",
+                    "ospf",
+                    "connected",
+                    "static",
+                    "network",
+                    "aggregate"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "protocol_variable"
+              },
+              "route_policy": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "route-policy",
+                "schema": {
+                  "maxLength": 127,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "route_policy_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "protocol",
+              "route-policy",
+              "protocol-sub-type",
+              "prefix-list"
+            ],
+            "required": [],
+            "trees": {
+              "networks": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "aggregate-only": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "aggregate_only": {
+                      "boolean_string": true,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "aggregate-only",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "aggregate_only_variable"
+                    },
+                    "prefix": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "prefix-entry",
+                      "schema": {
+                        "format": "ipv6-prefix",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "prefix_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "prefix-entry",
+                    "aggregate-only"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "prefix-list",
+                "primary_keys": [
+                  "prefix-entry"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "omp.ipv6-advertise",
+          "primary_keys": [
+            "protocol"
+          ],
+          "primitive": false
+        },
+        "port_forwarding_rules": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "pool-name": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "nat_pool_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "pool-name",
+                "schema": {
+                  "enum": [],
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "nat_pool_id_variable"
+              },
+              "protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "proto",
+                "schema": {
+                  "enum": [
+                    "tcp",
+                    "udp"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "protocol_variable"
+              },
+              "source_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "source-ip",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_ip_variable"
+              },
+              "source_port": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "source-port",
+                "schema": {
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "source_port_variable"
+              },
+              "translate_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "translate-ip",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "translate_ip_variable"
+              },
+              "translate_port": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "translate-port",
+                "schema": {
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "translate_port_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "pool-name",
+              "source-port",
+              "translate-port",
+              "source-ip",
+              "translate-ip",
+              "proto"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "nat.port-forward",
+          "primary_keys": [
+            "source-port",
+            "translate-port",
+            "source-ip",
+            "translate-ip",
+            "proto"
+          ],
+          "primitive": false
+        },
+        "route_global_exports": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "redistribute": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "protocol"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "route-policy": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "protocol",
+                "schema": {
+                  "enum": [
+                    "static",
+                    "connected",
+                    "bgp",
+                    "eigrp",
+                    "ospf"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "protocol_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "protocol",
+              "protocol-sub-type",
+              "route-policy",
+              "redistribute"
+            ],
+            "required": [],
+            "trees": {
+              "redistributes": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "route-policy": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "protocol": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "protocol",
+                      "schema": {
+                        "enum": [
+                          "bgp",
+                          "ospf"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "protocol_variable"
+                    },
+                    "route_policy": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "route-policy",
+                      "schema": {
+                        "enum": [],
+                        "type": "string"
+                      },
+                      "set": false
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "protocol",
+                    "route-policy"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "redistribute",
+                "primary_keys": [
+                  "protocol"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "route-export",
+          "primary_keys": [
+            "protocol"
+          ],
+          "primitive": false
+        },
+        "route_global_imports": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "redistribute": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "protocol"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "route-policy": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "protocol",
+                "schema": {
+                  "enum": [
+                    "static",
+                    "connected",
+                    "bgp",
+                    "ospf"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "protocol_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "protocol",
+              "protocol-sub-type",
+              "route-policy",
+              "redistribute"
+            ],
+            "required": [],
+            "trees": {
+              "redistributes": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "route-policy": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "protocol": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "protocol",
+                      "schema": {
+                        "enum": [
+                          "bgp",
+                          "eigrp",
+                          "ospf"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "protocol_variable"
+                    },
+                    "route_policy": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "route-policy",
+                      "schema": {
+                        "enum": [],
+                        "type": "string"
+                      },
+                      "set": false
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "protocol",
+                    "route-policy"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "redistribute",
+                "primary_keys": [
+                  "protocol"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "route-import",
+          "primary_keys": [
+            "protocol"
+          ],
+          "primitive": false
+        },
+        "route_vpn_imports": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "redistribute": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "protocol"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "route-policy": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "protocol",
+                "schema": {
+                  "enum": [
+                    "static",
+                    "connected",
+                    "bgp",
+                    "ospf",
+                    "eigrp"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "protocol_variable"
+              },
+              "route_policy": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "route-policy",
+                "schema": {
+                  "enum": [],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "route_policy_variable"
+              },
+              "source_vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "source-vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "source_vpn_id_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "source-vpn",
+              "protocol",
+              "protocol-sub-type",
+              "route-policy",
+              "redistribute"
+            ],
+            "required": [],
+            "trees": {
+              "redistributes": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "route-policy": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "protocol": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "protocol",
+                      "schema": {
+                        "enum": [
+                          "bgp",
+                          "eigrp",
+                          "ospf"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "protocol_variable"
+                    },
+                    "route_policy": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "route-policy",
+                      "schema": {
+                        "enum": [],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "route_policy_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "protocol",
+                    "route-policy"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "redistribute",
+                "primary_keys": [
+                  "protocol"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "route-import-from",
+          "primary_keys": [
+            "source-vpn",
+            "protocol"
+          ],
+          "primitive": false
+        },
+        "services": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "track-enable": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "addresses": {
+                "boolean_string": false,
+                "object_type": "list",
+                "omit_null": true,
+                "path": "address",
+                "schema": {
+                  "items": {
+                    "format": "ipv4",
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "set": true,
+                "variable": "addresses_variable"
+              },
+              "service_type": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "svc-type",
+                "schema": {
+                  "enum": [
+                    "FW",
+                    "IDS",
+                    "IDP",
+                    "netsvc1",
+                    "netsvc2",
+                    "netsvc3",
+                    "netsvc4",
+                    "TE",
+                    "appqoe"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "track_enable": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "track-enable",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "track_enable_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "svc-type",
+              "address",
+              "interface",
+              "track-enable"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "service",
+          "primary_keys": [
+            "svc-type"
+          ],
+          "primitive": false
+        },
+        "static_nat_rules": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "pool-name": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "tracker-id": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "direction": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "static-nat-direction",
+                "schema": {
+                  "enum": [
+                    "inside",
+                    "outside"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "direction_variable"
+              },
+              "nat_pool_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "pool-name",
+                "schema": {
+                  "enum": [],
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "nat_pool_id_variable"
+              },
+              "source_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "source-ip",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_ip_variable"
+              },
+              "tracker_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tracker-id",
+                "schema": {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "tracker_id_variable"
+              },
+              "translate_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "translate-ip",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "translate_ip_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "pool-name",
+              "source-ip",
+              "translate-ip",
+              "static-nat-direction",
+              "tracker-id"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "nat.static",
+          "primary_keys": [
+            "source-ip",
+            "translate-ip"
+          ],
+          "primitive": false
+        },
+        "static_nat_subnet_rules": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "tracker-id": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "direction": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "static-nat-direction",
+                "schema": {
+                  "enum": [
+                    "inside",
+                    "outside"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "direction_variable"
+              },
+              "prefix_length": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "prefix-length",
+                "schema": {
+                  "maximum": 32,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "prefix_length_variable"
+              },
+              "source_ip_subnet": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "source-ip-subnet",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_ip_subnet_variable"
+              },
+              "tracker_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tracker-id",
+                "schema": {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "tracker_id_variable"
+              },
+              "translate_ip_subnet": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "translate-ip-subnet",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "translate_ip_subnet_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "source-ip-subnet",
+              "translate-ip-subnet",
+              "prefix-length",
+              "static-nat-direction",
+              "tracker-id"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "nat.subnet-static",
+          "primary_keys": [
+            "source-ip-subnet",
+            "translate-ip-subnet"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_vpn",
+      "unavailable_inputs": {
+        "ipv4_dns_hosts": "Nested DNS flattening is not yet mapped",
+        "ipv4_primary_dns_server": "Nested DNS flattening is not yet mapped",
+        "ipv4_primary_dns_server_variable": "Nested DNS flattening is not yet mapped",
+        "ipv4_secondary_dns_server": "Nested DNS flattening is not yet mapped",
+        "ipv4_secondary_dns_server_variable": "Nested DNS flattening is not yet mapped",
+        "ipv6_dns_hosts": "Nested DNS flattening is not yet mapped",
+        "ipv6_primary_dns_server": "Nested DNS flattening is not yet mapped",
+        "ipv6_primary_dns_server_variable": "Nested DNS flattening is not yet mapped",
+        "ipv6_secondary_dns_server": "Nested DNS flattening is not yet mapped",
+        "ipv6_secondary_dns_server_variable": "Nested DNS flattening is not yet mapped",
+        "omp_advertise_ipv4_routes[].protocol_sub_type": "Pinned module derives external subtype for OSPF",
+        "route_global_exports[].protocol_sub_type": "Pinned module derives external subtype",
+        "route_global_imports[].protocol_sub_type": "Pinned module derives external subtype"
+      }
     }
   }
 }

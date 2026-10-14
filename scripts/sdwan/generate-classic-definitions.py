@@ -196,7 +196,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if leaf["objectType"] not in ("object", "node-only", "list"):
             raise SystemExit("Unreviewed classic leaf type")
         datatype = leaf["dataType"]
-        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range"}:
+        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range"}:
             raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
         value_type = {"String": "string", "Bool": "boolean", "Int64": "integer", "Float64": "number"}.get(typ)
         if typ in ("Set", "List"):
@@ -287,7 +287,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
     ospf_policy_source = None
     if resource == "sdwan_cisco_ospf_feature_template":
@@ -379,6 +379,24 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
             source, count = re.subn(pattern, '', source)
             if count != 1:
                 raise SystemExit("System EPFR field changed: " + field)
+    if resource == "sdwan_cisco_vpn_feature_template":
+        for field in ("dns_hosts", "dns_ipv4_servers", "dns_ipv6_servers"):
+            start = source.index("  " + field + " =")
+            end = source.index("  ])", start) + len("  ])")
+            source = source[:start] + source[end:]
+        dia = 'try(route.next_hop_dia, null) == true ? 0 : null'
+        if source.count(dia) != 1:
+            raise SystemExit("VPN direct-internet-access mapping changed")
+        source = source.replace(dia, 'try(route.next_hop_dia, null)')
+        subtype = 'protocol_sub_type     = try(route.protocol, "") == "ospf" ? ["external"] : null\n'
+        if source.count(subtype) != 1:
+            raise SystemExit("VPN OMP route subtype mapping changed")
+        source = source.replace(subtype, '')
+        for name in ("exp", "imp"):
+            derived = f'protocol_sub_type = try({name}.protocol, null) != null ? ["external"] : null\n'
+            if source.count(derived) != 1:
+                raise SystemExit("VPN route leak subtype mapping changed")
+            source = source.replace(derived, '')
     public_collection = re.search(r'local.edge_feature_templates\.(\w+)', source).group(1)
     model = (args.provider / "internal/provider" / ("model_" + resource + ".go")).read_text()
     body = model[model.index("toBody(ctx"):model.index("return body")]
@@ -519,6 +537,15 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
             generated["unavailable_inputs"][f"endpoint_trackers[].{field}_variable"] = "Pinned provider model omits this field"
         for field in ("enhanced_app_aware_routing", "enhanced_app_aware_routing_variable"):
             generated["unavailable_inputs"][field] = "Pinned Manager feature-template schema omits EPFR"
+    if resource == "sdwan_cisco_vpn_feature_template":
+        field = generated["trees"]["ipv4_static_routes"]["definition"]["fields"]["next_hop_dia"]
+        field["boolean_zero"] = True
+        field["input_schema"] = {"type":"boolean"}
+        for name in ("ipv4_dns_hosts", "ipv6_dns_hosts", "ipv4_primary_dns_server", "ipv4_primary_dns_server_variable", "ipv4_secondary_dns_server", "ipv4_secondary_dns_server_variable", "ipv6_primary_dns_server", "ipv6_primary_dns_server_variable", "ipv6_secondary_dns_server", "ipv6_secondary_dns_server_variable"):
+            generated["unavailable_inputs"][name] = "Nested DNS flattening is not yet mapped"
+        generated["unavailable_inputs"]["omp_advertise_ipv4_routes[].protocol_sub_type"] = "Pinned module derives external subtype for OSPF"
+        generated["unavailable_inputs"]["route_global_exports[].protocol_sub_type"] = "Pinned module derives external subtype"
+        generated["unavailable_inputs"]["route_global_imports[].protocol_sub_type"] = "Pinned module derives external subtype"
     if resource == "sdwan_cisco_logging_feature_template":
         generated["unavailable_inputs"]["tls_profiles[].ciphersuites_variable"] = "Pinned module reads version_ciphersuites_variablevariable instead"
     generated.update(type=template_type, device_types=defaults[public_collection]["device_types"])

@@ -22,6 +22,7 @@ type classicPredicate struct {
 	Field, Equals, Boolean string
 }
 type classicField struct {
+	BooleanZero            bool    `json:"boolean_zero"`
 	JoinedRanges           string  `json:"joined_ranges"`
 	MacFormat              string  `json:"mac_format"`
 	VariableValue          *string `json:"variable_value"`
@@ -324,6 +325,16 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 				value = strings.Join(parts, ",")
 			}
 			field.InputSchema = nil
+		}
+		if field.BooleanZero && value != nil {
+			flag, ok := value.(bool)
+			if !ok {
+				return nil, fmt.Errorf("invalid %s boolean", public)
+			}
+			value = nil
+			if flag {
+				value = float64(0)
+			}
 		}
 		leaf := map[string]any{"vipObjectType": field.ObjectType}
 		if variable != nil {
