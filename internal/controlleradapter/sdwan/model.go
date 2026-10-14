@@ -29,11 +29,15 @@ type Defaults struct {
 	} `json:"sdwan"`
 }
 type SDWAN struct {
+	ApplicationCatalog   *ApplicationCatalog        `json:"application_catalog,omitempty"`
 	NetworkHierarchy     *NetworkHierarchy          `json:"network_hierarchy,omitempty"`
 	PolicyObjects        map[string]json.RawMessage `json:"policy_objects,omitempty"`
 	ConfigurationGroups  []ConfigurationGroup       `json:"configuration_groups,omitempty"`
 	FeatureProfiles      map[string]json.RawMessage `json:"feature_profiles,omitempty"`
 	EdgeFeatureTemplates map[string]json.RawMessage `json:"edge_feature_templates"`
+}
+type ApplicationCatalog struct {
+	CustomApplications []map[string]any `json:"custom_applications,omitempty"`
 }
 type Banner struct {
 	Name          string    `json:"name"`
@@ -148,6 +152,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, policies...)
+	customApps, err := compileCustomApplications(doc.SDWAN.ApplicationCatalog)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, customApps...)
 	profiles, err := compileProfiles(doc.SDWAN.FeatureProfiles)
 	if err != nil {
 		return nil, err

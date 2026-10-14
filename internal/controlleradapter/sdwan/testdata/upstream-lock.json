@@ -14,8 +14,13 @@
       "type": "sdwan_custom_application",
       "name": "custom_application",
       "source": "sdwan_application_catalog.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "implemented-unqualified",
+      "live_tested": false,
+      "local_tested": true,
+      "fixtures": [
+        "custom-applications"
+      ],
+      "reason": "Native mapping and asynchronous lifecycle pass local simulation; live Manager rejects create with POLICYVALIDATION0001 because SD-AVC is not enabled on any vManage."
     },
     {
       "type": "sdwan_activate_centralized_policy",

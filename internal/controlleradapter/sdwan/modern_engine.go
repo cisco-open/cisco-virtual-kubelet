@@ -193,6 +193,9 @@ func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id strin
 	if !validID.MatchString(id) {
 		return ErrResponse
 	}
+	if r.Kind == "custom-app" {
+		return c.deleteCustomApplication(ctx, r, id)
+	}
 	path, e := c.collection(ctx, r)
 	if e != nil {
 		return e

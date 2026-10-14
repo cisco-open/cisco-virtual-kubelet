@@ -19,6 +19,9 @@ type Observation struct {
 }
 
 func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) {
+	if r.Kind == "custom-app" {
+		return c.observeCustomApplication(ctx, r)
+	}
 	if r.Kind == "hierarchy" {
 		return c.observeHierarchy(ctx, r)
 	}
@@ -74,6 +77,9 @@ func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) 
 	return &Observation{ID: id, Body: body, Attached: attached}, nil
 }
 func (c *Client) Create(ctx context.Context, r Resource) (string, error) {
+	if r.Kind == "custom-app" {
+		return c.createCustomApplication(ctx, r)
+	}
 	if r.Kind != "" {
 		return c.createModern(ctx, r)
 	}
@@ -93,6 +99,9 @@ func (c *Client) Update(ctx context.Context, r Resource, o *Observation) error {
 		return errors.New("SD-WAN update requires a qualified unattached resource")
 	}
 	if r.Kind != "" {
+		if r.Kind == "custom-app" {
+			return c.updateCustomApplication(ctx, r, o)
+		}
 		return c.updateModern(ctx, r, o)
 	}
 	return c.Request(ctx, "PUT", "/dataservice/template/feature/"+url.PathEscape(o.ID), r.Body, nil)

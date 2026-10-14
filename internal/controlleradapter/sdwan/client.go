@@ -213,6 +213,14 @@ func (c *Client) Request(ctx context.Context, method, path string, input, output
 	if err = c.connect(ctx); err != nil {
 		return err
 	}
+	// Manager 20.18 may take over 30 seconds to answer a custom-app POST,
+	// even when it rejects the request. Keep the normal mutation timeout for
+	// every other endpoint while allowing this observed asynchronous API time.
+	if method == http.MethodPost && path == "/dataservice/template/policy/customapp/" && c.http.Timeout < 2*time.Minute {
+		original := c.http.Timeout
+		c.http.Timeout = 2 * time.Minute
+		defer func() { c.http.Timeout = original }()
+	}
 	result, err := c.raw(ctx, method, path, b, "application/json")
 	var he *HTTPError
 	if method == http.MethodGet && errors.As(err, &he) && he.Status == 401 {

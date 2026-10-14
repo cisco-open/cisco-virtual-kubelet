@@ -6,8 +6,8 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 | Status | Declarations |
 |---|---:|
 | Fixture-qualified against live Manager | 102 |
-| Implemented with local fixtures; live tests outstanding | 34 |
-| Implementation still pending | 89 |
+| Implemented with local fixtures; live tests outstanding | 35 |
+| Implementation still pending | 88 |
 | Compatibility-blocked (TrustSec) | 1 |
 
 The latest increment qualifies six more declarations: classic SVI, cellular and
@@ -30,6 +30,7 @@ implemented existing-parent workflow is needed. CVK does not adopt that profile.
 
 | Upstream declaration | Native model path (under `sdwan`) | Fixture(s) | Prerequisite |
 |---|---|---|---|
+| `sdwan_custom_application` | `application_catalog.custom_applications` | [custom-applications.yaml](../../examples/configs/sdwan/custom-applications.yaml) | Enable SD-AVC on a test vManage; current Manager returns `POLICYVALIDATION0001` before creating the object |
 | `sdwan_policy_object_feature_profile` | `feature_profiles.policy_object_profile` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Manager permits only one policy-object profile |
 | `sdwan_system_ca_certificate_feature` | `feature_profiles.system_profiles.ca_certificate` | [ca-certificate.yaml](../../examples/configs/sdwan/ca-certificate.yaml) | Replace placeholder certificate ID with an existing lab certificate |
 | `sdwan_policy_object_app_probe_class` | `feature_profiles.policy_object_profile.app_probe_classes` | [policy-dependencies.yaml](../../examples/configs/sdwan/policy-dependencies.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
@@ -91,12 +92,8 @@ All examples have report-mode companion `NetworkControllerConfig` manifests.
 
 ## Implementation still required
 
-These 89 declarations are not merely waiting for live tests. Their native mapping
+These 88 declarations are not merely waiting for live tests. Their native mapping
 and/or lifecycle implementation remains unfinished. They must not be counted as parity.
-
-### sdwan_application_catalog.tf
-
-- `sdwan_custom_application.custom_application`
 
 ### sdwan_centralized_policies.tf
 

@@ -141,6 +141,9 @@ func profileBannerValue(v, variable *string) map[string]any {
 	return map[string]any{"optionType": "default", "value": ""}
 }
 func equalModern(r Resource, o map[string]any) (bool, error) {
+	if r.Kind == "custom-app" {
+		return equalCustomApplication(r, o)
+	}
 	if r.Kind == "hierarchy" {
 		return equalHierarchy(r, o)
 	}

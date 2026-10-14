@@ -7,7 +7,7 @@ schemas, defaults and API behavior. Terraform is not a build, test or deployment
 dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 96 resource declarations (90 distinct resource types) have fixture-level native live coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 102 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -42,6 +42,12 @@ parity**. The pinned upstream module has 226 resource declarations. 96 resource 
 | `examples/configs/sdwan/transport-trackers.yaml` | Transport IPv4/IPv6 trackers and tracker groups | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-sig-credentials.yaml` | Global Umbrella credentials using variables | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/cisco-sse.yaml` | Cisco SSE parcel | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-svi.yaml` | Classic SVI interface template | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-cellular-interface.yaml` | Classic cellular VPN interface template | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-switchport.yaml` | Classic switchport template | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/routing-eigrp.yaml` | Service EIGRP parcel | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/service-switchport.yaml` | Service switchport parcel | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/zscaler-sse.yaml` | Zscaler SSE parcel | Native lifecycle, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -52,11 +58,11 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
-An additional 34 declarations have native implementations but remain unqualified:
-the policy-object profile and all 32 modern policy-object collections, plus system
-CA certificates. SIG credential creation now passes after fixing the global flag
+An additional 35 declarations have native implementations but remain unqualified:
+the policy-object profile and all 32 modern policy-object collections, system
+CA certificates, and custom applications (the lab lacks SD-AVC). SIG credential creation now passes after fixing the global flag
 and variable-secret payloads.
-95 declarations remain pending and TrustSec remains compatibility-blocked.
+88 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 
@@ -99,6 +105,8 @@ The public model remains the upstream `sdwan` document. The format is
   automatically created application-priority settings parcel and visibility flags.
 - All 24 classic `policy_objects` collections, including named SLA probe references.
   Policy names are limited to 32 characters because this Manager rewrites longer names.
+- `application_catalog.custom_applications`: custom names, server names, L3/L4 rows
+  and business relevance; the lab cannot qualify create until SD-AVC is enabled.
 - `network_hierarchy` groups/regions through levels 0–2 and unassigned sites with
   the 20.18 location/GPS model. Global collectors remain unsupported.
 

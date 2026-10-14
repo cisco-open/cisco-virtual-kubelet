@@ -57,6 +57,7 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		}
 
 		sections := map[string][]string{
+			"custom-applications.yaml": {"application_catalog"},
 			"banner.yaml":         {"edge_feature_templates"},
 			"system-profile.yaml": {"feature_profiles", "configuration_groups"},
 			"policy-objects.yaml": {"policy_objects"},

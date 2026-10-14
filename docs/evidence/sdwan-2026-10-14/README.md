@@ -331,3 +331,15 @@ attributes was removed. Existing generated mappings were unchanged.
 All five fixtures are unattached; router forwarding and feature associations
 remain outside this evidence. Status: **102 fixture-qualified, 34 implemented
 but unqualified, 89 pending implementation, one compatibility-blocked**.
+
+## Custom application catalog
+
+The NetAsCode `application_catalog.custom_applications` model now compiles to
+the native custom-application API body, including server names, L3/L4 rows and
+business-relevance translation. A simulated Manager test passed asynchronous
+task completion, post-task ID lookup, readback, update and deletion. The real
+Manager rejected creation with HTTP 400 `POLICYVALIDATION0001`: “SD-AVC is not
+enabled on any vManage.” Read-only inventory showed the fixture absent after
+the failed attempt. Live lifecycle and Kubernetes reconciliation remain
+pending until SD-AVC is enabled in a test lab. Status: **102 qualified, 35
+implemented but unqualified, 88 pending, one compatibility-blocked**.
