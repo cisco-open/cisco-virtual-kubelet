@@ -310,3 +310,29 @@ func TestLiveClassicLoggingLifecycle(t *testing.T) {
 func TestLiveClassicLoggingOracle(t *testing.T) {
 	liveParcelOracle(t, parcelFixtures(t, "classic-logging"))
 }
+
+func TestClassicGREConditionalACLs(t *testing.T) {
+	resources := parcelFixtures(t, "classic-gre")
+	if len(resources) != 1 {
+		t.Fatal("expected GRE template")
+	}
+	data := resources[0].Body["templateDefinition"].(map[string]any)
+	encoded, _ := json.Marshal(data)
+	for _, value := range []string{"fixture_gre_ingress_acl", "fixture_gre_egress_acl"} {
+		if !strings.Contains(string(encoded), value) {
+			t.Fatal("conditional ACL row lost")
+		}
+	}
+	for _, input := range []map[string]any{
+		{"name": "test", "description": "test"},
+		{"name": "test", "description": "test", "ipv4_ingress_access_list": "fixture-acl"},
+		{"name": "test", "description": "test", "tracker": "fixture-tracker"},
+	} {
+		if _, err := compileClassicTemplates("gre_interface_templates", []map[string]any{input}, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+func TestLiveGRENamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "classic-gre")) }
+func TestLiveGRELifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "classic-gre")) }
+func TestLiveGREOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "classic-gre")) }

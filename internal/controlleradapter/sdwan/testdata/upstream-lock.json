@@ -568,8 +568,10 @@
       "type": "sdwan_cisco_vpn_interface_gre_feature_template",
       "name": "cisco_vpn_interface_gre_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-gre.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_vpn_interface_cellular_feature_template",

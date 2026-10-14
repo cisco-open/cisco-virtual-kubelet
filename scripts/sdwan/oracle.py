@@ -13,13 +13,14 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--terraform", default="terraform")
 parser.add_argument("--execute", action="store_true")
-parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular", "classic-bfd", "classic-igmp", "classic-ntp", "classic-omp", "classic-pim", "classic-applications", "classic-dhcp", "service-features", "transport-cellular", "classic-ipsec", "classic-snmp", "classic-logging"], default="core")
+parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular", "classic-bfd", "classic-igmp", "classic-ntp", "classic-omp", "classic-pim", "classic-applications", "classic-dhcp", "service-features", "transport-cellular", "classic-ipsec", "classic-snmp", "classic-logging", "classic-gre"], default="core")
 args = parser.parse_args()
 if args.fixture_set == "policy-profile" and args.execute:
     raise SystemExit("Policy-profile execution needs a qualified empty-controller or read-only-parent workflow; plan-only is available")
 root = Path(__file__).resolve().parents[2]
 oracle = root / "examples/configs/sdwan/oracle"
 sets = {
+ "classic-gre": {"files": ["classic-gre"], "count": 1, "absent": "GRE", "oracle": "GRE"},
  "classic-logging": {"files": ["classic-logging"], "count": 1, "absent": "ClassicLogging", "oracle": "ClassicLogging"},
  "classic-snmp": {"files": ["classic-snmp"], "count": 1, "absent": "ClassicSNMP", "oracle": "ClassicSNMP"},
  "classic-ipsec": {"files": ["classic-ipsec"], "count": 1, "absent": "IPSec", "oracle": "IPSec"},
@@ -51,6 +52,7 @@ for key in ("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"):
         raise SystemExit(f"{key} is required")
 env.update(CVK_SDWAN_LIVE="1", CVK_SDWAN_ORACLE="1")
 allowed = {
+    "sdwan_cisco_vpn_interface_gre_feature_template",
     "sdwan_cisco_logging_feature_template",
     "sdwan_cisco_snmp_feature_template",
     "sdwan_cisco_vpn_interface_ipsec_feature_template",

@@ -37,12 +37,14 @@ type classicField struct {
 	BooleanString  bool `json:"boolean_string"`
 }
 type classicTree struct {
+	Triggers    []string
 	Primitive   bool
 	Path        string
 	PrimaryKeys []string `json:"primary_keys"`
 	Definition  classicDefinition
 }
 type classicDefinition struct {
+	ConditionalTrees    []classicTree `json:"conditional_trees"`
 	Wrapper             *classicTree
 	AlwaysPriorityOrder bool `json:"always_priority_order"`
 	Trees               map[string]classicTree
@@ -317,6 +319,45 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			}
 			setScalarPath(data, tree.Path, map[string]any{"vipObjectType": "tree", "vipType": "constant", "vipPrimaryKey": tree.PrimaryKeys, "vipValue": output})
 		}
+	}
+	for _, tree := range definition.ConditionalTrees {
+		selected := map[string]any{}
+		for public, field := range tree.Definition.Fields {
+			if field.Literal == nil && !field.Derived {
+				allowed[public] = true
+				if value, exists := input[public]; exists {
+					selected[public] = value
+				}
+			}
+			if field.Variable != "" {
+				allowed[field.Variable] = true
+				if value, exists := input[field.Variable]; exists {
+					selected[field.Variable] = value
+				}
+			}
+		}
+		enabled := false
+		for _, field := range tree.Triggers {
+			if value, exists := input[field]; exists {
+				enabled = value != nil
+				break
+			}
+		}
+		if !enabled {
+			continue
+		}
+		row, err := classicData(tree.Definition, selected, false)
+		if err != nil {
+			return nil, err
+		}
+		rows := []any{}
+		if current, ok := classicInput(data, tree.Path).(map[string]any); ok {
+			if prior, ok := current["vipValue"].([]any); ok {
+				rows = append(rows, prior...)
+			}
+		}
+		rows = append(rows, row)
+		setScalarPath(data, tree.Path, map[string]any{"vipObjectType": "tree", "vipType": "constant", "vipPrimaryKey": tree.PrimaryKeys, "vipValue": rows})
 	}
 	if err := validateClassicFields(input, allowed, ""); err != nil {
 		return nil, err

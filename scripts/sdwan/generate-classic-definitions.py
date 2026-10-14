@@ -219,8 +219,21 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
+    gre_acl_source = None
+    if resource == "sdwan_cisco_vpn_interface_gre_feature_template":
+        start = source.index("  access_lists =")
+        end = source.index("  ])", start) + len("  ])")
+        gre_acl_source = source[start:end]
+        outer = 'access_lists = try(each.value.ipv4_ingress_access_list, each.value.ipv4_ingress_access_list_variable, each.value.ipv4_egress_access_list, each.value.ipv4_egress_access_list_variable, null) == null ? null : flatten(['
+        if not gre_acl_source.strip().startswith(outer):
+            raise SystemExit("GRE ACL outer condition changed")
+        for direction in ("ingress", "egress"):
+            condition = 'try(each.value.ipv4_' + direction + '_access_list, each.value.ipv4_' + direction + '_access_list_variable, null) == null ? [] : [{'
+            if gre_acl_source.count(condition) != 1:
+                raise SystemExit("GRE ACL row condition changed")
+        source = source[:start] + source[end:]
     if resource == "sdwan_cisco_logging_feature_template":
         broken = r'^    ciphersuite_list_variable\s*= try\(prof.version_ciphersuites_variablevariable, null\)\n'
         source, count = re.subn(broken, '', source, flags=re.M)
@@ -242,6 +255,20 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         generated["wrapper"] = {"path": path, "primary_keys": leaf["primaryKeys"]}
     else:
         generated = definition(source, "each.value", 2, model, body, schema["fields"])
+    if gre_acl_source:
+        loop = re.search(r'for _, item := range data.AccessLists \{', body)
+        item_body = block(body, loop.end() - 1)
+        path = re.search(r'sjson.SetRaw\(body, path\+"([^"]+)\."\+"vipValue\.-1", itemBody\)', item_body).group(1)
+        leaf = next(x for x in schema["fields"] if ".".join(x["dataPath"] + [x["key"]]) == path)
+        child_struct = re.search(r'AccessLists\s+\[\](\w+)', model).group(1)
+        children = list(re.finditer(r'\[\] : \[\{', gre_acl_source))
+        if len(children) != 2:
+            raise SystemExit("GRE ACL conditions changed")
+        generated["conditional_trees"] = []
+        for match, direction in zip(children, ["ingress", "egress"]):
+            item_source = block(gre_acl_source, match.end() - 1)
+            child = definition(item_source, "each.value", 6, model, item_body, leaf["children"], "item", "itemBody", child_struct)
+            generated["conditional_trees"].append({"path":path, "primary_keys":leaf["primaryKeys"], "definition":child, "triggers":["ipv4_"+direction+"_access_list", "ipv4_"+direction+"_access_list_variable"]})
     if resource == "sdwan_cisco_vpn_interface_ipsec_feature_template":
         # NaC's published example uses numeric DH groups; Terraform coerces to String.
         field = generated["fields"]["ike.group"]

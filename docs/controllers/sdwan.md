@@ -5,7 +5,7 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 83 resource declarations (77 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 84 resource declarations (78 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -33,6 +33,7 @@ parity**. The pinned upstream module has 226 resource declarations. 83 resource 
 | `examples/configs/sdwan/classic-ipsec.yaml` | Classic IPsec nested IKE/IPsec settings and key variable | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-snmp.yaml` | Classic SNMP nested OIDs, communities and users | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-logging.yaml` | Classic logging TLS profile and IPv4/IPv6 servers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-gre.yaml` | Classic GRE with conditional ingress/egress ACL variables | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -55,7 +56,7 @@ The public model remains the upstream `sdwan` document. The format is
   `cellular_profile_templates`, `bfd_templates`, `igmp_templates`, `ntp_templates`,
   `omp_templates`, `pim_templates`, `thousandeyes_templates`,
   `secure_app_hosting_templates`, `dhcp_server_templates`, `ipsec_interface_templates`,
-  `snmp_templates` and `logging_templates`, including per-family device defaults and overrides.
+  `snmp_templates`, `logging_templates` and `gre_interface_templates`, including per-family device defaults and overrides.
   Generate their metadata with `scripts/sdwan/generate-classic-definitions.py
   MODULE_CHECKOUT PROVIDER_CHECKOUT`.
 - `feature_profiles.system_profiles`: profile name/description, banner, basic,

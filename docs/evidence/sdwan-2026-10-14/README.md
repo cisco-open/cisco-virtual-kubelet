@@ -231,3 +231,13 @@ expression is documented and rejected before mutation.
 
 Full Go regression and focused race suites passed. Both generators reproduce their
 metadata byte-for-byte; previously qualified classic mappings remain unchanged.
+
+## Classic GRE
+
+The unattached, shut-down GRE fixture passed native lifecycle (3.20s), pinned
+Terraform comparison (1.75s), and live Kubernetes reconciliation with cleanup
+(8.72s). Conditional ingress/egress ACL rows preserve literal/variable precedence
+from the module, and scalar tracker names use the provider's list encoding.
+
+Full Go regression and focused race checks passed. Metadata regenerated
+byte-for-byte and all previously qualified classic definitions remained unchanged.
