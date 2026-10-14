@@ -24,10 +24,26 @@ type CentralizedPolicies struct {
 			HubAndSpokeTopology []CentralizedHubAndSpoke   `json:"hub_and_spoke_topology,omitempty"`
 		} `json:"control_policy"`
 		DataPolicy struct {
-			Cflowd      []CentralizedCflowd      `json:"cflowd,omitempty"`
-			TrafficData []CentralizedTrafficData `json:"traffic_data,omitempty"`
+			Cflowd                  []CentralizedCflowd                  `json:"cflowd,omitempty"`
+			TrafficData             []CentralizedTrafficData             `json:"traffic_data,omitempty"`
+			ApplicationAwareRouting []CentralizedApplicationAwareRouting `json:"application_aware_routing,omitempty"`
 		} `json:"data_policy"`
 	} `json:"definitions"`
+}
+type CentralizedApplicationAwareRouting struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Sequences   []struct {
+		ID            int    `json:"id"`
+		Name          string `json:"name"`
+		IPType        string `json:"ip_type,omitempty"`
+		MatchCriteria struct {
+			SourceDataPrefix string `json:"source_data_prefix,omitempty"`
+		} `json:"match_criterias"`
+		Actions struct {
+			Log *bool `json:"log,omitempty"`
+		} `json:"actions"`
+	} `json:"sequences"`
 }
 type CentralizedTrafficData struct {
 	Name              string `json:"name"`
@@ -342,6 +358,45 @@ func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) 
 			sequences = append(sequences, map[string]any{"sequenceId": s.ID, "sequenceName": s.Name, "sequenceType": mapped, "sequenceIpType": ipType, "baseAction": base, "match": map[string]any{"entries": matches}, "actions": []any{}})
 		}
 		out = append(out, Resource{Key: "centralized_policies/definitions/data_policy/traffic_data/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "traffic_data_policy_definition", Collection: "/dataservice/template/policy/definition/data/", Body: map[string]any{"type": "data", "name": p.Name, "description": p.Description, "defaultAction": map[string]any{"type": defaultAction}, "sequences": sequences}})
+	}
+	for _, p := range input.Definitions.DataPolicy.ApplicationAwareRouting {
+		if p.Name == "" || p.Description == "" || seen["appRoute/"+p.Name] {
+			return nil, errors.New("invalid or duplicate application-aware routing definition")
+		}
+		seen["appRoute/"+p.Name] = true
+		sequences := []any{}
+		ids := map[int]bool{}
+		for _, s := range p.Sequences {
+			if s.ID < 1 || s.ID > 65535 || ids[s.ID] || s.Name == "" {
+				return nil, errors.New("invalid application-aware routing sequence")
+			}
+			ids[s.ID] = true
+			ipType := s.IPType
+			if ipType == "" {
+				ipType = "ipv4"
+			}
+			if ipType != "ipv4" && ipType != "ipv6" && ipType != "all" {
+				return nil, errors.New("invalid application-aware routing IP type")
+			}
+			matches := []any{}
+			if s.MatchCriteria.SourceDataPrefix != "" {
+				prefix, e := netip.ParsePrefix(s.MatchCriteria.SourceDataPrefix)
+				if e != nil || (ipType == "ipv4" && !prefix.Addr().Is4()) || (ipType == "ipv6" && !prefix.Addr().Is6()) {
+					return nil, errors.New("invalid application-aware routing source prefix")
+				}
+				matches = append(matches, map[string]any{"field": "sourceIp", "value": s.MatchCriteria.SourceDataPrefix})
+			}
+			actions := []any{}
+			if s.Actions.Log != nil {
+				row := map[string]any{"type": "log"}
+				if *s.Actions.Log {
+					row["parameter"] = ""
+				}
+				actions = append(actions, row)
+			}
+			sequences = append(sequences, map[string]any{"sequenceId": s.ID, "sequenceName": s.Name, "sequenceType": "appRoute", "sequenceIpType": ipType, "match": map[string]any{"entries": matches}, "actions": actions})
+		}
+		out = append(out, Resource{Key: "centralized_policies/definitions/data_policy/application_aware_routing/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "application_aware_routing_policy_definition", Collection: "/dataservice/template/policy/definition/approute/", Body: map[string]any{"type": "appRoute", "name": p.Name, "description": p.Description, "sequences": sequences}})
 	}
 	for _, p := range input.FeaturePolicies {
 		if p.Name == "" || p.Description == "" || seen["feature/"+p.Name] {

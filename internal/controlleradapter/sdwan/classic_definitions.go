@@ -372,6 +372,36 @@ func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 	if description, _ := o["description"].(string); description != r.Body["description"] {
 		return false, nil
 	}
+	if r.Type == "application_aware_routing_policy_definition" {
+		rows, ok := o["sequences"].([]any)
+		if !ok {
+			return false, ErrResponse
+		}
+		wanted := r.Body["sequences"].([]any)
+		if len(rows) != len(wanted) {
+			return false, nil
+		}
+		encoded, err := json.Marshal(wanted)
+		if err != nil {
+			return false, ErrResponse
+		}
+		var normalized []map[string]any
+		if json.Unmarshal(encoded, &normalized) != nil {
+			return false, ErrResponse
+		}
+		for i, raw := range rows {
+			row, ok := raw.(map[string]any)
+			if !ok {
+				return false, ErrResponse
+			}
+			for key, value := range normalized[i] {
+				if !reflect.DeepEqual(row[key], value) {
+					return false, nil
+				}
+			}
+		}
+		return true, nil
+	}
 	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" || r.Type == "vpn_membership_policy_definition" || r.Type == "mesh_topology_policy_definition" || r.Type == "hub_and_spoke_topology_policy_definition" || r.Type == "cflowd_policy_definition" || r.Type == "intrusion_prevention_policy_definition" || r.Type == "zone_based_firewall_policy_definition" {
 		if (r.Type == "intrusion_prevention_policy_definition" || r.Type == "zone_based_firewall_policy_definition") && o["mode"] != r.Body["mode"] {
 			return false, nil

@@ -100,8 +100,11 @@
       "type": "sdwan_application_aware_routing_policy_definition",
       "name": "application_aware_routing_policy_definition",
       "source": "sdwan_centralized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-centralized-app-route"
+      ]
     },
     {
       "type": "sdwan_application_list_policy_object",
