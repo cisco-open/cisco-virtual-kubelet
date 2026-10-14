@@ -196,9 +196,9 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if leaf["objectType"] not in ("object", "node-only", "list"):
             raise SystemExit("Unreviewed classic leaf type")
         datatype = leaf["dataType"]
-        if datatype["type"] not in ("string", "boolean", "number", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range"}:
+        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range"}:
             raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
-        value_type = {"String": "string", "Bool": "boolean", "Int64": "integer"}.get(typ)
+        value_type = {"String": "string", "Bool": "boolean", "Int64": "integer", "Float64": "number"}.get(typ)
         if typ in ("Set", "List"):
             value_type = "integer" if datatype["type"] == "number" else "string"
         if value_type is None:
@@ -267,6 +267,18 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             mapping[public].update(derived=True, when=conditions[tf][0], derived_value=conditions[tf][1])
         if tf + "_variable" in inputs:
             mapping[public]["variable"] = inputs[tf + "_variable"]
+    for tf, public in inputs.items():
+        if not tf.endswith("_variable") or tf.removesuffix("_variable") in inputs:
+            continue
+        name, typ = fields[tf]
+        if typ != "String":
+            raise SystemExit("Unsupported standalone classic variable: " + tf)
+        paths = set(re.findall(prefix + r'"([^"]+)\."\+"vipVariableName", ' + receiver + r'\.' + name + r'\.ValueString\(\)', body))
+        if len(paths) != 1:
+            raise SystemExit("Ambiguous standalone classic variable: " + tf)
+        path = paths.pop()
+        leaf = leaves[path]
+        mapping[public] = {"path":path,"schema":{"type":"string"},"object_type":leaf["objectType"],"variable":public,"omit_null":True}
     result = {"fields": mapping, "required": required, "defaults": baseline, "trees": trees, "optional": optional, "unavailable_inputs": unavailable}
     if conditional_trees:
         result["conditional_trees"] = conditional_trees
@@ -275,7 +287,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
     ospf_policy_source = None
     if resource == "sdwan_cisco_ospf_feature_template":
@@ -341,6 +353,32 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         source, count = re.subn(broken, '', source, flags=re.M)
         if count != 1:
             raise SystemExit("Logging upstream typo changed")
+    if resource == "sdwan_cisco_system_feature_template":
+        # This expression captures obj from the parent loop while the row itself
+        # iterates scalar i values; the generic nested mapping cannot represent it.
+        unsupported = '      track_id_variable = try(obj.group_trackers_variable, null)\n'
+        if source.count(unsupported) != 1:
+            raise SystemExit("System object tracker variable mapping changed")
+        source = source.replace(unsupported, '')
+        for field in ("interval", "multiplier", "threshold"):
+            original = rf'(?m)^(\s*{field})\s+= try\(obj\.{field}, can\(obj\.{field}_variable\) \? null : local\.defaults\.sdwan\.edge_feature_templates\.system_templates\.endpoint_trackers\.{field}\)$'
+            source, count = re.subn(original, rf'\1 = try(obj.{field}, null)', source)
+            if count != 1:
+                raise SystemExit("System tracker default expression changed: " + field)
+        tracker_type = 'try(can(obj.group_trackers) ? "tracker-group" : try(obj.type, can(obj.type_variable) ? null : local.defaults.sdwan.edge_feature_templates.system_templates.endpoint_trackers.type))'
+        if source.count(tracker_type) != 1:
+            raise SystemExit("System tracker type expression changed")
+        source = source.replace(tracker_type, 'try(obj.type, null)')
+        for field in ("transport_endpoint_ip", "transport_endpoint_port", "transport_endpoint_protocol"):
+            pattern = rf'(?m)^\s*{field}(?:_variable)?\s*= try\(obj\.{field}(?:_variable)?, null\)\n'
+            source, count = re.subn(pattern, '', source)
+            if count != 2:
+                raise SystemExit("System transport endpoint fields changed: " + field)
+        for field in ("enhanced_app_aware_routing", "enhanced_app_aware_routing_variable"):
+            pattern = rf'(?m)^\s*{field}\s*= try\(each\.value\.{field}, null\)\n'
+            source, count = re.subn(pattern, '', source)
+            if count != 1:
+                raise SystemExit("System EPFR field changed: " + field)
     public_collection = re.search(r'local.edge_feature_templates\.(\w+)', source).group(1)
     model = (args.provider / "internal/provider" / ("model_" + resource + ".go")).read_text()
     body = model[model.index("toBody(ctx"):model.index("return body")]
@@ -468,6 +506,19 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
                 field["decimal_string"] = True
     if resource == "sdwan_cisco_ospf_feature_template":
         generated["unavailable_inputs"]["areas[].interfaces[].dead_interval_variable"] = "Pinned module reads dead_intervale_variable instead"
+    if resource == "sdwan_cisco_system_feature_template":
+        fields = generated["trees"]["endpoint_trackers"]["definition"]["fields"]
+        for field in ("interval", "multiplier", "threshold", "type"):
+            fields[field]["input_default"] = defaults["system_templates"]["endpoint_trackers"][field]
+        if fields["type"]["schema"] != {"type":"string","enum":["interface","static-route"]}:
+            raise SystemExit("System tracker type schema changed")
+        fields["type"]["schema"]["enum"].append("tracker-group")
+        generated["unavailable_inputs"]["object_trackers[].group_trackers_variable"] = "Pinned module captures the parent variable inside a scalar child row"
+        for field in ("transport_endpoint_ip", "transport_endpoint_port", "transport_endpoint_protocol"):
+            generated["unavailable_inputs"][f"endpoint_trackers[].{field}"] = "Pinned provider model omits this field"
+            generated["unavailable_inputs"][f"endpoint_trackers[].{field}_variable"] = "Pinned provider model omits this field"
+        for field in ("enhanced_app_aware_routing", "enhanced_app_aware_routing_variable"):
+            generated["unavailable_inputs"][field] = "Pinned Manager feature-template schema omits EPFR"
     if resource == "sdwan_cisco_logging_feature_template":
         generated["unavailable_inputs"]["tls_profiles[].ciphersuites_variable"] = "Pinned module reads version_ciphersuites_variablevariable instead"
     generated.update(type=template_type, device_types=defaults[public_collection]["device_types"])

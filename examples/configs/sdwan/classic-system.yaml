@@ -1,0 +1,10 @@
+sdwan:
+  edge_feature_templates:
+    system_templates:
+      - name: CVK-CLASSIC-SYSTEM
+        description: CVK isolated system template
+        device_types: [C8000V]
+        hostname_variable: cvkHostname
+        system_ip_variable: cvkSystemIP
+        site_id_variable: cvkSiteID
+        timezone: UTC

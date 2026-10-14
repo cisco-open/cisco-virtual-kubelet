@@ -527,8 +527,12 @@
       "type": "sdwan_cisco_system_feature_template",
       "name": "cisco_system_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "classic-system"
+      ]
     },
     {
       "type": "sdwan_cisco_thousandeyes_feature_template",

@@ -86,6 +86,16 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 	out := []Resource{}
 	seen := map[string]bool{}
 	for _, input := range templates {
+		if collection == "system_templates" {
+			if trackers, ok := input["endpoint_trackers"].([]any); ok {
+				for _, tracker := range trackers {
+					row, ok := tracker.(map[string]any)
+					if ok && row["group_trackers"] != nil {
+						row["type"] = "tracker-group"
+					}
+				}
+			}
+		}
 		name, ok := input["name"].(string)
 		if !ok || name == "" || len(name) > 128 || seen[name] {
 			return nil, errors.New("classic templates require unique names")

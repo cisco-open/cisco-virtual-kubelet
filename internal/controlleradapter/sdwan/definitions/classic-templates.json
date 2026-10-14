@@ -9372,6 +9372,1423 @@
       "type": "switchport",
       "unavailable_inputs": {}
     },
+    "system_templates": {
+      "defaults": {
+        "admin-tech-on-failure": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "affinity-group": {
+          "affinity-group-number": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "preference": {
+            "vipObjectType": "list",
+            "vipType": "ignore"
+          }
+        },
+        "clock": {
+          "timezone": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "control-session-pps": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "controller-group-list": {
+          "vipObjectType": "list",
+          "vipType": "ignore"
+        },
+        "description": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "device-groups": {
+          "vipObjectType": "list",
+          "vipType": "ignore"
+        },
+        "enable-mrf-migration": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "epfr": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "gps-location": {
+          "geo-fencing": {
+            "enable": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "range": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "sms": {
+              "enable": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "mobile-number": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "number"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              }
+            }
+          },
+          "latitude": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "longitude": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "idle-timeout": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "location": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "max-omp-sessions": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "migration-bgp-community": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "object-track": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "object-number"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "on-demand": {
+          "enable": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "idle-timeout": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "overlay-id": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "port-hop": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "port-offset": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "region-id": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "role": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "secondary-region": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "track-default-gateway": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "track-interface-tag": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "track-transport": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "tracker": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "transport-gateway": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "$derived:geo_fencing_sms": {
+          "boolean_string": true,
+          "derived": true,
+          "derived_value": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "gps-location.geo-fencing.sms.enable",
+          "present": "geo_fencing_sms_phone_numbers",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false
+        },
+        "admin_tech_on_failure": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "admin-tech-on-failure",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "admin_tech_on_failure_variable"
+        },
+        "affinity_group_number": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "affinity-group.affinity-group-number",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "affinity_group_number_variable"
+        },
+        "affinity_group_preferences": {
+          "boolean_string": false,
+          "object_type": "list",
+          "omit_null": false,
+          "path": "affinity-group.preference",
+          "schema": {
+            "items": {
+              "maximum": 255,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "set": false,
+          "variable": "affinity_group_preferences_variable"
+        },
+        "console_baud_rate": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "console-baud-rate",
+          "schema": {
+            "enum": [
+              "1200",
+              "2400",
+              "4800",
+              "9600",
+              "19200",
+              "38400",
+              "57600",
+              "115200"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "console_baud_rate_variable"
+        },
+        "control_session_pps": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "control-session-pps",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "control_session_pps_variable"
+        },
+        "controller_groups": {
+          "boolean_string": false,
+          "object_type": "list",
+          "omit_null": false,
+          "path": "controller-group-list",
+          "schema": {
+            "items": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "set": false,
+          "variable": "controller_groups_variable"
+        },
+        "device_groups": {
+          "boolean_string": false,
+          "object_type": "list",
+          "omit_null": false,
+          "path": "device-groups",
+          "schema": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "set": true,
+          "variable": "device_groups_variable"
+        },
+        "enable_mrf_migration": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "enable-mrf-migration",
+          "schema": {
+            "enum": [
+              "enabled",
+              "enabled-from-bgp-core"
+            ],
+            "type": "string"
+          },
+          "set": false
+        },
+        "geo_fencing": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "gps-location.geo-fencing.enable",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false
+        },
+        "geo_fencing_range": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "gps-location.geo-fencing.range",
+          "schema": {
+            "maximum": 10000,
+            "minimum": 100,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "geo_fencing_range_variable"
+        },
+        "hostname_variable": {
+          "object_type": "object",
+          "omit_null": true,
+          "path": "host-name",
+          "schema": {
+            "type": "string"
+          },
+          "variable": "hostname_variable"
+        },
+        "idle_timeout": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "idle-timeout",
+          "schema": {
+            "maximum": 300,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "idle_timeout_variable"
+        },
+        "latitude": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "gps-location.latitude",
+          "schema": {
+            "maximum": 90,
+            "minimum": -90,
+            "type": "number"
+          },
+          "set": false,
+          "variable": "latitude_variable"
+        },
+        "location": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "location",
+          "schema": {
+            "maxLength": 128,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "location_variable"
+        },
+        "longitude": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "gps-location.longitude",
+          "schema": {
+            "maximum": 180,
+            "minimum": -180,
+            "type": "number"
+          },
+          "set": false,
+          "variable": "longitude_variable"
+        },
+        "max_omp_sessions": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "max-omp-sessions",
+          "schema": {
+            "maximum": 100,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "max_omp_sessions_variable"
+        },
+        "migration_bgp_community": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "migration-bgp-community",
+          "schema": {
+            "maximum": 4294967295,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false
+        },
+        "multi_tenant": {
+          "boolean_string": true,
+          "object_type": "node-only",
+          "omit_null": true,
+          "path": "multi-tenant",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "multi_tenant_variable"
+        },
+        "on_demand_tunnel": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "on-demand.enable",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "on_demand_tunnel_variable"
+        },
+        "on_demand_tunnel_idle_timeout": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "on-demand.idle-timeout",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "on_demand_tunnel_idle_timeout_variable"
+        },
+        "overlay_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "overlay-id",
+          "schema": {
+            "maximum": 4294967295,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "overlay_id_variable"
+        },
+        "port_hopping": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "port-hop",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "port_hopping_variable"
+        },
+        "port_offset": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "port-offset",
+          "schema": {
+            "maximum": 19,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "port_offset_variable"
+        },
+        "region_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "region-id",
+          "schema": {
+            "maximum": 63,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "region_id_variable"
+        },
+        "role": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "role",
+          "schema": {
+            "enum": [
+              "edge-router",
+              "border-router"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "role_variable"
+        },
+        "secondary_region_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "secondary-region",
+          "schema": {
+            "maximum": 63,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "secondary_region_id_variable"
+        },
+        "site_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "site-id",
+          "schema": {
+            "maximum": 4294967295,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "site_id_variable"
+        },
+        "system_description": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "description",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "system_description_variable"
+        },
+        "system_ip_variable": {
+          "object_type": "object",
+          "omit_null": true,
+          "path": "system-ip",
+          "schema": {
+            "type": "string"
+          },
+          "variable": "system_ip_variable"
+        },
+        "timezone": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "clock.timezone",
+          "schema": {
+            "enum": [
+              "Europe/Andorra",
+              "Asia/Dubai",
+              "Asia/Kabul",
+              "America/Antigua",
+              "America/Anguilla",
+              "Europe/Tirane",
+              "Asia/Yerevan",
+              "Africa/Luanda",
+              "Antarctica/McMurdo",
+              "Antarctica/Rothera",
+              "Antarctica/Palmer",
+              "Antarctica/Mawson",
+              "Antarctica/Davis",
+              "Antarctica/Casey",
+              "Antarctica/Vostok",
+              "Antarctica/DumontDUrville",
+              "Antarctica/Syowa",
+              "America/Argentina/Buenos_Aires",
+              "America/Argentina/Cordoba",
+              "America/Argentina/Salta",
+              "America/Argentina/Jujuy",
+              "America/Argentina/Tucuman",
+              "America/Argentina/Catamarca",
+              "America/Argentina/La_Rioja",
+              "America/Argentina/San_Juan",
+              "America/Argentina/Mendoza",
+              "America/Argentina/San_Luis",
+              "America/Argentina/Rio_Gallegos",
+              "America/Argentina/Ushuaia",
+              "Pacific/Pago_Pago",
+              "Europe/Vienna",
+              "Australia/Lord_Howe",
+              "Antarctica/Macquarie",
+              "Australia/Hobart",
+              "Australia/Currie",
+              "Australia/Melbourne",
+              "Australia/Sydney",
+              "Australia/Broken_Hill",
+              "Australia/Brisbane",
+              "Australia/Lindeman",
+              "Australia/Adelaide",
+              "Australia/Darwin",
+              "Australia/Perth",
+              "Australia/Eucla",
+              "America/Aruba",
+              "Europe/Mariehamn",
+              "Asia/Baku",
+              "Europe/Sarajevo",
+              "America/Barbados",
+              "Asia/Dhaka",
+              "Europe/Brussels",
+              "Africa/Ouagadougou",
+              "Europe/Sofia",
+              "Asia/Bahrain",
+              "Africa/Bujumbura",
+              "Africa/Porto-Novo",
+              "America/St_Barthelemy",
+              "Atlantic/Bermuda",
+              "Asia/Brunei",
+              "America/La_Paz",
+              "America/Kralendijk",
+              "America/Noronha",
+              "America/Belem",
+              "America/Fortaleza",
+              "America/Recife",
+              "America/Araguaina",
+              "America/Maceio",
+              "America/Bahia",
+              "America/Sao_Paulo",
+              "America/Campo_Grande",
+              "America/Cuiaba",
+              "America/Santarem",
+              "America/Porto_Velho",
+              "America/Boa_Vista",
+              "America/Manaus",
+              "America/Eirunepe",
+              "America/Rio_Branco",
+              "America/Nassau",
+              "Asia/Thimphu",
+              "Africa/Gaborone",
+              "Europe/Minsk",
+              "America/Belize",
+              "America/St_Johns",
+              "America/Halifax",
+              "America/Glace_Bay",
+              "America/Moncton",
+              "America/Goose_Bay",
+              "America/Blanc-Sablon",
+              "America/Toronto",
+              "America/Nipigon",
+              "America/Thunder_Bay",
+              "America/Iqaluit",
+              "America/Pangnirtung",
+              "America/Resolute",
+              "America/Atikokan",
+              "America/Rankin_Inlet",
+              "America/Winnipeg",
+              "America/Rainy_River",
+              "America/Regina",
+              "America/Swift_Current",
+              "America/Edmonton",
+              "America/Cambridge_Bay",
+              "America/Yellowknife",
+              "America/Inuvik",
+              "America/Creston",
+              "America/Dawson_Creek",
+              "America/Vancouver",
+              "America/Whitehorse",
+              "America/Dawson",
+              "Indian/Cocos",
+              "Africa/Kinshasa",
+              "Africa/Lubumbashi",
+              "Africa/Bangui",
+              "Africa/Brazzaville",
+              "Europe/Zurich",
+              "Africa/Abidjan",
+              "Pacific/Rarotonga",
+              "America/Santiago",
+              "Pacific/Easter",
+              "Africa/Douala",
+              "Asia/Shanghai",
+              "Asia/Harbin",
+              "Asia/Chongqing",
+              "Asia/Urumqi",
+              "Asia/Kashgar",
+              "America/Bogota",
+              "America/Costa_Rica",
+              "America/Havana",
+              "Atlantic/Cape_Verde",
+              "America/Curacao",
+              "Indian/Christmas",
+              "Asia/Nicosia",
+              "Europe/Prague",
+              "Europe/Berlin",
+              "Europe/Busingen",
+              "Africa/Djibouti",
+              "Europe/Copenhagen",
+              "America/Dominica",
+              "America/Santo_Domingo",
+              "Africa/Algiers",
+              "America/Guayaquil",
+              "Pacific/Galapagos",
+              "Europe/Tallinn",
+              "Africa/Cairo",
+              "Africa/El_Aaiun",
+              "Africa/Asmara",
+              "Europe/Madrid",
+              "Africa/Ceuta",
+              "Atlantic/Canary",
+              "Africa/Addis_Ababa",
+              "Europe/Helsinki",
+              "Pacific/Fiji",
+              "Atlantic/Stanley",
+              "Pacific/Chuuk",
+              "Pacific/Pohnpei",
+              "Pacific/Kosrae",
+              "Atlantic/Faroe",
+              "Europe/Paris",
+              "Africa/Libreville",
+              "Europe/London",
+              "America/Grenada",
+              "Asia/Tbilisi",
+              "America/Cayenne",
+              "Europe/Guernsey",
+              "Africa/Accra",
+              "Europe/Gibraltar",
+              "America/Godthab",
+              "America/Danmarkshavn",
+              "America/Scoresbysund",
+              "America/Thule",
+              "Africa/Banjul",
+              "Africa/Conakry",
+              "America/Guadeloupe",
+              "Africa/Malabo",
+              "Europe/Athens",
+              "Atlantic/South_Georgia",
+              "America/Guatemala",
+              "Pacific/Guam",
+              "Africa/Bissau",
+              "America/Guyana",
+              "Asia/Hong_Kong",
+              "America/Tegucigalpa",
+              "Europe/Zagreb",
+              "America/Port-au-Prince",
+              "Europe/Budapest",
+              "Asia/Jakarta",
+              "Asia/Pontianak",
+              "Asia/Makassar",
+              "Asia/Jayapura",
+              "Europe/Dublin",
+              "Asia/Jerusalem",
+              "Europe/Isle_of_Man",
+              "Asia/Kolkata",
+              "Indian/Chagos",
+              "Asia/Baghdad",
+              "Asia/Tehran",
+              "Atlantic/Reykjavik",
+              "Europe/Rome",
+              "Europe/Jersey",
+              "America/Jamaica",
+              "Asia/Amman",
+              "Asia/Tokyo",
+              "Africa/Nairobi",
+              "Asia/Bishkek",
+              "Asia/Phnom_Penh",
+              "Pacific/Tarawa",
+              "Pacific/Enderbury",
+              "Pacific/Kiritimati",
+              "Indian/Comoro",
+              "America/St_Kitts",
+              "Asia/Pyongyang",
+              "Asia/Seoul",
+              "Asia/Kuwait",
+              "America/Cayman",
+              "Asia/Almaty",
+              "Asia/Qyzylorda",
+              "Asia/Aqtobe",
+              "Asia/Aqtau",
+              "Asia/Oral",
+              "Asia/Vientiane",
+              "Asia/Beirut",
+              "America/St_Lucia",
+              "Europe/Vaduz",
+              "Asia/Colombo",
+              "Africa/Monrovia",
+              "Africa/Maseru",
+              "Europe/Vilnius",
+              "Europe/Luxembourg",
+              "Europe/Riga",
+              "Africa/Tripoli",
+              "Africa/Casablanca",
+              "Europe/Monaco",
+              "Europe/Chisinau",
+              "Europe/Podgorica",
+              "America/Marigot",
+              "Indian/Antananarivo",
+              "Pacific/Majuro",
+              "Pacific/Kwajalein",
+              "Europe/Skopje",
+              "Africa/Bamako",
+              "Asia/Rangoon",
+              "Asia/Ulaanbaatar",
+              "Asia/Hovd",
+              "Asia/Choibalsan",
+              "Asia/Macau",
+              "Pacific/Saipan",
+              "America/Martinique",
+              "Africa/Nouakchott",
+              "America/Montserrat",
+              "Europe/Malta",
+              "Indian/Mauritius",
+              "Indian/Maldives",
+              "Africa/Blantyre",
+              "America/Mexico_City",
+              "America/Cancun",
+              "America/Merida",
+              "America/Monterrey",
+              "America/Matamoros",
+              "America/Mazatlan",
+              "America/Chihuahua",
+              "America/Ojinaga",
+              "America/Hermosillo",
+              "America/Tijuana",
+              "America/Santa_Isabel",
+              "America/Bahia_Banderas",
+              "Asia/Kuala_Lumpur",
+              "Asia/Kuching",
+              "Africa/Maputo",
+              "Africa/Windhoek",
+              "Pacific/Noumea",
+              "Africa/Niamey",
+              "Pacific/Norfolk",
+              "Africa/Lagos",
+              "America/Managua",
+              "Europe/Amsterdam",
+              "Europe/Oslo",
+              "Asia/Kathmandu",
+              "Pacific/Nauru",
+              "Pacific/Niue",
+              "Pacific/Auckland",
+              "Pacific/Chatham",
+              "Asia/Muscat",
+              "America/Panama",
+              "America/Lima",
+              "Pacific/Tahiti",
+              "Pacific/Marquesas",
+              "Pacific/Gambier",
+              "Pacific/Port_Moresby",
+              "Asia/Manila",
+              "Asia/Karachi",
+              "Europe/Warsaw",
+              "America/Miquelon",
+              "Pacific/Pitcairn",
+              "America/Puerto_Rico",
+              "Asia/Gaza",
+              "Asia/Hebron",
+              "Europe/Lisbon",
+              "Atlantic/Madeira",
+              "Atlantic/Azores",
+              "Pacific/Palau",
+              "America/Asuncion",
+              "Asia/Qatar",
+              "Indian/Reunion",
+              "Europe/Bucharest",
+              "Europe/Belgrade",
+              "Europe/Kaliningrad",
+              "Europe/Moscow",
+              "Europe/Volgograd",
+              "Europe/Samara",
+              "Asia/Yekaterinburg",
+              "Asia/Omsk",
+              "Asia/Novosibirsk",
+              "Asia/Novokuznetsk",
+              "Asia/Krasnoyarsk",
+              "Asia/Irkutsk",
+              "Asia/Yakutsk",
+              "Asia/Khandyga",
+              "Asia/Vladivostok",
+              "Asia/Sakhalin",
+              "Asia/Ust-Nera",
+              "Asia/Magadan",
+              "Asia/Kamchatka",
+              "Asia/Anadyr",
+              "Africa/Kigali",
+              "Asia/Riyadh",
+              "Pacific/Guadalcanal",
+              "Indian/Mahe",
+              "Africa/Khartoum",
+              "Europe/Stockholm",
+              "Asia/Singapore",
+              "Atlantic/St_Helena",
+              "Europe/Ljubljana",
+              "Arctic/Longyearbyen",
+              "Europe/Bratislava",
+              "Africa/Freetown",
+              "Europe/San_Marino",
+              "Africa/Dakar",
+              "Africa/Mogadishu",
+              "America/Paramaribo",
+              "Africa/Juba",
+              "Africa/Sao_Tome",
+              "America/El_Salvador",
+              "America/Lower_Princes",
+              "Asia/Damascus",
+              "Africa/Mbabane",
+              "America/Grand_Turk",
+              "Africa/Ndjamena",
+              "Indian/Kerguelen",
+              "Africa/Lome",
+              "Asia/Bangkok",
+              "Asia/Dushanbe",
+              "Pacific/Fakaofo",
+              "Asia/Dili",
+              "Asia/Ashgabat",
+              "Africa/Tunis",
+              "Pacific/Tongatapu",
+              "Europe/Istanbul",
+              "America/Port_of_Spain",
+              "Pacific/Funafuti",
+              "Asia/Taipei",
+              "Africa/Dar_es_Salaam",
+              "Europe/Kiev",
+              "Europe/Uzhgorod",
+              "Europe/Zaporozhye",
+              "Europe/Simferopol",
+              "Africa/Kampala",
+              "Pacific/Johnston",
+              "Pacific/Midway",
+              "Pacific/Wake",
+              "America/New_York",
+              "America/Detroit",
+              "America/Kentucky/Louisville",
+              "America/Kentucky/Monticello",
+              "America/Indiana/Indianapolis",
+              "America/Indiana/Vincennes",
+              "America/Indiana/Winamac",
+              "America/Indiana/Marengo",
+              "America/Indiana/Petersburg",
+              "America/Indiana/Vevay",
+              "America/Chicago",
+              "America/Indiana/Tell_City",
+              "America/Indiana/Knox",
+              "America/Menominee",
+              "America/North_Dakota/Center",
+              "America/North_Dakota/New_Salem",
+              "America/North_Dakota/Beulah",
+              "America/Denver",
+              "America/Boise",
+              "America/Phoenix",
+              "America/Los_Angeles",
+              "America/Anchorage",
+              "America/Juneau",
+              "America/Sitka",
+              "America/Yakutat",
+              "America/Nome",
+              "America/Adak",
+              "America/Metlakatla",
+              "Pacific/Honolulu",
+              "America/Montevideo",
+              "Asia/Samarkand",
+              "Asia/Tashkent",
+              "Europe/Vatican",
+              "America/St_Vincent",
+              "America/Caracas",
+              "America/Tortola",
+              "America/St_Thomas",
+              "Asia/Ho_Chi_Minh",
+              "Pacific/Efate",
+              "Pacific/Wallis",
+              "Pacific/Apia",
+              "Asia/Aden",
+              "Indian/Mayotte",
+              "Africa/Johannesburg",
+              "Africa/Lusaka",
+              "Africa/Harare",
+              "UTC"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "timezone_variable"
+        },
+        "track_default_gateway": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "track-default-gateway",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "track_default_gateway_variable"
+        },
+        "track_interface_omp_tag": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "track-interface-tag",
+          "schema": {
+            "maximum": 4294967295,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "track_interface_omp_tag_variable"
+        },
+        "track_transport": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "track-transport",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "track_transport_variable"
+        },
+        "transport_gateway": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "transport-gateway",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "transport_gateway_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "endpoint_trackers": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "interval": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "multiplier": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "threshold": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "type": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "endpoint_api_url": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "endpoint-api-url",
+                "schema": {
+                  "maxLength": 512,
+                  "minLength": 0,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "endpoint_api_url_variable"
+              },
+              "endpoint_dns_name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "endpoint-dns-name",
+                "schema": {
+                  "maxLength": 63,
+                  "minLength": 0,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "endpoint_dns_name_variable"
+              },
+              "endpoint_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "endpoint-ip",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "endpoint_ip_variable"
+              },
+              "group_criteria": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "boolean",
+                "schema": {
+                  "enum": [
+                    "or",
+                    "and"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "group_criteria_variable"
+              },
+              "group_trackers": {
+                "boolean_string": false,
+                "object_type": "list",
+                "omit_null": true,
+                "path": "elements",
+                "schema": {
+                  "items": {
+                    "maxLength": 257,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "set": true,
+                "variable": "group_trackers_variable"
+              },
+              "interval": {
+                "boolean_string": false,
+                "input_default": 60,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "interval",
+                "schema": {
+                  "maximum": 600,
+                  "minimum": 20,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "interval_variable"
+              },
+              "multiplier": {
+                "boolean_string": false,
+                "input_default": 3,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "multiplier",
+                "schema": {
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "multiplier_variable"
+              },
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "name_variable"
+              },
+              "threshold": {
+                "boolean_string": false,
+                "input_default": 300,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "threshold",
+                "schema": {
+                  "maximum": 1000,
+                  "minimum": 100,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "threshold_variable"
+              },
+              "type": {
+                "boolean_string": false,
+                "input_default": "interface",
+                "object_type": "object",
+                "omit_null": false,
+                "path": "type",
+                "schema": {
+                  "enum": [
+                    "interface",
+                    "static-route",
+                    "tracker-group"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "type_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "name",
+              "endpoint-ip",
+              "endpoint-dns-name",
+              "endpoint-api-url",
+              "elements",
+              "boolean",
+              "threshold",
+              "interval",
+              "multiplier",
+              "type"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "tracker",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        },
+        "geo_fencing_sms_phone_numbers": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "number": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "number",
+                "schema": {
+                  "maxLength": 20,
+                  "minLength": 7,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "number_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "number"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "gps-location.geo-fencing.sms.mobile-number",
+          "primary_keys": [
+            "number"
+          ],
+          "primitive": false
+        },
+        "object_trackers": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "group_criteria": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "boolean",
+                "schema": {
+                  "enum": [
+                    "and",
+                    "or"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "group_criteria_variable"
+              },
+              "id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "object-number",
+                "schema": {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "id_variable"
+              },
+              "interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "interface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "interface_variable"
+              },
+              "ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ip",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ip_variable"
+              },
+              "mask": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "mask",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "mask_variable"
+              },
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65527,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "object-number",
+              "interface",
+              "sig",
+              "ip",
+              "mask",
+              "vpn",
+              "object",
+              "boolean"
+            ],
+            "required": [],
+            "trees": {
+              "group_trackers": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "$value": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "number",
+                      "schema": {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "number"
+                  ],
+                  "required": [
+                    "$value"
+                  ],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "object",
+                "primary_keys": [
+                  "number"
+                ],
+                "primitive": true
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "object-track",
+          "primary_keys": [
+            "object-number"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_system",
+      "unavailable_inputs": {
+        "endpoint_trackers[].transport_endpoint_ip": "Pinned provider model omits this field",
+        "endpoint_trackers[].transport_endpoint_ip_variable": "Pinned provider model omits this field",
+        "endpoint_trackers[].transport_endpoint_port": "Pinned provider model omits this field",
+        "endpoint_trackers[].transport_endpoint_port_variable": "Pinned provider model omits this field",
+        "endpoint_trackers[].transport_endpoint_protocol": "Pinned provider model omits this field",
+        "endpoint_trackers[].transport_endpoint_protocol_variable": "Pinned provider model omits this field",
+        "enhanced_app_aware_routing": "Pinned Manager feature-template schema omits EPFR",
+        "enhanced_app_aware_routing_variable": "Pinned Manager feature-template schema omits EPFR",
+        "object_trackers[].group_trackers_variable": "Pinned module captures the parent variable inside a scalar child row"
+      }
+    },
     "thousandeyes_templates": {
       "defaults": {
         "te": {
