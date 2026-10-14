@@ -6,17 +6,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/netip"
 	"net/url"
 	"reflect"
+	"strings"
 )
 
 type LocalizedPolicies struct {
 	Definitions LocalizedPolicyDefinitions `json:"definitions"`
 }
 type LocalizedPolicyDefinitions struct {
-	IPv4AccessControlLists []ClassicACL `json:"ipv4_access_control_lists,omitempty"`
-	IPv6AccessControlLists []ClassicACL `json:"ipv6_access_control_lists,omitempty"`
+	IPv4AccessControlLists   []ClassicACL `json:"ipv4_access_control_lists,omitempty"`
+	IPv6AccessControlLists   []ClassicACL `json:"ipv6_access_control_lists,omitempty"`
+	IPv4DeviceAccessPolicies []ClassicACL `json:"ipv4_device_access_policies,omitempty"`
+	IPv6DeviceAccessPolicies []ClassicACL `json:"ipv6_device_access_policies,omitempty"`
 }
 type ClassicACL struct {
 	Name          string               `json:"name"`
@@ -33,6 +37,7 @@ type ClassicACLSequence struct {
 type ClassicACLMatch struct {
 	SourceIPPrefix      string `json:"source_ip_prefix,omitempty"`
 	DestinationIPPrefix string `json:"destination_ip_prefix,omitempty"`
+	DestinationPort     *int   `json:"destination_port,omitempty"`
 }
 
 func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
@@ -41,9 +46,14 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 	}
 	out := []Resource{}
 	for _, spec := range []struct {
-		family, apiType, path, modelType, sourceField, destinationField string
-		items                                                           []ClassicACL
-	}{{"ipv4", "acl", "acl/", "ipv4_acl_policy_definition", "sourceIp", "destinationIp", input.Definitions.IPv4AccessControlLists}, {"ipv6", "aclv6", "aclv6/", "ipv6_acl_policy_definition", "sourceIpv6", "destinationIpv6", input.Definitions.IPv6AccessControlLists}} {
+		family, apiType, sequenceType, path, modelType, keyPart, sourceField, destinationField, defaultName string
+		items                                                                                               []ClassicACL
+	}{
+		{"ipv4", "acl", "acl", "acl/", "ipv4_acl_policy_definition", "ipv4_access_control_lists", "sourceIp", "destinationIp", "Access Control List", input.Definitions.IPv4AccessControlLists},
+		{"ipv6", "aclv6", "aclv6", "aclv6/", "ipv6_acl_policy_definition", "ipv6_access_control_lists", "sourceIpv6", "destinationIpv6", "Access Control List", input.Definitions.IPv6AccessControlLists},
+		{"ipv4", "deviceAccessPolicy", "deviceaccesspolicy", "deviceaccesspolicy/", "ipv4_device_acl_policy_definition", "ipv4_device_access_policies", "sourceIp", "destinationIp", "Device Access Control List", input.Definitions.IPv4DeviceAccessPolicies},
+		{"ipv6", "deviceaccesspolicyv6", "deviceaccesspolicyv6", "deviceaccesspolicyv6/", "ipv6_device_acl_policy_definition", "ipv6_device_access_policies", "sourceIpv6", "destinationIpv6", "Device Access Control List", input.Definitions.IPv6DeviceAccessPolicies},
+	} {
 		seen := map[string]bool{}
 		for _, acl := range spec.items {
 			if acl.Name == "" || len(acl.Name) > 128 || seen[acl.Name] || acl.Description == "" {
@@ -62,7 +72,7 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 				ids[s.ID] = true
 				name := s.Name
 				if name == "" {
-					name = "Access Control List"
+					name = spec.defaultName
 				}
 				matches := []any{}
 				if s.MatchCriteria.SourceIPPrefix != "" {
@@ -79,14 +89,24 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 					}
 					matches = append(matches, map[string]any{"field": spec.destinationField, "value": s.MatchCriteria.DestinationIPPrefix})
 				}
-				sequence := map[string]any{"sequenceId": s.ID, "sequenceName": name, "sequenceType": spec.apiType, "baseAction": s.BaseAction, "match": map[string]any{"entries": matches}, "actions": []any{}}
+				if s.MatchCriteria.DestinationPort != nil {
+					port := *s.MatchCriteria.DestinationPort
+					if !strings.Contains(spec.modelType, "device_acl") || (port != 22 && port != 161) {
+						return nil, errors.New("invalid device ACL destination_port")
+					}
+					matches = append(matches, map[string]any{"field": "destinationPort", "value": fmt.Sprint(port)})
+				}
+				if strings.Contains(spec.modelType, "device_acl") && s.MatchCriteria.DestinationPort == nil {
+					return nil, errors.New("device ACL requires destination_port 22 or 161")
+				}
+				sequence := map[string]any{"sequenceId": s.ID, "sequenceName": name, "sequenceType": spec.sequenceType, "baseAction": s.BaseAction, "match": map[string]any{"entries": matches}, "actions": []any{}}
 				if spec.family == "ipv6" {
 					sequence["sequenceIpType"] = "ipv6"
 				}
 				sequences = append(sequences, sequence)
 			}
 			body := map[string]any{"type": spec.apiType, "name": acl.Name, "description": acl.Description, "defaultAction": map[string]any{"type": acl.DefaultAction}, "sequences": sequences}
-			out = append(out, Resource{Key: "localized_policies/definitions/" + spec.family + "_access_control_lists/" + acl.Name, Name: acl.Name, Section: "localized_policies", Kind: "classic-definition", Type: spec.modelType, Collection: "/dataservice/template/policy/definition/" + spec.path, Body: body})
+			out = append(out, Resource{Key: "localized_policies/definitions/" + spec.keyPart + "/" + acl.Name, Name: acl.Name, Section: "localized_policies", Kind: "classic-definition", Type: spec.modelType, Collection: "/dataservice/template/policy/definition/" + spec.path, Body: body})
 		}
 	}
 	return out, nil
@@ -108,7 +128,7 @@ func (c *Client) observeClassicDefinition(ctx context.Context, r Resource) (*Obs
 	id := ""
 	for _, item := range *list.Data {
 		if item.Name == r.Name {
-			if id != "" || item.Type != r.Body["type"] || !validID.MatchString(item.ID) {
+			if id != "" || !strings.EqualFold(item.Type, r.Body["type"].(string)) || !validID.MatchString(item.ID) {
 				return nil, ErrResponse
 			}
 			id = item.ID
@@ -144,13 +164,13 @@ func (c *Client) deleteClassicDefinition(ctx context.Context, r Resource, id str
 	return c.Request(ctx, "DELETE", r.Collection+url.PathEscape(id), nil, nil)
 }
 func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
-	if o["name"] != r.Name || o["type"] != r.Body["type"] {
+	if o["name"] != r.Name || !strings.EqualFold(fmt.Sprint(o["type"]), r.Body["type"].(string)) {
 		return false, nil
 	}
 	if description, _ := o["description"].(string); description != r.Body["description"] {
 		return false, nil
 	}
-	actual := map[string]any{"type": o["type"], "name": o["name"], "description": o["description"], "defaultAction": o["defaultAction"], "sequences": o["sequences"]}
+	actual := map[string]any{"type": r.Body["type"], "name": o["name"], "description": o["description"], "defaultAction": o["defaultAction"], "sequences": o["sequences"]}
 	if actual["sequences"] == nil {
 		actual["sequences"] = []any{}
 	}
@@ -159,13 +179,20 @@ func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 	}
 	if rows, ok := actual["sequences"].([]any); ok {
 		normalized := []any{}
-		for _, row := range rows {
+		for i, row := range rows {
 			entry, ok := row.(map[string]any)
 			if !ok {
 				return false, ErrResponse
 			}
-			sequence := map[string]any{"sequenceId": entry["sequenceId"], "sequenceName": entry["sequenceName"], "sequenceType": entry["sequenceType"], "baseAction": entry["baseAction"], "match": entry["match"], "actions": entry["actions"]}
-			if r.Type == "ipv6_acl_policy_definition" {
+			sequenceType := entry["sequenceType"]
+			if i < len(r.Body["sequences"].([]any)) {
+				wantType := r.Body["sequences"].([]any)[i].(map[string]any)["sequenceType"].(string)
+				if strings.EqualFold(fmt.Sprint(sequenceType), wantType) {
+					sequenceType = wantType
+				}
+			}
+			sequence := map[string]any{"sequenceId": entry["sequenceId"], "sequenceName": entry["sequenceName"], "sequenceType": sequenceType, "baseAction": entry["baseAction"], "match": entry["match"], "actions": entry["actions"]}
+			if r.Type == "ipv6_acl_policy_definition" || r.Type == "ipv6_device_acl_policy_definition" {
 				sequence["sequenceIpType"] = entry["sequenceIpType"]
 			}
 			normalized = append(normalized, sequence)

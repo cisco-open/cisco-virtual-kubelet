@@ -1,0 +1,14 @@
+sdwan:
+  localized_policies:
+    definitions:
+      ipv6_device_access_policies:
+        - name: CVK-CLASSIC-DEVICE-ACL6
+          description: Managed by CVK
+          default_action: drop
+          sequences:
+            - id: 1
+              name: CVK-ALLOW-DEVICE-V6-PREFIX
+              base_action: accept
+              match_criterias:
+                source_ip_prefix: 2001:db8::/32
+                destination_port: 22
