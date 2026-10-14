@@ -70,6 +70,12 @@ func compileTrackerGroups(p FeatureProfile, collection, key string) ([]Resource,
 func (c *Client) resolveParcelRefs(ctx context.Context, r Resource) error {
 	for _, reference := range r.ParcelRefs {
 		target := Resource{Kind: "parcel", Name: reference.Name, Collection: r.Collection, ParentName: r.ParentName, ParcelPath: reference.ParcelPath}
+		if reference.Collection != "" {
+			target.Collection = reference.Collection
+		}
+		if reference.ParentName != "" {
+			target.ParentName = reference.ParentName
+		}
 		observed, err := c.observeModern(ctx, target)
 		if err != nil {
 			return err

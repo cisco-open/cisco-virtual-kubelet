@@ -91,6 +91,31 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 			return nil, err
 		}
 	}
+	if (p.IPv4DeviceAccess != nil || p.IPv6DeviceAccess != nil) && collection != "system" {
+		return nil, errors.New("device access policies require a system profile")
+	}
+	for _, item := range []struct {
+		ip    string
+		input map[string]any
+	}{{"ipv4", p.IPv4DeviceAccess}, {"ipv6", p.IPv6DeviceAccess}} {
+		if item.input == nil {
+			continue
+		}
+		meta, data, err := deviceAccessData(item.input, item.ip)
+		if err != nil {
+			return nil, err
+		}
+		name := item.ip + "_device_access_policy"
+		if meta.Name != nil {
+			name = *meta.Name
+		}
+		if err := add(item.ip+"_device_access_policy", item.ip+"-device-access-policy", meta, data); err != nil {
+			return nil, err
+		}
+		out[len(out)-1].Name = name
+		out[len(out)-1].Type = "system_" + item.ip + "_device_access"
+		out[len(out)-1].ParcelRefs = deviceAccessReferences(item.input, item.ip)
+	}
 	if p.OSPF != nil && collection != "service" && collection != "transport" {
 		return nil, errors.New("OSPF requires a service or transport profile")
 	}

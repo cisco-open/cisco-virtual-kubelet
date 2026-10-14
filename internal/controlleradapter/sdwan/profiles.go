@@ -17,6 +17,8 @@ type FeatureProfile struct {
 	EIGRP                 []map[string]any             `json:"eigrp_features,omitempty"`
 	Switchports           []map[string]any             `json:"switchport_features,omitempty"`
 	Multicasts            []map[string]any             `json:"multicast_features,omitempty"`
+	IPv4DeviceAccess      map[string]any               `json:"ipv4_device_access_policy,omitempty"`
+	IPv6DeviceAccess      map[string]any               `json:"ipv6_device_access_policy,omitempty"`
 	IPv6Trackers          []map[string]any             `json:"ipv6_trackers,omitempty"`
 	IPv6TrackerGroups     []map[string]any             `json:"ipv6_tracker_groups,omitempty"`
 	CACertificate         map[string]any               `json:"ca_certificate,omitempty"`

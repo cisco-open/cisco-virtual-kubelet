@@ -5,12 +5,18 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 103 |
+| Fixture-qualified against live Manager | 105 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 87 |
+| Implementation still pending | 85 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies seven more declarations: classic SVI, cellular and
+The latest increment qualifies two system device-access declarations, IPv4 and
+IPv6. Both passed native lifecycle and live Kubernetes reconciliation with inline
+prefixes. Prefix-list references passed compiler and dependency-order tests but
+need a lab where CVK can create the singleton policy-object profile; this lab
+already has one.
+
+The previous increment qualified seven declarations: classic SVI, cellular and
 switchport templates, service EIGRP, service switchport, service multicast, and Zscaler SSE. Each passed native live
 create/read/update/read with cleanup and Kubernetes reconciliation. Qualification
 covers unattached fixture attributes, not router behavior or full parity. The

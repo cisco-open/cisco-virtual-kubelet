@@ -52,9 +52,10 @@ type Banner struct {
 var defaultBannerDevices = []string{"C8000V", "C8300-1N1S-4T2X", "C8300-1N1S-6T", "C8300-2N2S-6T", "C8300-2N2S-4T2X", "C8500-12X4QC", "C8500-12X", "C8500-20X6C", "C8500L-8S4X", "C8200-1N-4T", "C8200L-1N-4T"}
 
 type ParcelReference struct {
-	Kind             string
-	Name, ParcelPath string
-	BodyPath         []string
+	Kind                   string
+	Name, ParcelPath       string
+	Collection, ParentName string
+	BodyPath               []string
 }
 type Resource struct {
 	ParcelRefs                   []ParcelReference
@@ -167,6 +168,19 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, groups...)
+	policyProfile := ""
+	for _, r := range out {
+		if r.Kind == "profile" && r.Type == "policy-object" {
+			policyProfile = r.Name
+		}
+	}
+	for i := range out {
+		for j := range out[i].ParcelRefs {
+			if out[i].ParcelRefs[j].ParentName == "$policy_objects" {
+				out[i].ParcelRefs[j].ParentName = policyProfile
+			}
+		}
+	}
 	if len(out) == 0 {
 		return nil, errors.New("SD-WAN document has no supported resources")
 	}

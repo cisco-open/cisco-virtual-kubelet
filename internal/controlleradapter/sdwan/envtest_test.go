@@ -58,12 +58,12 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 
 		sections := map[string][]string{
 			"custom-applications.yaml": {"application_catalog"},
-			"banner.yaml":         {"edge_feature_templates"},
-			"system-profile.yaml": {"feature_profiles", "configuration_groups"},
-			"policy-objects.yaml": {"policy_objects"},
-			"deployment.yaml":     {"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"},
+			"banner.yaml":              {"edge_feature_templates"},
+			"system-profile.yaml":      {"feature_profiles", "configuration_groups"},
+			"policy-objects.yaml":      {"policy_objects"},
+			"deployment.yaml":          {"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"},
 		}
-		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular", "transport-trackers", "routing-ospf", "routing-eigrp", "zscaler-sse", "service-switchport", "service-multicast", "policy-profile", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse"} {
+		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular", "transport-trackers", "routing-ospf", "routing-eigrp", "zscaler-sse", "service-switchport", "service-multicast", "system-device-access", "policy-profile", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse"} {
 			sections[name+".yaml"] = []string{"feature_profiles"}
 		}
 		for _, name := range []string{"templates", "cellular", "bfd", "igmp", "ntp", "omp", "pim", "applications", "dhcp", "ipsec", "snmp", "logging", "gre", "sig-credentials", "security", "ospf", "svi", "cellular-interface", "switchport"} {

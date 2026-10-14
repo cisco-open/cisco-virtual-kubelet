@@ -418,4 +418,8 @@ for family, feature, alias, key in reviewed:
 folder = root / "internal/controlleradapter/sdwan/definitions"
 folder.mkdir(exist_ok=True)
 (folder / "scalar-parcels.json").write_text(json.dumps(output, indent=2, sort_keys=True) + "\n")
+(folder / "device-access-schemas.json").write_text(json.dumps({
+    ip: json.loads((args.provider / "gen/models/profile_parcels" / f"system_{ip}_device_access.json").read_text())["request"]["properties"]["data"]
+    for ip in ("ipv4", "ipv6")
+}, indent=2, sort_keys=True) + "\n")
 (folder / "LICENSE").write_text((args.provider / "LICENSE").read_text())

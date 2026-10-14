@@ -11,7 +11,7 @@ import (
 )
 
 func TestPendingNativeFixtures(t *testing.T) {
-	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2} {
+	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2, "system-device-access": 3, "system-device-access-references": 6} {
 		t.Run(fixture, func(t *testing.T) {
 			rs := parcelFixtures(t, fixture)
 			if len(rs) != count {
@@ -66,17 +66,42 @@ func TestPolicyPrefixEncodingAndAMPFanout(t *testing.T) {
 	}
 }
 
+func TestSystemDeviceAccessPolicyReferences(t *testing.T) {
+	resources := parcelFixtures(t, "system-device-access-references")
+	count := 0
+	for _, r := range resources {
+		if r.Type != "system_ipv4_device_access" && r.Type != "system_ipv6_device_access" {
+			continue
+		}
+		if len(r.ParcelRefs) != 1 {
+			t.Fatal("expected one prefix-list reference", r.Type)
+		}
+		ref := r.ParcelRefs[0]
+		if ref.Collection != "/dataservice/v1/feature-profile/sdwan/policy-object" || ref.ParentName != "CVK-DEVICE-ACCESS-OBJECTS" {
+			t.Fatal("reference target changed", ref)
+		}
+		count++
+	}
+	if count != 2 {
+		t.Fatal("expected both device-access families")
+	}
+	input := map[string]any{"default_action": "drop", "sequences": []any{map[string]any{"id": float64(1), "base_action": "accept", "match_entries": map[string]any{"destination_port": float64(22), "source_data_prefixes": []any{"192.0.2.0/24"}, "source_data_prefix_list": "named"}}}}
+	if _, _, err := deviceAccessData(input, "ipv4"); err == nil {
+		t.Fatal("conflicting inline and referenced prefixes accepted")
+	}
+}
+
 // These opt-in entry points exercise native Manager APIs only. They are not
 // executed by the normal local suite and do not imply live qualification.
 func TestLivePendingNamesAbsent(t *testing.T) {
-	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast"} {
+	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access"} {
 		t.Run(fixture, func(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, fixture)) })
 	}
 }
 func TestLivePendingLifecycle(t *testing.T) {
 	fixture := os.Getenv("CVK_SDWAN_PENDING_FIXTURE")
 	switch fixture {
-	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast":
+	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access":
 		liveParcelLifecycle(t, parcelFixtures(t, fixture))
 	default:
 		t.Skip("select a pending fixture with CVK_SDWAN_PENDING_FIXTURE")

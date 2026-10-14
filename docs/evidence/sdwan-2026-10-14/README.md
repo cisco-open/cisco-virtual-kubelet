@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 102 resource declarations
+Native fixture coverage now includes 105 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -351,3 +351,19 @@ implemented but unqualified, 87 pending, one compatibility-blocked**.
 nested IGMP join groups, PIM interfaces and source-specific multicast. The
 provider schema requires an access list for static RP rows; that branch was
 not part of this fixture. No VPN association or router activation was tested.
+
+## System device-access policies
+
+`system-device-access.yaml` adds IPv4 and IPv6 device-access parcels with
+sequence IDs, names, default and base actions, destination ports, inline source
+prefixes, and IPv4 source ports. Native create/read/update/read and cleanup
+passed twice (9.68s and 9.45s), and live Kubernetes reconciliation passed
+twice (17.99s and 17.90s). The pinned provider request schemas are embedded
+from the locked source and validated before writes.
+
+`system-device-access-references.yaml` validates dependency ordering and
+policy-object prefix-list reference paths locally. Its live attempt stopped at
+the policy-object profile POST: this Manager already has its singleton profile
+and rejects a second one with HTTP 400. The referenced-parcel branch therefore
+remains unqualified against a live Manager. No policy object or device-access
+parcel was created by that attempt.

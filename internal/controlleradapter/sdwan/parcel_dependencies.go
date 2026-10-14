@@ -68,6 +68,12 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 			target := r
 			target.Name = ref.Name
 			target.ParcelPath = ref.ParcelPath
+			if ref.Collection != "" {
+				target.Collection = ref.Collection
+			}
+			if ref.ParentName != "" {
+				target.ParentName = ref.ParentName
+			}
 			j, exists := indices[identity(target)]
 			if !exists || (ref.Kind != "" && resources[j].Type != ref.Kind) {
 				return nil, errors.New("parcel reference is not declared in the required collection of this profile")
