@@ -94,6 +94,11 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 	if (p.IPv4DeviceAccess != nil || p.IPv6DeviceAccess != nil) && collection != "system" {
 		return nil, errors.New("device access policies require a system profile")
 	}
+	mesh, err := compileMeshPolicies(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, mesh...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any

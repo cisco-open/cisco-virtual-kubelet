@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 105 resource declarations
+Native fixture coverage now includes 106 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -369,3 +369,15 @@ the policy-object profile POST: this Manager already has its singleton profile
 and rejects a second one with HTTP 400. The referenced-parcel branch therefore
 remains unqualified against a live Manager. No policy object or device-access
 parcel was created by that attempt.
+
+## Topology mesh and site UUID targeting
+
+`topology-mesh.yaml` creates an isolated hierarchy group and site, a topology
+profile, and a mesh policy using `site_groups`. Native create/read/update/read
+and reverse cleanup passed in 11.44s. Real Kubernetes reconciliation passed
+in 21.35s, including status/Lease persistence, idempotence, and cleanup.
+The Manager returned HTTP 405 for the mesh collection GET; the native adapter
+now finds the parcel in its parent profile and reads it by ID. The fixture
+resolved the declared site to the live hierarchy UUID. A local test also
+checks legacy site-name mode and rejects unknown site groups. No policy was
+activated or attached to a device.

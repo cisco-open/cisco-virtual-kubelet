@@ -64,6 +64,22 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		for _, site := range r.HierarchySites {
+			if r.Type != "topology_mesh" {
+				continue
+			}
+			found := -1
+			for j, candidate := range resources {
+				if candidate.Kind == "hierarchy" && candidate.Type == "site" && candidate.Name == site {
+					found = j
+					break
+				}
+			}
+			if found < 0 {
+				return nil, errors.New("mesh site is not declared")
+			}
+			dependencies[i] = append(dependencies[i], found)
+		}
 		for _, ref := range r.ParcelRefs {
 			target := r
 			target.Name = ref.Name

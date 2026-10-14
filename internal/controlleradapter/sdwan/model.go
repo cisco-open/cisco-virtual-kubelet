@@ -29,6 +29,7 @@ type Defaults struct {
 	} `json:"sdwan"`
 }
 type SDWAN struct {
+	ManagerVersion       string                     `json:"manager_version,omitempty"`
 	ApplicationCatalog   *ApplicationCatalog        `json:"application_catalog,omitempty"`
 	NetworkHierarchy     *NetworkHierarchy          `json:"network_hierarchy,omitempty"`
 	PolicyObjects        map[string]json.RawMessage `json:"policy_objects,omitempty"`
@@ -59,6 +60,7 @@ type ParcelReference struct {
 }
 type Resource struct {
 	ParcelRefs                   []ParcelReference
+	HierarchySites, SiteGroups   []string
 	ParcelPath                   string
 	Key, Name, Section, Type     string
 	Kind, Collection, ParentName string
@@ -163,6 +165,9 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, profiles...)
+	if err := prepareMeshPolicies(out, doc.SDWAN.ManagerVersion); err != nil {
+		return nil, err
+	}
 	groups, err := compileGroups(doc.SDWAN.ConfigurationGroups, profiles)
 	if err != nil {
 		return nil, err

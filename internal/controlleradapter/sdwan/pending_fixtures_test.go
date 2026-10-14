@@ -11,7 +11,7 @@ import (
 )
 
 func TestPendingNativeFixtures(t *testing.T) {
-	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2, "system-device-access": 3, "system-device-access-references": 6} {
+	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2, "system-device-access": 3, "system-device-access-references": 6, "topology-mesh": 4} {
 		t.Run(fixture, func(t *testing.T) {
 			rs := parcelFixtures(t, fixture)
 			if len(rs) != count {
@@ -91,17 +91,55 @@ func TestSystemDeviceAccessPolicyReferences(t *testing.T) {
 	}
 }
 
+func TestTopologyMeshSiteModes(t *testing.T) {
+	resources := parcelFixtures(t, "topology-mesh")
+	for i, r := range resources {
+		if r.Type != "topology_mesh" {
+			continue
+		}
+		if i != len(resources)-1 || len(r.HierarchySites) != 1 || r.HierarchySites[0] != "CVK-MESH-SITE" {
+			t.Fatal("site group expansion or dependency order changed")
+		}
+		data := r.Body["data"].(map[string]any)
+		if data["hierarchyUuid"] == nil || data["sites"] != nil {
+			t.Fatal("20.18+ should use hierarchy UUIDs")
+		}
+	}
+	raw, err := os.ReadFile("../../../examples/configs/sdwan/topology-mesh.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	legacy := strings.Replace(string(raw), "sdwan:\n", "sdwan:\n  manager_version: 20.15\n", 1)
+	legacy = strings.Replace(legacy, "site_groups: [CVK-MESH-GROUP]", "sites: [CVK-MESH-SITE]", 1)
+	compiled, err := Compile([]byte(legacy))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range compiled {
+		if r.Type == "topology_mesh" {
+			data := r.Body["data"].(map[string]any)
+			if data["sites"] == nil || data["hierarchyUuid"] != nil {
+				t.Fatal("legacy site-name mode changed")
+			}
+		}
+	}
+	bad := strings.Replace(string(raw), "CVK-MESH-GROUP]", "MISSING]", 1)
+	if _, err := Compile([]byte(bad)); err == nil {
+		t.Fatal("missing site group accepted")
+	}
+}
+
 // These opt-in entry points exercise native Manager APIs only. They are not
 // executed by the normal local suite and do not imply live qualification.
 func TestLivePendingNamesAbsent(t *testing.T) {
-	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access"} {
+	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh"} {
 		t.Run(fixture, func(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, fixture)) })
 	}
 }
 func TestLivePendingLifecycle(t *testing.T) {
 	fixture := os.Getenv("CVK_SDWAN_PENDING_FIXTURE")
 	switch fixture {
-	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access":
+	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh":
 		liveParcelLifecycle(t, parcelFixtures(t, fixture))
 	default:
 		t.Skip("select a pending fixture with CVK_SDWAN_PENDING_FIXTURE")

@@ -62,6 +62,7 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 			"system-profile.yaml":      {"feature_profiles", "configuration_groups"},
 			"policy-objects.yaml":      {"policy_objects"},
 			"deployment.yaml":          {"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"},
+			"topology-mesh.yaml":       {"network_hierarchy", "feature_profiles"},
 		}
 		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular", "transport-trackers", "routing-ospf", "routing-eigrp", "zscaler-sse", "service-switchport", "service-multicast", "system-device-access", "policy-profile", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse"} {
 			sections[name+".yaml"] = []string{"feature_profiles"}

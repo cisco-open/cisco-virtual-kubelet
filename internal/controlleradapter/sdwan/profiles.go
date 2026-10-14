@@ -19,6 +19,7 @@ type FeatureProfile struct {
 	Multicasts            []map[string]any             `json:"multicast_features,omitempty"`
 	IPv4DeviceAccess      map[string]any               `json:"ipv4_device_access_policy,omitempty"`
 	IPv6DeviceAccess      map[string]any               `json:"ipv6_device_access_policy,omitempty"`
+	MeshPolicies          []map[string]any             `json:"mesh_policies,omitempty"`
 	IPv6Trackers          []map[string]any             `json:"ipv6_trackers,omitempty"`
 	IPv6TrackerGroups     []map[string]any             `json:"ipv6_tracker_groups,omitempty"`
 	CACertificate         map[string]any               `json:"ca_certificate,omitempty"`

@@ -5,12 +5,14 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 105 |
+| Fixture-qualified against live Manager | 106 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 85 |
+| Implementation still pending | 84 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies two system device-access declarations, IPv4 and
+The latest increment qualifies topology mesh with network-hierarchy site UUID
+resolution and live Kubernetes reconciliation. The previous increment qualified
+two system device-access declarations, IPv4 and
 IPv6. Both passed native lifecycle and live Kubernetes reconciliation with inline
 prefixes. Prefix-list references passed compiler and dependency-order tests but
 need a lab where CVK can create the singleton policy-object profile; this lab
