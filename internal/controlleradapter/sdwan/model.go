@@ -38,6 +38,7 @@ type SDWAN struct {
 	PolicyGroups         []PolicyGroup              `json:"policy_groups,omitempty"`
 	LocalizedPolicies    *LocalizedPolicies         `json:"localized_policies,omitempty"`
 	CentralizedPolicies  *CentralizedPolicies       `json:"centralized_policies,omitempty"`
+	SecurityPolicies     *SecurityPolicies          `json:"security_policies,omitempty"`
 	FeatureProfiles      map[string]json.RawMessage `json:"feature_profiles,omitempty"`
 	EdgeFeatureTemplates map[string]json.RawMessage `json:"edge_feature_templates"`
 }
@@ -209,6 +210,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, centralized...)
+	security, err := compileSecurityPolicies(doc.SDWAN.SecurityPolicies)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, security...)
 	policyProfile := ""
 	for _, r := range out {
 		if r.Kind == "profile" && r.Type == "policy-object" {

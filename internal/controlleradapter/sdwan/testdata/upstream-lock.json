@@ -2018,8 +2018,11 @@
       "type": "sdwan_intrusion_prevention_policy_definition",
       "name": "intrusion_prevention_policy_definition",
       "source": "sdwan_security_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-security-ips"
+      ]
     },
     {
       "type": "sdwan_cloud_provider_settings",

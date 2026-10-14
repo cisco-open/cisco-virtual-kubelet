@@ -1,0 +1,10 @@
+sdwan:
+  security_policies:
+    definitions:
+      intrusion_prevention:
+        - name: CVK-CLASSIC-IPS
+          description: Managed by CVK
+          inspection_mode: detection
+          log_level: warning
+          signature_set: balanced
+          target_vpns: [10]
