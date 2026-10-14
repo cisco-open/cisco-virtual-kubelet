@@ -21,6 +21,7 @@ sdwan:
           topology_label: cvk-lab
           device_variables:
             region_id: "1"
+            cvkAddressList: [192.0.2.1, 192.0.2.2]
           policy_group: CVK-GROUP-DEPLOY-POLICY
           policy_variables:
-            cvkPolicyVariable: value
+            cvkPolicyVariable: [one, two]

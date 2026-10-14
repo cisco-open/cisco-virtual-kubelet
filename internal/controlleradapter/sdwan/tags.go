@@ -15,16 +15,16 @@ type SDWANSite struct {
 	Routers []SDWANRouter `json:"routers,omitempty"`
 }
 type SDWANRouter struct {
-	ChassisID                string            `json:"chassis_id"`
-	Tags                     []string          `json:"tags,omitempty"`
-	DeviceTemplate           string            `json:"device_template,omitempty"`
-	DeviceVariables          map[string]string `json:"device_variables,omitempty"`
-	ConfigurationGroup       string            `json:"configuration_group,omitempty"`
-	ConfigurationGroupDeploy *bool             `json:"configuration_group_deploy,omitempty"`
-	PolicyGroup              string            `json:"policy_group,omitempty"`
-	PolicyGroupDeploy        *bool             `json:"policy_group_deploy,omitempty"`
-	PolicyVariables          map[string]any    `json:"policy_variables,omitempty"`
-	TopologyLabel            string            `json:"topology_label,omitempty"`
+	ChassisID                string         `json:"chassis_id"`
+	Tags                     []string       `json:"tags,omitempty"`
+	DeviceTemplate           string         `json:"device_template,omitempty"`
+	DeviceVariables          map[string]any `json:"device_variables,omitempty"`
+	ConfigurationGroup       string         `json:"configuration_group,omitempty"`
+	ConfigurationGroupDeploy *bool          `json:"configuration_group_deploy,omitempty"`
+	PolicyGroup              string         `json:"policy_group,omitempty"`
+	PolicyGroupDeploy        *bool          `json:"policy_group_deploy,omitempty"`
+	PolicyVariables          map[string]any `json:"policy_variables,omitempty"`
+	TopologyLabel            string         `json:"topology_label,omitempty"`
 }
 
 const tagPath = "/dataservice/v1/tags"

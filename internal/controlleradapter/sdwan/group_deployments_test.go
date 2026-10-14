@@ -38,6 +38,12 @@ func TestGroupDeploymentModel(t *testing.T) {
 		if deployment.Type == "configuration_group" && deployment.GroupDevices[0].TopologyLabel != "cvk-lab" {
 			t.Fatal("topology label missing")
 		}
+		if _, ok := deployment.GroupDevices[0].Variables["cvkAddressList"].([]any); deployment.Type == "configuration_group" && !ok {
+			t.Fatal("configuration group list variable missing")
+		}
+		if _, ok := deployment.GroupDevices[0].Variables["cvkPolicyVariable"].([]any); deployment.Type == "policy_group" && !ok {
+			t.Fatal("policy group list variable missing")
+		}
 	}
 	withoutDeploy := strings.Replace(string(raw), "topology_label: cvk-lab", "topology_label: cvk-lab\n          configuration_group_deploy: false", 1)
 	resolved, err := Compile([]byte(withoutDeploy))

@@ -46,7 +46,7 @@ func compileGroupDeployments(sites []SDWANSite, configGroups []ConfigurationGrou
 				defaultDeploy        bool
 				variables            map[string]any
 			}{
-				{"configuration_groups", router.ConfigurationGroup, router.TopologyLabel, router.ConfigurationGroupDeploy, configDeploy, stringVariables(router.DeviceVariables)},
+				{"configuration_groups", router.ConfigurationGroup, router.TopologyLabel, router.ConfigurationGroupDeploy, configDeploy, router.DeviceVariables},
 				{"policy_groups", router.PolicyGroup, "", router.PolicyGroupDeploy, policyDeploy, router.PolicyVariables},
 			} {
 				if spec.name == "" {
@@ -70,13 +70,8 @@ func compileGroupDeployments(sites []SDWANSite, configGroups []ConfigurationGrou
 					deploy = *spec.deploy
 				}
 				for name, value := range spec.variables {
-					if name == "" || strings.TrimSpace(name) != name || value == nil {
+					if name == "" || strings.TrimSpace(name) != name || !validGroupVariableValue(value) {
 						return nil, errors.New("invalid group device variable")
-					}
-					switch value.(type) {
-					case string, bool, int, float64, []any:
-					default:
-						return nil, errors.New("unsupported group device variable value")
 					}
 				}
 				byGroup[key] = append(byGroup[key], GroupDeviceTarget{ID: router.ChassisID, TopologyLabel: spec.label, Deploy: deploy, Variables: spec.variables})
@@ -102,12 +97,23 @@ func compileGroupDeployments(sites []SDWANSite, configGroups []ConfigurationGrou
 	return out, nil
 }
 
-func stringVariables(values map[string]string) map[string]any {
-	result := map[string]any{}
-	for key, value := range values {
-		result[key] = value
+func validGroupVariableValue(value any) bool {
+	switch v := value.(type) {
+	case string, bool, int, float64:
+		return true
+	case []any:
+		if len(v) == 0 {
+			return false
+		}
+		for _, item := range v {
+			if _, nested := item.([]any); nested || !validGroupVariableValue(item) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
 	}
-	return result
 }
 
 func (c *Client) groupDeploymentID(ctx context.Context, r Resource) (string, error) {

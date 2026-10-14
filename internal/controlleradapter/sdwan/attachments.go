@@ -42,7 +42,15 @@ func compileDeviceAttachments(sites []SDWANSite, templates []EdgeDeviceTemplate)
 					return nil, errors.New("invalid device variable name")
 				}
 			}
-			byTemplate[router.DeviceTemplate] = append(byTemplate[router.DeviceTemplate], DeviceAttachmentTarget{ID: router.ChassisID, Variables: router.DeviceVariables})
+			variables := map[string]string{}
+			for name, value := range router.DeviceVariables {
+				text, ok := value.(string)
+				if !ok {
+					return nil, errors.New("classic device template variables must be strings")
+				}
+				variables[name] = text
+			}
+			byTemplate[router.DeviceTemplate] = append(byTemplate[router.DeviceTemplate], DeviceAttachmentTarget{ID: router.ChassisID, Variables: variables})
 		}
 	}
 	names := make([]string, 0, len(byTemplate))
