@@ -56,7 +56,7 @@ parity**. The pinned upstream module has 226 resource declarations. 118 resource
 | `examples/configs/sdwan/route-policies.yaml` | Service and transport route-policy parcels | Native lifecycle, Kubernetes reconciliation; policy-object references local only |
 | `examples/configs/sdwan/transport-management-vpn.yaml` | Transport management VPN with DNS, host mapping, and static routes | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/transport-management-interface.yaml` | Transport management VPN Ethernet interface with static IPv4/IPv6, secondary address, ARP, and MTU | Native lifecycle, Kubernetes reconciliation |
-| `examples/configs/sdwan/service-lan-vpn.yaml` | Service LAN VPN core ID, description, OMP distance, DNS and remote access | Native lifecycle, Kubernetes reconciliation; nested routes and NAT pending |
+| `examples/configs/sdwan/service-lan-vpn.yaml` | Service LAN VPN core ID, description, OMP distance, DNS, host mapping and static routes | Native lifecycle, Kubernetes reconciliation; NAT, advertisements and route leaking pending |
 | `examples/configs/sdwan/service-dual-router-ha.yaml` | Dual-router HA with resolved service LAN VPN reference | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/transport-wan-vpn.yaml` | Transport WAN VPN with ECMP, NAT64, TE service, and static routes | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/zscaler-sse.yaml` | Zscaler SSE parcel | Native lifecycle, Kubernetes reconciliation |
