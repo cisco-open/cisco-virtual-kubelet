@@ -2011,8 +2011,11 @@
       "type": "sdwan_security_policy",
       "name": "security_policy",
       "source": "sdwan_security_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-security-ips"
+      ]
     },
     {
       "type": "sdwan_intrusion_prevention_policy_definition",

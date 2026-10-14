@@ -51,6 +51,7 @@ var classicDefinitionTypes = map[string]classicDefinitionSpec{
 	"centralized_policies/definitions/control_policy/hub_and_spoke_topology": {"hubandspoke/", "hubAndSpoke"},
 	"centralized_policies/definitions/control_policy/vpn_membership":         {"vpnmembershipgroup/", "vpnMembershipGroup"},
 	"centralized_policies/definitions/data_policy/cflowd":                    {"cflowd/", "cflowd"},
+	"security_policies/definitions/intrusion_prevention":                     {"intrusionprevention/", "intrusionPrevention"},
 }
 
 func compileLocalizedFeaturePolicies(items []LocalizedFeaturePolicy) ([]Resource, error) {
@@ -120,7 +121,7 @@ func compileLocalizedFeaturePolicies(items []LocalizedFeaturePolicy) ([]Resource
 }
 
 func (c *Client) resolveLocalizedDefinitions(ctx context.Context, r Resource) error {
-	if r.Kind != "localized-policy" && r.Kind != "centralized-policy" {
+	if r.Kind != "localized-policy" && r.Kind != "centralized-policy" && r.Kind != "security-policy" {
 		return nil
 	}
 	definition, ok := r.Body["policyDefinition"].(map[string]any)
@@ -195,6 +196,39 @@ func (c *Client) createLocalizedPolicy(ctx context.Context, r Resource) (string,
 	if e := c.resolveLocalizedDefinitions(ctx, r); e != nil {
 		return "", e
 	}
+	if r.Kind == "security-policy" {
+		// This endpoint returns an empty body after a successful POST. Find the
+		// exact fixture identity in the follow-up list, as the pinned provider does.
+		if e := c.Request(ctx, "POST", r.Collection, r.Body, nil); e != nil {
+			return "", e
+		}
+		var list struct {
+			Data *[]struct {
+				ID   string `json:"policyId"`
+				Name string `json:"policyName"`
+				Type string `json:"policyType"`
+			} `json:"data"`
+		}
+		if e := c.Request(ctx, "GET", r.Collection, nil, &list); e != nil {
+			return "", e
+		}
+		if list.Data == nil {
+			return "", ErrResponse
+		}
+		id := ""
+		for _, item := range *list.Data {
+			if item.Name == r.Name {
+				if id != "" || item.Type != "feature" || !validID.MatchString(item.ID) {
+					return "", ErrResponse
+				}
+				id = item.ID
+			}
+		}
+		if id == "" {
+			return "", ErrResponse
+		}
+		return id, nil
+	}
 	var result map[string]any
 	if e := c.Request(ctx, "POST", r.Collection, r.Body, &result); e != nil {
 		return "", e
@@ -227,6 +261,12 @@ func equalLocalizedPolicy(r Resource, observed map[string]any) (bool, error) {
 	}
 	wanted := r.Body["policyDefinition"].(map[string]any)
 	if r.Kind == "centralized-policy" {
+		return equalCentralizedAssembly(actual, wanted)
+	}
+	if r.Kind == "security-policy" {
+		if observed["policyMode"] != r.Body["policyMode"] || observed["policyUseCase"] != r.Body["policyUseCase"] {
+			return false, nil
+		}
 		return equalCentralizedAssembly(actual, wanted)
 	}
 	actualSettings, ok := actual["settings"].(map[string]any)

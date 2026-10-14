@@ -82,11 +82,11 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 			}
 			dependencies[i] = append(dependencies[i], found)
 		}
-		if r.Kind == "localized-policy" || r.Kind == "centralized-policy" {
+		if r.Kind == "localized-policy" || r.Kind == "centralized-policy" || r.Kind == "security-policy" {
 			for _, ref := range r.ClassicDefinitionRefs {
 				found := -1
 				key := "localized_policies/definitions/" + ref.Type + "/" + ref.Name
-				if strings.HasPrefix(ref.Type, "centralized_policies/") {
+				if strings.HasPrefix(ref.Type, "centralized_policies/") || strings.HasPrefix(ref.Type, "security_policies/") {
 					key = ref.Type + "/" + ref.Name
 				}
 				for j, candidate := range resources {

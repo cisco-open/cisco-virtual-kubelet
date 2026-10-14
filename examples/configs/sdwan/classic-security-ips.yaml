@@ -1,5 +1,10 @@
 sdwan:
   security_policies:
+    feature_policies:
+      - name: CVK-CLASSIC-SECURITY
+        description: Managed by CVK
+        use_case: custom
+        intrusion_prevention_policy: CVK-CLASSIC-IPS
     definitions:
       intrusion_prevention:
         - name: CVK-CLASSIC-IPS

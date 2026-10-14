@@ -5,9 +5,17 @@ package sdwan
 import "errors"
 
 type SecurityPolicies struct {
-	Definitions struct {
+	FeaturePolicies []ClassicSecurityFeaturePolicy `json:"feature_policies,omitempty"`
+	Definitions     struct {
 		IntrusionPrevention []ClassicIntrusionPrevention `json:"intrusion_prevention,omitempty"`
 	} `json:"definitions"`
+}
+type ClassicSecurityFeaturePolicy struct {
+	Name                      string `json:"name"`
+	Description               string `json:"description"`
+	Mode                      string `json:"mode,omitempty"`
+	UseCase                   string `json:"use_case"`
+	IntrusionPreventionPolicy string `json:"intrusion_prevention_policy,omitempty"`
 }
 type ClassicIntrusionPrevention struct {
 	Name           string   `json:"name"`
@@ -56,6 +64,27 @@ func compileSecurityPolicies(input *SecurityPolicies) ([]Resource, error) {
 			definition["targetVpns"] = p.TargetVPNs
 		}
 		out = append(out, Resource{Key: "security_policies/definitions/intrusion_prevention/" + p.Name, Name: p.Name, Section: "security_policies", Kind: "classic-definition", Type: "intrusion_prevention_policy_definition", Collection: "/dataservice/template/policy/definition/intrusionprevention/", Body: map[string]any{"type": "intrusionPrevention", "name": p.Name, "description": p.Description, "mode": "security", "definition": definition}})
+	}
+	for _, p := range input.FeaturePolicies {
+		if p.Name == "" || p.Description == "" || p.IntrusionPreventionPolicy == "" {
+			return nil, errors.New("invalid security feature policy")
+		}
+		mode := p.Mode
+		if mode == "" {
+			mode = "security"
+		}
+		if mode != "security" {
+			return nil, errors.New("unsupported security policy mode")
+		}
+		useCase := p.UseCase
+		if useCase == "" {
+			useCase = "custom"
+		}
+		validUseCase := map[string]bool{"custom": true, "compliance": true, "guestAccess": true, "directCloudAccess": true, "directInternetAccess": true}
+		if !validUseCase[useCase] {
+			return nil, errors.New("invalid security policy use_case")
+		}
+		out = append(out, Resource{Key: "security_policies/feature_policies/" + p.Name, Name: p.Name, Section: "security_policies", Kind: "security-policy", Type: "security_policy", Collection: "/dataservice/template/policy/security/", ClassicDefinitionRefs: []ClassicDefinitionReference{{Type: "security_policies/definitions/intrusion_prevention", Name: p.IntrusionPreventionPolicy}}, Body: map[string]any{"policyType": "feature", "policyName": p.Name, "policyDescription": p.Description, "policyMode": mode, "policyUseCase": useCase, "policyDefinition": map[string]any{"assembly": []any{map[string]any{"definitionId": "", "type": "intrusionPrevention"}}, "settings": map[string]any{"logging": []any{}}}}})
 	}
 	return out, nil
 }
