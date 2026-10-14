@@ -149,6 +149,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, associations...)
+	svis, err := compileServiceSVIs(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, svis...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any

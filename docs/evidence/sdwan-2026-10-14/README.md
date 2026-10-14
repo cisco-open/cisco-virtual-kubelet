@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 124 resource declarations
+Native fixture coverage now includes 125 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -438,3 +438,5 @@ singleton policy-object profile. No policy was activated on a router.
 `service-lan-vpn.yaml` and `service-dual-router-ha.yaml` each passed native create/observe/update/observe/cleanup and live Kubernetes reconciliation. The HA fixture resolved a declared LAN VPN parcel ID before POST and cleaned up in reverse dependency order. LAN VPN qualification now includes core fields, host mapping, IPv4/IPv6 next-hop and null routes. NAT, OMP advertisements, route leaking and child interfaces remain to implement.
 
 Six VPN routing associations passed native create/observe/idempotent-update/observe/delete and live Kubernetes reconciliation: service OSPF, EIGRP, multicast, OSPFv3 IPv4/IPv6, and transport OSPF. The Manager returns the associated routing parcel ID and payload from each nested endpoint. A redundant PUT of an unchanged association returned HTTP 400, so CVK now treats that update as idempotent, as the pinned provider does. The association fixtures cleaned up their links before routing parcels and VPN parents.
+
+`service-lan-vpn-svi.yaml` passed native create/observe/update/observe/cleanup and live Kubernetes reconciliation using the nested LAN VPN SVI endpoint. Its fixture covers IPv4/IPv6 addressing, ARP and MTU. VRRP, ACL associations, DHCP and device activation remain untested.
