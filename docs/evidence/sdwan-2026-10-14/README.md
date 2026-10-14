@@ -30,7 +30,7 @@ provider runs inside the CVK worker. Native and upstream fixture cycles are
 separate, avoiding simultaneous writers. All observed fixture cleanup calls
 succeeded.
 
-The expanded oracles passed for 60 resource declarations (54 distinct types) and
+The expanded oracles passed for 65 resource declarations (59 distinct types) and
 the checked fixture attributes. The full 226-resource module surface is not qualified.
 The real-API-server tests exercise reconcilers directly; they do not claim a
 container-image rollout or Helm installation into the user's existing cluster.
@@ -132,3 +132,19 @@ and receipt-bound cleanup.
 
 Full regression and focused race suites passed for this checkpoint. The final
 read-only sweep confirmed SNMP, AAA and isolated policy-profile fixture names absent.
+
+## Classic feature-template extension
+
+The CLI/global/multicast fixture batch passed native lifecycle, pinned Terraform
+comparison, and Kubernetes/live reconciliation (15.22s) with reverse cleanup.
+The cellular controller/profile batch passed the same checks (12.43s for
+Kubernetes). All five templates were unattached.
+
+Classic metadata derives API paths, input constraints, unset-value behavior,
+Boolean string encoding and implicit provider defaults from pinned sources.
+The cellular controller retains the provider's ignored data-profile tree and
+firmware auto-SIM default even though the NaC module does not expose those fields.
+Tests cover resolver stability and strict rejection of unknown template collections.
+
+Full Go regression and focused race suites passed after the classic extension.
+Final read-only checks confirmed all five classic fixture names absent.

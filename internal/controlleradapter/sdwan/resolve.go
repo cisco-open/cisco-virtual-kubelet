@@ -23,8 +23,8 @@ func Resolve(data []byte) ([]byte, error) {
 	}
 	stripe := root["sdwan"].(map[string]any)
 	devices := defaultBannerDevices
-	if doc.Defaults != nil && doc.Defaults.SDWAN.EdgeFeatureTemplates.BannerTemplates.DeviceTypes != nil {
-		devices = doc.Defaults.SDWAN.EdgeFeatureTemplates.BannerTemplates.DeviceTypes
+	if doc.Defaults != nil && doc.Defaults.SDWAN.EdgeFeatureTemplates["banner_templates"].DeviceTypes != nil {
+		devices = doc.Defaults.SDWAN.EdgeFeatureTemplates["banner_templates"].DeviceTypes
 	}
 	if edge, ok := stripe["edge_feature_templates"].(map[string]any); ok {
 		if banners, ok := edge["banner_templates"].([]any); ok {
@@ -32,6 +32,25 @@ func Resolve(data []byte) ([]byte, error) {
 				b := item.(map[string]any)
 				if _, exists := b["device_types"]; !exists {
 					b["device_types"] = append([]string(nil), devices...)
+				}
+			}
+		}
+	}
+	if edge, ok := stripe["edge_feature_templates"].(map[string]any); ok {
+		var registry struct{ Templates map[string]classicDefinition }
+		if err := json.Unmarshal(classicDefinitions, &registry); err != nil {
+			return nil, err
+		}
+		for collection, definition := range registry.Templates {
+			types := definition.DeviceTypes
+			if doc.Defaults != nil && doc.Defaults.SDWAN.EdgeFeatureTemplates[collection].DeviceTypes != nil {
+				types = doc.Defaults.SDWAN.EdgeFeatureTemplates[collection].DeviceTypes
+			}
+			items, _ := edge[collection].([]any)
+			for _, item := range items {
+				object := item.(map[string]any)
+				if _, exists := object["device_types"]; !exists {
+					object["device_types"] = append([]string(nil), types...)
 				}
 			}
 		}

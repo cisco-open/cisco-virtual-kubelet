@@ -1,0 +1,675 @@
+{
+  "license": "MPL-2.0",
+  "module_commit": "5fbf037ea57368c7e6e77694c81330b6f7b16666",
+  "provider_commit": "d3194b612c3f24421ec1727b6fa6e9c0bc98b07f",
+  "templates": {
+    "cellular_controller_templates": {
+      "defaults": {
+        "lte": {
+          "failovertimer": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "firmware": {
+            "auto-sim": {
+              "vipObjectType": "node-only",
+              "vipType": "ignore"
+            }
+          },
+          "sim": {
+            "data-profile-list": {
+              "vipObjectType": "tree",
+              "vipPrimaryKey": [
+                "slot"
+              ],
+              "vipType": "ignore",
+              "vipValue": []
+            },
+            "max-retry": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "primary": {
+              "slot": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            }
+          }
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "cellular_interface_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "id",
+          "schema": {
+            "maxLength": 5,
+            "minLength": 1,
+            "type": "string"
+          },
+          "variable": "cellular_interface_id_variable"
+        },
+        "primary_sim_slot": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "lte.sim.primary.slot",
+          "schema": {
+            "maximum": 255,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "variable": "primary_sim_slot_variable"
+        },
+        "sim_failover_retries": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "lte.sim.max-retry",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "variable": "sim_failover_retries_variable"
+        },
+        "sim_failover_timeout": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "lte.failovertimer",
+          "schema": {
+            "maximum": 7,
+            "minimum": 3,
+            "type": "integer"
+          },
+          "variable": "sim_failover_timeout_variable"
+        }
+      },
+      "required": [],
+      "type": "cellular-cedge-controller"
+    },
+    "cellular_profile_templates": {
+      "defaults": {
+        "authentication": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "no-overwrite": {
+          "vipObjectType": "node-only",
+          "vipType": "ignore"
+        },
+        "pdn-type": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "access_point_name": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "apn",
+          "schema": {
+            "type": "string"
+          },
+          "variable": "access_point_name_variable"
+        },
+        "authentication_type": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "authentication",
+          "schema": {
+            "enum": [
+              "none",
+              "pap",
+              "chap",
+              "pap_chap"
+            ],
+            "type": "string"
+          },
+          "variable": "authentication_type_variable"
+        },
+        "no_overwrite": {
+          "boolean_string": true,
+          "object_type": "node-only",
+          "omit_null": false,
+          "path": "no-overwrite",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "no_overwrite_variable"
+        },
+        "packet_data_network_type": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "pdn-type",
+          "schema": {
+            "enum": [
+              "ipv4",
+              "ipv4v6",
+              "ipv6"
+            ],
+            "type": "string"
+          },
+          "variable": "packet_data_network_type_variable"
+        },
+        "profile_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "id",
+          "schema": {
+            "maximum": 16,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "variable": "profile_id_variable"
+        },
+        "profile_password": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "password",
+          "schema": {
+            "type": "string"
+          },
+          "variable": "profile_password_variable"
+        },
+        "profile_username": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "username",
+          "schema": {
+            "type": "string"
+          },
+          "variable": "profile_username_variable"
+        }
+      },
+      "required": [],
+      "type": "cellular-cedge-profile"
+    },
+    "cli_templates": {
+      "defaults": {},
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "cli_config": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "config",
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "cli_config"
+      ],
+      "type": "cli-template"
+    },
+    "global_settings_templates": {
+      "defaults": {
+        "http-global": {
+          "http-authentication": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "nat64-global": {
+          "nat64-timeout": {
+            "tcp-timeout": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "udp-timeout": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          }
+        },
+        "services-global": {
+          "services-ip": {
+            "arp-proxy": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "cdp": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "domain-lookup": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "ftp-passive": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "http-server": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "https-server": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "line-vty": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "lldp": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "rcmd": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "source-intrf": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          },
+          "services-other": {
+            "bootp": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "console-logging": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "snmp-ifindex-persist": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "source-route": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "tcp-keepalives-in": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "tcp-keepalives-out": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "tcp-small-servers": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "udp-small-servers": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "vty-logging": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          }
+        },
+        "ssh": {
+          "version": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "arp_proxy": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.arp-proxy",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "arp_proxy_variable"
+        },
+        "cdp": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.cdp",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "cdp_variable"
+        },
+        "console_logging": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.console-logging",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "console_logging_variable"
+        },
+        "domain_lookup": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.domain-lookup",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "domain_lookup_variable"
+        },
+        "ftp_passive": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.ftp-passive",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "ftp_passive_variable"
+        },
+        "http_authentication": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "http-global.http-authentication",
+          "schema": {
+            "enum": [
+              "local",
+              "aaa"
+            ],
+            "type": "string"
+          },
+          "variable": "http_authentication_variable"
+        },
+        "http_server": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.http-server",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "http_server_variable"
+        },
+        "https_server": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.https-server",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "https_server_variable"
+        },
+        "ignore_bootp": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.bootp",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "ignore_bootp_variable"
+        },
+        "ip_source_routing": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.source-route",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "ip_source_routing_variable"
+        },
+        "lldp": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.lldp",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "lldp_variable"
+        },
+        "nat64_tcp_timeout": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "nat64-global.nat64-timeout.tcp-timeout",
+          "schema": {
+            "maximum": 536870,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "variable": "nat64_tcp_timeout_variable"
+        },
+        "nat64_udp_timeout": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "nat64-global.nat64-timeout.udp-timeout",
+          "schema": {
+            "maximum": 536870,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "variable": "nat64_udp_timeout_variable"
+        },
+        "rsh_rcp": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.rcmd",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "rsh_rcp_variable"
+        },
+        "snmp_ifindex_persist": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.snmp-ifindex-persist",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "snmp_ifindex_persist_variable"
+        },
+        "source_interface": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.source-intrf",
+          "schema": {
+            "maxLength": 256,
+            "minLength": 0,
+            "type": "string"
+          },
+          "variable": "source_interface_variable"
+        },
+        "ssh_version": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ssh.version",
+          "schema": {
+            "maximum": 2,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "variable": "ssh_version_variable"
+        },
+        "tcp_keepalives_in": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.tcp-keepalives-in",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "tcp_keepalives_in_variable"
+        },
+        "tcp_keepalives_out": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.tcp-keepalives-out",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "tcp_keepalives_out_variable"
+        },
+        "tcp_small_servers": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.tcp-small-servers",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "tcp_small_servers_variable"
+        },
+        "telnet_outbound": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-ip.line-vty",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "telnet_outbound_variable"
+        },
+        "udp_small_servers": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.udp-small-servers",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "udp_small_servers_variable"
+        },
+        "vty_logging": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "services-global.services-other.vty-logging",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "vty_logging_variable"
+        }
+      },
+      "required": [],
+      "type": "cedge_global"
+    },
+    "multicast_templates": {
+      "defaults": {
+        "multicast-replicator": {
+          "threshold": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "local_replicator": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "multicast-replicator.local",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "local_replicator_variable"
+        },
+        "spt_only": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "multicast.spt-only",
+          "schema": {
+            "type": "boolean"
+          },
+          "variable": "spt_only_variable"
+        },
+        "threshold": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "multicast-replicator.threshold",
+          "schema": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "variable": "threshold_variable"
+        }
+      },
+      "required": [],
+      "type": "cedge_multicast"
+    }
+  }
+}

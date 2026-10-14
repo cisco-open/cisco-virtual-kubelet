@@ -20,13 +20,12 @@ type Document struct {
 	SDWAN    SDWAN     `json:"sdwan"`
 	Defaults *Defaults `json:"defaults,omitempty"`
 }
+type TemplateDefaults struct {
+	DeviceTypes []string `json:"device_types"`
+}
 type Defaults struct {
 	SDWAN struct {
-		EdgeFeatureTemplates struct {
-			BannerTemplates struct {
-				DeviceTypes []string `json:"device_types"`
-			} `json:"banner_templates"`
-		} `json:"edge_feature_templates"`
+		EdgeFeatureTemplates map[string]TemplateDefaults `json:"edge_feature_templates"`
 	} `json:"sdwan"`
 }
 type SDWAN struct {
@@ -34,9 +33,7 @@ type SDWAN struct {
 	PolicyObjects        map[string]json.RawMessage `json:"policy_objects,omitempty"`
 	ConfigurationGroups  []ConfigurationGroup       `json:"configuration_groups,omitempty"`
 	FeatureProfiles      map[string]json.RawMessage `json:"feature_profiles,omitempty"`
-	EdgeFeatureTemplates struct {
-		BannerTemplates []Banner `json:"banner_templates"`
-	} `json:"edge_feature_templates"`
+	EdgeFeatureTemplates map[string]json.RawMessage `json:"edge_feature_templates"`
 }
 type Banner struct {
 	Name          string    `json:"name"`
@@ -68,12 +65,18 @@ func Compile(data []byte) ([]Resource, error) {
 	}
 
 	defaults := defaultBannerDevices
-	if doc.Defaults != nil && doc.Defaults.SDWAN.EdgeFeatureTemplates.BannerTemplates.DeviceTypes != nil {
-		defaults = doc.Defaults.SDWAN.EdgeFeatureTemplates.BannerTemplates.DeviceTypes
+	if doc.Defaults != nil && doc.Defaults.SDWAN.EdgeFeatureTemplates["banner_templates"].DeviceTypes != nil {
+		defaults = doc.Defaults.SDWAN.EdgeFeatureTemplates["banner_templates"].DeviceTypes
 	}
 	seen := map[string]bool{}
 	out := []Resource{}
-	for _, b := range doc.SDWAN.EdgeFeatureTemplates.BannerTemplates {
+	var banners []Banner
+	if raw, exists := doc.SDWAN.EdgeFeatureTemplates["banner_templates"]; exists {
+		if err := yaml.UnmarshalStrict(raw, &banners); err != nil {
+			return nil, errors.New("invalid banner template fields")
+		}
+	}
+	for _, b := range banners {
 		if b.Name == "" || len(b.Name) > 128 || strings.TrimSpace(b.Name) != b.Name || b.Description == nil {
 			return nil, errors.New("banner requires a name and description")
 		}
@@ -103,6 +106,31 @@ func Compile(data []byte) ([]Resource, error) {
 		sort.Strings(mapped)
 		body := map[string]any{"deviceType": mapped, "factoryDefault": false, "templateDescription": *b.Description, "templateMinVersion": "15.0.0", "templateName": b.Name, "templateType": "cisco_banner", "templateDefinition": map[string]any{"login": bannerValue(b.Login, b.LoginVariable), "motd": bannerValue(b.MOTD, b.MOTDVariable)}}
 		out = append(out, Resource{Key: "edge_feature_templates/banner_templates/" + b.Name, Name: b.Name, Section: "edge_feature_templates", Type: "cisco_banner", Body: body})
+	}
+	overrides := map[string][]string{}
+	if doc.Defaults != nil {
+		for collection, definition := range doc.Defaults.SDWAN.EdgeFeatureTemplates {
+			if collection != "banner_templates" {
+				if _, err := compileClassicTemplates(collection, nil, nil); err != nil {
+					return nil, err
+				}
+			}
+			overrides[collection] = definition.DeviceTypes
+		}
+	}
+	for collection, raw := range doc.SDWAN.EdgeFeatureTemplates {
+		if collection == "banner_templates" {
+			continue
+		}
+		var input []map[string]any
+		if err := yaml.UnmarshalStrict(raw, &input); err != nil {
+			return nil, errors.New("invalid classic template fields")
+		}
+		resources, err := compileClassicTemplates(collection, input, overrides[collection])
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, resources...)
 	}
 	hierarchy, err := compileHierarchy(doc.SDWAN.NetworkHierarchy)
 	if err != nil {
@@ -146,7 +174,14 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, errors.New("SD-WAN document exceeds 512 resource limit")
 	}
 	counts := map[string]int{}
+	classicNames := map[string]bool{}
 	for _, r := range out {
+		if r.Kind == "" {
+			if classicNames[r.Name] {
+				return nil, errors.New("duplicate classic template name across collections")
+			}
+			classicNames[r.Name] = true
+		}
 		counts[r.Section]++
 		if counts[r.Section] > 128 {
 			return nil, errors.New("SD-WAN section exceeds journal capacity")
@@ -201,23 +236,11 @@ func normalized(body map[string]any) (string, error) {
 	if !ok {
 		return "", ErrResponse
 	}
-	for _, key := range []string{"login", "motd"} {
-		v, ok := def[key].(map[string]any)
-		if !ok {
-			return "", ErrResponse
-		}
-		n := map[string]any{"vipObjectType": v["vipObjectType"], "vipType": v["vipType"]}
-		switch v["vipType"] {
-		case "constant":
-			n["vipValue"] = v["vipValue"]
-		case "variableName":
-			n["vipVariableName"] = v["vipVariableName"]
-		case "ignore":
-		default:
-			return "", ErrResponse
-		}
-		def[key] = n
+	normalizedDefinition, err := normalizeVIP(def)
+	if err != nil {
+		return "", err
 	}
+	m["templateDefinition"] = normalizedDefinition
 	raw, err = json.Marshal(m)
 	return string(raw), err
 }

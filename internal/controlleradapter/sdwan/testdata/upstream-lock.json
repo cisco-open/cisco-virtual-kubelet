@@ -355,8 +355,8 @@
       "type": "sdwan_cedge_global_feature_template",
       "name": "cedge_global_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_cedge_igmp_feature_template",
@@ -406,8 +406,8 @@
       "type": "sdwan_cedge_multicast_feature_template",
       "name": "cedge_multicast_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_cisco_ntp_feature_template",
@@ -504,8 +504,8 @@
       "type": "sdwan_cli_template_feature_template",
       "name": "cli_template_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_switchport_feature_template",
@@ -532,15 +532,15 @@
       "type": "sdwan_cellular_controller_feature_template",
       "name": "cellular_controller_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_cellular_cedge_profile_feature_template",
       "name": "cellular_cedge_profile_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_cisco_vpn_interface_gre_feature_template",

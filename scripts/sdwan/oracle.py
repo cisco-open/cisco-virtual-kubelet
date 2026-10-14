@@ -13,13 +13,15 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--terraform", default="terraform")
 parser.add_argument("--execute", action="store_true")
-parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature"], default="core")
+parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular"], default="core")
 args = parser.parse_args()
 if args.fixture_set == "policy-profile" and args.execute:
     raise SystemExit("Policy-profile execution needs a qualified empty-controller or read-only-parent workflow; plan-only is available")
 root = Path(__file__).resolve().parents[2]
 oracle = root / "examples/configs/sdwan/oracle"
 sets = {
+ "classic-cellular": {"files": ["classic-cellular"], "count": 2, "absent": "Cellular", "oracle": "Cellular"},
+ "classic-templates": {"files": ["classic-templates"], "count": 3, "absent": "Classic", "oracle": "Classic"},
  "aaa-feature": {"files": ["aaa-feature"], "count": 2, "absent": "AAA", "oracle": "AAA"},
  "snmp-feature": {"files": ["snmp-feature"], "count": 2, "absent": "SNMP", "oracle": "SNMP"},
  "policy-profile": {"files": ["policy-profile"], "count": 16, "absent": "PolicyProfile", "oracle": "PolicyProfile"},
@@ -102,6 +104,11 @@ allowed = {
     'sdwan_system_security_feature',
     'sdwan_system_snmp_feature',
     'sdwan_system_aaa_feature',
+    'sdwan_cedge_global_feature_template',
+    'sdwan_cedge_multicast_feature_template',
+    'sdwan_cli_template_feature_template',
+    'sdwan_cellular_controller_feature_template',
+    'sdwan_cellular_cedge_profile_feature_template',
     'sdwan_system_performance_monitoring_feature',
     'sdwan_tloc_list_policy_object',
     'sdwan_topology_feature_profile',

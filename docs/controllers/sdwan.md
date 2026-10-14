@@ -5,7 +5,7 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 60 resource declarations (54 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 65 resource declarations (59 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -19,6 +19,8 @@ parity**. The pinned upstream module has 226 resource declarations. 60 resource 
 | `examples/configs/sdwan/thousandeyes-feature.yaml` | Unattached ThousandEyes parcel using a token variable | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/snmp-feature.yaml` | SNMP nested views, communities, groups, users and targets | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/aaa-feature.yaml` | AAA users, RADIUS/TACACS and accounting/authorization rules | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-templates.yaml` | Classic CLI, global settings and multicast templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-cellular.yaml` | Classic cellular controller and cellular profile templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -36,6 +38,11 @@ The public model remains the upstream `sdwan` document. The format is
 
 - `edge_feature_templates.banner_templates`: name, description, device types,
   login/MOTD literals and variables, including upstream device-type defaults.
+- `edge_feature_templates.cli_templates`, `global_settings_templates`,
+  `multicast_templates`, `cellular_controller_templates` and
+  `cellular_profile_templates`, including per-family device defaults and overrides.
+  Generate their metadata with `scripts/sdwan/generate-classic-definitions.py
+  MODULE_CHECKOUT PROVIDER_CHECKOUT`.
 - `feature_profiles.system_profiles`: profile name/description, banner, basic,
   BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security, SNMP and AAA.
   `feature_profiles.cli_profiles.config` supports native CLI parcels.

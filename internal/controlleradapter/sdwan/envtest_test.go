@@ -55,8 +55,11 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		if fixture == "" {
 			fixture = "banner.yaml"
 		}
-		if fixture != "banner.yaml" && fixture != "system-profile.yaml" && fixture != "policy-objects.yaml" && fixture != "deployment.yaml" && fixture != "system-features.yaml" && fixture != "peripheral-features.yaml" && fixture != "thousandeyes-feature.yaml" && fixture != "snmp-feature.yaml" && fixture != "aaa-feature.yaml" {
+		if fixture != "banner.yaml" && fixture != "system-profile.yaml" && fixture != "policy-objects.yaml" && fixture != "deployment.yaml" && fixture != "system-features.yaml" && fixture != "peripheral-features.yaml" && fixture != "thousandeyes-feature.yaml" && fixture != "snmp-feature.yaml" && fixture != "aaa-feature.yaml" && fixture != "classic-templates.yaml" && fixture != "classic-cellular.yaml" {
 			t.Fatal("unsupported fixture")
+		}
+		if fixture == "classic-templates.yaml" || fixture == "classic-cellular.yaml" {
+			cfg.Spec.ManagedSections = []string{"edge_feature_templates"}
 		}
 		if fixture == "system-features.yaml" || fixture == "peripheral-features.yaml" || fixture == "thousandeyes-feature.yaml" || fixture == "snmp-feature.yaml" || fixture == "aaa-feature.yaml" {
 			cfg.Spec.ManagedSections = []string{"feature_profiles"}

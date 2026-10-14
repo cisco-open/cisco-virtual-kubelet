@@ -67,7 +67,11 @@ func liveParcelLifecycle(t *testing.T, resources []Resource) {
 		if e != nil || !same {
 			t.Fatal(r.Type, "create verification", e)
 		}
-		r.Body["description"] = "CVK updated isolated fixture"
+		if r.Kind == "" {
+			r.Body["templateDescription"] = "CVK updated isolated fixture"
+		} else {
+			r.Body["description"] = "CVK updated isolated fixture"
+		}
 		if e = c.Update(ctx, r, o); e != nil {
 			t.Fatal(r.Type, "update", e)
 		}
