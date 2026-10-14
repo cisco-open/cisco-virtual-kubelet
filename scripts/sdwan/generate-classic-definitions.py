@@ -170,6 +170,25 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             child = definition(item_source, alias, indent+2, model, item_body, leaf["children"], item_receiver, item_target, child_struct)
             conditional_trees.append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":[]})
             continue
+        if tf == "route_policies" and alias == "af" and expression.endswith(' == null ? null : flatten(['):
+            start = source.index(expression)
+            end = source.index("      ])", start) + len("      ])")
+            branch = source[start:end]
+            go_name, child_struct = re.search(r'(\w+)\s+\[\](\w+)\s+`tfsdk:"route_policies"`', struct_body).groups()
+            loop = re.search(r'for _, (\w+) := range ' + receiver + r'\.' + go_name + r' \{', body)
+            item_body = block(body, loop.end()-1)
+            item_receiver = loop.group(1)
+            item_target = re.search(r'(\w+) := ""', item_body).group(1)
+            path = re.search(r'sjson.SetRaw\(' + target + ', ' + prefix + r'"([^" ]+)\."\+"vipValue\.-1", ' + item_target + r'\)', item_body).group(1)
+            leaf = leaves[path]
+            children = list(re.finditer(r'\[\] : \[\{', branch))
+            if len(children) != 2:
+                raise SystemExit("BGP neighbor route policy conditions changed")
+            for match, direction in zip(children, ("in", "out")):
+                item_source = block(branch, match.end()-1)
+                child = definition(item_source, alias, indent+4, model, item_body, leaf["children"], item_receiver, item_target, child_struct)
+                conditional_trees.append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":["route_policy_"+direction,"route_policy_"+direction+"_variable"]})
+            continue
         index = re.fullmatch(r'index\(each\.value\.([\w.]+), ' + re.escape(alias) + r'\)', expression)
         if index and tf == "name":
             inputs[tf] = "$index"
@@ -212,7 +231,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if tf.endswith("_variable"):
             continue
         name, typ = fields[tf]
-        if tf in ("stub", "nssa", "default_information_originate", "nat", "nat64_interface", "nat66_interface") and typ == "Bool" and tf not in literals and (tf != "nat" or target == "body"):
+        if tf in ("stub", "nssa", "default_information_originate", "nat", "nat64_interface", "nat66_interface") and typ == "Bool" and tf not in literals and (tf != "nat" or target == "body") and not (tf == "default_information_originate" and target != "body"):
             # These booleans enable a container rather than a vipValue leaf.
             expected_path = {"default_information_originate":"ospf.default-information.originate", "nat64_interface":"nat64", "nat66_interface":"nat66"}.get(tf, tf)
             if not re.search(r'sjson.Set\(' + target + ', ' + prefix + '"' + re.escape(expected_path) + r'", map\[string\]interface\{\}\{\}\)', body):
@@ -234,7 +253,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         datatype = dict(leaf["dataType"])
         if tf in ("zscaler_surrogate_idle_time", "zscaler_surrogate_refresh_time") and datatype.get("max:") == 4294967296:
             datatype["max"] = datatype.pop("max:")
-        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList", "xConnect", "tlocExtension", "numberFixedInterval", "stringList") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range", "interval"}:
+        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList", "xConnect", "tlocExtension", "numberFixedInterval", "stringList", "holdTime", "remoteAS") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range", "interval"}:
             raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
         value_type = {"String": "string", "Bool": "boolean", "Int64": "integer", "Float64": "number"}.get(typ)
         if typ in ("Set", "List"):
@@ -340,7 +359,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template", "sdwan_cisco_vpn_interface_feature_template", "sdwan_cedge_aaa_feature_template", "sdwan_cisco_secure_internet_gateway_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template", "sdwan_cisco_vpn_interface_feature_template", "sdwan_cedge_aaa_feature_template", "sdwan_cisco_secure_internet_gateway_feature_template", "sdwan_cisco_bgp_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
     ospf_policy_source = None
     if resource == "sdwan_cisco_ospf_feature_template":
@@ -348,6 +367,16 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         end = source.index("  }]", start) + len("  }]")
         ospf_policy_source = source[start:end]
         source = source[:start] + source[end:]
+    bgp_address_families_source = None
+    if resource == "sdwan_cisco_bgp_feature_template":
+        start = source.index("  address_families = flatten([")
+        end = source.index("  ])", start) + len("  ])")
+        bgp_address_families_source = source[start:end]
+        source = source[:start] + source[end:]
+        missing = r'(?m)^\s*optional_variable\s*= try\((n|af)\.optional_variable, null\)\n'
+        source, count = re.subn(missing, '', source)
+        if count != 4:
+            raise SystemExit("BGP provider-missing optional variable fields changed")
     if resource == "sdwan_switchport_feature_template":
         expected = 'switchport_trunk_allowed_vlans                    = length(concat(try(interface.trunk_allowed_vlans, []), try(interface.trunk_allowed_vlans_ranges, []))) > 0 ? join(",", concat([for p in try(interface.trunk_allowed_vlans, []) : p], [for r in try(interface.trunk_allowed_vlans_ranges, []) : "${r.from}-${r.to}"])) : null'
         if expected not in source:
@@ -500,6 +529,19 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         child_struct = re.search(r'RoutePolicies\s+\[\](\w+)',model).group(1)
         child = definition(item_source,"each.value",4,model,item_body,leaf["children"],"item","itemBody",child_struct)
         generated["conditional_trees"] = [{"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":["route_policy","route_policy_variable"]}]
+    if bgp_address_families_source:
+        loop = re.search(r'for _, item := range data.AddressFamilies \{', body)
+        item_body = block(body, loop.end()-1)
+        path = re.search(r'sjson.SetRaw\(body, path\+"([^" ]+)\."\+"vipValue\.-1", itemBody\)', item_body).group(1)
+        leaf = next(x for x in schema["fields"] if ".".join(x["dataPath"]+[x["key"]]) == path)
+        child_struct = re.search(r'AddressFamilies\s+\[\](\w+)', model).group(1)
+        children = list(re.finditer(r'== null \? \[\] : \[\{', bgp_address_families_source))
+        if len(children) != 2:
+            raise SystemExit("BGP address family conditions changed")
+        for match, family in zip(children, ("ipv4", "ipv6")):
+            item_source = block(bgp_address_families_source, match.end()-1)
+            child = definition(item_source, "each.value", 6, model, item_body, leaf["children"], "item", "itemBody", child_struct)
+            generated.setdefault("conditional_trees",[]).append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":[family+"_address_family"]})
     if resource == "sdwan_cisco_security_feature_template":
         generated["fields"]["$field:authentication_type"]["array_values"] = {"esp":"sha1-hmac", "ip-udp-esp":"ah-sha1-hmac", "ip-udp-esp-no-id":"ah-no-id"}
     if resource == "sdwan_cisco_sig_credentials_feature_template":
@@ -624,6 +666,14 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         generated["unavailable_inputs"]["route_global_imports[].protocol_sub_type"] = "Pinned module derives external subtype"
     if resource == "sdwan_cedge_aaa_feature_template":
         generated["fields"]["authentication_and_authorization_order"]["input_default"] = defaults["aaa_templates"]["authentication_and_authorization_order"]
+    if resource == "sdwan_cisco_bgp_feature_template":
+        as_number = generated["fields"]["as_number"]
+        as_number["input_schema"] = {"anyOf":[{"type":"string"},{"type":"integer","minimum":1,"maximum":4294967295}]}
+        as_number["decimal_string"] = True
+        for family in ("ipv4", "ipv6"):
+            generated["unavailable_inputs"][f"{family}_address_family.neighbors[].optional_variable"] = "Pinned provider model omits neighbor optional_variable"
+            generated["unavailable_inputs"][f"{family}_address_family.neighbors[].address_families[].optional_variable"] = "Pinned provider model omits address-family optional_variable"
+        generated["unavailable_inputs"]["compare_router_id_variable"] = "Pinned module reads compare_router_idr_variable instead"
     if resource == "sdwan_cisco_secure_internet_gateway_feature_template":
         generated["sig_defaults"] = defaults["secure_internet_gateway_templates"]["interfaces"]
         pair_fields = generated["conditional_trees"][0]["definition"]["trees"]["high_availability_interface_pairs"]["definition"]["fields"]

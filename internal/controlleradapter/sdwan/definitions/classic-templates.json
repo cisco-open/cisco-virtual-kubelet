@@ -1376,6 +1376,2176 @@
       "type": "cisco_bfd",
       "unavailable_inputs": {}
     },
+    "bgp_templates": {
+      "conditional_trees": [
+        {
+          "definition": {
+            "defaults": {
+              "default-information": {
+                "originate": {
+                  "vipObjectType": "node-only",
+                  "vipType": "ignore"
+                }
+              },
+              "maximum-paths": {
+                "paths": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "redistribute": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "protocol"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "table-map": {
+                "filter": {
+                  "vipObjectType": "node-only",
+                  "vipType": "ignore"
+                },
+                "name": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              }
+            },
+            "fields": {
+              "$literal:family_type": {
+                "boolean_string": false,
+                "literal": "ipv4-unicast",
+                "object_type": "object",
+                "omit_null": true,
+                "path": "family-type",
+                "schema": {
+                  "enum": [
+                    "ipv4-unicast"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "ipv4_address_family.default_information_originate": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": false,
+                "path": "default-information.originate",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "ipv4_address_family.default_information_originate_variable"
+              },
+              "ipv4_address_family.maximum_paths": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "maximum-paths.paths",
+                "schema": {
+                  "maximum": 32,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "ipv4_address_family.maximum_paths_variable"
+              },
+              "ipv4_address_family.table_map_filter": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": false,
+                "path": "table-map.filter",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "ipv4_address_family.table_map_filter_variable"
+              },
+              "ipv4_address_family.table_map_policy": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "table-map.name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ipv4_address_family.table_map_policy_variable"
+              }
+            },
+            "optional": "",
+            "required": [],
+            "trees": {
+              "ipv4_address_family.aggregate_addresses": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "as-set": {
+                      "vipObjectType": "node-only",
+                      "vipType": "ignore"
+                    },
+                    "summary-only": {
+                      "vipObjectType": "node-only",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "as_set_path": {
+                      "boolean_string": true,
+                      "object_type": "node-only",
+                      "omit_null": false,
+                      "path": "as-set",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "as_set_path_variable"
+                    },
+                    "prefix": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "prefix",
+                      "schema": {
+                        "format": "ipv4-prefix",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "prefix_variable"
+                    },
+                    "summary_only": {
+                      "boolean_string": true,
+                      "object_type": "node-only",
+                      "omit_null": false,
+                      "path": "summary-only",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "summary_only_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "prefix",
+                    "as-set",
+                    "summary-only"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "aggregate-address",
+                "primary_keys": [
+                  "prefix"
+                ],
+                "primitive": false
+              },
+              "ipv4_address_family.networks": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "prefix": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "prefix",
+                      "schema": {
+                        "format": "ipv4-prefix",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "prefix_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "prefix"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "network",
+                "primary_keys": [
+                  "prefix"
+                ],
+                "primitive": false
+              },
+              "ipv4_address_family.redistributes": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "route-policy": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "protocol": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "protocol",
+                      "schema": {
+                        "enum": [
+                          "static",
+                          "connected",
+                          "ospf",
+                          "ospfv3",
+                          "omp",
+                          "eigrp",
+                          "nat"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "protocol_variable"
+                    },
+                    "route_policy": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "route-policy",
+                      "schema": {
+                        "maxLength": 32,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "route_policy_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "protocol",
+                    "route-policy"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "redistribute",
+                "primary_keys": [
+                  "protocol"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "bgp.address-family",
+          "primary_keys": [
+            "family-type"
+          ],
+          "triggers": [
+            "ipv4_address_family"
+          ]
+        },
+        {
+          "definition": {
+            "defaults": {
+              "default-information": {
+                "originate": {
+                  "vipObjectType": "node-only",
+                  "vipType": "ignore"
+                }
+              },
+              "maximum-paths": {
+                "paths": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "redistribute": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "protocol"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "table-map": {
+                "filter": {
+                  "vipObjectType": "node-only",
+                  "vipType": "ignore"
+                },
+                "name": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              }
+            },
+            "fields": {
+              "$literal:family_type": {
+                "boolean_string": false,
+                "literal": "ipv6-unicast",
+                "object_type": "object",
+                "omit_null": true,
+                "path": "family-type",
+                "schema": {
+                  "enum": [
+                    "ipv4-unicast"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "ipv6_address_family.default_information_originate": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": false,
+                "path": "default-information.originate",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "ipv6_address_family.default_information_originate_variable"
+              },
+              "ipv6_address_family.maximum_paths": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "maximum-paths.paths",
+                "schema": {
+                  "maximum": 32,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "ipv6_address_family.maximum_paths_variable"
+              },
+              "ipv6_address_family.table_map_filter": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": false,
+                "path": "table-map.filter",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "ipv6_address_family.table_map_filter_variable"
+              },
+              "ipv6_address_family.table_map_policy": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "table-map.name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ipv6_address_family.table_map_policy_variable"
+              }
+            },
+            "optional": "",
+            "required": [],
+            "trees": {
+              "ipv6_address_family.aggregate_addresses": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "as-set": {
+                      "vipObjectType": "node-only",
+                      "vipType": "ignore"
+                    },
+                    "summary-only": {
+                      "vipObjectType": "node-only",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "as_set_path": {
+                      "boolean_string": true,
+                      "object_type": "node-only",
+                      "omit_null": false,
+                      "path": "as-set",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "as_set_path_variable"
+                    },
+                    "prefix": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "prefix",
+                      "schema": {
+                        "format": "ipv6-prefix",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "prefix_variable"
+                    },
+                    "summary_only": {
+                      "boolean_string": true,
+                      "object_type": "node-only",
+                      "omit_null": false,
+                      "path": "summary-only",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "summary_only_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "prefix",
+                    "as-set",
+                    "summary-only"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "ipv6-aggregate-address",
+                "primary_keys": [
+                  "prefix"
+                ],
+                "primitive": false
+              },
+              "ipv6_address_family.networks": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "prefix": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "prefix",
+                      "schema": {
+                        "format": "ipv6-prefix",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "prefix_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "prefix"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "ipv6-network",
+                "primary_keys": [
+                  "prefix"
+                ],
+                "primitive": false
+              },
+              "ipv6_address_family.redistributes": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "route-policy": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "protocol": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "protocol",
+                      "schema": {
+                        "enum": [
+                          "static",
+                          "connected",
+                          "ospf",
+                          "ospfv3",
+                          "omp",
+                          "eigrp",
+                          "nat"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "protocol_variable"
+                    },
+                    "route_policy": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "route-policy",
+                      "schema": {
+                        "maxLength": 32,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "route_policy_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "protocol",
+                    "route-policy"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "redistribute",
+                "primary_keys": [
+                  "protocol"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "bgp.address-family",
+          "primary_keys": [
+            "family-type"
+          ],
+          "triggers": [
+            "ipv6_address_family"
+          ]
+        }
+      ],
+      "defaults": {
+        "bgp": {
+          "address-family": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "family-type"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "best-path": {
+            "as-path": {
+              "multipath-relax": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "compare-router-id": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "med": {
+              "always-compare": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "deterministic": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "missing-as-worst": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            }
+          },
+          "distance": {
+            "external": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "internal": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "local": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          },
+          "ipv6-neighbor": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "address"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "mpls-interface": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "if-name"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "neighbor": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "address"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "propagate-aspath": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "propagate-community": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "router-id": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "shutdown": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "target": {
+            "route-target-ipv4": {
+              "vipObjectType": "tree",
+              "vipPrimaryKey": [
+                "vpn-id"
+              ],
+              "vipType": "ignore",
+              "vipValue": []
+            },
+            "route-target-ipv6": {
+              "vipObjectType": "tree",
+              "vipPrimaryKey": [
+                "vpn-id"
+              ],
+              "vipType": "ignore",
+              "vipValue": []
+            }
+          },
+          "timers": {
+            "holdtime": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "keepalive": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          }
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "always_compare_med": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.best-path.med.always-compare",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "always_compare_med_variable"
+        },
+        "as_number": {
+          "boolean_string": false,
+          "decimal_string": true,
+          "input_schema": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "maximum": 4294967295,
+                "minimum": 1,
+                "type": "integer"
+              }
+            ]
+          },
+          "object_type": "object",
+          "omit_null": true,
+          "path": "bgp.as-num",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "as_number_variable"
+        },
+        "compare_router_id": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.best-path.compare-router-id",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "compare_router_idr_variable"
+        },
+        "deterministic_med": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.best-path.med.deterministic",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "deterministic_med_variable"
+        },
+        "distance_external": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.distance.external",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "distance_external_variable"
+        },
+        "distance_internal": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.distance.internal",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "distance_internal_variable"
+        },
+        "distance_local": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.distance.local",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "distance_local_variable"
+        },
+        "holdtime": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.timers.holdtime",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "holdtime_variable"
+        },
+        "keepalive": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.timers.keepalive",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "keepalive_variable"
+        },
+        "missing_med_as_worst": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.best-path.med.missing-as-worst",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "missing_med_as_worst_variable"
+        },
+        "multipath_relax": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.best-path.as-path.multipath-relax",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "multipath_relax_variable"
+        },
+        "propagate_as_path": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.propagate-aspath",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "propagate_as_path_variable"
+        },
+        "propagate_community": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.propagate-community",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "propagate_community_variable"
+        },
+        "router_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.router-id",
+          "schema": {
+            "format": "ipv4",
+            "type": "string"
+          },
+          "set": false,
+          "variable": "router_id_variable"
+        },
+        "shutdown": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "bgp.shutdown",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "shutdown_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "ipv4_address_family.neighbors": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "address-family": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "family-type"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "allowas-in": {
+                "as-number": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "as-override": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "description": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "ebgp-multihop": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "next-hop-self": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "password": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-community": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-ext-community": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-label": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-label-explicit": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "shutdown": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "timers": {
+                "holdtime": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                },
+                "keepalive": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "update-source": {
+                "if-name": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              }
+            },
+            "fields": {
+              "address": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "address",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "address_variable"
+              },
+              "allow_as_in": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "allowas-in.as-number",
+                "schema": {
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "allow_as_in_variable"
+              },
+              "as_override": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "as-override",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "as_override_variable"
+              },
+              "description": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "description",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "description_variable"
+              },
+              "ebgp_multihop": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "ebgp-multihop",
+                "schema": {
+                  "maximum": 255,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "ebgp_multihop_variable"
+              },
+              "holdtime": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "timers.holdtime",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "holdtime_variable"
+              },
+              "keepalive": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "timers.keepalive",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "keepalive_variable"
+              },
+              "next_hop_self": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "next-hop-self",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "next_hop_self_variable"
+              },
+              "password": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "password",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "password_variable"
+              },
+              "remote_as": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "remote-as",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "remote_as_variable"
+              },
+              "send_community": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-community",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_community_variable"
+              },
+              "send_extended_community": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-ext-community",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_extended_community_variable"
+              },
+              "send_label": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-label",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_label_variable"
+              },
+              "send_label_explicit_null": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-label-explicit",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_label_explicit_null_variable"
+              },
+              "shutdown": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "shutdown",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "shutdown_variable"
+              },
+              "source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "update-source.if-name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_interface_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "address",
+              "description",
+              "shutdown",
+              "remote-as",
+              "timers",
+              "timers",
+              "update-source",
+              "next-hop-self",
+              "send-community",
+              "send-ext-community",
+              "ebgp-multihop",
+              "password",
+              "send-label",
+              "send-label-explicit",
+              "as-override",
+              "allowas-in",
+              "address-family"
+            ],
+            "required": [],
+            "trees": {
+              "address_families": {
+                "definition": {
+                  "always_priority_order": false,
+                  "conditional_trees": [
+                    {
+                      "definition": {
+                        "defaults": {},
+                        "fields": {
+                          "$literal:direction": {
+                            "boolean_string": false,
+                            "literal": "in",
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "direction",
+                            "schema": {
+                              "enum": [
+                                "in",
+                                "out"
+                              ],
+                              "type": "string"
+                            },
+                            "set": false
+                          },
+                          "route_policy_in": {
+                            "boolean_string": false,
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "pol-name",
+                            "schema": {
+                              "maxLength": 32,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "set": false,
+                            "variable": "route_policy_in_variable"
+                          }
+                        },
+                        "optional": "",
+                        "required": [],
+                        "trees": {},
+                        "unavailable_inputs": {}
+                      },
+                      "path": "route-policy",
+                      "primary_keys": [
+                        "direction"
+                      ],
+                      "triggers": [
+                        "route_policy_in",
+                        "route_policy_in_variable"
+                      ]
+                    },
+                    {
+                      "definition": {
+                        "defaults": {},
+                        "fields": {
+                          "$literal:direction": {
+                            "boolean_string": false,
+                            "literal": "out",
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "direction",
+                            "schema": {
+                              "enum": [
+                                "in",
+                                "out"
+                              ],
+                              "type": "string"
+                            },
+                            "set": false
+                          },
+                          "route_policy_out": {
+                            "boolean_string": false,
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "pol-name",
+                            "schema": {
+                              "maxLength": 32,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "set": false,
+                            "variable": "route_policy_out_variable"
+                          }
+                        },
+                        "optional": "",
+                        "required": [],
+                        "trees": {},
+                        "unavailable_inputs": {}
+                      },
+                      "path": "route-policy",
+                      "primary_keys": [
+                        "direction"
+                      ],
+                      "triggers": [
+                        "route_policy_out",
+                        "route_policy_out_variable"
+                      ]
+                    }
+                  ],
+                  "defaults": {
+                    "maximum-prefixes": {
+                      "prefix-num": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      },
+                      "restart": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      },
+                      "threshold": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      },
+                      "warning-only": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      }
+                    },
+                    "route-policy": {
+                      "vipObjectType": "tree",
+                      "vipPrimaryKey": [
+                        "direction"
+                      ],
+                      "vipType": "ignore",
+                      "vipValue": []
+                    }
+                  },
+                  "fields": {
+                    "family_type": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "family-type",
+                      "schema": {
+                        "enum": [
+                          "ipv4-unicast",
+                          "vpnv4-unicast",
+                          "vpnv6-unicast"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "maximum_prefixes": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.prefix-num",
+                      "schema": {
+                        "maximum": 4294967295,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_variable"
+                    },
+                    "maximum_prefixes_restart": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.restart",
+                      "schema": {
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_restart_variable"
+                    },
+                    "maximum_prefixes_threshold": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.threshold",
+                      "schema": {
+                        "maximum": 100,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_threshold_variable"
+                    },
+                    "maximum_prefixes_warning_only": {
+                      "boolean_string": true,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.warning-only",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_warning_only_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "family-type",
+                    "maximum-prefixes",
+                    "maximum-prefixes",
+                    "maximum-prefixes",
+                    "maximum-prefixes",
+                    "route-policy"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "address-family",
+                "primary_keys": [
+                  "family-type"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "bgp.neighbor",
+          "primary_keys": [
+            "address"
+          ],
+          "primitive": false
+        },
+        "ipv4_address_family.route_targets": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "export": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "asn-ip"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "import": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "asn-ip"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              }
+            },
+            "fields": {
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn-id",
+                "schema": {
+                  "maximum": 65527,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "vpn_id_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "vpn-id",
+              "export",
+              "import"
+            ],
+            "required": [],
+            "trees": {
+              "exports": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "asn_ip": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "asn-ip",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "asn_ip_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "asn-ip"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "export",
+                "primary_keys": [
+                  "asn-ip"
+                ],
+                "primitive": false
+              },
+              "imports": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "asn_ip": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "asn-ip",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "asn_ip_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "asn-ip"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "import",
+                "primary_keys": [
+                  "asn-ip"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "bgp.target.route-target-ipv4",
+          "primary_keys": [
+            "vpn-id"
+          ],
+          "primitive": false
+        },
+        "ipv6_address_family.neighbors": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "address-family": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "family-type"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "allowas-in": {
+                "as-number": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "as-override": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "description": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "ebgp-multihop": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "next-hop-self": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "password": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-community": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-ext-community": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-label": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-label-explicit": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "shutdown": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "timers": {
+                "holdtime": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                },
+                "keepalive": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "update-source": {
+                "if-name": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              }
+            },
+            "fields": {
+              "address": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "address",
+                "schema": {
+                  "format": "ipv6",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "address_variable"
+              },
+              "allow_as_in": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "allowas-in.as-number",
+                "schema": {
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "allow_as_in_variable"
+              },
+              "as_override": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "as-override",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "as_override_variable"
+              },
+              "description": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "description",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "description_variable"
+              },
+              "ebgp_multihop": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "ebgp-multihop",
+                "schema": {
+                  "maximum": 255,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "ebgp_multihop_variable"
+              },
+              "holdtime": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "timers.holdtime",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "holdtime_variable"
+              },
+              "keepalive": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "timers.keepalive",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "keepalive_variable"
+              },
+              "next_hop_self": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "next-hop-self",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "next_hop_self_variable"
+              },
+              "password": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "password",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "password_variable"
+              },
+              "remote_as": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "remote-as",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "remote_as_variable"
+              },
+              "send_community": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-community",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_community_variable"
+              },
+              "send_extended_community": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-ext-community",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_extended_community_variable"
+              },
+              "send_label": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-label",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_label_variable"
+              },
+              "send_label_explicit_null": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-label-explicit",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_label_explicit_null_variable"
+              },
+              "shutdown": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "shutdown",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "shutdown_variable"
+              },
+              "source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "update-source.if-name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_interface_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "address",
+              "description",
+              "shutdown",
+              "remote-as",
+              "timers",
+              "timers",
+              "update-source",
+              "next-hop-self",
+              "send-community",
+              "send-ext-community",
+              "ebgp-multihop",
+              "password",
+              "send-label",
+              "send-label-explicit",
+              "as-override",
+              "allowas-in",
+              "address-family"
+            ],
+            "required": [],
+            "trees": {
+              "address_families": {
+                "definition": {
+                  "always_priority_order": false,
+                  "conditional_trees": [
+                    {
+                      "definition": {
+                        "defaults": {},
+                        "fields": {
+                          "$literal:direction": {
+                            "boolean_string": false,
+                            "literal": "in",
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "direction",
+                            "schema": {
+                              "enum": [
+                                "in",
+                                "out"
+                              ],
+                              "type": "string"
+                            },
+                            "set": false
+                          },
+                          "route_policy_in": {
+                            "boolean_string": false,
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "pol-name",
+                            "schema": {
+                              "maxLength": 32,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "set": false,
+                            "variable": "route_policy_in_variable"
+                          }
+                        },
+                        "optional": "",
+                        "required": [],
+                        "trees": {},
+                        "unavailable_inputs": {}
+                      },
+                      "path": "route-policy",
+                      "primary_keys": [
+                        "direction"
+                      ],
+                      "triggers": [
+                        "route_policy_in",
+                        "route_policy_in_variable"
+                      ]
+                    },
+                    {
+                      "definition": {
+                        "defaults": {},
+                        "fields": {
+                          "$literal:direction": {
+                            "boolean_string": false,
+                            "literal": "out",
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "direction",
+                            "schema": {
+                              "enum": [
+                                "in",
+                                "out"
+                              ],
+                              "type": "string"
+                            },
+                            "set": false
+                          },
+                          "route_policy_out": {
+                            "boolean_string": false,
+                            "object_type": "object",
+                            "omit_null": true,
+                            "path": "pol-name",
+                            "schema": {
+                              "maxLength": 32,
+                              "minLength": 1,
+                              "type": "string"
+                            },
+                            "set": false,
+                            "variable": "route_policy_out_variable"
+                          }
+                        },
+                        "optional": "",
+                        "required": [],
+                        "trees": {},
+                        "unavailable_inputs": {}
+                      },
+                      "path": "route-policy",
+                      "primary_keys": [
+                        "direction"
+                      ],
+                      "triggers": [
+                        "route_policy_out",
+                        "route_policy_out_variable"
+                      ]
+                    }
+                  ],
+                  "defaults": {
+                    "maximum-prefixes": {
+                      "prefix-num": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      },
+                      "restart": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      },
+                      "threshold": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      },
+                      "warning-only": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      }
+                    },
+                    "route-policy": {
+                      "vipObjectType": "tree",
+                      "vipPrimaryKey": [
+                        "direction"
+                      ],
+                      "vipType": "ignore",
+                      "vipValue": []
+                    }
+                  },
+                  "fields": {
+                    "family_type": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "family-type",
+                      "schema": {
+                        "enum": [
+                          "ipv6-unicast"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "maximum_prefixes": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.prefix-num",
+                      "schema": {
+                        "maximum": 4294967295,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_variable"
+                    },
+                    "maximum_prefixes_restart": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.restart",
+                      "schema": {
+                        "maximum": 65535,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_restart_variable"
+                    },
+                    "maximum_prefixes_threshold": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.threshold",
+                      "schema": {
+                        "maximum": 100,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_threshold_variable"
+                    },
+                    "maximum_prefixes_warning_only": {
+                      "boolean_string": true,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "maximum-prefixes.warning-only",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "maximum_prefixes_warning_only_variable"
+                    }
+                  },
+                  "optional": "optional",
+                  "priority_order": [
+                    "family-type",
+                    "maximum-prefixes",
+                    "maximum-prefixes",
+                    "maximum-prefixes",
+                    "maximum-prefixes",
+                    "route-policy"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "address-family",
+                "primary_keys": [
+                  "family-type"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "bgp.ipv6-neighbor",
+          "primary_keys": [
+            "address"
+          ],
+          "primitive": false
+        },
+        "ipv6_address_family.route_targets": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "export": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "asn-ip"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "import": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "asn-ip"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              }
+            },
+            "fields": {
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn-id",
+                "schema": {
+                  "maximum": 65527,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "vpn_id_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "vpn-id",
+              "export",
+              "import"
+            ],
+            "required": [],
+            "trees": {
+              "exports": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "asn_ip": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "asn-ip",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "asn_ip_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "asn-ip"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "export",
+                "primary_keys": [
+                  "asn-ip"
+                ],
+                "primitive": false
+              },
+              "imports": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "asn_ip": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "asn-ip",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "asn_ip_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "asn-ip"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "import",
+                "primary_keys": [
+                  "asn-ip"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "bgp.target.route-target-ipv6",
+          "primary_keys": [
+            "vpn-id"
+          ],
+          "primitive": false
+        },
+        "mpls_interfaces": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "if-name": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "interface_name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "if-name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "interface_name_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "if-name"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "bgp.mpls-interface",
+          "primary_keys": [
+            "if-name"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_bgp",
+      "unavailable_inputs": {
+        "compare_router_id_variable": "Pinned module reads compare_router_idr_variable instead",
+        "ipv4_address_family.neighbors[].address_families[].optional_variable": "Pinned provider model omits address-family optional_variable",
+        "ipv4_address_family.neighbors[].optional_variable": "Pinned provider model omits neighbor optional_variable",
+        "ipv6_address_family.neighbors[].address_families[].optional_variable": "Pinned provider model omits address-family optional_variable",
+        "ipv6_address_family.neighbors[].optional_variable": "Pinned provider model omits neighbor optional_variable"
+      }
+    },
     "cellular_controller_templates": {
       "defaults": {
         "lte": {

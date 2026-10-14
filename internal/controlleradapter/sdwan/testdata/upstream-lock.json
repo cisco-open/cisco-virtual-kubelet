@@ -430,8 +430,12 @@
       "type": "sdwan_cisco_bgp_feature_template",
       "name": "cisco_bgp_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "classic-bgp"
+      ]
     },
     {
       "type": "sdwan_cisco_dhcp_server_feature_template",
