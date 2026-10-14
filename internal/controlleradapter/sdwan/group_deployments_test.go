@@ -171,3 +171,19 @@ func TestGroupVariableValue(t *testing.T) {
 		}
 	}
 }
+
+func TestGroupVariableSchema(t *testing.T) {
+	c := testClient(t, func(w http.ResponseWriter, request *http.Request) {
+		if auth(w, request) {
+			return
+		}
+		if request.URL.Path != "/dataservice/v1/config-group/group1/device/variables/schema" {
+			t.Errorf("unexpected schema path %s", request.URL.Path)
+		}
+		fmt.Fprint(w, `[{"variables":[{"schema":{"properties":{"region-id":{"properties":{"value":{"type":"integer"}}},"cvkList":{"properties":{"value":{"type":"array","items":{"type":"boolean"}}}}}}}]}]`)
+	})
+	types := c.groupVariableTypes(context.Background(), "/dataservice/v1/config-group/group1/device/")
+	if types["region-id"] != "integer" || types["cvkList"] != "boolean" {
+		t.Fatal("group variable schema types missing", types)
+	}
+}
