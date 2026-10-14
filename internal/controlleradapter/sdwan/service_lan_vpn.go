@@ -43,7 +43,7 @@ func compileServiceLANVPNs(p FeatureProfile, collection, key string) ([]Resource
 }
 
 func serviceLANVPNData(input map[string]any) (map[string]any, error) {
-	allowed := map[string]bool{"name": true, "description": true, "vpn_id": true, "vpn_id_variable": true, "vpn_name": true, "vpn_name_variable": true, "sdwan_remote_access": true, "host_mappings": true, "ipv4_static_routes": true, "ipv6_static_routes": true, "ospf": true, "ospfv3_ipv4": true, "ospfv3_ipv6": true, "eigrp": true, "multicast": true, "svi_interfaces": true, "ethernet_interfaces": true}
+	allowed := map[string]bool{"name": true, "description": true, "vpn_id": true, "vpn_id_variable": true, "vpn_name": true, "vpn_name_variable": true, "sdwan_remote_access": true, "host_mappings": true, "ipv4_static_routes": true, "ipv6_static_routes": true, "ospf": true, "ospfv3_ipv4": true, "ospfv3_ipv6": true, "eigrp": true, "multicast": true, "svi_interfaces": true, "ethernet_interfaces": true, "gre_interfaces": true}
 	for _, field := range []string{"ipv4_omp_admin_distance", "ipv6_omp_admin_distance", "ipv4_primary_dns_address", "ipv4_secondary_dns_address", "ipv6_primary_dns_address", "ipv6_secondary_dns_address"} {
 		allowed[field] = true
 		allowed[field+"_variable"] = true

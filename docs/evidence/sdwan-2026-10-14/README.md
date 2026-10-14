@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 130 resource declarations
+Native fixture coverage now includes 133 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -446,3 +446,5 @@ Six VPN routing associations passed native create/observe/idempotent-update/obse
 `service-lan-vpn-ethernet.yaml` passed native create/observe/update/observe/cleanup and live Kubernetes reconciliation using the nested LAN VPN Ethernet endpoint. Its fixture covers IPv4 addressing and ARP. `service-lan-vpn-ethernet-dhcp-association.yaml` passed the same native lifecycle and live reconciliation through the three-level DHCP association endpoint. Both are unattached parcels; advanced interface branches and device behavior remain untested.
 
 `service-lan-vpn-ethernet-tracker-association.yaml` and `service-lan-vpn-ethernet-tracker-group-association.yaml` passed native create/observe/idempotent-update/observe/delete and live Kubernetes reconciliation. CVK resolved the nested interface and referenced tracker IDs; the group fixture also resolved two tracker dependencies. Device activation remains untested.
+
+`service-lan-vpn-gre.yaml`, `transport-wan-vpn-gre.yaml`, and `transport-wan-vpn-gre-tracker-association.yaml` passed native create/observe/update/observe/cleanup and live Kubernetes reconciliation. The transport association resolved the nested WAN VPN, GRE interface and tracker parcel IDs. The fixtures cover unprotected IPv4 GRE with static source/destination; advanced GRE branches and device behavior remain untested.

@@ -159,6 +159,21 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, serviceEthernets...)
+	serviceGREs, err := compileServiceGREs(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, serviceGREs...)
+	transportGREs, err := compileTransportGREs(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, transportGREs...)
+	transportGRETrackers, err := compileTransportGRETrackerAssociations(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, transportGRETrackers...)
 	sviAssociations, err := compileSVIDHCPAssociations(p, collection, key)
 	if err != nil {
 		return nil, err

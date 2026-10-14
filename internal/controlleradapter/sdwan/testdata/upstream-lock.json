@@ -837,8 +837,11 @@
       "type": "sdwan_service_lan_vpn_interface_gre_feature",
       "name": "service_lan_vpn_interface_gre_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "service-lan-vpn-gre.yaml",
+      "limits": "Unattached GRE fixture qualified through native lifecycle and live Kubernetes reconciliation; optional GRE branches and device activation excluded"
     },
     {
       "type": "sdwan_service_lan_vpn_interface_ipsec_feature",
@@ -1374,15 +1377,21 @@
       "type": "sdwan_transport_wan_vpn_interface_gre_feature",
       "name": "transport_wan_vpn_interface_gre_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-wan-vpn-gre.yaml",
+      "limits": "Unattached GRE fixture qualified through native lifecycle and live Kubernetes reconciliation; optional GRE branches and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_interface_gre_feature_associate_tracker_feature",
       "name": "transport_wan_vpn_interface_gre_feature_associate_tracker_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-wan-vpn-gre-tracker-association.yaml",
+      "limits": "Unattached GRE fixture qualified through native lifecycle and live Kubernetes reconciliation; optional GRE branches and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_interface_ipsec_feature",

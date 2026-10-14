@@ -7,7 +7,7 @@ schemas, defaults and API behavior. Terraform is not a build, test or deployment
 dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 130 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 133 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -65,6 +65,7 @@ parity**. The pinned upstream module has 226 resource declarations. 130 resource
 | `examples/configs/sdwan/service-lan-vpn-ospfv3-associations.yaml` | Service LAN VPN to OSPFv3 IPv4 and IPv6 associations | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/service-lan-vpn-ethernet.yaml` and `service-lan-vpn-ethernet-dhcp-association.yaml` | Service LAN VPN Ethernet interface and DHCP association | Native lifecycle, Kubernetes reconciliation; advanced attributes and device activation pending |
 | `examples/configs/sdwan/service-lan-vpn-ethernet-tracker-association.yaml` and `service-lan-vpn-ethernet-tracker-group-association.yaml` | Ethernet-to-tracker and tracker-group associations | Native lifecycle, Kubernetes reconciliation; device activation pending |
+| `examples/configs/sdwan/service-lan-vpn-gre.yaml`, `transport-wan-vpn-gre.yaml`, and `transport-wan-vpn-gre-tracker-association.yaml` | Service and transport GRE interfaces plus transport tracker association | Native lifecycle, Kubernetes reconciliation; advanced GRE branches and device activation pending |
 | `examples/configs/sdwan/service-lan-vpn-svi.yaml` | Service LAN VPN SVI with IPv4/IPv6, ARP and MTU | Native lifecycle, Kubernetes reconciliation; VRRP and ACL pending |
 | `examples/configs/sdwan/service-lan-vpn-svi-dhcp-association.yaml` | SVI-to-DHCP server association through nested LAN VPN path | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/transport-wan-vpn.yaml` | Transport WAN VPN with ECMP, NAT64, TE service, and static routes | Native lifecycle, Kubernetes reconciliation |
@@ -83,7 +84,7 @@ An additional 35 declarations have native implementations but remain unqualified
 the policy-object profile and all 32 modern policy-object collections, system
 CA certificates, and custom applications (the lab lacks SD-AVC). SIG credential creation now passes after fixing the global flag
 and variable-secret payloads.
-60 declarations remain pending and TrustSec remains compatibility-blocked.
+57 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 
