@@ -7,6 +7,13 @@ sdwan:
       - name: CVK-CENTRAL-VPNS
         vpn_ids: [10]
   centralized_policies:
+    feature_policies:
+      - name: CVK-CENTRAL-POLICY
+        description: Managed by CVK
+        mesh_topology:
+          - policy_definition: CVK-CENTRAL-MESH
+        vpn_membership:
+          - policy_definition: CVK-CENTRAL-MEMBERSHIP
     definitions:
       control_policy:
         vpn_membership:

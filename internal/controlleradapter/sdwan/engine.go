@@ -19,7 +19,7 @@ type Observation struct {
 }
 
 func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) {
-	if r.Kind == "localized-policy" {
+	if r.Kind == "localized-policy" || r.Kind == "centralized-policy" {
 		return c.observeLocalizedPolicy(ctx, r)
 	}
 	if r.Kind == "classic-definition" {
@@ -83,7 +83,7 @@ func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) 
 	return &Observation{ID: id, Body: body, Attached: attached}, nil
 }
 func (c *Client) Create(ctx context.Context, r Resource) (string, error) {
-	if r.Kind == "localized-policy" {
+	if r.Kind == "localized-policy" || r.Kind == "centralized-policy" {
 		return c.createLocalizedPolicy(ctx, r)
 	}
 	if r.Kind == "classic-definition" {
@@ -111,7 +111,7 @@ func (c *Client) Update(ctx context.Context, r Resource, o *Observation) error {
 		return errors.New("SD-WAN update requires a qualified unattached resource")
 	}
 	if r.Kind != "" {
-		if r.Kind == "localized-policy" {
+		if r.Kind == "localized-policy" || r.Kind == "centralized-policy" {
 			return c.updateLocalizedPolicy(ctx, r, o)
 		}
 		if r.Kind == "classic-definition" {

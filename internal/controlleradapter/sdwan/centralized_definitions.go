@@ -16,7 +16,8 @@ type PolicyListReference struct {
 }
 
 type CentralizedPolicies struct {
-	Definitions struct {
+	FeaturePolicies []CentralizedFeaturePolicy `json:"feature_policies,omitempty"`
+	Definitions     struct {
 		ControlPolicy struct {
 			VPNMembership []CentralizedVPNMembership `json:"vpn_membership,omitempty"`
 			MeshTopology  []CentralizedMeshTopology  `json:"mesh_topology,omitempty"`
@@ -25,6 +26,20 @@ type CentralizedPolicies struct {
 			Cflowd []CentralizedCflowd `json:"cflowd,omitempty"`
 		} `json:"data_policy"`
 	} `json:"definitions"`
+}
+type CentralizedFeaturePolicy struct {
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	MeshTopology []struct {
+		PolicyDefinition string `json:"policy_definition"`
+	} `json:"mesh_topology,omitempty"`
+	VPNMembership []struct {
+		PolicyDefinition string `json:"policy_definition"`
+	} `json:"vpn_membership,omitempty"`
+	Cflowd []struct {
+		PolicyDefinition string   `json:"policy_definition"`
+		SiteLists        []string `json:"site_lists"`
+	} `json:"cflowd,omitempty"`
 }
 type CentralizedCflowd struct {
 	Name                string `json:"name"`
@@ -172,6 +187,32 @@ func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) 
 		}
 		definition["collectors"] = collectors
 		out = append(out, Resource{Key: "centralized_policies/definitions/data_policy/cflowd/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "cflowd_policy_definition", Collection: "/dataservice/template/policy/definition/cflowd/", Body: map[string]any{"type": "cflowd", "name": p.Name, "description": p.Description, "definition": definition}})
+	}
+	for _, p := range input.FeaturePolicies {
+		if p.Name == "" || p.Description == "" || seen["feature/"+p.Name] {
+			return nil, errors.New("invalid or duplicate centralized feature policy")
+		}
+		seen["feature/"+p.Name] = true
+		refs := []ClassicDefinitionReference{}
+		assembly := []any{}
+		for _, item := range p.MeshTopology {
+			if item.PolicyDefinition == "" {
+				return nil, errors.New("empty mesh policy definition reference")
+			}
+			refs = append(refs, ClassicDefinitionReference{Type: "centralized_policies/definitions/control_policy/mesh_topology", Name: item.PolicyDefinition})
+			assembly = append(assembly, map[string]any{"definitionId": "", "type": "mesh", "entries": []any{}})
+		}
+		for _, item := range p.VPNMembership {
+			if item.PolicyDefinition == "" {
+				return nil, errors.New("empty membership policy definition reference")
+			}
+			refs = append(refs, ClassicDefinitionReference{Type: "centralized_policies/definitions/control_policy/vpn_membership", Name: item.PolicyDefinition})
+			assembly = append(assembly, map[string]any{"definitionId": "", "type": "vpnMembershipGroup", "entries": []any{}})
+		}
+		if len(p.Cflowd) > 0 {
+			return nil, errors.New("centralized cflowd policy binding is not yet implemented")
+		}
+		out = append(out, Resource{Key: "centralized_policies/feature_policies/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "centralized-policy", Type: "centralized_policy", Collection: "/dataservice/template/policy/vsmart/", ClassicDefinitionRefs: refs, Body: map[string]any{"policyType": "feature", "policyName": p.Name, "policyDescription": p.Description, "policyDefinition": map[string]any{"assembly": assembly}}})
 	}
 	return out, nil
 }

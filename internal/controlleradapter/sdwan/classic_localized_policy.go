@@ -47,6 +47,9 @@ var classicDefinitionTypes = map[string]classicDefinitionSpec{
 	"ipv6_access_control_lists":   {"aclv6/", "aclv6"},
 	"ipv4_device_access_policies": {"deviceaccesspolicy/", "deviceAccessPolicy"},
 	"ipv6_device_access_policies": {"deviceaccesspolicyv6/", "deviceAccessPolicyv6"},
+	"centralized_policies/definitions/control_policy/mesh_topology":  {"mesh/", "mesh"},
+	"centralized_policies/definitions/control_policy/vpn_membership": {"vpnmembershipgroup/", "vpnMembershipGroup"},
+	"centralized_policies/definitions/data_policy/cflowd":            {"cflowd/", "cflowd"},
 }
 
 func compileLocalizedFeaturePolicies(items []LocalizedFeaturePolicy) ([]Resource, error) {
@@ -116,7 +119,7 @@ func compileLocalizedFeaturePolicies(items []LocalizedFeaturePolicy) ([]Resource
 }
 
 func (c *Client) resolveLocalizedDefinitions(ctx context.Context, r Resource) error {
-	if r.Kind != "localized-policy" {
+	if r.Kind != "localized-policy" && r.Kind != "centralized-policy" {
 		return nil
 	}
 	definition, ok := r.Body["policyDefinition"].(map[string]any)
@@ -222,6 +225,9 @@ func equalLocalizedPolicy(r Resource, observed map[string]any) (bool, error) {
 		return false, ErrResponse
 	}
 	wanted := r.Body["policyDefinition"].(map[string]any)
+	if r.Kind == "centralized-policy" {
+		return equalCentralizedAssembly(actual, wanted)
+	}
 	actualSettings, ok := actual["settings"].(map[string]any)
 	if !ok {
 		return false, ErrResponse
@@ -245,6 +251,28 @@ func equalLocalizedPolicy(r Resource, observed map[string]any) (bool, error) {
 			return false, ErrResponse
 		}
 		want := wantAssembly[i].(map[string]any)
+		if !strings.EqualFold(fmt.Sprint(row["type"]), fmt.Sprint(want["type"])) || row["definitionId"] != want["definitionId"] {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+func equalCentralizedAssembly(actual, wanted map[string]any) (bool, error) {
+	rows, ok := actual["assembly"].([]any)
+	if !ok {
+		return false, ErrResponse
+	}
+	expected := wanted["assembly"].([]any)
+	if len(rows) != len(expected) {
+		return false, nil
+	}
+	for i, raw := range rows {
+		row, ok := raw.(map[string]any)
+		if !ok {
+			return false, ErrResponse
+		}
+		want := expected[i].(map[string]any)
 		if !strings.EqualFold(fmt.Sprint(row["type"]), fmt.Sprint(want["type"])) || row["definitionId"] != want["definitionId"] {
 			return false, nil
 		}

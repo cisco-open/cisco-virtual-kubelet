@@ -33,8 +33,11 @@
       "type": "sdwan_centralized_policy",
       "name": "centralized_policy",
       "source": "sdwan_centralized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-centralized-membership-mesh"
+      ]
     },
     {
       "type": "sdwan_custom_control_topology_policy_definition",
