@@ -19,6 +19,31 @@ type ConfigurationGroup struct {
 	OtherProfile     string `json:"other_profile,omitempty"`
 }
 
+type TopologyGroup struct {
+	Name            string `json:"name"`
+	Description     string `json:"description,omitempty"`
+	TopologyProfile string `json:"topology_profile"`
+}
+
+func compileTopologyGroups(groups []TopologyGroup, profiles []Resource) ([]Resource, error) {
+	known := map[string]bool{}
+	for _, p := range profiles {
+		if p.Kind == "profile" && p.Type == "topology" {
+			known[p.Name] = true
+		}
+	}
+	seen := map[string]bool{}
+	out := make([]Resource, 0, len(groups))
+	for _, g := range groups {
+		if g.Name == "" || len(g.Name) > 128 || seen[g.Name] || !known[g.TopologyProfile] {
+			return nil, errors.New("invalid topology group or undeclared topology profile")
+		}
+		seen[g.Name] = true
+		out = append(out, Resource{Key: "topology_groups/" + g.Name, Name: g.Name, Section: "topology_groups", Kind: "group", Type: "topology_group", Collection: "/dataservice/v1/topology-group", ProfileRefs: map[string]string{"topology": g.TopologyProfile}, Body: map[string]any{"name": g.Name, "description": g.Description, "solution": "sdwan", "profiles": []any{}}})
+	}
+	return out, nil
+}
+
 func compileGroups(groups []ConfigurationGroup, profiles []Resource) ([]Resource, error) {
 	known := map[string]bool{}
 	for _, p := range profiles {
@@ -97,6 +122,9 @@ func (c *Client) observeGroup(ctx context.Context, r Resource) (*Observation, er
 	var body map[string]any
 	if e := c.Request(ctx, "GET", r.Collection+"/"+id, nil, &body); e != nil {
 		return nil, e
+	}
+	if r.Type == "topology_group" {
+		return &Observation{ID: id, Body: body}, nil
 	}
 	var associated struct {
 		Devices *[]any `json:"devices"`

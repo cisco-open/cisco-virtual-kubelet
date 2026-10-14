@@ -34,6 +34,7 @@ type SDWAN struct {
 	NetworkHierarchy     *NetworkHierarchy          `json:"network_hierarchy,omitempty"`
 	PolicyObjects        map[string]json.RawMessage `json:"policy_objects,omitempty"`
 	ConfigurationGroups  []ConfigurationGroup       `json:"configuration_groups,omitempty"`
+	TopologyGroups       []TopologyGroup            `json:"topology_groups,omitempty"`
 	FeatureProfiles      map[string]json.RawMessage `json:"feature_profiles,omitempty"`
 	EdgeFeatureTemplates map[string]json.RawMessage `json:"edge_feature_templates"`
 }
@@ -183,6 +184,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, groups...)
+	topologyGroups, err := compileTopologyGroups(doc.SDWAN.TopologyGroups, profiles)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, topologyGroups...)
 	policyProfile := ""
 	for _, r := range out {
 		if r.Kind == "profile" && r.Type == "policy-object" {

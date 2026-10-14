@@ -2015,8 +2015,8 @@
       "type": "sdwan_topology_group",
       "name": "topology_group",
       "source": "sdwan_topology_groups.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     }
   ]
 }

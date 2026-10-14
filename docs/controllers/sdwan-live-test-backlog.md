@@ -5,12 +5,12 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 151 |
+| Fixture-qualified against live Manager | 152 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 39 |
+| Implementation still pending | 38 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies the custom-control topology parcel with a route rule and resolved hierarchy site UUID through native lifecycle and Kubernetes reconciliation. The preceding increment qualifies service and transport Ethernet port-channel member-link parcels using their conditional payload branches. The preceding increment qualifies service and transport BGP parcels with AS number, router ID, and one IPv4 or IPv6 neighbor and advertised network, plus their VPN associations. Redistribution and policy references remain outside these fixtures. The preceding increment qualifies a non-tunnel WAN cellular parcel and its IPv4 tracker and tracker-group associations. The pinned provider points the group association to `tracker/`, but Manager actually stores and reads it at `trackergroup/`; CVK uses the observed Manager path. The preceding increment qualifies the non-tunnel WAN Ethernet parcel and all four IPv4/IPv6 tracker and tracker-group associations through native lifecycle and live Kubernetes reconciliation. Manager requires IPv6 settings on the parent before an IPv6 tracker can be associated. The preceding increment qualifies service and transport IPsec interface parcels and a transport IPsec-to-IPv4-tracker association. Both use a variable preshared-key reference and passed native lifecycle plus live Kubernetes reconciliation. The preceding increment qualifies service and transport GRE interface parcels and a transport GRE-to-IPv4-tracker association through native lifecycle and live Kubernetes reconciliation. The preceding increment qualifies Ethernet interface associations to IPv4 trackers and tracker groups through native lifecycle and live Kubernetes reconciliation. The preceding increment qualifies a service LAN VPN Ethernet interface and its three-level DHCP-server association through native lifecycle and live Kubernetes reconciliation. The Ethernet fixture covers IPv4 addressing and ARP; NAT, port-channel, VRRP, ACL, TrustSec and other advanced branches remain outside that fixture. The preceding increment qualifies the three-level service LAN VPN SVI-to-DHCP association. The preceding increment qualified a service LAN VPN SVI child with IPv4/IPv6 addressing, ARP and MTU. VRRP, ACL references and DHCP attachment remain pending. The preceding increment qualified six service and transport VPN routing associations: OSPF, EIGRP, multicast, and service OSPFv3 IPv4/IPv6. Each resolved its parent VPN and referenced routing parcel IDs through the Manager before association. The preceding increment qualified the core service LAN VPN parent and dual-router HA with a resolved VPN reference. The LAN VPN compiler currently accepts ID, name, OMP distance, DNS, host mapping, and IPv4/IPv6 next-hop and null-route fields; NAT, advertisements, route leaking and child interfaces are still outstanding. The preceding increment qualified the transport management VPN Ethernet child and its nested Manager path. The preceding increment qualified the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
+The latest increment qualifies a topology group referencing a CVK-created topology profile through native lifecycle and Kubernetes reconciliation. The preceding increment qualifies the custom-control topology parcel with a route rule and resolved hierarchy site UUID through native lifecycle and Kubernetes reconciliation. The preceding increment qualifies service and transport Ethernet port-channel member-link parcels using their conditional payload branches. The preceding increment qualifies service and transport BGP parcels with AS number, router ID, and one IPv4 or IPv6 neighbor and advertised network, plus their VPN associations. Redistribution and policy references remain outside these fixtures. The preceding increment qualifies a non-tunnel WAN cellular parcel and its IPv4 tracker and tracker-group associations. The pinned provider points the group association to `tracker/`, but Manager actually stores and reads it at `trackergroup/`; CVK uses the observed Manager path. The preceding increment qualifies the non-tunnel WAN Ethernet parcel and all four IPv4/IPv6 tracker and tracker-group associations through native lifecycle and live Kubernetes reconciliation. Manager requires IPv6 settings on the parent before an IPv6 tracker can be associated. The preceding increment qualifies service and transport IPsec interface parcels and a transport IPsec-to-IPv4-tracker association. Both use a variable preshared-key reference and passed native lifecycle plus live Kubernetes reconciliation. The preceding increment qualifies service and transport GRE interface parcels and a transport GRE-to-IPv4-tracker association through native lifecycle and live Kubernetes reconciliation. The preceding increment qualifies Ethernet interface associations to IPv4 trackers and tracker groups through native lifecycle and live Kubernetes reconciliation. The preceding increment qualifies a service LAN VPN Ethernet interface and its three-level DHCP-server association through native lifecycle and live Kubernetes reconciliation. The Ethernet fixture covers IPv4 addressing and ARP; NAT, port-channel, VRRP, ACL, TrustSec and other advanced branches remain outside that fixture. The preceding increment qualifies the three-level service LAN VPN SVI-to-DHCP association. The preceding increment qualified a service LAN VPN SVI child with IPv4/IPv6 addressing, ARP and MTU. VRRP, ACL references and DHCP attachment remain pending. The preceding increment qualified six service and transport VPN routing associations: OSPF, EIGRP, multicast, and service OSPFv3 IPv4/IPv6. Each resolved its parent VPN and referenced routing parcel IDs through the Manager before association. The preceding increment qualified the core service LAN VPN parent and dual-router HA with a resolved VPN reference. The LAN VPN compiler currently accepts ID, name, OMP distance, DNS, host mapping, and IPv4/IPv6 next-hop and null-route fields; NAT, advertisements, route leaking and child interfaces are still outstanding. The preceding increment qualified the transport management VPN Ethernet child and its nested Manager path. The preceding increment qualified the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
 
 The previous increment qualified seven declarations: classic SVI, cellular and
 switchport templates, service EIGRP, service switchport, service multicast, and Zscaler SSE. Each passed native live
@@ -94,7 +94,7 @@ All examples have report-mode companion `NetworkControllerConfig` manifests.
 
 ## Implementation still required
 
-These 39 declarations are not merely waiting for live tests. Their native mapping
+These 38 declarations are not merely waiting for live tests. Their native mapping
 and/or lifecycle implementation remains unfinished. They must not be counted as parity.
 
 ### sdwan_centralized_policies.tf
@@ -135,52 +135,18 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 
 ### sdwan_features_service.tf
 
-- `sdwan_service_routing_bgp_feature.service_routing_bgp_feature`
-- `sdwan_service_ipv4_acl_feature.service_ipv4_acl_feature`
-- `sdwan_service_lan_vpn_feature_associate_routing_bgp_feature.service_lan_vpn_feature_associate_routing_bgp_feature`
-- `sdwan_service_lan_vpn_interface_ethernet_feature.service_lan_vpn_interface_ethernet_member_link_feature`
-- `sdwan_service_lan_vpn_interface_ethernet_feature.service_lan_vpn_interface_ethernet_feature`
-- `sdwan_service_lan_vpn_interface_ethernet_feature_associate_dhcp_server_feature.service_lan_vpn_interface_ethernet_feature_associate_dhcp_server_feature`
-- `sdwan_service_lan_vpn_interface_ethernet_feature_associate_tracker_feature.service_lan_vpn_interface_ethernet_feature_associate_tracker_feature`
-- `sdwan_service_lan_vpn_interface_ethernet_feature_associate_tracker_group_feature.service_lan_vpn_interface_ethernet_feature_associate_tracker_group_feature`
-- `sdwan_service_lan_vpn_interface_gre_feature.service_lan_vpn_interface_gre_feature`
-- `sdwan_service_lan_vpn_interface_ipsec_feature.service_lan_vpn_interface_ipsec_feature`
-- `sdwan_service_route_policy_feature.service_route_policy_feature`
-- `sdwan_service_ipv6_acl_feature.service_ipv6_acl_feature`
 
 ### sdwan_features_sse.tf
 
 
 ### sdwan_features_system.tf
 
-- `sdwan_system_ipv4_device_access_feature.system_ipv4_device_access_feature`
-- `sdwan_system_ipv6_device_access_feature.system_ipv6_device_access_feature`
 
 ### sdwan_features_topology.tf
 
-- `sdwan_topology_hub_spoke_feature.topology_hub_spoke_feature`
-- `sdwan_topology_mesh_feature.topology_mesh_feature`
 
 ### sdwan_features_transport.tf
 
-- `sdwan_transport_routing_bgp_feature.transport_routing_bgp_feature`
-- `sdwan_transport_ipv4_acl_feature.transport_ipv4_acl_feature`
-- `sdwan_transport_route_policy_feature.transport_route_policy_feature`
-- `sdwan_transport_wan_vpn_feature_associate_routing_bgp_feature.transport_wan_vpn_feature_associate_routing_bgp_feature`
-- `sdwan_transport_wan_vpn_interface_cellular_feature.transport_wan_vpn_interface_cellular_feature`
-- `sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_feature.transport_wan_vpn_interface_cellular_feature_associate_tracker_feature`
-- `sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature.transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature`
-- `sdwan_transport_wan_vpn_interface_ethernet_feature.transport_wan_vpn_interface_ethernet_member_link_feature`
-- `sdwan_transport_wan_vpn_interface_ethernet_feature.transport_wan_vpn_interface_ethernet_feature`
-- `sdwan_transport_wan_vpn_interface_ethernet_feature_associate_tracker_feature.transport_wan_vpn_interface_ethernet_feature_associate_tracker_feature`
-- `sdwan_transport_wan_vpn_interface_ethernet_feature_associate_tracker_group_feature.transport_wan_vpn_interface_ethernet_feature_associate_tracker_group_feature`
-- `sdwan_transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_feature.transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_feature`
-- `sdwan_transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_group_feature.transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_group_feature`
-- `sdwan_transport_wan_vpn_interface_gre_feature.transport_wan_vpn_interface_gre_feature`
-- `sdwan_transport_wan_vpn_interface_gre_feature_associate_tracker_feature.transport_wan_vpn_interface_gre_feature_associate_tracker_feature`
-- `sdwan_transport_wan_vpn_interface_ipsec_feature.transport_wan_vpn_interface_ipsec_feature`
-- `sdwan_transport_wan_vpn_interface_ipsec_feature_associate_tracker_feature.transport_wan_vpn_interface_ipsec_feature_associate_tracker_feature`
-- `sdwan_transport_ipv6_acl_feature.transport_ipv6_acl_feature`
 
 ### sdwan_inventory.tf
 
@@ -219,7 +185,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 ### sdwan_topology_groups.tf
 
 - `sdwan_activate_topology_group.activate_topology_group`
-- `sdwan_topology_group.topology_group`
 
 ## Compatibility-blocked
 

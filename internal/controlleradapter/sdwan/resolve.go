@@ -97,7 +97,11 @@ func Resolve(data []byte) ([]byte, error) {
 			}
 		}
 	}
-	if groups, ok := stripe["configuration_groups"].([]any); ok {
+	for _, groupKind := range []string{"configuration_groups", "topology_groups"} {
+		groups, ok := stripe[groupKind].([]any)
+		if !ok {
+			continue
+		}
 		for _, item := range groups {
 			g := item.(map[string]any)
 			if _, ok := g["description"]; !ok {
