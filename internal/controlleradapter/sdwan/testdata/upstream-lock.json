@@ -362,8 +362,10 @@
       "type": "sdwan_cedge_igmp_feature_template",
       "name": "cedge_igmp_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-igmp.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cisco_banner_feature_template",
@@ -378,8 +380,10 @@
       "type": "sdwan_cisco_bfd_feature_template",
       "name": "cisco_bfd_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-bfd.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cisco_bgp_feature_template",
@@ -392,8 +396,10 @@
       "type": "sdwan_cisco_dhcp_server_feature_template",
       "name": "cisco_dhcp_server_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-dhcp.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cisco_logging_feature_template",
@@ -413,15 +419,19 @@
       "type": "sdwan_cisco_ntp_feature_template",
       "name": "cisco_ntp_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-ntp.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cisco_omp_feature_template",
       "name": "cisco_omp_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-omp.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cisco_ospf_feature_template",
@@ -434,8 +444,10 @@
       "type": "sdwan_cedge_pim_feature_template",
       "name": "cedge_pim_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-pim.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cisco_secure_internet_gateway_feature_template",
@@ -476,8 +488,10 @@
       "type": "sdwan_cisco_thousandeyes_feature_template",
       "name": "cisco_thousandeyes_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-applications.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cisco_vpn_feature_template",
@@ -525,8 +539,10 @@
       "type": "sdwan_security_app_hosting_feature_template",
       "name": "security_app_hosting_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "classic-applications.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_cellular_controller_feature_template",

@@ -13,13 +13,20 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--terraform", default="terraform")
 parser.add_argument("--execute", action="store_true")
-parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular"], default="core")
+parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular", "classic-bfd", "classic-igmp", "classic-ntp", "classic-omp", "classic-pim", "classic-applications", "classic-dhcp"], default="core")
 args = parser.parse_args()
 if args.fixture_set == "policy-profile" and args.execute:
     raise SystemExit("Policy-profile execution needs a qualified empty-controller or read-only-parent workflow; plan-only is available")
 root = Path(__file__).resolve().parents[2]
 oracle = root / "examples/configs/sdwan/oracle"
 sets = {
+ "classic-dhcp": {"files": ["classic-dhcp"], "count": 1, "absent": "DHCP", "oracle": "DHCP"},
+ "classic-applications": {"files": ["classic-applications"], "count": 2, "absent": "Applications", "oracle": "Applications"},
+ "classic-pim": {"files": ["classic-pim"], "count": 1, "absent": "PIM", "oracle": "PIM"},
+ "classic-omp": {"files": ["classic-omp"], "count": 1, "absent": "OMP", "oracle": "OMP"},
+ "classic-ntp": {"files": ["classic-ntp"], "count": 1, "absent": "NTP", "oracle": "NTP"},
+ "classic-igmp": {"files": ["classic-igmp"], "count": 1, "absent": "IGMP", "oracle": "IGMP"},
+ "classic-bfd": {"files": ["classic-bfd"], "count": 1, "absent": "BFD", "oracle": "BFD"},
  "classic-cellular": {"files": ["classic-cellular"], "count": 2, "absent": "Cellular", "oracle": "Cellular"},
  "classic-templates": {"files": ["classic-templates"], "count": 3, "absent": "Classic", "oracle": "Classic"},
  "aaa-feature": {"files": ["aaa-feature"], "count": 2, "absent": "AAA", "oracle": "AAA"},
@@ -39,6 +46,11 @@ for key in ("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"):
         raise SystemExit(f"{key} is required")
 env.update(CVK_SDWAN_LIVE="1", CVK_SDWAN_ORACLE="1")
 allowed = {
+    "sdwan_cisco_dhcp_server_feature_template",
+    "sdwan_cisco_thousandeyes_feature_template",
+    "sdwan_security_app_hosting_feature_template",
+    "sdwan_cedge_pim_feature_template",
+    "sdwan_cisco_omp_feature_template",
     'sdwan_policy_object_feature_profile',
     'sdwan_policy_object_as_path_list',
     'sdwan_policy_object_class_map',
@@ -108,6 +120,9 @@ allowed = {
     'sdwan_cedge_multicast_feature_template',
     'sdwan_cli_template_feature_template',
     'sdwan_cellular_controller_feature_template',
+    'sdwan_cisco_bfd_feature_template',
+    'sdwan_cedge_igmp_feature_template',
+    'sdwan_cisco_ntp_feature_template',
     'sdwan_cellular_cedge_profile_feature_template',
     'sdwan_system_performance_monitoring_feature',
     'sdwan_tloc_list_policy_object',

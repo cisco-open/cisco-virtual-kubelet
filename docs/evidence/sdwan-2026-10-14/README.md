@@ -148,3 +148,31 @@ Tests cover resolver stability and strict rejection of unknown template collecti
 
 Full Go regression and focused race suites passed after the classic extension.
 Final read-only checks confirmed all five classic fixture names absent.
+
+## Classic trees, lists and application wrappers
+
+Eight additional resource declarations passed native create/read/update/read/delete,
+pinned Terraform comparison, and isolated Kubernetes reconciliation with cleanup:
+
+| Fixture | Kubernetes duration |
+|---|---:|
+| Classic BFD | 8.75s |
+| Classic IGMP | 8.82s |
+| Classic NTP | 8.31s |
+| Classic OMP | 8.40s |
+| Classic PIM | 8.45s |
+| Classic applications (two templates) | 11.64s |
+| Classic DHCP | 8.50s |
+
+All templates remain unattached. Tests cover nested row identities, optional flags,
+NTP credential variables, OMP's conditional OSPF advertisement and disjoint hold-time
+range, fixed application wrappers, DHCP ranges and static leases. No application
+was started and no DHCP service was enabled on a router.
+
+PIM differential testing found a missing empty `send-rp-discovery` object. The
+metadata generator now preserves these provider defaults. PIM RP-address `optional`
+is not serialized by the pinned provider and is explicitly unsupported. Temporary
+diagnostic instrumentation was removed after resolving the mismatch.
+
+Full Go regression and focused race suites passed. Classic metadata regenerated
+byte-for-byte, and final read-only checks confirmed all new fixture names absent.

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/netip"
 	"sort"
 	"strconv"
 )
@@ -15,18 +16,35 @@ import (
 var classicDefinitions []byte
 
 type classicField struct {
+	Ranges         string
+	Literal        any
+	Derived        bool
+	When           string
+	DerivedValue   any `json:"derived_value"`
+	Set            bool
 	ObjectType     string `json:"object_type"`
 	Path, Variable string
 	Schema         map[string]any
 	OmitNull       bool `json:"omit_null"`
 	BooleanString  bool `json:"boolean_string"`
 }
+type classicTree struct {
+	Primitive   bool
+	Path        string
+	PrimaryKeys []string `json:"primary_keys"`
+	Definition  classicDefinition
+}
 type classicDefinition struct {
-	Defaults    map[string]any
-	Type        string
-	Fields      map[string]classicField
-	Required    []string
-	DeviceTypes []string `json:"device_types"`
+	Wrapper             *classicTree
+	AlwaysPriorityOrder bool `json:"always_priority_order"`
+	Trees               map[string]classicTree
+	Optional            string
+	PriorityOrder       []string `json:"priority_order"`
+	Defaults            map[string]any
+	Type                string
+	Fields              map[string]classicField
+	Required            []string
+	DeviceTypes         []string `json:"device_types"`
 }
 
 func compileClassicTemplates(collection string, templates []map[string]any, override []string) ([]Resource, error) {
@@ -83,59 +101,195 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 			}
 		}
 		sort.Strings(mapped)
-		for _, field := range definition.Required {
-			if input[field] == nil {
-				return nil, fmt.Errorf("%s is required", field)
-			}
-		}
-		allowed := map[string]bool{"name": true, "description": true, "device_types": true}
-		data := map[string]any{}
-		baseline, err := json.Marshal(definition.Defaults)
+		data, err := classicData(definition, input, true)
 		if err != nil {
 			return nil, err
 		}
-		if err = json.Unmarshal(baseline, &data); err != nil {
-			return nil, err
-		}
-		for public, field := range definition.Fields {
-			allowed[public] = true
-			var variable any
-			if field.Variable != "" {
-				allowed[field.Variable] = true
-				variable = input[field.Variable]
-			}
-			leaf := map[string]any{"vipObjectType": field.ObjectType}
-			if variable != nil {
-				v, ok := variable.(string)
-				if !ok || len(v) == 0 || len(v) > 128 {
-					return nil, fmt.Errorf("invalid %s variable", public)
-				}
-				leaf["vipType"] = "variableName"
-				leaf["vipVariableName"] = v
-			} else if value := input[public]; value != nil {
-				if !validScalarValue(value, field.Schema) {
-					return nil, fmt.Errorf("invalid %s value", public)
-				}
-				if field.BooleanString {
-					value = strconv.FormatBool(value.(bool))
-				}
-				leaf["vipType"] = "constant"
-				leaf["vipValue"] = value
-			} else if field.OmitNull {
-				continue
-			} else {
-				leaf["vipType"] = "ignore"
-			}
-			setScalarPath(data, field.Path, leaf)
-		}
-		for field := range input {
-			if !allowed[field] {
-				return nil, fmt.Errorf("unsupported classic field %s", field)
-			}
+		if wrapper := definition.Wrapper; wrapper != nil {
+			wrapped := map[string]any{}
+			setScalarPath(wrapped, wrapper.Path, map[string]any{"vipObjectType": "tree", "vipType": "constant", "vipPrimaryKey": wrapper.PrimaryKeys, "vipValue": []any{data}})
+			data = wrapped
 		}
 		out = append(out, Resource{Key: "edge_feature_templates/" + collection + "/" + name, Name: name, Section: "edge_feature_templates", Type: definition.Type, Body: map[string]any{"deviceType": mapped, "factoryDefault": false, "templateDescription": description, "templateMinVersion": "15.0.0", "templateName": name, "templateType": definition.Type, "templateDefinition": data}})
 	}
 	return out, nil
+}
+
+func classicData(definition classicDefinition, input map[string]any, metadata bool) (map[string]any, error) {
+	for _, field := range definition.Required {
+		if input[field] == nil {
+			return nil, fmt.Errorf("%s is required", field)
+		}
+	}
+	allowed := map[string]bool{}
+	if metadata {
+		allowed["name"] = true
+		allowed["description"] = true
+		allowed["device_types"] = true
+	}
+	data := map[string]any{}
+	baseline, err := json.Marshal(definition.Defaults)
+	if err != nil {
+		return nil, err
+	}
+	if err = json.Unmarshal(baseline, &data); err != nil {
+		return nil, err
+	}
+	for public, field := range definition.Fields {
+		value := input[public]
+		if field.Literal != nil {
+			value = field.Literal
+		} else if field.Derived {
+			value = nil
+			if input["$value"] == field.When {
+				value = field.DerivedValue
+			}
+		} else {
+			allowed[public] = true
+		}
+		if field.Ranges != "" {
+			allowed[field.Ranges] = true
+			if raw := input[field.Ranges]; raw != nil {
+				rows, ok := raw.([]any)
+				if !ok {
+					return nil, errors.New("exclude address ranges must be an array")
+				}
+				values := []any{}
+				if value != nil {
+					var ok bool
+					values, ok = value.([]any)
+					if !ok {
+						return nil, errors.New("excluded addresses must be an array")
+					}
+					values = append([]any(nil), values...)
+				}
+				for _, row := range rows {
+					r, ok := row.(map[string]any)
+					if !ok || len(r) != 2 {
+						return nil, errors.New("address range requires from and to")
+					}
+					lo, lok := r["from"].(string)
+					hi, hok := r["to"].(string)
+					a, ae := netip.ParseAddr(lo)
+					b, be := netip.ParseAddr(hi)
+					if !lok || !hok || ae != nil || be != nil || !a.Is4() || !b.Is4() || a.Compare(b) > 0 {
+						return nil, errors.New("invalid excluded address range")
+					}
+					values = append(values, lo+"-"+hi)
+				}
+				value = values
+			}
+		}
+		var variable any
+		if field.Variable != "" {
+			allowed[field.Variable] = true
+			variable = input[field.Variable]
+		}
+		leaf := map[string]any{"vipObjectType": field.ObjectType}
+		if variable != nil {
+			v, ok := variable.(string)
+			if !ok || len(v) == 0 || len(v) > 128 {
+				return nil, fmt.Errorf("invalid %s variable", public)
+			}
+			leaf["vipType"] = "variableName"
+			leaf["vipVariableName"] = v
+		} else if value != nil {
+			if !validScalarValue(value, field.Schema) {
+				return nil, fmt.Errorf("invalid %s value", public)
+			}
+			if field.Set {
+				values := value.([]any)
+				unique := map[string]any{}
+				for _, v := range values {
+					encoded, _ := json.Marshal(v)
+					unique[string(encoded)] = v
+				}
+				keys := []string{}
+				for key := range unique {
+					keys = append(keys, key)
+				}
+				sort.Strings(keys)
+				values = []any{}
+				for _, key := range keys {
+					values = append(values, unique[key])
+				}
+				value = values
+			}
+			if field.BooleanString {
+				value = strconv.FormatBool(value.(bool))
+			}
+			leaf["vipType"] = "constant"
+			leaf["vipValue"] = value
+		} else if field.OmitNull {
+			continue
+		} else {
+			leaf["vipType"] = "ignore"
+		}
+		setScalarPath(data, field.Path, leaf)
+	}
+	if definition.AlwaysPriorityOrder {
+		data["priority-order"] = append([]string(nil), definition.PriorityOrder...)
+	}
+	if definition.Optional != "" {
+		allowed[definition.Optional] = true
+		if value := input[definition.Optional]; value != nil {
+			flag, ok := value.(bool)
+			if !ok {
+				return nil, errors.New("optional must be Boolean")
+			}
+			data["vipOptional"] = flag
+			data["priority-order"] = append([]string(nil), definition.PriorityOrder...)
+		}
+	}
+	for public, tree := range definition.Trees {
+		allowed[public] = true
+		if value := input[public]; value != nil {
+			rows, ok := value.([]any)
+			if !ok {
+				return nil, fmt.Errorf("%s must be an array", public)
+			}
+			if len(rows) == 0 {
+				continue
+			}
+			output := []any{}
+			identities := map[string]bool{}
+			for _, row := range rows {
+				object, ok := row.(map[string]any)
+				if tree.Primitive {
+					object, ok = map[string]any{"$value": row}, true
+				}
+				if !ok {
+					return nil, errors.New("classic rows must be objects")
+				}
+				mapped, err := classicData(tree.Definition, object, false)
+				if err != nil {
+					return nil, err
+				}
+				identity := []any{}
+				for _, key := range tree.PrimaryKeys {
+					leaf, ok := mapped[key].(map[string]any)
+					if !ok || leaf["vipType"] == "ignore" {
+						return nil, errors.New("classic row primary key is required")
+					}
+					identity = append(identity, leaf)
+				}
+				encoded, _ := json.Marshal(identity)
+				if identities[string(encoded)] {
+					return nil, errors.New("duplicate classic row primary key")
+				}
+				identities[string(encoded)] = true
+				output = append(output, mapped)
+			}
+			setScalarPath(data, tree.Path, map[string]any{"vipObjectType": "tree", "vipType": "constant", "vipPrimaryKey": tree.PrimaryKeys, "vipValue": output})
+		}
+	}
+	for field := range input {
+		if !allowed[field] {
+			return nil, fmt.Errorf("unsupported classic field %s", field)
+		}
+	}
+
+	return data, nil
 }
 
 func normalizeVIP(value any) (any, error) {
@@ -147,12 +301,34 @@ func normalizeVIP(value any) (any, error) {
 		if kind == "tree" {
 			entries, ok := object["vipValue"].([]any)
 			keys, keysOK := object["vipPrimaryKey"].([]any)
-			if object["vipType"] != "ignore" || !ok || len(entries) != 0 || !keysOK {
+			if !ok || !keysOK {
 				return nil, ErrResponse
 			}
-			return map[string]any{"vipObjectType": kind, "vipType": "ignore", "vipPrimaryKey": keys, "vipValue": entries}, nil
+			for _, key := range keys {
+				if _, ok := key.(string); !ok {
+					return nil, ErrResponse
+				}
+			}
+			if object["vipType"] != "constant" && object["vipType"] != "ignore" {
+				return nil, ErrResponse
+			}
+			if object["vipType"] == "ignore" && len(entries) != 0 {
+				return nil, ErrResponse
+			}
+			normalized := []any{}
+			for _, entry := range entries {
+				if _, ok := entry.(map[string]any); !ok {
+					return nil, ErrResponse
+				}
+				row, err := normalizeVIP(entry)
+				if err != nil {
+					return nil, err
+				}
+				normalized = append(normalized, row)
+			}
+			return map[string]any{"vipObjectType": kind, "vipType": object["vipType"], "vipPrimaryKey": keys, "vipValue": normalized}, nil
 		}
-		if kind != "object" && kind != "node-only" {
+		if kind != "object" && kind != "node-only" && kind != "list" {
 			return nil, ErrResponse
 		}
 		out := map[string]any{"vipObjectType": kind, "vipType": object["vipType"]}

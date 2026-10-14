@@ -1,0 +1,22 @@
+sdwan:
+  edge_feature_templates:
+    dhcp_server_templates:
+      - name: CVK-CLASSIC-DHCP
+        description: CVK unattached DHCP server template
+        device_types: [C8000V]
+        address_pool: 192.0.2.0/24
+        default_gateway: 192.0.2.1
+        dns_servers: [192.0.2.53]
+        lease_time: 86400
+        exclude_addresses: [192.0.2.1]
+        exclude_addresses_ranges:
+          - from: 192.0.2.2
+            to: 192.0.2.9
+        static_leases:
+          - ip_address: 192.0.2.10
+            mac_address: 02:00:00:00:00:10
+            hostname: fixture-client
+            optional: false
+        options:
+          - option_code: 66
+            ascii: fixture-tftp

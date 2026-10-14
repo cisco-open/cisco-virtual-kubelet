@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"net/netip"
 	"reflect"
 	"regexp"
@@ -328,6 +329,31 @@ func validScalarValue(value any, schema map[string]any) bool {
 			case "ipv4", "ipv6":
 				address, e := netip.ParseAddr(v)
 				if e != nil || (format == "ipv6" && !address.Is6()) || (format == "ipv4" && !address.Is4()) {
+					return false
+				}
+			case "mac":
+				address, e := net.ParseMAC(v)
+				if e != nil || len(address) != 6 {
+					return false
+				}
+			case "ipv4Range":
+				parts := strings.Split(v, "-")
+				if len(parts) > 2 {
+					return false
+				}
+				a, e := netip.ParseAddr(parts[0])
+				if e != nil || !a.Is4() {
+					return false
+				}
+				if len(parts) == 2 {
+					b, e := netip.ParseAddr(parts[1])
+					if e != nil || !b.Is4() || a.Compare(b) > 0 {
+						return false
+					}
+				}
+			case "ipv4-prefix":
+				prefix, e := netip.ParsePrefix(v)
+				if e != nil || !prefix.Addr().Is4() {
 					return false
 				}
 			case "hostname":

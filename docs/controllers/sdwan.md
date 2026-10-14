@@ -5,7 +5,7 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 65 resource declarations (59 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 73 resource declarations (67 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -21,6 +21,14 @@ parity**. The pinned upstream module has 226 resource declarations. 65 resource 
 | `examples/configs/sdwan/aaa-feature.yaml` | AAA users, RADIUS/TACACS and accounting/authorization rules | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-templates.yaml` | Classic CLI, global settings and multicast templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-cellular.yaml` | Classic cellular controller and cellular profile templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+
+| `examples/configs/sdwan/classic-bfd.yaml` | BFD color rows and variable intervals | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-igmp.yaml` | IGMP interfaces and nested join groups | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-ntp.yaml` | NTP authentication-key variables, trusted keys and servers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-omp.yaml` | OMP protocol lists and conditional external OSPF routes | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-pim.yaml` | PIM interfaces and rendezvous-point addresses | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-applications.yaml` | Classic ThousandEyes and security application hosting | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-dhcp.yaml` | DHCP address ranges, static leases and option rows | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -40,7 +48,9 @@ The public model remains the upstream `sdwan` document. The format is
   login/MOTD literals and variables, including upstream device-type defaults.
 - `edge_feature_templates.cli_templates`, `global_settings_templates`,
   `multicast_templates`, `cellular_controller_templates` and
-  `cellular_profile_templates`, including per-family device defaults and overrides.
+  `cellular_profile_templates`, `bfd_templates`, `igmp_templates`, `ntp_templates`,
+  `omp_templates`, `pim_templates`, `thousandeyes_templates`,
+  `secure_app_hosting_templates` and `dhcp_server_templates`, including per-family device defaults and overrides.
   Generate their metadata with `scripts/sdwan/generate-classic-definitions.py
   MODULE_CHECKOUT PROVIDER_CHECKOUT`.
 - `feature_profiles.system_profiles`: profile name/description, banner, basic,
@@ -161,7 +171,7 @@ python3 scripts/sdwan/oracle.py --terraform terraform --fixture-set system-featu
 ```
 
 The script checks fixture names are absent, pins dependencies, checks the plan
-contains exactly the selected fixture set (44 core objects or 12 system/CLI objects), applies upstream,
+contains exactly the selected fixture set (44 core objects or 13 system/CLI objects), applies upstream,
 compares native observations, and destroys the upstream fixtures. It never
 attaches devices. It stages hierarchy creation before region lists because the
 upstream module does not express that dependency, and destroys region lists first. Run it without `--execute` for plan validation only. Do not run
@@ -210,3 +220,9 @@ The pinned module's SNMP `groups[].view_variable` expression incorrectly travers
 AAA `accounting_rules[].start_stop_variable` is passed verbatim by the module and
 therefore requires the upstream `{{variable}}` expression. Other generated parcel
 variable fields wrap the public variable name as required by their module mapping.
+
+### Classic PIM provider limitation
+
+The pinned provider does not serialize `pim_templates[].rp_addresses[].optional`.
+CVK rejects this field before mutation; the qualified fixture omits it. Other PIM
+row types preserve their optional flag and provider-defined priority order.
