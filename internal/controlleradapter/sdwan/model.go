@@ -58,8 +58,12 @@ type ParcelReference struct {
 	Collection, ParentName string
 	BodyPath               []string
 }
+type ParcelAncestor struct {
+	Path, Name string
+}
 type Resource struct {
 	ParcelRefs                         []ParcelReference
+	ParcelAncestors                    []ParcelAncestor
 	HierarchySites, SiteGroups         []string
 	HubSpoke                           *hubSpokeInput
 	ParcelPath                         string

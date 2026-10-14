@@ -4,6 +4,7 @@ package sdwan
 
 import (
 	"errors"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,7 +65,17 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
-		if r.ParentParcelPath != "" {
+		if len(r.ParcelAncestors) > 0 {
+			last := r.ParcelAncestors[len(r.ParcelAncestors)-1]
+			parent := r
+			parent.Name = last.Name
+			parent.ParcelPath = last.Path
+			j, exists := indices[identity(parent)]
+			if !exists {
+				return nil, errors.New("nested parcel parent is not declared")
+			}
+			dependencies[i] = append(dependencies[i], j)
+		} else if r.ParentParcelPath != "" {
 			parent := r
 			parent.Name = r.ParentParcelName
 			parent.ParcelPath = r.ParentParcelPath
@@ -117,7 +128,7 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 			}
 			j, exists := indices[identity(target)]
 			if !exists || (ref.Kind != "" && resources[j].Type != ref.Kind) {
-				return nil, errors.New("parcel reference is not declared in the required collection of this profile")
+				return nil, fmt.Errorf("parcel reference %s/%s is not declared in the required collection of this profile", ref.ParcelPath, ref.Name)
 			}
 			dependencies[i] = append(dependencies[i], j)
 		}

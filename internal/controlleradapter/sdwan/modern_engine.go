@@ -48,11 +48,16 @@ func (c *Client) collection(ctx context.Context, r Resource) (string, error) {
 	if parcel == "" {
 		parcel = "banner"
 	}
-	if r.ParentParcelPath != "" {
-		if r.ParentParcelName == "" {
-			return "", errors.New("nested parcel requires parent name")
+	ancestors := r.ParcelAncestors
+	if len(ancestors) == 0 && r.ParentParcelPath != "" {
+		ancestors = []ParcelAncestor{{Path: r.ParentParcelPath, Name: r.ParentParcelName}}
+	}
+	path := r.Collection + "/" + url.PathEscape(id)
+	for _, ancestor := range ancestors {
+		if ancestor.Path == "" || ancestor.Name == "" {
+			return "", errors.New("nested parcel requires parent path and name")
 		}
-		parentPath := r.Collection + "/" + url.PathEscape(id) + "/" + r.ParentParcelPath
+		parentPath := path + "/" + ancestor.Path
 		var result struct {
 			Data []struct {
 				ID      string `json:"parcelId"`
@@ -70,7 +75,7 @@ func (c *Client) collection(ctx context.Context, r Resource) (string, error) {
 		}
 		parentID := ""
 		for _, item := range result.Data {
-			if item.Name == r.ParentParcelName || item.Payload.Name == r.ParentParcelName {
+			if item.Name == ancestor.Name || item.Payload.Name == ancestor.Name {
 				if parentID != "" || !validID.MatchString(item.ID) {
 					return "", ErrResponse
 				}
@@ -80,9 +85,9 @@ func (c *Client) collection(ctx context.Context, r Resource) (string, error) {
 		if parentID == "" {
 			return "", ErrDependencyPending
 		}
-		return parentPath + "/" + url.PathEscape(parentID) + "/" + parcel, nil
+		path = parentPath + "/" + url.PathEscape(parentID)
 	}
-	return r.Collection + "/" + url.PathEscape(id) + "/" + parcel, nil
+	return path + "/" + parcel, nil
 }
 func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, error) {
 	path, e := c.collection(ctx, r)

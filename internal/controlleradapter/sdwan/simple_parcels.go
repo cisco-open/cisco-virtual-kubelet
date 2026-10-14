@@ -154,6 +154,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, svis...)
+	sviAssociations, err := compileSVIDHCPAssociations(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, sviAssociations...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any
@@ -248,6 +253,7 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 			if e = add(family.public+"/"+*meta.Name, family.path, meta, data); e != nil {
 				return nil, e
 			}
+			out[len(out)-1].Type = family.kind
 		}
 	}
 	trackerGroups, e := compileTrackerGroups(p, collection, key)

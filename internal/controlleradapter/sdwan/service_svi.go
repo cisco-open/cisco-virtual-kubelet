@@ -59,6 +59,7 @@ func serviceSVIData(input map[string]any) (map[string]any, error) {
 		{"shutdown", "shutdown", true, true}, {"interface_name", "interfaceName", nil, false}, {"interface_description", "description", nil, false}, {"interface_mtu", "ifMtu", float64(1500), true}, {"ip_mtu", "ipMtu", float64(1500), true}, {"ipv6_address", "addressV6", nil, false}, {"tcp_mss", "tcpMss", nil, false}, {"arp_timeout", "arpTimeout", float64(1200), true}, {"ip_directed_broadcast", "ipDirectedBroadcast", false, true}, {"icmp_redirect_disable", "icmpRedirectDisable", true, true}, {"ipv4_dhcp_helpers", "dhcpHelperV4", nil, false},
 	}
 	allowed := map[string]bool{"name": true, "description": true, "ipv4_address": true, "ipv4_address_variable": true, "ipv4_subnet_mask": true, "ipv4_subnet_mask_variable": true, "ipv4_secondary_addresses": true, "ipv6_secondary_addresses": true, "arp_entries": true}
+	allowed["dhcp_server"] = true
 	for _, spec := range fields {
 		allowed[spec.source] = true
 		allowed[spec.source+"_variable"] = true
