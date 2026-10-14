@@ -17,11 +17,38 @@ type LocalizedPolicies struct {
 	Definitions LocalizedPolicyDefinitions `json:"definitions"`
 }
 type LocalizedPolicyDefinitions struct {
+	QoSMaps                  []ClassicQoSMap      `json:"qos_maps,omitempty"`
+	RewriteRules             []ClassicRewriteRule `json:"rewrite_rules,omitempty"`
 	IPv4AccessControlLists   []ClassicACL         `json:"ipv4_access_control_lists,omitempty"`
 	IPv6AccessControlLists   []ClassicACL         `json:"ipv6_access_control_lists,omitempty"`
 	IPv4DeviceAccessPolicies []ClassicACL         `json:"ipv4_device_access_policies,omitempty"`
 	IPv6DeviceAccessPolicies []ClassicACL         `json:"ipv6_device_access_policies,omitempty"`
 	RoutePolicies            []ClassicRoutePolicy `json:"route_policies,omitempty"`
+}
+type ClassicQoSMap struct {
+	Name          string                `json:"name"`
+	Description   string                `json:"description"`
+	QoSSchedulers []ClassicQoSScheduler `json:"qos_schedulers"`
+}
+type ClassicQoSScheduler struct {
+	Queue            int    `json:"queue"`
+	ClassMap         string `json:"class_map,omitempty"`
+	BandwidthPercent int    `json:"bandwidth_percent"`
+	BufferPercent    int    `json:"buffer_percent"`
+	BurstBytes       *int   `json:"burst_bytes,omitempty"`
+	DropType         string `json:"drop_type"`
+	SchedulingType   string `json:"scheduling_type"`
+}
+type ClassicRewriteRule struct {
+	Name        string                `json:"name"`
+	Description string                `json:"description"`
+	Rules       []ClassicRewriteEntry `json:"rules"`
+}
+type ClassicRewriteEntry struct {
+	Class     string `json:"class"`
+	Priority  string `json:"priority"`
+	DSCP      int    `json:"dscp"`
+	Layer2COS *int   `json:"layer2_cos,omitempty"`
 }
 type ClassicRoutePolicy struct {
 	Name          string                 `json:"name"`
@@ -64,6 +91,54 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 		return nil, nil
 	}
 	out := []Resource{}
+	for _, qos := range input.Definitions.QoSMaps {
+		if qos.Name == "" || len(qos.Name) > 128 || qos.Description == "" {
+			return nil, errors.New("invalid localized QoS map")
+		}
+		rows := []any{}
+		refs := map[string]string{}
+		queues := map[int]bool{}
+		for i, s := range qos.QoSSchedulers {
+			if s.Queue < 0 || s.Queue > 7 || queues[s.Queue] || (s.Queue != 0 && s.ClassMap == "") || s.BandwidthPercent < 0 || s.BandwidthPercent > 100 || s.BufferPercent < 0 || s.BufferPercent > 100 || s.DropType == "" || s.SchedulingType == "" {
+				return nil, errors.New("invalid QoS scheduler")
+			}
+			queues[s.Queue] = true
+			row := map[string]any{"queue": fmt.Sprint(s.Queue), "classMapRef": "", "bandwidthPercent": fmt.Sprint(s.BandwidthPercent), "bufferPercent": fmt.Sprint(s.BufferPercent), "drops": s.DropType, "scheduling": s.SchedulingType}
+			if s.BurstBytes != nil {
+				if *s.BurstBytes < 0 {
+					return nil, errors.New("invalid QoS burst")
+				}
+				row["burst"] = fmt.Sprint(*s.BurstBytes)
+			}
+			if s.ClassMap != "" {
+				refs[fmt.Sprint(i)] = s.ClassMap
+			}
+			rows = append(rows, row)
+		}
+		out = append(out, Resource{Key: "localized_policies/definitions/qos_maps/" + qos.Name, Name: qos.Name, Section: "localized_policies", Kind: "classic-definition", Type: "qos_map_policy_definition", Collection: "/dataservice/template/policy/definition/qosmap/", ProfileRefs: refs, Body: map[string]any{"type": "qosMap", "name": qos.Name, "description": qos.Description, "definition": map[string]any{"qosSchedulers": rows}}})
+	}
+	for _, rewrite := range input.Definitions.RewriteRules {
+		if rewrite.Name == "" || len(rewrite.Name) > 128 || rewrite.Description == "" {
+			return nil, errors.New("invalid localized rewrite rule")
+		}
+		rows := []any{}
+		refs := map[string]string{}
+		for i, rule := range rewrite.Rules {
+			if rule.Class == "" || rule.Priority == "" || rule.DSCP < 0 || rule.DSCP > 63 {
+				return nil, errors.New("invalid localized rewrite entry")
+			}
+			row := map[string]any{"class": "", "plp": rule.Priority, "dscp": fmt.Sprint(rule.DSCP)}
+			if rule.Layer2COS != nil {
+				if *rule.Layer2COS < 0 || *rule.Layer2COS > 7 {
+					return nil, errors.New("invalid layer2_cos")
+				}
+				row["layer2Cos"] = fmt.Sprint(*rule.Layer2COS)
+			}
+			refs[fmt.Sprint(i)] = rule.Class
+			rows = append(rows, row)
+		}
+		out = append(out, Resource{Key: "localized_policies/definitions/rewrite_rules/" + rewrite.Name, Name: rewrite.Name, Section: "localized_policies", Kind: "classic-definition", Type: "rewrite_rule_policy_definition", Collection: "/dataservice/template/policy/definition/rewriterule/", ProfileRefs: refs, Body: map[string]any{"type": "rewriteRule", "name": rewrite.Name, "description": rewrite.Description, "definition": map[string]any{"rules": rows}}})
+	}
 	for _, spec := range []struct {
 		family, apiType, sequenceType, path, modelType, keyPart, sourceField, destinationField, defaultName string
 		items                                                                                               []ClassicACL
@@ -172,6 +247,12 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 	return out, nil
 }
 func (c *Client) observeClassicDefinition(ctx context.Context, r Resource) (*Observation, error) {
+	if e := c.resolveClassicClassMaps(ctx, r); e != nil {
+		if errors.Is(e, ErrDependencyPending) {
+			return nil, nil
+		}
+		return nil, e
+	}
 	var list struct {
 		Data *[]struct {
 			ID   string `json:"definitionId"`
@@ -204,6 +285,9 @@ func (c *Client) observeClassicDefinition(ctx context.Context, r Resource) (*Obs
 	return &Observation{ID: id, Body: body}, nil
 }
 func (c *Client) createClassicDefinition(ctx context.Context, r Resource) (string, error) {
+	if e := c.resolveClassicClassMaps(ctx, r); e != nil {
+		return "", e
+	}
 	var response map[string]any
 	if e := c.Request(ctx, "POST", r.Collection, r.Body, &response); e != nil {
 		return "", e
@@ -215,6 +299,9 @@ func (c *Client) createClassicDefinition(ctx context.Context, r Resource) (strin
 	return id, nil
 }
 func (c *Client) updateClassicDefinition(ctx context.Context, r Resource, o *Observation) error {
+	if e := c.resolveClassicClassMaps(ctx, r); e != nil {
+		return e
+	}
 	return c.Request(ctx, "PUT", r.Collection+url.PathEscape(o.ID), r.Body, nil)
 }
 func (c *Client) deleteClassicDefinition(ctx context.Context, r Resource, id string) error {
@@ -223,12 +310,65 @@ func (c *Client) deleteClassicDefinition(ctx context.Context, r Resource, id str
 	}
 	return c.Request(ctx, "DELETE", r.Collection+url.PathEscape(id), nil, nil)
 }
+func (c *Client) resolveClassicClassMaps(ctx context.Context, r Resource) error {
+	if len(r.ProfileRefs) == 0 {
+		return nil
+	}
+	definition, ok := r.Body["definition"].(map[string]any)
+	if !ok {
+		return ErrResponse
+	}
+	field, target := "qosSchedulers", "classMapRef"
+	if r.Type == "rewrite_rule_policy_definition" {
+		field, target = "rules", "class"
+	}
+	rows, ok := definition[field].([]any)
+	if !ok {
+		return ErrResponse
+	}
+	for index, name := range r.ProfileRefs {
+		i := -1
+		if _, e := fmt.Sscan(index, &i); e != nil || i < 0 || i >= len(rows) {
+			return ErrResponse
+		}
+		probe := Resource{Name: name, Type: "class", Kind: "policy-list", Collection: "/dataservice/template/policy/list/class"}
+		o, e := c.observePolicyList(ctx, probe)
+		if e != nil {
+			return e
+		}
+		if o == nil {
+			return fmt.Errorf("class map %q: %w", name, ErrDependencyPending)
+		}
+		row, ok := rows[i].(map[string]any)
+		if !ok {
+			return ErrResponse
+		}
+		row[target] = o.ID
+	}
+	return nil
+}
 func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 	if o["name"] != r.Name || !strings.EqualFold(fmt.Sprint(o["type"]), r.Body["type"].(string)) {
 		return false, nil
 	}
 	if description, _ := o["description"].(string); description != r.Body["description"] {
 		return false, nil
+	}
+	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" {
+		actual, ok := o["definition"].(map[string]any)
+		if !ok {
+			return false, ErrResponse
+		}
+		key := "qosSchedulers"
+		if r.Type == "rewrite_rule_policy_definition" {
+			key = "rules"
+		}
+		rows, ok := actual[key]
+		if !ok {
+			return false, ErrResponse
+		}
+		want := r.Body["definition"].(map[string]any)[key]
+		return reflect.DeepEqual(rows, want), nil
 	}
 	actual := map[string]any{"type": r.Body["type"], "name": o["name"], "description": o["description"], "defaultAction": o["defaultAction"], "sequences": o["sequences"]}
 	if actual["sequences"] == nil {

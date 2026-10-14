@@ -65,6 +65,21 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		if r.Kind == "classic-definition" {
+			for _, name := range r.ProfileRefs {
+				found := -1
+				for j, candidate := range resources {
+					if candidate.Kind == "policy-list" && candidate.Type == "class" && candidate.Name == name {
+						found = j
+						break
+					}
+				}
+				if found < 0 {
+					return nil, fmt.Errorf("classic definition class map %q is not declared", name)
+				}
+				dependencies[i] = append(dependencies[i], found)
+			}
+		}
 		if len(r.ParcelAncestors) > 0 {
 			last := r.ParcelAncestors[len(r.ParcelAncestors)-1]
 			parent := r

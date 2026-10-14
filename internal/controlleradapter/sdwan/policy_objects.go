@@ -411,7 +411,11 @@ func equalPolicyList(r Resource, body map[string]any) (bool, error) {
 	if e != nil {
 		return false, e
 	}
-	b, e := json.Marshal(map[string]any{"name": body["name"], "type": r.Type, "entries": body["entries"]})
+	observed := map[string]any{"name": body["name"], "type": r.Type, "entries": body["entries"]}
+	if _, hasDescription := r.Body["description"]; hasDescription {
+		observed["description"] = body["description"]
+	}
+	b, e := json.Marshal(observed)
 	return string(a) == string(b), e
 }
 

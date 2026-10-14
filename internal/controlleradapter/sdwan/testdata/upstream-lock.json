@@ -1481,15 +1481,21 @@
       "type": "sdwan_qos_map_policy_definition",
       "name": "qos_map_policy_definition",
       "source": "sdwan_localized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-qos-rewrite-definitions"
+      ]
     },
     {
       "type": "sdwan_rewrite_rule_policy_definition",
       "name": "rewrite_rule_policy_definition",
       "source": "sdwan_localized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-qos-rewrite-definitions"
+      ]
     },
     {
       "type": "sdwan_ipv4_acl_policy_definition",
