@@ -138,3 +138,23 @@ func TestLiveThousandEyesLifecycle(t *testing.T) {
 func TestLiveThousandEyesOracle(t *testing.T) {
 	liveParcelOracle(t, parcelFixtures(t, "thousandeyes-feature"))
 }
+
+func TestSNMPFixture(t *testing.T) {
+	if len(parcelFixtures(t, "snmp-feature")) != 2 {
+		t.Fatal("expected one profile and one SNMP parcel")
+	}
+}
+func TestLiveSNMPNamesAbsent(t *testing.T) {
+	liveParcelNamesAbsent(t, parcelFixtures(t, "snmp-feature"))
+}
+func TestLiveSNMPLifecycle(t *testing.T) { liveParcelLifecycle(t, parcelFixtures(t, "snmp-feature")) }
+func TestLiveSNMPOracle(t *testing.T)    { liveParcelOracle(t, parcelFixtures(t, "snmp-feature")) }
+
+func TestAAAFixture(t *testing.T) {
+	if len(parcelFixtures(t, "aaa-feature")) != 2 {
+		t.Fatal("expected one profile and one AAA parcel")
+	}
+}
+func TestLiveAAANamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "aaa-feature")) }
+func TestLiveAAALifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "aaa-feature")) }
+func TestLiveAAAOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "aaa-feature")) }

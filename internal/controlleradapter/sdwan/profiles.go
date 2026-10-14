@@ -11,6 +11,8 @@ import (
 )
 
 type FeatureProfile struct {
+	AAA                   map[string]any               `json:"aaa,omitempty"`
+	SNMP                  map[string]any               `json:"snmp,omitempty"`
 	ThousandEyes          map[string]any               `json:"thousandeyes,omitempty"`
 	GPS                   []map[string]any             `json:"gps_features,omitempty"`
 	TrustSec              map[string]any               `json:"trustsec,omitempty"`
@@ -51,6 +53,15 @@ var profileCollections = map[string]string{"system_profiles": "system", "transpo
 func compileProfiles(raw map[string]json.RawMessage) ([]Resource, error) {
 	out := []Resource{}
 	for section, data := range raw {
+		if section == "policy_object_profile" {
+			resources, err := compilePolicyObjectProfile(data)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, resources...)
+			continue
+		}
+
 		collection, ok := profileCollections[section]
 		if !ok {
 			return nil, errors.New("unsupported feature profile collection")

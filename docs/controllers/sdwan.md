@@ -5,7 +5,7 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 58 resource declarations (52 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 60 resource declarations (54 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -17,6 +17,8 @@ parity**. The pinned upstream module has 226 resource declarations. 58 resource 
 | `examples/configs/sdwan/system-features.yaml` | CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security | Create, read, update, cleanup, upstream equivalence |
 | `examples/configs/sdwan/peripheral-features.yaml` | Transport GPS and other-profile UCSE | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/thousandeyes-feature.yaml` | Unattached ThousandEyes parcel using a token variable | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/snmp-feature.yaml` | SNMP nested views, communities, groups, users and targets | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/aaa-feature.yaml` | AAA users, RADIUS/TACACS and accounting/authorization rules | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -35,7 +37,7 @@ The public model remains the upstream `sdwan` document. The format is
 - `edge_feature_templates.banner_templates`: name, description, device types,
   login/MOTD literals and variables, including upstream device-type defaults.
 - `feature_profiles.system_profiles`: profile name/description, banner, basic,
-  BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring and security.
+  BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security, SNMP and AAA.
   `feature_profiles.cli_profiles.config` supports native CLI parcels.
   Scalar and nested-list definitions for basic/global/OMP/NTP/logging/security are generated
   from pinned module mappings and provider defaults/value schemas. Regenerate with
@@ -180,3 +182,24 @@ required by this Manager but absent from the provider model. Its default empty
 `examples/configs/sdwan/unqualified/trustsec.yaml`; the compiler rejects TrustSec
 before mutation. Generated TrustSec metadata is retained for further compatibility
 work and does not count toward qualified coverage.
+
+### Policy-object profile qualification
+
+`policy-profile.yaml` defines the singular policy-object profile and fifteen
+policy parcels. Compiler validation and a pinned Terraform plan passed for all
+16 objects. Live qualification is pending: Manager already has its singleton
+policy-object profile and rejects creation of another. Existing resources were
+not adopted or changed. The inventory marks these definitions
+`implemented-unqualified`, and the oracle permits plan-only validation for this set.
+A read-only-parent workflow or an empty Manager is needed for live qualification.
+
+The pinned module uses `forwarding_classes` where the current documentation calls
+this collection `class_maps`. This branch follows the pinned module's name.
+NaC integer queue and TLOC preference values are encoded as strings for the
+provider API, with their public numeric constraints retained.
+
+The pinned module's SNMP `groups[].view_variable` expression incorrectly traverses
+`group.view.view_variable`. That unavailable input is explicitly rejected.
+AAA `accounting_rules[].start_stop_variable` is passed verbatim by the module and
+therefore requires the upstream `{{variable}}` expression. Other generated parcel
+variable fields wrap the public variable name as required by their module mapping.

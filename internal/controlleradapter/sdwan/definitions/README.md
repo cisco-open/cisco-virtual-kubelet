@@ -9,3 +9,7 @@ The metadata derives from Cisco's MPL-2.0 provider sources. The upstream license
 is retained in `LICENSE`; the pinned source commits are included in the JSON and
 in `../testdata/upstream-lock.json`. The native interpreter is independently
 implemented; no Terraform provider or Terraform executable runs in the worker.
+
+The generator requires Python 3 and PyYAML. Reviewed module defects and public
+model/API type conversions are explicit in the generator and emitted metadata.
+Metadata presence alone does not imply live qualification; consult upstream-lock.json.

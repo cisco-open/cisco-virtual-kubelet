@@ -66,6 +66,7 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
     prefix = r'path\+' if target == "body" else ''
     setter = r'sjson.Set\(' + target + ', ' + prefix
     baseline, inputs, lists, required, public_defaults, wrappers = {}, {}, {}, [], {}, []
+    constants, computed_defaults, wrapped_variables = {}, {}, set()
     for match in re.finditer(r'if ' + receiver + r'\.(\w+)\.IsNull\(\) \{', body):
         content = block(body, match.end() - 1)
         for path, literal in re.findall(setter + r'"([^"]+)", ([^\n]+)\)', content):
@@ -74,8 +75,26 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
     for tf, expr in assignments:
         if indent == 2 and tf in {"for_each", "name", "description", "feature_profile_id"}:
             continue
+        if expr.split("#")[0].strip() == "null":
+            continue
+        if re.fullmatch(r'"[^"]*"', expr):
+            inputs[tf] = "$constant:" + tf
+            constants[tf] = json.loads(expr)
+            continue
+        computed = False
+        for group_prefix in ("radius", "tacacs"):
+            expected = 'try(' + alias + '.group_name, "' + group_prefix + '-${index}-${' + alias + '.vpn}", "' + group_prefix + '-${index}-${index}")'
+            if expr == expected:
+                inputs[tf] = "group_name"
+                computed_defaults["group_name"] = group_prefix
+                computed = True
+        if computed:
+            continue
+        if expr in (alias, "try(" + alias + ", null)"):
+            inputs[tf] = "$value"
+            continue
         match = re.fullmatch(r'try\(' + re.escape(alias) + r'\.(\w+), null\)', expr)
-        fallback = re.fullmatch(r'try\(' + re.escape(alias) + r'\.(\w+), local.defaults.([\w.]+), null\)', expr)
+        fallback = re.fullmatch(r'try\(' + re.escape(alias) + r'\.(\w+), local.defaults.([\w.]+)(?:, null)?\)', expr)
         if fallback:
             public, default_path = fallback.groups()
             value = module_defaults["defaults"]
@@ -87,38 +106,47 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         variable = re.fullmatch(r'try\("\{\{\$\{' + re.escape(alias) + r'\.(\w+)\}\}\}", null\)', expr)
         if match or variable:
             inputs[tf] = (match or variable).group(1)
+            if variable:
+                wrapped_variables.add(tf)
             continue
         direct = re.fullmatch(re.escape(alias) + r'\.(\w+)', expr)
         if direct:
             inputs[tf] = direct.group(1)
             required.append(direct.group(1))
             continue
-        array = re.search(r'\[for (\w+) in ' + re.escape(alias) + r'\.(\w+) : \{', expr)
+        array = re.search(r'\[for (?:index, )?(\w+) in (?:try\()?' + re.escape(alias) + r'\.(\w+)(?:, \[\]\))? : \{', expr)
         if not array and expr != "[{":
             raise SystemExit(f"Unsupported expression {tf}: {expr}")
         item_alias, public = array.groups() if array else (alias, None)
         item_source = block(source, source.index("{", source.index(expr) + (array.start() if array else 0)))
         go_name = re.search(r'(\w+)\s+\[\]\w+\s+`tfsdk:"' + tf + '"`', model).group(1)
-        loop = re.search(r'for _, item := range ' + receiver + r'\.' + go_name + r' \{', body)
+        loop = re.search(r'for _, (\w+) := range ' + receiver + r'\.' + go_name + r' \{', body)
+        item_receiver = loop.group(1)
         item_body = block(body, loop.end() - 1)
+        item_target = re.search(r'(\w+) := ""', item_body).group(1)
         array_paths = re.findall(setter + r'"([^"]+)", \[\]interface\{\}\{\}\)', body[:loop.start()])
-        array_path = array_paths[-1] if array_paths else re.findall(r'sjson.SetRaw\(' + target + r', ' + prefix + r'"([^"]+)\.-1", itemBody\)', body)[0]
+        array_path = array_paths[-1] if array_paths else re.findall(r'sjson.SetRaw\(' + target + r', ' + prefix + r'"([^"]+)\.-1", ' + item_target + r'\)', body)[0]
         node = schema
         for part in array_path.split("."):
             node = property_schema(node, part)
-        entry = {"path": array_path, "definition": definition(item_source, item_alias, indent + 2, model, item_body, node["items"], "item", "itemBody")}
+        entry = {"path": array_path, "definition": definition(item_source, item_alias, indent + 2, model, item_body, node["items"], item_receiver, item_target)}
         if array:
+            if expr.startswith("[for") and " in " + alias + "." in expr:
+                required.append(public)
+            entry["primitive"] = "$value" in entry["definition"]["fields"]
+            entry["omit_empty"] = not bool(array_paths)
             lists[public] = entry
         else:
             wrappers.append(entry)
-        put(baseline, array_path, [])
+        if array_paths:
+            put(baseline, array_path, [])
     mapping = {}
     for tf, public in inputs.items():
         if tf.endswith("_variable"):
             continue
         name, typ = fields[tf]
         paths = re.findall(setter + r'"([^"]+)\.value", ' + receiver + r'\.' + name + r'\.Value\w+\(\)\)', body)
-        if typ == "Set":
+        if typ in ("Set", "List"):
             match = re.search(receiver + r'\.' + name + r'\.ElementsAs[^\n]*\n\s*' + target + ', _ = ' + setter + r'"([^"]+)\.value", values\)', body)
             paths = [match.group(1)] if match else []
         if len(set(paths)) != 1:
@@ -132,25 +160,57 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
             raise SystemExit(f"Missing global value schema {tf}")
         global_schema = global_values[0] if len(global_values) == 1 else {"anyOf": global_values}
         validate_schema(global_schema)
+        if tf in constants:
+            put(baseline, path, {"optionType": "global", "value": constants[tf]})
+            continue
         mapping[public] = {"path": path, "type": typ, "schema": global_schema}
         if tf + "_variable" in inputs:
             mapping[public]["variable"] = inputs[tf + "_variable"]
-    return {"defaults": baseline, "fields": mapping, "lists": lists, "required": required, "public_defaults": public_defaults, "wrappers": wrappers}
+            if tf + "_variable" not in wrapped_variables:
+                mapping[public]["variable_encoding"] = "verbatim"
+    return {"defaults": baseline, "fields": mapping, "lists": lists, "required": required, "public_defaults": public_defaults, "wrappers": wrappers, "computed_defaults": computed_defaults}
 
 output = {"license": "MPL-2.0", "provider_commit": lock["provider"]["commit"], "module_commit": lock["module"]["commit"], "parcels": {}}
-reviewed = [("system", f, f, f) for f in ["global", "omp", "basic", "ntp", "logging", "security"]]
+reviewed = [("system", f, f, f) for f in ["global", "omp", "basic", "ntp", "logging", "security", "snmp", "aaa"]]
 reviewed += [("transport", "gps", "gps", "transport_gps"),
              ("other", "trustsec", "trustsec", "other_trustsec"), ("other", "ucse", "ucse", "other_ucse"),
              ("other", "thousandeyes", "thousandeyes", "other_thousandeyes")]
+policy_features = ["as_path_list", "class_map", "color_list", "extended_community_list",
+                   "mirror", "policer", "security_data_ipv4_prefix_list", "security_fqdn_list",
+                   "security_local_domain_list", "security_port_list", "security_protocol_list",
+                   "security_url_allow_list", "security_url_block_list", "standard_community_list", "tloc_list"]
+reviewed += [("policy_object", f, "", "policy_object_" + f) for f in policy_features]
 for family, feature, alias, key in reviewed:
-    hcl = (args.module / ("sdwan_features_" + family + ".tf")).read_text()
-    resource = "sdwan_" + family + "_" + feature + "_feature"
+    hcl = (args.module / ("sdwan_policy_objects.tf" if family == "policy_object" else "sdwan_features_" + family + ".tf")).read_text()
+    resource = "sdwan_" + family + "_" + feature + ("" if family == "policy_object" else "_feature")
     start = hcl.index("{", hcl.index('resource "' + resource + '"'))
     source = block(hcl, start)
+    if key == "snmp":
+        # Upstream typo is unreachable for a string-valued group.view. Do not
+        # expose a supposedly working variable field that the module cannot use.
+        typo = 'try("{{${group.view.view_variable}}}", null)'
+        if source.count(typo) != 1:
+            raise SystemExit("SNMP upstream compatibility exception changed")
+        source = source.replace(typo, "null")
     model = (args.provider / "internal/provider" / ("model_" + resource + ".go")).read_text()
     body = model[model.index("toBody(ctx"):model.index("return body")]
     schema = json.loads((args.provider / "gen/models/profile_parcels" / (family + "_" + feature + ".json")).read_text())["request"]["properties"]["data"]
-    output["parcels"][key] = definition(source, "each.value." + alias, 2, model, body, schema)
+    generated = definition(source, "each.value" + ("." + alias if alias else ""), 2, model, body, schema)
+    if key == "snmp":
+        generated["unavailable_inputs"] = {"groups[].view_variable": "Pinned module reads group.view.view_variable although group.view is a string"}
+    if family == "policy_object":
+        generated["collection"] = re.search(r'feature_profiles.policy_object_profile\.(\w+)', source).group(1)
+        generated["path"] = re.search(r'/policy-object/%v/([^" ]+)', model).group(1)
+        generated["ignore_description"] = not bool(re.search(r'description\s*=\s*try\(each.value.description', source))
+    # Reviewed NaC numeric fields whose provider schema encodes strings.
+    # Public constraints: netascode.cisco.com/docs/data_models/sdwan/policy_objects/{class_map,tloc_list}/
+    if key == "policy_object_class_map":
+        field = generated["wrappers"][0]["definition"]["fields"]["queue"]
+        field.update(input_schema={"type": "integer", "minimum": 0, "maximum": 7}, encode="decimal-string")
+    if key == "policy_object_tloc_list":
+        field = generated["lists"]["tlocs"]["definition"]["fields"]["preference"]
+        field.update(input_schema={"type": "integer", "minimum": 0, "maximum": 4294967295}, encode="decimal-string")
+    output["parcels"][key] = generated
 folder = root / "internal/controlleradapter/sdwan/definitions"
 folder.mkdir(exist_ok=True)
 (folder / "scalar-parcels.json").write_text(json.dumps(output, indent=2, sort_keys=True) + "\n")

@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -20,20 +21,28 @@ import (
 var scalarDefinitions []byte
 
 type scalarField struct {
+	VariableEncoding     string         `json:"variable_encoding"`
+	InputSchema          map[string]any `json:"input_schema"`
+	Encode               string
 	Path, Type, Variable string
 	Schema               map[string]any
 }
 type scalarList struct {
+	Primitive  bool
+	OmitEmpty  bool `json:"omit_empty"`
 	Path       string
 	Definition scalarDefinition
 }
 type scalarDefinition struct {
-	Wrappers       []scalarList
-	PublicDefaults map[string]any `json:"public_defaults"`
-	Required       []string
-	Lists          map[string]scalarList
-	Defaults       map[string]any
-	Fields         map[string]scalarField
+	ComputedDefaults  map[string]string `json:"computed_defaults"`
+	Collection, Path  string
+	IgnoreDescription bool `json:"ignore_description"`
+	Wrappers          []scalarList
+	PublicDefaults    map[string]any `json:"public_defaults"`
+	Required          []string
+	Lists             map[string]scalarList
+	Defaults          map[string]any
+	Fields            map[string]scalarField
 }
 
 func scalarParcelData(kind string, input map[string]any) (ParcelMetadata, map[string]any, error) {
@@ -101,11 +110,27 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 		value := input[public]
 		if variable != nil {
 			name, ok := variable.(string)
+			if field.VariableEncoding == "verbatim" {
+				if !strings.HasPrefix(name, "{{") || !strings.HasSuffix(name, "}}") {
+					return nil, fmt.Errorf("%s requires an upstream variable expression", public)
+				}
+				name = strings.TrimSuffix(strings.TrimPrefix(name, "{{"), "}}")
+			}
 			if !ok || len(name) > 124 || !validParcelVariable.MatchString(name) {
 				return nil, fmt.Errorf("invalid %s variable", public)
 			}
 			setScalarPath(definition.Defaults, field.Path, map[string]any{"optionType": "variable", "value": "{{" + name + "}}"})
 		} else if value != nil {
+			if field.InputSchema != nil {
+				if !validScalarValue(value, field.InputSchema) {
+					return nil, fmt.Errorf("invalid %s model value", public)
+				}
+				if field.Encode == "decimal-string" {
+					value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
+				} else {
+					return nil, errors.New("unsupported scalar encoding")
+				}
+			}
 			if !validScalarValue(value, field.Schema) {
 				return nil, fmt.Errorf("invalid %s value", public)
 			}
@@ -147,18 +172,36 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 				return nil, fmt.Errorf("%s must be an array", public)
 			}
 			out := []any{}
-			for _, item := range items {
+			for index, item := range items {
 				object, ok := item.(map[string]any)
+				if list.Primitive {
+					object, ok = map[string]any{"$value": item}, true
+				}
 				if !ok {
 					return nil, fmt.Errorf("%s entries must be objects", public)
 				}
-				mapped, e := applyScalarDefinition(list.Definition, object, false)
+				copy := make(map[string]any, len(object)+len(list.Definition.ComputedDefaults))
+				for key, value := range object {
+					copy[key] = value
+				}
+				for field, prefix := range list.Definition.ComputedDefaults {
+					if _, exists := copy[field]; !exists {
+						suffix := strconv.Itoa(index)
+						if vpn := copy["vpn"]; vpn != nil {
+							suffix = fmt.Sprint(vpn)
+						}
+						copy[field] = fmt.Sprintf("%s-%d-%s", prefix, index, suffix)
+					}
+				}
+				mapped, e := applyScalarDefinition(list.Definition, copy, false)
 				if e != nil {
 					return nil, e
 				}
 				out = append(out, mapped)
 			}
-			setScalarPath(definition.Defaults, list.Path, out)
+			if len(out) > 0 || !list.OmitEmpty {
+				setScalarPath(definition.Defaults, list.Path, out)
+			}
 		}
 	}
 	for _, wrapper := range definition.Wrappers {

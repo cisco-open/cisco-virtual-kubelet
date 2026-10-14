@@ -37,6 +37,14 @@ func Resolve(data []byte) ([]byte, error) {
 		}
 	}
 	if profiles, ok := stripe["feature_profiles"].(map[string]any); ok {
+		if policy, ok := profiles["policy_object_profile"].(map[string]any); ok {
+			if _, exists := policy["name"]; !exists {
+				policy["name"] = "policy_objects"
+			}
+			if _, exists := policy["description"]; !exists {
+				policy["description"] = ""
+			}
+		}
 		for profileKind, collection := range profiles {
 			items, ok := collection.([]any)
 			if !ok {

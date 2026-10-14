@@ -2,7 +2,673 @@
   "license": "MPL-2.0",
   "module_commit": "5fbf037ea57368c7e6e77694c81330b6f7b16666",
   "parcels": {
+    "aaa": {
+      "computed_defaults": {},
+      "defaults": {
+        "accountingGroup": {
+          "optionType": "default",
+          "value": false
+        },
+        "accountingRule": [],
+        "authenticationGroup": {
+          "optionType": "default",
+          "value": false
+        },
+        "authorizationConfigCommands": {
+          "optionType": "default",
+          "value": false
+        },
+        "authorizationConsole": {
+          "optionType": "default",
+          "value": false
+        },
+        "authorizationRule": [],
+        "ctsAuthList": {
+          "optionType": "default",
+          "value": ""
+        },
+        "radius": [],
+        "radiusTrustsecGroup": {
+          "optionType": "default",
+          "value": ""
+        },
+        "tacacs": []
+      },
+      "fields": {
+        "auth_order": {
+          "path": "serverAuthOrder",
+          "schema": {
+            "additionalProperties": false,
+            "items": {
+              "default": "local",
+              "maxLength": 220,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "type": "List"
+        },
+        "authorization_config_commands": {
+          "path": "authorizationConfigCommands",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "authorization_config_commands_variable"
+        },
+        "authorization_console": {
+          "path": "authorizationConsole",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "authorization_console_variable"
+        },
+        "dot1x_accounting": {
+          "path": "accountingGroup",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "dot1x_accounting_variable"
+        },
+        "dot1x_authentication": {
+          "path": "authenticationGroup",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "dot1x_authentication_variable"
+        },
+        "trustsec_cts_auth_list": {
+          "path": "ctsAuthList",
+          "schema": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "trustsec_cts_auth_list_variable"
+        },
+        "trustsec_radius_group": {
+          "path": "radiusTrustsecGroup",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String"
+        }
+      },
+      "lists": {
+        "accounting_rules": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {
+              "level": {
+                "optionType": "default"
+              },
+              "startStop": {
+                "optionType": "default",
+                "value": true
+              }
+            },
+            "fields": {
+              "groups": {
+                "path": "group",
+                "schema": {
+                  "additionalProperties": false,
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "type": "List"
+              },
+              "id": {
+                "path": "ruleId",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "level": {
+                "path": "level",
+                "schema": {
+                  "enum": [
+                    "1",
+                    "15"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "method": {
+                "path": "method",
+                "schema": {
+                  "enum": [
+                    "commands",
+                    "exec",
+                    "network",
+                    "system"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "start_stop": {
+                "path": "startStop",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool",
+                "variable": "start_stop_variable",
+                "variable_encoding": "verbatim"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "groups",
+              "method",
+              "id"
+            ],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "accountingRule",
+          "primitive": false
+        },
+        "authorization_rules": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {
+              "ifAuthenticated": {
+                "optionType": "default",
+                "value": false
+              }
+            },
+            "fields": {
+              "authenticated": {
+                "path": "ifAuthenticated",
+                "schema": {
+                  "type": "boolean"
+                },
+                "type": "Bool"
+              },
+              "groups": {
+                "path": "group",
+                "schema": {
+                  "additionalProperties": false,
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 3,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "type": "List"
+              },
+              "id": {
+                "path": "ruleId",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "level": {
+                "path": "level",
+                "schema": {
+                  "enum": [
+                    "1",
+                    "15"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "method": {
+                "path": "method",
+                "schema": {
+                  "enum": [
+                    "commands"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "groups",
+              "method",
+              "id"
+            ],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "authorizationRule",
+          "primitive": false
+        },
+        "radius_groups": {
+          "definition": {
+            "computed_defaults": {
+              "group_name": "radius"
+            },
+            "defaults": {
+              "server": [],
+              "sourceInterface": {
+                "optionType": "default"
+              },
+              "vpn": {
+                "optionType": "default",
+                "value": 0
+              }
+            },
+            "fields": {
+              "group_name": {
+                "path": "groupName",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "source_interface": {
+                "path": "sourceInterface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 3,
+                  "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "source_interface_variable"
+              },
+              "vpn": {
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_variable"
+              }
+            },
+            "lists": {
+              "servers": {
+                "definition": {
+                  "computed_defaults": {},
+                  "defaults": {
+                    "acctPort": {
+                      "optionType": "default",
+                      "value": 1813
+                    },
+                    "authPort": {
+                      "optionType": "default",
+                      "value": 1812
+                    },
+                    "keyEnum": {
+                      "optionType": "default"
+                    },
+                    "keyType": {
+                      "optionType": "default",
+                      "value": "key"
+                    },
+                    "retransmit": {
+                      "optionType": "default",
+                      "value": 3
+                    },
+                    "secretKey": {
+                      "optionType": "default"
+                    },
+                    "timeout": {
+                      "optionType": "default",
+                      "value": 5
+                    }
+                  },
+                  "fields": {
+                    "accounting_port": {
+                      "path": "acctPort",
+                      "schema": {
+                        "default": 1813,
+                        "maximum": 65534,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "type": "Int64",
+                      "variable": "accounting_port_variable"
+                    },
+                    "address": {
+                      "path": "address",
+                      "schema": {
+                        "oneOf": [
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ],
+                        "type": "string"
+                      },
+                      "type": "String"
+                    },
+                    "authentication_port": {
+                      "path": "authPort",
+                      "schema": {
+                        "default": 1812,
+                        "maximum": 65534,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "type": "Int64",
+                      "variable": "authentication_port_variable"
+                    },
+                    "key": {
+                      "path": "key",
+                      "schema": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "String",
+                      "variable": "key_variable"
+                    },
+                    "key_type": {
+                      "path": "keyType",
+                      "schema": {
+                        "default": "key",
+                        "enum": [
+                          "key",
+                          "pac"
+                        ],
+                        "type": "string"
+                      },
+                      "type": "String",
+                      "variable": "key_type_variable"
+                    },
+                    "retransmit": {
+                      "path": "retransmit",
+                      "schema": {
+                        "default": 3,
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "type": "Int64",
+                      "variable": "retransmit_variable"
+                    },
+                    "timeout": {
+                      "path": "timeout",
+                      "schema": {
+                        "default": 5,
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "type": "Int64",
+                      "variable": "timeout_variable"
+                    }
+                  },
+                  "lists": {},
+                  "public_defaults": {},
+                  "required": [
+                    "address"
+                  ],
+                  "wrappers": []
+                },
+                "omit_empty": false,
+                "path": "server",
+                "primitive": false
+              }
+            },
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "radius",
+          "primitive": false
+        },
+        "tacacs_groups": {
+          "definition": {
+            "computed_defaults": {
+              "group_name": "tacacs"
+            },
+            "defaults": {
+              "server": [],
+              "sourceInterface": {
+                "optionType": "default"
+              },
+              "vpn": {
+                "optionType": "default",
+                "value": 0
+              }
+            },
+            "fields": {
+              "group_name": {
+                "path": "groupName",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "source_interface": {
+                "path": "sourceInterface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 3,
+                  "pattern": "(ATM|ATM-ACR|AppGigabitEthernet|AppNav-Compress|AppNav-UnCompress|Async|BD-VIF|BDI|CEM|CEM-ACR|Cellular|Dialer|Embedded-Service-Engine|Ethernet|Ethernet-Internal|FastEthernet|FiftyGigabitEthernet|FiveGigabitEthernet|FortyGigabitEthernet|FourHundredGigE|GMPLS|GigabitEthernet|Group-Async|HundredGigE|L2LISP|LISP|Loopback|MFR|Multilink|Port-channel|SM|Serial|Service-Engine|TenGigabitEthernet|Tunnel|TwentyFiveGigE|TwentyFiveGigabitEthernet|TwoGigabitEthernet|TwoHundredGigE|Vif|Virtual-PPP|Virtual-Template|VirtualPortGroup|Vlan|Wlan-GigabitEthernet|nat64|nat66|ntp|nve|ospfv3|overlay|pseudowire|ucse|vasileft|vasiright|vmi)([0-9]*(. ?[1-9][0-9]*)*|[0-9/]+|[0-9]+/[0-9]+/[0-9]+:[0-9]+|[0-9]+/[0-9]+/[0-9]+|[0-9]+/[0-9]+|[0-9]+)",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "source_interface_variable"
+              },
+              "vpn": {
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_variable"
+              }
+            },
+            "lists": {
+              "servers": {
+                "definition": {
+                  "computed_defaults": {},
+                  "defaults": {
+                    "keyEnum": {
+                      "optionType": "default"
+                    },
+                    "port": {
+                      "optionType": "default",
+                      "value": 49
+                    },
+                    "timeout": {
+                      "optionType": "default",
+                      "value": 5
+                    }
+                  },
+                  "fields": {
+                    "address": {
+                      "path": "address",
+                      "schema": {
+                        "oneOf": [
+                          {
+                            "format": "ipv4"
+                          },
+                          {
+                            "format": "ipv6"
+                          }
+                        ],
+                        "type": "string"
+                      },
+                      "type": "String"
+                    },
+                    "key": {
+                      "path": "key",
+                      "schema": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "type": "String",
+                      "variable": "key_variable"
+                    },
+                    "port": {
+                      "path": "port",
+                      "schema": {
+                        "default": 49,
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "type": "Int64",
+                      "variable": "port_variable"
+                    },
+                    "timeout": {
+                      "path": "timeout",
+                      "schema": {
+                        "default": 5,
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "type": "Int64",
+                      "variable": "timeout_variable"
+                    }
+                  },
+                  "lists": {},
+                  "public_defaults": {},
+                  "required": [
+                    "address"
+                  ],
+                  "wrappers": []
+                },
+                "omit_empty": false,
+                "path": "server",
+                "primitive": false
+              }
+            },
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "tacacs",
+          "primitive": false
+        },
+        "users": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {
+              "privilege": {
+                "optionType": "default",
+                "value": "15"
+              },
+              "pubkeyChain": []
+            },
+            "fields": {
+              "name": {
+                "path": "name",
+                "schema": {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "pattern": "^[^&<>! \"]+$",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "name_variable"
+              },
+              "password": {
+                "path": "password",
+                "schema": {
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "password_variable"
+              },
+              "privilege": {
+                "path": "privilege",
+                "schema": {
+                  "default": "15",
+                  "enum": [
+                    "1",
+                    "15"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "privilege_variable"
+              }
+            },
+            "lists": {
+              "public_key_chains": {
+                "definition": {
+                  "computed_defaults": {},
+                  "defaults": {
+                    "keyType": {
+                      "optionType": "global",
+                      "value": "ssh-rsa"
+                    }
+                  },
+                  "fields": {
+                    "key": {
+                      "path": "keyString",
+                      "schema": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "pattern": "^AAAA[0-9A-Za-z+/]+[=]{0,3}$",
+                        "type": "string"
+                      },
+                      "type": "String",
+                      "variable": "key_variable"
+                    }
+                  },
+                  "lists": {},
+                  "public_defaults": {},
+                  "required": [],
+                  "wrappers": []
+                },
+                "omit_empty": false,
+                "path": "pubkeyChain",
+                "primitive": false
+              }
+            },
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "user",
+          "primitive": false
+        }
+      },
+      "public_defaults": {
+        "auth_order": [
+          "local"
+        ]
+      },
+      "required": [],
+      "wrappers": []
+    },
     "basic": {
+      "computed_defaults": {},
       "defaults": {
         "adminTechOnFailure": {
           "optionType": "default",
@@ -885,6 +1551,7 @@
       "lists": {
         "affinity_per_vrfs": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "affinityGroupNumber": {
                 "optionType": "default"
@@ -928,10 +1595,13 @@
             "required": [],
             "wrappers": []
           },
-          "path": "affinityPerVrf"
+          "omit_empty": false,
+          "path": "affinityPerVrf",
+          "primitive": false
         },
         "geo_fencing_sms_mobile_numbers": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {},
             "fields": {
               "number": {
@@ -951,7 +1621,9 @@
             "required": [],
             "wrappers": []
           },
-          "path": "gpsLocation.geoFencing.sms.mobileNumber"
+          "omit_empty": false,
+          "path": "gpsLocation.geoFencing.sms.mobileNumber",
+          "primitive": false
         }
       },
       "public_defaults": {},
@@ -959,6 +1631,7 @@
       "wrappers": []
     },
     "global": {
+      "computed_defaults": {},
       "defaults": {
         "services_global": {
           "services_ip": {
@@ -1321,6 +1994,7 @@
       "wrappers": []
     },
     "logging": {
+      "computed_defaults": {},
       "defaults": {
         "disk": {
           "diskEnable": {
@@ -1369,6 +2043,7 @@
       "lists": {
         "ipv4_servers": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "priority": {
                 "optionType": "default",
@@ -1472,10 +2147,13 @@
             "required": [],
             "wrappers": []
           },
-          "path": "server"
+          "omit_empty": false,
+          "path": "server",
+          "primitive": false
         },
         "ipv6_servers": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "priority": {
                 "optionType": "default",
@@ -1579,10 +2257,13 @@
             "required": [],
             "wrappers": []
           },
-          "path": "ipv6Server"
+          "omit_empty": false,
+          "path": "ipv6Server",
+          "primitive": false
         },
         "tls_profiles": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "cipherSuiteList": {
                 "optionType": "default"
@@ -1646,7 +2327,9 @@
             "required": [],
             "wrappers": []
           },
-          "path": "tlsProfile"
+          "omit_empty": false,
+          "path": "tlsProfile",
+          "primitive": false
         }
       },
       "public_defaults": {},
@@ -1654,6 +2337,7 @@
       "wrappers": []
     },
     "ntp": {
+      "computed_defaults": {},
       "defaults": {
         "authentication": {
           "authenticationKeys": [],
@@ -1724,6 +2408,7 @@
       "lists": {
         "authentication_keys": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {},
             "fields": {
               "cmac_aes128_value": {
@@ -1780,10 +2465,13 @@
             "required": [],
             "wrappers": []
           },
-          "path": "authentication.authenticationKeys"
+          "omit_empty": false,
+          "path": "authentication.authenticationKeys",
+          "primitive": false
         },
         "servers": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "key": {
                 "optionType": "default"
@@ -1882,7 +2570,9 @@
             "required": [],
             "wrappers": []
           },
-          "path": "server"
+          "omit_empty": false,
+          "path": "server",
+          "primitive": false
         }
       },
       "public_defaults": {},
@@ -1890,6 +2580,7 @@
       "wrappers": []
     },
     "omp": {
+      "computed_defaults": {},
       "defaults": {
         "advertiseIpv4": {
           "bgp": {
@@ -2319,9 +3010,8 @@
       "wrappers": []
     },
     "other_thousandeyes": {
-      "defaults": {
-        "virtualApplication": []
-      },
+      "computed_defaults": {},
+      "defaults": {},
       "fields": {},
       "lists": {},
       "public_defaults": {},
@@ -2329,6 +3019,7 @@
       "wrappers": [
         {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "hostname": {
                 "optionType": "default"
@@ -2498,6 +3189,7 @@
       ]
     },
     "other_trustsec": {
+      "computed_defaults": {},
       "defaults": {
         "deviceId": {
           "optionType": "default",
@@ -2693,6 +3385,7 @@
       "lists": {
         "sxp_connections": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "connectionMaxHoldTime": {
                 "optionType": "default",
@@ -2809,7 +3502,9 @@
             "required": [],
             "wrappers": []
           },
-          "path": "sxpConnectionList"
+          "omit_empty": false,
+          "path": "sxpConnectionList",
+          "primitive": false
         }
       },
       "public_defaults": {},
@@ -2817,6 +3512,7 @@
       "wrappers": []
     },
     "other_ucse": {
+      "computed_defaults": {},
       "defaults": {
         "imc": {
           "access-port": {
@@ -2936,6 +3632,7 @@
       "lists": {
         "interfaces": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "ifName": {
                 "optionType": "default"
@@ -2981,7 +3678,9 @@
             "required": [],
             "wrappers": []
           },
-          "path": "interface"
+          "omit_empty": false,
+          "path": "interface",
+          "primitive": false
         }
       },
       "public_defaults": {},
@@ -2991,7 +3690,906 @@
       ],
       "wrappers": []
     },
+    "policy_object_as_path_list": {
+      "collection": "as_path_lists",
+      "computed_defaults": {},
+      "defaults": {
+        "entries": []
+      },
+      "fields": {
+        "id": {
+          "path": "asPathListNum",
+          "schema": {
+            "maximum": 500,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64"
+        }
+      },
+      "ignore_description": false,
+      "lists": {
+        "as_paths": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "asPath",
+                "schema": {
+                  "pattern": "[^<>]*",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "as-path",
+      "public_defaults": {},
+      "required": [
+        "id",
+        "as_paths"
+      ],
+      "wrappers": []
+    },
+    "policy_object_class_map": {
+      "collection": "forwarding_classes",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": false,
+      "lists": {},
+      "path": "class",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": [
+        {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "queue": {
+                "encode": "decimal-string",
+                "input_schema": {
+                  "maximum": 7,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "path": "queue",
+                "schema": {
+                  "enum": [
+                    "0",
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                    "6",
+                    "7"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "queue"
+            ],
+            "wrappers": []
+          },
+          "path": "entries"
+        }
+      ]
+    },
+    "policy_object_color_list": {
+      "collection": "color_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "colors": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "color",
+                "schema": {
+                  "enum": [
+                    "3g",
+                    "biz-internet",
+                    "blue",
+                    "bronze",
+                    "custom1",
+                    "custom2",
+                    "custom3",
+                    "default",
+                    "gold",
+                    "green",
+                    "lte",
+                    "metro-ethernet",
+                    "mpls",
+                    "private1",
+                    "private2",
+                    "private3",
+                    "private4",
+                    "private5",
+                    "private6",
+                    "public-internet",
+                    "red",
+                    "silver"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "color",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_extended_community_list": {
+      "collection": "extended_community_lists",
+      "computed_defaults": {},
+      "defaults": {
+        "entries": []
+      },
+      "fields": {},
+      "ignore_description": false,
+      "lists": {
+        "extended_communities": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "extCommunity",
+                "schema": {
+                  "pattern": "^(rt|soo) ([\\d\\.]+):(\\d+)$",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "ext-community",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_mirror": {
+      "collection": "mirrors",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": false,
+      "lists": {},
+      "path": "mirror",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": [
+        {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "remote_destination_ip": {
+                "path": "remoteDestIp",
+                "schema": {
+                  "oneOf": [
+                    {
+                      "format": "ipv4"
+                    },
+                    {
+                      "format": "ipv6"
+                    }
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "source_ip": {
+                "path": "sourceIp",
+                "schema": {
+                  "oneOf": [
+                    {
+                      "format": "ipv4"
+                    },
+                    {
+                      "format": "ipv6"
+                    }
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "remote_destination_ip",
+              "source_ip"
+            ],
+            "wrappers": []
+          },
+          "path": "entries"
+        }
+      ]
+    },
+    "policy_object_policer": {
+      "collection": "policers",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": false,
+      "lists": {},
+      "path": "policer",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": [
+        {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "burst_bytes": {
+                "path": "burst",
+                "schema": {
+                  "maximum": 10000000,
+                  "minimum": 15000,
+                  "type": "integer"
+                },
+                "type": "Int64"
+              },
+              "exceed_action": {
+                "path": "exceed",
+                "schema": {
+                  "enum": [
+                    "drop",
+                    "remark"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "rate_bps": {
+                "path": "rate",
+                "schema": {
+                  "maximum": 100000000000,
+                  "minimum": 8,
+                  "type": "integer"
+                },
+                "type": "Int64"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "burst_bytes",
+              "exceed_action",
+              "rate_bps"
+            ],
+            "wrappers": []
+          },
+          "path": "entries"
+        }
+      ]
+    },
+    "policy_object_security_data_ipv4_prefix_list": {
+      "collection": "security_data_ipv4_prefix_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "prefixes": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "ipPrefix",
+                "schema": {
+                  "pattern": "(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\\/)([0-2]?[0-9]$|[3]?[0-2])",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "security-data-ip-prefix",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_security_fqdn_list": {
+      "collection": "security_fqdn_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "fqdns": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "pattern",
+                "schema": {
+                  "description": "Must be valid FQDN",
+                  "maxLength": 120,
+                  "minLength": 1,
+                  "pattern": "^([*][.])?([a-zA-Z0-9-]+\\.)+([a-zA-Z0-9-])+$",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "security-fqdn",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_security_local_domain_list": {
+      "collection": "security_local_domain_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "local_domains": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "nameServer",
+                "schema": {
+                  "description": "Must be valid utd regex. String cannot start with a '*' or a '+', be empty, or be more than 240 characters",
+                  "maxLength": 240,
+                  "minLength": 1,
+                  "pattern": "^[^*+].*",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "security-localdomain",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_security_port_list": {
+      "collection": "security_port_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "ports": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "port",
+                "schema": {
+                  "oneOf": [
+                    {
+                      "pattern": "^(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+                      "type": "string"
+                    },
+                    {
+                      "pattern": "^(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])\\-(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "security-port",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_security_protocol_list": {
+      "collection": "security_protocol_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "protocols": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "protocolName",
+                "schema": {
+                  "enum": [
+                    "snmp",
+                    "icmp",
+                    "tcp",
+                    "udp",
+                    "echo",
+                    "telnet",
+                    "wins",
+                    "n2h2server",
+                    "nntp",
+                    "pptp",
+                    "rtsp",
+                    "bootpc",
+                    "gdoi",
+                    "tacacs",
+                    "gopher",
+                    "icabrowser",
+                    "skinny",
+                    "sunrpc",
+                    "biff",
+                    "router",
+                    "ircs",
+                    "orasrv",
+                    "ms-cluster-net",
+                    "kermit",
+                    "isakmp",
+                    "sshell",
+                    "realsecure",
+                    "ircu",
+                    "appleqtc",
+                    "pwdgen",
+                    "rdb-dbs-disp",
+                    "creativepartnr",
+                    "finger",
+                    "ftps",
+                    "giop",
+                    "rsvd",
+                    "hp-alarm-mgr",
+                    "uucp",
+                    "kerberos",
+                    "imap",
+                    "time",
+                    "bootps",
+                    "tftp",
+                    "oracle",
+                    "snmptrap",
+                    "http",
+                    "qmtp",
+                    "radius",
+                    "oracle-em-vp",
+                    "tarantella",
+                    "pcanywheredata",
+                    "ldap",
+                    "mgcp",
+                    "sqlsrv",
+                    "hsrp",
+                    "cisco-net-mgmt",
+                    "smtp",
+                    "pcanywherestat",
+                    "exec",
+                    "send",
+                    "stun",
+                    "syslog",
+                    "ms-sql-m",
+                    "citrix",
+                    "creativeserver",
+                    "cifs",
+                    "cisco-sys",
+                    "cisco-tna",
+                    "ms-dotnetster",
+                    "gtpv1",
+                    "gtpv0",
+                    "imap3",
+                    "fcip-port",
+                    "netbios-dgm",
+                    "sip-tls",
+                    "pop3s",
+                    "cisco-fna",
+                    "802-11-iapp",
+                    "oem-agent",
+                    "cisco-tdp",
+                    "tr-rsrb",
+                    "r-winsock",
+                    "sql-net",
+                    "syslog-conn",
+                    "tacacs-ds",
+                    "h225ras",
+                    "ace-svr",
+                    "dhcp-failover",
+                    "igmpv3lite",
+                    "irc-serv",
+                    "entrust-svcs",
+                    "dbcontrol_agent",
+                    "cisco-svcs",
+                    "ipsec-msft",
+                    "microsoft-ds",
+                    "ms-sna",
+                    "rsvp_tunnel",
+                    "rsvp-encap",
+                    "hp-collector",
+                    "netbios-ns",
+                    "msexch-routing",
+                    "h323",
+                    "l2tp",
+                    "ldap-admin",
+                    "pop3",
+                    "h323callsigalt",
+                    "ms-sql",
+                    "iscsi-target",
+                    "webster",
+                    "lotusnote",
+                    "ipx",
+                    "entrust-svc-hand",
+                    "citriximaclient",
+                    "rtc-pm-port",
+                    "ftp",
+                    "aol",
+                    "xdmcp",
+                    "oraclenames",
+                    "login",
+                    "iscsi",
+                    "ttc",
+                    "imaps",
+                    "socks",
+                    "ssh",
+                    "dnsix",
+                    "daytime",
+                    "sip",
+                    "discard",
+                    "ntp",
+                    "ldaps",
+                    "https",
+                    "vdolive",
+                    "ica",
+                    "net8-cman",
+                    "cuseeme",
+                    "netstat",
+                    "sms",
+                    "streamworks",
+                    "rtelnet",
+                    "who",
+                    "kazaa",
+                    "ssp",
+                    "dbase",
+                    "timed",
+                    "cddbp",
+                    "telnets",
+                    "ymsgr",
+                    "ident",
+                    "bgp",
+                    "ddns-v3",
+                    "vqp",
+                    "irc",
+                    "ipass",
+                    "x11",
+                    "dns",
+                    "lotusmtap",
+                    "mysql",
+                    "nfs",
+                    "msnmsgr",
+                    "netshow",
+                    "sqlserv",
+                    "hp-managed-node",
+                    "ncp",
+                    "shell",
+                    "realmedia",
+                    "msrpc",
+                    "clp"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "security-protocolname",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_security_url_allow_list": {
+      "collection": "security_url_allow_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "urls": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "pattern",
+                "schema": {
+                  "maxLength": 240,
+                  "minLength": 1,
+                  "pattern": "^[^*+].*",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "security-urllist",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_security_url_block_list": {
+      "collection": "security_url_block_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": true,
+      "lists": {
+        "urls": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "pattern",
+                "schema": {
+                  "maxLength": 240,
+                  "minLength": 1,
+                  "pattern": "^[^*+].*",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "security-urllist",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_standard_community_list": {
+      "collection": "standard_community_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": false,
+      "lists": {
+        "standard_communities": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "standardCommunity",
+                "schema": {
+                  "oneOf": [
+                    {
+                      "enum": [
+                        "internet",
+                        "local-AS",
+                        "no-advertise",
+                        "no-export"
+                      ],
+                      "type": "string"
+                    },
+                    {
+                      "pattern": "^(0|[1-9]\\d{0,3}|[1-5]\\d{4}|6[0-4]\\d{3}|65[0-4]\\d{2}|655[0-2]\\d|6553[0-5]):(0|[1-9]\\d{0,3}|[1-5]\\d{4}|6[0-4]\\d{3}|65[0-4]\\d{2}|655[0-2]\\d|6553[0-5])$",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": true
+        }
+      },
+      "path": "standard-community",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "policy_object_tloc_list": {
+      "collection": "tloc_lists",
+      "computed_defaults": {},
+      "defaults": {},
+      "fields": {},
+      "ignore_description": false,
+      "lists": {
+        "tlocs": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "color": {
+                "path": "color",
+                "schema": {
+                  "enum": [
+                    "3g",
+                    "biz-internet",
+                    "blue",
+                    "bronze",
+                    "custom1",
+                    "custom2",
+                    "custom3",
+                    "default",
+                    "gold",
+                    "green",
+                    "lte",
+                    "metro-ethernet",
+                    "mpls",
+                    "private1",
+                    "private2",
+                    "private3",
+                    "private4",
+                    "private5",
+                    "private6",
+                    "public-internet",
+                    "red",
+                    "silver"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "encapsulation": {
+                "path": "encap",
+                "schema": {
+                  "enum": [
+                    "ipsec",
+                    "gre"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "preference": {
+                "encode": "decimal-string",
+                "input_schema": {
+                  "maximum": 4294967295,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "path": "preference",
+                "schema": {
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "tloc_ip": {
+                "path": "tloc",
+                "schema": {
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "color",
+              "encapsulation",
+              "tloc_ip"
+            ],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "entries",
+          "primitive": false
+        }
+      },
+      "path": "tloc",
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
     "security": {
+      "computed_defaults": {},
       "defaults": {
         "extendedArWindow": {
           "optionType": "default",
@@ -3090,6 +4688,7 @@
       "lists": {
         "key_chains": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {},
             "fields": {
               "key_id": {
@@ -3118,10 +4717,13 @@
             ],
             "wrappers": []
           },
-          "path": "keychain"
+          "omit_empty": false,
+          "path": "keychain",
+          "primitive": false
         },
         "keys": {
           "definition": {
+            "computed_defaults": {},
             "defaults": {
               "acceptAoMismatch": {
                 "optionType": "default",
@@ -3304,14 +4906,418 @@
             ],
             "wrappers": []
           },
-          "path": "key"
+          "omit_empty": false,
+          "path": "key",
+          "primitive": false
         }
       },
       "public_defaults": {},
       "required": [],
       "wrappers": []
     },
+    "snmp": {
+      "computed_defaults": {},
+      "defaults": {
+        "community": [],
+        "contact": {
+          "optionType": "default"
+        },
+        "group": [],
+        "location": {
+          "optionType": "default"
+        },
+        "shutdown": {
+          "optionType": "default",
+          "value": false
+        },
+        "target": [],
+        "user": [],
+        "view": []
+      },
+      "fields": {
+        "contact_person": {
+          "path": "contact",
+          "schema": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "contact_person_variable"
+        },
+        "location": {
+          "path": "location",
+          "schema": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "location_variable"
+        },
+        "shutdown": {
+          "path": "shutdown",
+          "schema": {
+            "type": "boolean"
+          },
+          "type": "Bool",
+          "variable": "shutdown_variable"
+        }
+      },
+      "lists": {
+        "communities": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "authorization": {
+                "path": "authorization",
+                "schema": {
+                  "enum": [
+                    "read-only",
+                    "read-write"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "authorization_variable"
+              },
+              "name": {
+                "path": "name",
+                "schema": {
+                  "minLength": 1,
+                  "pattern": "^[\\S]+$",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "name_variable"
+              },
+              "user_label": {
+                "path": "userLabel",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "view": {
+                "path": "view",
+                "schema": {
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "view_variable"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "user_label"
+            ],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "community",
+          "primitive": false
+        },
+        "groups": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "name": {
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "security_level": {
+                "path": "securityLevel",
+                "schema": {
+                  "enum": [
+                    "no-auth-no-priv",
+                    "auth-no-priv",
+                    "auth-priv"
+                  ],
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "view": {
+                "path": "view",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "name",
+              "security_level"
+            ],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "group",
+          "primitive": false
+        },
+        "trap_target_servers": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "ip": {
+                "path": "ip",
+                "schema": {
+                  "oneOf": [
+                    {
+                      "format": "ipv4"
+                    },
+                    {
+                      "format": "ipv6"
+                    }
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "ip_variable"
+              },
+              "port": {
+                "path": "port",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "port_variable"
+              },
+              "source_interface": {
+                "path": "sourceInterface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "pattern": "(^GigabitEthernet|Loopback|TenGigabitEthernet|TwoGigabitEthernet|FortyGigabitEthernet|HundredGigE|Vlan)(([1-9]\\d|\\d)/){0,2}(0|[1-9]\\d*)([:|\\.][1-9]\\d*)?",
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "source_interface_variable"
+              },
+              "user": {
+                "path": "user",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "user_variable"
+              },
+              "user_label": {
+                "path": "userLabel",
+                "schema": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "vpn_id": {
+                "path": "vpnId",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "Int64",
+                "variable": "vpn_id_variable"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "target",
+          "primitive": false
+        },
+        "users": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {
+              "auth": {
+                "optionType": "default"
+              },
+              "authPassword": {
+                "optionType": "default"
+              },
+              "priv": {
+                "optionType": "default"
+              },
+              "privPassword": {
+                "optionType": "default"
+              }
+            },
+            "fields": {
+              "authentication_password": {
+                "path": "authPassword",
+                "schema": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "authentication_password_variable"
+              },
+              "authentication_protocol": {
+                "path": "auth",
+                "schema": {
+                  "enum": [
+                    "sha",
+                    "sha256"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "authentication_protocol_variable"
+              },
+              "group": {
+                "path": "group",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "group_variable"
+              },
+              "name": {
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              },
+              "privacy_password": {
+                "path": "privPassword",
+                "schema": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "privacy_password_variable"
+              },
+              "privacy_protocol": {
+                "path": "priv",
+                "schema": {
+                  "enum": [
+                    "aes-cfb-128",
+                    "aes-256-cfb-128"
+                  ],
+                  "type": "string"
+                },
+                "type": "String",
+                "variable": "privacy_protocol_variable"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [
+              "name"
+            ],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "user",
+          "primitive": false
+        },
+        "views": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {
+              "oid": []
+            },
+            "fields": {
+              "name": {
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {
+              "oids": {
+                "definition": {
+                  "computed_defaults": {},
+                  "defaults": {
+                    "exclude": {
+                      "optionType": "default",
+                      "value": false
+                    }
+                  },
+                  "fields": {
+                    "exclude": {
+                      "path": "exclude",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "type": "Bool",
+                      "variable": "exclude_variable"
+                    },
+                    "id": {
+                      "path": "id",
+                      "schema": {
+                        "minLength": 1,
+                        "pattern": "^(([0-1](\\.[1-3]?[0-9]))|(2\\.(0|([1-9]\\d*))))(\\.(0|\\*|([1-9]\\d*))){0,126}$",
+                        "type": "string"
+                      },
+                      "type": "String",
+                      "variable": "id_variable"
+                    }
+                  },
+                  "lists": {},
+                  "public_defaults": {},
+                  "required": [],
+                  "wrappers": []
+                },
+                "omit_empty": false,
+                "path": "oid",
+                "primitive": false
+              }
+            },
+            "public_defaults": {},
+            "required": [
+              "name"
+            ],
+            "wrappers": []
+          },
+          "omit_empty": false,
+          "path": "view",
+          "primitive": false
+        }
+      },
+      "public_defaults": {},
+      "required": [],
+      "unavailable_inputs": {
+        "groups[].view_variable": "Pinned module reads group.view.view_variable although group.view is a string"
+      },
+      "wrappers": []
+    },
     "transport_gps": {
+      "computed_defaults": {},
       "defaults": {
         "destinationAddress": {
           "optionType": "default"

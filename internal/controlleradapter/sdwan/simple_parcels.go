@@ -111,10 +111,10 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 			return nil, e
 		}
 	}
-	if (p.Security != nil || p.NTP != nil || p.Logging != nil || p.Basic != nil || p.Global != nil || p.OMP != nil || p.BFD != nil || p.FlexiblePortSpeed != nil || p.MRF != nil || p.PerformanceMonitoring != nil) && collection != "system" {
+	if (p.AAA != nil || p.SNMP != nil || p.Security != nil || p.NTP != nil || p.Logging != nil || p.Basic != nil || p.Global != nil || p.OMP != nil || p.BFD != nil || p.FlexiblePortSpeed != nil || p.MRF != nil || p.PerformanceMonitoring != nil) && collection != "system" {
 		return nil, errors.New("system feature requires system profile")
 	}
-	for kind, input := range map[string]map[string]any{"security": p.Security, "ntp": p.NTP, "logging": p.Logging, "basic": p.Basic, "global": p.Global, "omp": p.OMP} {
+	for kind, input := range map[string]map[string]any{"aaa": p.AAA, "snmp": p.SNMP, "security": p.Security, "ntp": p.NTP, "logging": p.Logging, "basic": p.Basic, "global": p.Global, "omp": p.OMP} {
 		if input != nil {
 			meta, data, e := scalarParcelData(kind, input)
 			if e != nil {

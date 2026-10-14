@@ -123,3 +123,45 @@ func TestThousandEyesWrapperAndChoices(t *testing.T) {
 		}
 	}
 }
+
+func TestSNMPNestedViewAndUnsupportedUpstreamVariable(t *testing.T) {
+	resources := parcelFixtures(t, "snmp-feature")
+	data := resources[1].Body["data"].(map[string]any)
+	view := data["view"].([]any)[0].(map[string]any)
+	oid := view["oid"].([]any)[0].(map[string]any)
+	if oid["id"].(map[string]any)["value"] != "1.3.6.1" {
+		t.Fatal("nested OID mapping lost")
+	}
+	if _, _, err := scalarParcelData("snmp", map[string]any{"groups": []any{map[string]any{"name": "g", "security_level": "auth-priv", "view_variable": "view"}}}); err == nil {
+		t.Fatal("unusable upstream variable silently accepted")
+	}
+}
+
+func TestAAAComputedGroupNamesAndDefaults(t *testing.T) {
+	_, data, err := scalarParcelData("aaa", map[string]any{"radius_groups": []any{map[string]any{"vpn": float64(3)}, map[string]any{}}, "tacacs_groups": []any{map[string]any{"group_name": "explicit"}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	radius := data["radius"].([]any)
+	for i, want := range []string{"radius-0-3", "radius-1-1"} {
+		if radius[i].(map[string]any)["groupName"].(map[string]any)["value"] != want {
+			t.Fatal("computed name mismatch")
+		}
+	}
+	if data["serverAuthOrder"].(map[string]any)["value"].([]any)[0] != "local" {
+		t.Fatal("upstream authentication order default missing")
+	}
+}
+
+func TestAAAUpstreamLiteralAndVerbatimVariable(t *testing.T) {
+	input := map[string]any{"users": []any{map[string]any{"name": "fixture", "public_key_chains": []any{map[string]any{"key_variable": "public_key"}}}}, "accounting_rules": []any{map[string]any{"id": "rule", "groups": []any{"local"}, "method": "exec", "start_stop_variable": "{{accounting_start}}"}}}
+	_, data, err := scalarParcelData("aaa", input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	user := data["user"].([]any)[0].(map[string]any)
+	key := user["pubkeyChain"].([]any)[0].(map[string]any)
+	if key["keyType"].(map[string]any)["value"] != "ssh-rsa" {
+		t.Fatal("upstream literal lost")
+	}
+}

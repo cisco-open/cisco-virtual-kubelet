@@ -13,11 +13,16 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--terraform", default="terraform")
 parser.add_argument("--execute", action="store_true")
-parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature"], default="core")
+parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature"], default="core")
 args = parser.parse_args()
+if args.fixture_set == "policy-profile" and args.execute:
+    raise SystemExit("Policy-profile execution needs a qualified empty-controller or read-only-parent workflow; plan-only is available")
 root = Path(__file__).resolve().parents[2]
 oracle = root / "examples/configs/sdwan/oracle"
 sets = {
+ "aaa-feature": {"files": ["aaa-feature"], "count": 2, "absent": "AAA", "oracle": "AAA"},
+ "snmp-feature": {"files": ["snmp-feature"], "count": 2, "absent": "SNMP", "oracle": "SNMP"},
+ "policy-profile": {"files": ["policy-profile"], "count": 16, "absent": "PolicyProfile", "oracle": "PolicyProfile"},
  "thousandeyes-feature": {"files": ["thousandeyes-feature"], "count": 2, "absent": "ThousandEyes", "oracle": "ThousandEyes"},
  "peripheral-features": {"files": ["peripheral-features"], "count": 4, "absent": "Peripheral", "oracle": "Peripheral"},
     "core": {"files": ["banner", "system-profile", "policy-objects", "network-hierarchy", "feature-profiles"], "count": 44,
@@ -32,6 +37,23 @@ for key in ("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"):
         raise SystemExit(f"{key} is required")
 env.update(CVK_SDWAN_LIVE="1", CVK_SDWAN_ORACLE="1")
 allowed = {
+    'sdwan_policy_object_feature_profile',
+    'sdwan_policy_object_as_path_list',
+    'sdwan_policy_object_class_map',
+    'sdwan_policy_object_color_list',
+    'sdwan_policy_object_extended_community_list',
+    'sdwan_policy_object_mirror',
+    'sdwan_policy_object_policer',
+    'sdwan_policy_object_security_data_ipv4_prefix_list',
+    'sdwan_policy_object_security_fqdn_list',
+    'sdwan_policy_object_security_local_domain_list',
+    'sdwan_policy_object_security_port_list',
+    'sdwan_policy_object_security_protocol_list',
+    'sdwan_policy_object_security_url_allow_list',
+    'sdwan_policy_object_security_url_block_list',
+    'sdwan_policy_object_standard_community_list',
+    'sdwan_policy_object_tloc_list',
+
     'sdwan_app_probe_class_policy_object',
     'sdwan_application_list_policy_object',
     'sdwan_application_priority_feature_profile',
@@ -78,6 +100,8 @@ allowed = {
     'sdwan_system_ntp_feature',
     'sdwan_system_omp_feature',
     'sdwan_system_security_feature',
+    'sdwan_system_snmp_feature',
+    'sdwan_system_aaa_feature',
     'sdwan_system_performance_monitoring_feature',
     'sdwan_tloc_list_policy_object',
     'sdwan_topology_feature_profile',
@@ -102,6 +126,8 @@ def plan(filename, targets=()):
 
 def validate(changes, types=allowed):
     for change in changes:
+        if change.get("mode") == "data" and change["type"] == "sdwan_policy_object_feature_profile_parcels" and change["change"]["actions"] in (["read"], ["no-op"]):
+            continue
         if change["type"] not in types or change["change"]["actions"] not in (["no-op"], ["create"]):
             raise RuntimeError("Plan differs from the isolated fixture allow-list")
 
