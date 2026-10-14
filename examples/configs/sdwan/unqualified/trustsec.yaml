@@ -1,5 +1,5 @@
 # Unqualified on Manager 20.18.2.2: pinned provider omits required sxpNodeId.
-# Kept as a reproducible compatibility fixture; excluded from deployment/oracles.
+# Kept as a reproducible compatibility fixture; excluded from deployment.
 sdwan:
   feature_profiles:
     other_profiles:

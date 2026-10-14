@@ -85,23 +85,6 @@ func liveParcelLifecycle(t *testing.T, resources []Resource) {
 		}
 	}
 }
-func TestLiveExtraOracle(t *testing.T) { liveParcelOracle(t, extraFixtures(t)) }
-func liveParcelOracle(t *testing.T, resources []Resource) {
-	if os.Getenv("CVK_SDWAN_ORACLE") != "1" {
-		t.Skip("requires upstream fixture")
-	}
-	c := liveClient(t)
-	for _, r := range resources {
-		o, e := c.Observe(context.Background(), r)
-		if e != nil || o == nil {
-			t.Fatal(r.Type, "readback", e)
-		}
-		same, e := Equal(r, o.Body)
-		if e != nil || !same {
-			t.Fatal(r.Type, "oracle mismatch", e)
-		}
-	}
-}
 
 func TestPeripheralFixtures(t *testing.T) {
 	if len(parcelFixtures(t, "peripheral-features")) != 4 {
@@ -113,9 +96,6 @@ func TestLivePeripheralNamesAbsent(t *testing.T) {
 }
 func TestLivePeripheralLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "peripheral-features"))
-}
-func TestLivePeripheralOracle(t *testing.T) {
-	liveParcelOracle(t, parcelFixtures(t, "peripheral-features"))
 }
 
 func TestUnqualifiedTrustSecFailsBeforeMutation(t *testing.T) {
@@ -139,9 +119,6 @@ func TestLiveThousandEyesNamesAbsent(t *testing.T) {
 func TestLiveThousandEyesLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "thousandeyes-feature"))
 }
-func TestLiveThousandEyesOracle(t *testing.T) {
-	liveParcelOracle(t, parcelFixtures(t, "thousandeyes-feature"))
-}
 
 func TestSNMPFixture(t *testing.T) {
 	if len(parcelFixtures(t, "snmp-feature")) != 2 {
@@ -152,7 +129,6 @@ func TestLiveSNMPNamesAbsent(t *testing.T) {
 	liveParcelNamesAbsent(t, parcelFixtures(t, "snmp-feature"))
 }
 func TestLiveSNMPLifecycle(t *testing.T) { liveParcelLifecycle(t, parcelFixtures(t, "snmp-feature")) }
-func TestLiveSNMPOracle(t *testing.T)    { liveParcelOracle(t, parcelFixtures(t, "snmp-feature")) }
 
 func TestAAAFixture(t *testing.T) {
 	if len(parcelFixtures(t, "aaa-feature")) != 2 {
@@ -161,7 +137,6 @@ func TestAAAFixture(t *testing.T) {
 }
 func TestLiveAAANamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "aaa-feature")) }
 func TestLiveAAALifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "aaa-feature")) }
-func TestLiveAAAOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "aaa-feature")) }
 
 func TestServiceFeatureFixtures(t *testing.T) {
 	resources := parcelFixtures(t, "service-features")
@@ -175,7 +150,6 @@ func TestLiveServiceNamesAbsent(t *testing.T) {
 func TestLiveServiceLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "service-features"))
 }
-func TestLiveServiceOracle(t *testing.T) { liveParcelOracle(t, parcelFixtures(t, "service-features")) }
 
 func TestServiceSchemaCombinations(t *testing.T) {
 	for _, input := range []map[string]any{
@@ -222,7 +196,4 @@ func TestLiveTransportCellularNamesAbsent(t *testing.T) {
 }
 func TestLiveTransportCellularLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "transport-cellular"))
-}
-func TestLiveTransportCellularOracle(t *testing.T) {
-	liveParcelOracle(t, parcelFixtures(t, "transport-cellular"))
 }

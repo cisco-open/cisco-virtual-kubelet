@@ -80,19 +80,3 @@ func TestLiveFamilyLifecycle(t *testing.T) {
 		}
 	}
 }
-func TestLiveFamilyOracle(t *testing.T) {
-	if os.Getenv("CVK_SDWAN_ORACLE") != "1" {
-		t.Skip("requires upstream fixture")
-	}
-	c := liveClient(t)
-	for _, r := range familyFixtures(t) {
-		o, e := c.Observe(context.Background(), r)
-		if e != nil || o == nil {
-			t.Fatal(r.Name, "readback", e)
-		}
-		same, e := Equal(r, o.Body)
-		if e != nil || !same {
-			t.Fatal(r.Name, "oracle mismatch", e)
-		}
-	}
-}

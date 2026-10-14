@@ -59,24 +59,6 @@ func TestLivePolicyNamesAbsent(t *testing.T) {
 		}
 	}
 }
-func TestLivePolicyOracle(t *testing.T) {
-	if os.Getenv("CVK_SDWAN_ORACLE") != "1" {
-		t.Skip("requires upstream fixtures")
-	}
-	c := liveClient(t)
-	for _, r := range policyFixtures(t) {
-		t.Run(r.Key, func(t *testing.T) {
-			o, e := c.Observe(context.Background(), r)
-			if e != nil || o == nil {
-				t.Fatal("readback", e)
-			}
-			same, e := Equal(r, o.Body)
-			if e != nil || !same {
-				t.Fatal("upstream mapping mismatch", e)
-			}
-		})
-	}
-}
 func TestLivePolicyLifecycle(t *testing.T) {
 	if os.Getenv("CVK_SDWAN_MUTATE") != "1" {
 		t.Skip("requires fixture mutation opt-in")

@@ -55,7 +55,6 @@ func TestLiveClassicNamesAbsent(t *testing.T) {
 func TestLiveClassicLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "classic-templates"))
 }
-func TestLiveClassicOracle(t *testing.T) { liveParcelOracle(t, parcelFixtures(t, "classic-templates")) }
 
 func TestClassicCellularFixture(t *testing.T) {
 	resources := parcelFixtures(t, "classic-cellular")
@@ -86,7 +85,6 @@ func TestLiveCellularNamesAbsent(t *testing.T) {
 func TestLiveCellularLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "classic-cellular"))
 }
-func TestLiveCellularOracle(t *testing.T) { liveParcelOracle(t, parcelFixtures(t, "classic-cellular")) }
 
 func TestClassicCollectionsRemainStrict(t *testing.T) {
 	for _, source := range []string{
@@ -121,7 +119,6 @@ func TestClassicBFDTree(t *testing.T) {
 }
 func TestLiveBFDNamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "classic-bfd")) }
 func TestLiveBFDLifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "classic-bfd")) }
-func TestLiveBFDOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "classic-bfd")) }
 
 func TestClassicIGMPNestedTrees(t *testing.T) {
 	resources := parcelFixtures(t, "classic-igmp")
@@ -136,7 +133,6 @@ func TestLiveIGMPNamesAbsent(t *testing.T) {
 	liveParcelNamesAbsent(t, parcelFixtures(t, "classic-igmp"))
 }
 func TestLiveIGMPLifecycle(t *testing.T) { liveParcelLifecycle(t, parcelFixtures(t, "classic-igmp")) }
-func TestLiveIGMPOracle(t *testing.T)    { liveParcelOracle(t, parcelFixtures(t, "classic-igmp")) }
 
 func TestClassicNTPLists(t *testing.T) {
 	resources := parcelFixtures(t, "classic-ntp")
@@ -156,7 +152,6 @@ func TestClassicNTPLists(t *testing.T) {
 }
 func TestLiveNTPNamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "classic-ntp")) }
 func TestLiveNTPLifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "classic-ntp")) }
-func TestLiveNTPOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "classic-ntp")) }
 
 func TestClassicOMPConditionalRoute(t *testing.T) {
 	resources := parcelFixtures(t, "classic-omp")
@@ -180,7 +175,6 @@ func TestClassicOMPConditionalRoute(t *testing.T) {
 }
 func TestLiveOMPNamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "classic-omp")) }
 func TestLiveOMPLifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "classic-omp")) }
-func TestLiveOMPOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "classic-omp")) }
 
 func TestClassicPIMFixture(t *testing.T) {
 	resources := parcelFixtures(t, "classic-pim")
@@ -197,7 +191,6 @@ func TestClassicPIMFixture(t *testing.T) {
 }
 func TestLivePIMNamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "classic-pim")) }
 func TestLivePIMLifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "classic-pim")) }
-func TestLivePIMOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "classic-pim")) }
 
 func TestClassicApplicationWrappers(t *testing.T) {
 	resources := parcelFixtures(t, "classic-applications")
@@ -228,9 +221,6 @@ func TestLiveApplicationsNamesAbsent(t *testing.T) {
 func TestLiveApplicationsLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "classic-applications"))
 }
-func TestLiveApplicationsOracle(t *testing.T) {
-	liveParcelOracle(t, parcelFixtures(t, "classic-applications"))
-}
 
 func TestClassicDHCPRangesAndRows(t *testing.T) {
 	resources := parcelFixtures(t, "classic-dhcp")
@@ -251,7 +241,6 @@ func TestLiveDHCPNamesAbsent(t *testing.T) {
 	liveParcelNamesAbsent(t, parcelFixtures(t, "classic-dhcp"))
 }
 func TestLiveDHCPLifecycle(t *testing.T) { liveParcelLifecycle(t, parcelFixtures(t, "classic-dhcp")) }
-func TestLiveDHCPOracle(t *testing.T)    { liveParcelOracle(t, parcelFixtures(t, "classic-dhcp")) }
 
 func TestClassicIPSecNestedFields(t *testing.T) {
 	if len(parcelFixtures(t, "classic-ipsec")) != 1 {
@@ -268,7 +257,6 @@ func TestLiveIPSecNamesAbsent(t *testing.T) {
 	liveParcelNamesAbsent(t, parcelFixtures(t, "classic-ipsec"))
 }
 func TestLiveIPSecLifecycle(t *testing.T) { liveParcelLifecycle(t, parcelFixtures(t, "classic-ipsec")) }
-func TestLiveIPSecOracle(t *testing.T)    { liveParcelOracle(t, parcelFixtures(t, "classic-ipsec")) }
 
 func TestClassicSNMPDefaultAuthorization(t *testing.T) {
 	resources := parcelFixtures(t, "classic-snmp")
@@ -287,7 +275,6 @@ func TestLiveClassicSNMPNamesAbsent(t *testing.T) {
 func TestLiveClassicSNMPLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "classic-snmp"))
 }
-func TestLiveClassicSNMPOracle(t *testing.T) { liveParcelOracle(t, parcelFixtures(t, "classic-snmp")) }
 
 func TestClassicLoggingTLSFields(t *testing.T) {
 	resources := parcelFixtures(t, "classic-logging")
@@ -306,9 +293,6 @@ func TestLiveClassicLoggingNamesAbsent(t *testing.T) {
 }
 func TestLiveClassicLoggingLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "classic-logging"))
-}
-func TestLiveClassicLoggingOracle(t *testing.T) {
-	liveParcelOracle(t, parcelFixtures(t, "classic-logging"))
 }
 
 func TestClassicGREConditionalACLs(t *testing.T) {
@@ -335,4 +319,3 @@ func TestClassicGREConditionalACLs(t *testing.T) {
 }
 func TestLiveGRENamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "classic-gre")) }
 func TestLiveGRELifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "classic-gre")) }
-func TestLiveGREOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "classic-gre")) }

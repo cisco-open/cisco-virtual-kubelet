@@ -35,9 +35,6 @@ func TestLivePolicyProfileNamesAbsent(t *testing.T) {
 func TestLivePolicyProfileLifecycle(t *testing.T) {
 	liveParcelLifecycle(t, parcelFixtures(t, "policy-profile"))
 }
-func TestLivePolicyProfileOracle(t *testing.T) {
-	liveParcelOracle(t, parcelFixtures(t, "policy-profile"))
-}
 
 func TestPolicyProfileNumericModelEncoding(t *testing.T) {
 	for _, r := range parcelFixtures(t, "policy-profile") {

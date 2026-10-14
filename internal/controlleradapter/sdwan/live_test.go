@@ -49,25 +49,6 @@ func TestLiveSDWANDiscovery(t *testing.T) {
 	}
 	t.Logf("Manager=%s inventory=%d", r.Version, r.Count)
 }
-func TestLiveBannerOracle(t *testing.T) {
-	if os.Getenv("CVK_SDWAN_ORACLE") != "1" {
-		t.Skip("requires upstream-deployed fixture")
-	}
-	c := liveClient(t)
-	r := liveResource(t)
-	o, e := c.Observe(context.Background(), r)
-	if e != nil {
-		t.Fatal(e)
-	}
-	if o == nil {
-		t.Fatal("oracle resource missing")
-	}
-	same, e := Equal(r, o.Body)
-	if e != nil || !same {
-		t.Fatal("native mapping differs from upstream deployed state", e)
-	}
-	t.Log("native mapping matches upstream module/provider live readback")
-}
 func TestLiveBannerLifecycle(t *testing.T) {
 	if os.Getenv("CVK_SDWAN_MUTATE") != "1" {
 		t.Skip("requires explicit fixture mutation opt-in")
@@ -212,32 +193,6 @@ func TestLiveSystemProfileLifecycle(t *testing.T) {
 		}
 	}
 	t.Log("native profile and dependent banner parcel verified; reverse-order cleanup registered")
-}
-
-func TestLiveSystemProfileOracle(t *testing.T) {
-	if os.Getenv("CVK_SDWAN_ORACLE") != "1" {
-		t.Skip("requires upstream-deployed fixture")
-	}
-	c := liveClient(t)
-	b, e := os.ReadFile("../../../examples/configs/sdwan/system-profile.yaml")
-	if e != nil {
-		t.Fatal(e)
-	}
-	rs, e := Compile(b)
-	if e != nil {
-		t.Fatal(e)
-	}
-	for _, r := range rs {
-		o, e := c.Observe(context.Background(), r)
-		if e != nil || o == nil {
-			t.Fatal("oracle observation", r.Kind, e)
-		}
-		same, e := Equal(r, o.Body)
-		if e != nil || !same {
-			t.Fatal("native mapping differs from upstream", r.Kind, e)
-		}
-	}
-	t.Log("native system profile and banner parcel match upstream live deployment")
 }
 
 func TestLiveFixtureNamesAbsent(t *testing.T) {

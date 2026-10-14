@@ -2,38 +2,40 @@
 
 The independent `sdwan` adapter uses the existing CVK `NetworkController` worker
 and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
-Terraform is used only by the external differential-test oracle.
+the NetAsCode module and provider are source references for porting the data model,
+schemas, defaults and API behavior. Terraform is not a build, test or deployment
+dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 84 resource declarations (78 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 84 resource declarations (78 distinct resource types) have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
-| `examples/configs/sdwan/banner.yaml` | Classic Cisco banner feature template | Create, read, update, cleanup, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/system-profile.yaml` | System feature profile, system banner parcel, unattached configuration group | Dependency order, create, read, cleanup, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup, upstream equivalence |
-| `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup, upstream equivalence |
-| `examples/configs/sdwan/feature-profiles.yaml` | Eight other profile containers and implicit application-priority policy settings | Create, read, changed-value update, cleanup, upstream equivalence |
-| `examples/configs/sdwan/system-features.yaml` | CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security | Create, read, update, cleanup, upstream equivalence |
-| `examples/configs/sdwan/peripheral-features.yaml` | Transport GPS and other-profile UCSE | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/thousandeyes-feature.yaml` | Unattached ThousandEyes parcel using a token variable | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/snmp-feature.yaml` | SNMP nested views, communities, groups, users and targets | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/aaa-feature.yaml` | AAA users, RADIUS/TACACS and accounting/authorization rules | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-templates.yaml` | Classic CLI, global settings and multicast templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-cellular.yaml` | Classic cellular controller and cellular profile templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-bfd.yaml` | BFD color rows and variable intervals | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-igmp.yaml` | IGMP interfaces and nested join groups | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-ntp.yaml` | NTP authentication-key variables, trusted keys and servers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-omp.yaml` | OMP protocol lists and conditional external OSPF routes | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-pim.yaml` | PIM interfaces and rendezvous-point addresses | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-applications.yaml` | Classic ThousandEyes and security application hosting | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-dhcp.yaml` | DHCP address ranges, static leases and option rows | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/service-features.yaml` | Service DHCP, endpoint/object trackers and both tracker-group types | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/transport-cellular.yaml` | Transport cellular controller and profiles with/without authentication | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-ipsec.yaml` | Classic IPsec nested IKE/IPsec settings and key variable | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-snmp.yaml` | Classic SNMP nested OIDs, communities and users | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-logging.yaml` | Classic logging TLS profile and IPv4/IPv6 servers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/classic-gre.yaml` | Classic GRE with conditional ingress/egress ACL variables | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/banner.yaml` | Classic Cisco banner feature template | Create, read, update, cleanup, Kubernetes reconciliation |
+| `examples/configs/sdwan/system-profile.yaml` | System feature profile, system banner parcel, unattached configuration group | Dependency order, create, read, cleanup, Kubernetes reconciliation |
+| `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup |
+| `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup |
+| `examples/configs/sdwan/feature-profiles.yaml` | Eight other profile containers and implicit application-priority policy settings | Create, read, changed-value update, cleanup |
+| `examples/configs/sdwan/system-features.yaml` | CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security | Create, read, update, cleanup |
+| `examples/configs/sdwan/peripheral-features.yaml` | Transport GPS and other-profile UCSE | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/thousandeyes-feature.yaml` | Unattached ThousandEyes parcel using a token variable | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/snmp-feature.yaml` | SNMP nested views, communities, groups, users and targets | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/aaa-feature.yaml` | AAA users, RADIUS/TACACS and accounting/authorization rules | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-templates.yaml` | Classic CLI, global settings and multicast templates | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-cellular.yaml` | Classic cellular controller and cellular profile templates | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-bfd.yaml` | BFD color rows and variable intervals | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-igmp.yaml` | IGMP interfaces and nested join groups | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-ntp.yaml` | NTP authentication-key variables, trusted keys and servers | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-omp.yaml` | OMP protocol lists and conditional external OSPF routes | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-pim.yaml` | PIM interfaces and rendezvous-point addresses | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-applications.yaml` | Classic ThousandEyes and security application hosting | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-dhcp.yaml` | DHCP address ranges, static leases and option rows | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/service-features.yaml` | Service DHCP, endpoint/object trackers and both tracker-group types | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/transport-cellular.yaml` | Transport cellular controller and profiles with/without authentication | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-ipsec.yaml` | Classic IPsec nested IKE/IPsec settings and key variable | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-snmp.yaml` | Classic SNMP nested OIDs, communities and users | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-logging.yaml` | Classic logging TLS profile and IPv4/IPv6 servers | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-gre.yaml` | Classic GRE with conditional ingress/egress ACL variables | Native lifecycle, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -163,7 +165,7 @@ config UID. Remote pruning, explicit adoption/import, ownership release and
 device attachment/activation are still pending. The fixture test harness cleans
 up only its own created IDs in reverse dependency order.
 
-## Tests and upstream comparison
+## Native CVK tests
 
 Normal tests do not contact the lab. Live tests require explicit environment
 flags and credentials supplied outside Git. The test harness creates temporary
@@ -176,21 +178,12 @@ go test -race ./internal/controlleradapter/... ./cmd/cisco-vk
 go test -tags envtest ./internal/controlleradapter/sdwan -run TestEnvtest -v
 ```
 
-For an upstream comparison, set `SDWAN_URL`, `SDWAN_USERNAME`, `SDWAN_PASSWORD`
-and the appropriate TLS setting, then run:
-
-```bash
-python3 scripts/sdwan/oracle.py --terraform terraform --execute
-python3 scripts/sdwan/oracle.py --terraform terraform --fixture-set system-features --execute
-```
-
-The script checks fixture names are absent, pins dependencies, checks the plan
-contains exactly the selected fixture set (44 core objects or 13 system/CLI objects), applies upstream,
-compares native observations, and destroys the upstream fixtures. It never
-attaches devices. It stages hierarchy creation before region lists because the
-upstream module does not express that dependency, and destroys region lists first. Run it without `--execute` for plan validation only. Do not run
-the oracle while CVK is managing those same fixture names. Terraform state and
-plans stay ignored; do not add them to Git.
+Live native lifecycle tests use `CVK_SDWAN_LIVE=1` and
+`CVK_SDWAN_MUTATE=1`, with `SDWAN_URL`, `SDWAN_USERNAME`, `SDWAN_PASSWORD`
+and the appropriate TLS setting supplied outside Git. Select the intended
+`TestLive*Lifecycle` test explicitly. Live Kubernetes tests additionally use
+`CVK_SDWAN_ENVTEST_LIVE=1` and select a fixture through `CVK_SDWAN_ENVTEST_FIXTURE`.
+These tests exercise CVK's native compiler, API client and reconciliation.
 
 ## Remaining deployment parity
 
@@ -217,11 +210,11 @@ work and does not count toward qualified coverage.
 ### Policy-object profile qualification
 
 `policy-profile.yaml` defines the singular policy-object profile and fifteen
-policy parcels. Compiler validation and a pinned Terraform plan passed for all
+policy parcels. Compiler validation passed for all
 16 objects. Live qualification is pending: Manager already has its singleton
 policy-object profile and rejects creation of another. Existing resources were
 not adopted or changed. The inventory marks these definitions
-`implemented-unqualified`, and the oracle permits plan-only validation for this set.
+`implemented-unqualified`.
 A read-only-parent workflow or an empty Manager is needed for live qualification.
 
 The pinned module uses `forwarding_classes` where the current documentation calls

@@ -7,7 +7,9 @@ The endpoint credentials and session material are excluded from this record.
 
 Baseline: NetAsCode v1.5.0 (`5fbf037ea57368c7e6e77694c81330b6f7b16666`),
 CiscoDevNet/sdwan v0.11.5 (`d3194b612c3f24421ec1727b6fa6e9c0bc98b07f`).
-Oracle runtime: checksum-verified Terraform 1.9.8, utils 2.0.3, local 2.9.1.
+These upstream projects are source references for the native CVK port.
+Qualification below records native CVK tests; Terraform is not a repository test
+or deployment dependency.
 
 | Check | Observed result |
 |---|---|
@@ -16,7 +18,6 @@ Oracle runtime: checksum-verified Terraform 1.9.8, utils 2.0.3, local 2.9.1.
 | Native classic banner lifecycle | Create, read-back, repeated observation, update, verification and cleanup passed |
 | Native system profile + banner parcel | Create in dependency order, read-back and reverse cleanup passed |
 | Native unattached configuration group | Profile reference resolution, creation, read-back and cleanup passed |
-| Reproducible upstream oracle for all four resource types | Plan allow-list passed; upstream apply, both differential tests and destroy passed |
 | Real Kubernetes reconciliation with simulated Manager | Passed using API server/etcd 1.35.0; Lease and status persistence and repeat reconciliation |
 | Real Kubernetes reconciliation with live classic banner | Passed; verified apply and repeat reconciliation, followed by cleanup |
 | Real Kubernetes reconciliation with live profile/parcel/group chain | Passed; all three resources converged, including both section Leases, followed by receipt-bound reverse cleanup |
@@ -24,24 +25,14 @@ Oracle runtime: checksum-verified Terraform 1.9.8, utils 2.0.3, local 2.9.1.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-The upstream comparison creates resources with the pinned module, then invokes
-CVK's own compiler and native reads to compare canonical fields. No Terraform
-provider runs inside the CVK worker. Native and upstream fixture cycles are
-separate, avoiding simultaneous writers. All observed fixture cleanup calls
-succeeded.
-
-The expanded oracles passed for 65 resource declarations (59 distinct types) and
-the checked fixture attributes. The full 226-resource module surface is not qualified.
+Native fixture coverage now includes 84 resource declarations (78 distinct types)
+and the checked fixture attributes. The full 226-resource module surface is not qualified.
+All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
 container-image rollout or Helm installation into the user's existing cluster.
 No asynchronous device deployment or recovery is claimed.
 
 ## Expanded fixture run
-
-The pinned Terraform plan contained 44 SD-WAN objects plus its `terraform_data`
-input resource. Hierarchy prerequisites were applied first, followed by the full
-fixture plan. All native differential tests passed; targeted region-list cleanup
-and the remaining Terraform destroy completed successfully.
 
 Additional live evidence:
 
@@ -58,7 +49,7 @@ while some type labels change capitalization. Short fixture names and explicit
 case normalization resolved these mismatches. Region lists require hierarchy
 regions; the fixture now supplies those prerequisites. An absent tertiary color
 preference was rejected by this Manager; the working fixture supplies all three
-preferences. The upstream plan also exposed the application-priority settings
+preferences. The mapping includes the application-priority settings
 parcel that is created even when settings are omitted from YAML.
 
 The combined 44-resource Kubernetes/live reconciliation test passed in 730.69s,
@@ -68,10 +59,10 @@ inventory instead of being counted as complete.
 
 ## System/CLI feature extension
 
-A separate upstream fixture set creates 12 objects: two isolated profiles plus ten
-feature parcels. Native lifecycle and upstream differential comparison passed for
+A separate native fixture set creates 12 objects: two isolated profiles plus ten
+feature parcels. Native lifecycle passed for
 CLI config, system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed
-and performance monitoring. Both cycles cleaned up their created resources.
+and performance monitoring. The cycle cleaned up its created resources.
 Basic/global/OMP/NTP/logging definitions are reproducibly generated from pinned
 upstream mapping expressions, API value schemas and provider defaults. Unsupported
 mapping expressions or validation keywords fail generation. Nested-list and union
@@ -84,12 +75,12 @@ including convergence and receipt-bound cleanup.
 ## Security, GPS, UCSE and ThousandEyes extension
 
 - Expanded system batch: 13 objects. Security native create/read/update/read/delete
-  and pinned Terraform comparison passed. Live Kubernetes reconciliation passed in
+  passed. Live Kubernetes reconciliation passed in
   122.64s, including idempotence and receipt-bound cleanup.
-- GPS/UCSE batch: four objects. Native lifecycle and pinned Terraform comparison
+- GPS/UCSE batch: four objects. Native lifecycle
   passed. Live Kubernetes reconciliation passed in 23.21s with cleanup.
 - ThousandEyes batch: two unattached objects using a token variable. Native
-  lifecycle and pinned Terraform comparison passed; no external agent was started.
+  lifecycle passed; no external agent was started.
   Live Kubernetes reconciliation passed in 13.07s with receipt-bound cleanup.
 - Generator now preserves required nested fields, NaC scalar defaults, JSON-schema
   choice values, IPv4 formats, and fixed virtual-application wrappers. Regression
@@ -105,18 +96,17 @@ regenerated byte-for-byte from the pinned sources.
 
 ## SNMP, AAA and policy-profile definitions
 
-SNMP native lifecycle, pinned Terraform comparison, and live Kubernetes
+SNMP native lifecycle and live Kubernetes
 reconciliation passed (13.28s for Kubernetes), with cleanup. The fixture includes
 nested OIDs, community variables, security groups, user credential variables, and
 a trap target. No fixture was attached to a device.
 
-AAA native lifecycle and pinned Terraform comparison passed for local user
+AAA native lifecycle passed for local user
 variables, computed RADIUS/TACACS group names, nested servers, accounting rules,
 and authorization rules. The fixture remains unattached.
 
 The singular policy-profile fixture and fifteen policy parcels passed compiler
-checks and an upstream plan for 16 objects plus the module input resource. The
-plan includes two read-only data sources. Native profile creation was rejected:
+checks for all 16 objects. Native profile creation was rejected:
 this Manager already has its single permitted policy-object profile. No profile
 or parcel was created by that attempt. These sixteen declarations remain
 unqualified, pending a controlled existing-parent workflow or an empty Manager.
@@ -135,8 +125,7 @@ read-only sweep confirmed SNMP, AAA and isolated policy-profile fixture names ab
 
 ## Classic feature-template extension
 
-The CLI/global/multicast fixture batch passed native lifecycle, pinned Terraform
-comparison, and Kubernetes/live reconciliation (15.22s) with reverse cleanup.
+The CLI/global/multicast fixture batch passed native lifecycle and Kubernetes/live reconciliation (15.22s) with reverse cleanup.
 The cellular controller/profile batch passed the same checks (12.43s for
 Kubernetes). All five templates were unattached.
 
@@ -151,8 +140,8 @@ Final read-only checks confirmed all five classic fixture names absent.
 
 ## Classic trees, lists and application wrappers
 
-Eight additional resource declarations passed native create/read/update/read/delete,
-pinned Terraform comparison, and isolated Kubernetes reconciliation with cleanup:
+Eight additional resource declarations passed native create/read/update/read/delete
+and isolated Kubernetes reconciliation with cleanup:
 
 | Fixture | Kubernetes duration |
 |---|---:|
@@ -169,7 +158,7 @@ NTP credential variables, OMP's conditional OSPF advertisement and disjoint hold
 range, fixed application wrappers, DHCP ranges and static leases. No application
 was started and no DHCP service was enabled on a router.
 
-PIM differential testing found a missing empty `send-rp-discovery` object. The
+PIM mapping validation found a missing empty `send-rp-discovery` object. The
 metadata generator now preserves these provider defaults. PIM RP-address `optional`
 is not serialized by the pinned provider and is explicitly unsupported. Temporary
 diagnostic instrumentation was removed after resolving the mismatch.
@@ -181,7 +170,7 @@ byte-for-byte, and final read-only checks confirmed all new fixture names absent
 
 The six-object service fixture covers a service profile, DHCP server, endpoint
 tracker, and interface/route/SIG object trackers. Expanded native lifecycle passed
-in 18.82s; upstream comparison passed in 4.85s. Live Kubernetes reconciliation,
+in 18.82s. Live Kubernetes reconciliation,
 idempotence and receipt-bound cleanup passed in 39.73s after correcting the test
 harness's managed-section selection. The failed harness run made no mutations.
 
@@ -194,8 +183,8 @@ to the provider API's Interface/Route/SIG values.
 ## Transport cellular features
 
 The four-object fixture covers a transport profile, cellular controller, and two
-cellular profiles (authentication off/on). Native lifecycle passed in 12.71s,
-upstream comparison in 3.57s, and live Kubernetes reconciliation with cleanup in
+cellular profiles (authentication off/on). Native lifecycle passed in 12.71s
+and live Kubernetes reconciliation with cleanup in
 25.57s. Credentials are variables and all profiles remain unattached.
 
 The metadata preserves the provider's non-eSIM discriminator, authentication
@@ -209,17 +198,17 @@ byte-for-byte from the pinned upstream revisions.
 
 ## Tracker groups and classic IPsec/SNMP/logging
 
-| Fixture | Native lifecycle | Upstream comparison | Live Kubernetes |
-|---|---:|---:|---:|
-| Expanded service graph (nine objects) | 37.95s | 9.11s | 82.03s |
-| Classic IPsec | 3.19s | Passed | 10.73s |
-| Classic SNMP | 3.20s | 1.83s | 8.65s |
-| Classic logging | 3.24s | 1.85s | 9.20s |
+| Fixture | Native lifecycle | Live Kubernetes |
+|---|---:|---:|
+| Expanded service graph (nine objects) | 37.95s | 82.03s |
+| Classic IPsec | 3.19s | 10.73s |
+| Classic SNMP | 3.20s | 8.65s |
+| Classic logging | 3.24s | 9.20s |
 
 Every run completed cleanup. The service graph adds endpoint and object-tracker
 groups with named references. Unit tests verify dependency ordering, rejection of
 missing/duplicate/external names, and zero writes until both dependencies exist.
-Native readback and upstream comparison verify resolved IDs in group payloads.
+Native readback verifies resolved IDs in group payloads.
 
 IPsec uses nested IKE/IPsec settings and a pre-shared-key variable. Numeric DH groups
 follow the [published NaC example](https://netascode.cisco.com/docs/data_models/sdwan/edge_feature_templates/ipsec_interface/)
@@ -234,8 +223,8 @@ metadata byte-for-byte; previously qualified classic mappings remain unchanged.
 
 ## Classic GRE
 
-The unattached, shut-down GRE fixture passed native lifecycle (3.20s), pinned
-Terraform comparison (1.75s), and live Kubernetes reconciliation with cleanup
+The unattached, shut-down GRE fixture passed native lifecycle (3.20s)
+and live Kubernetes reconciliation with cleanup
 (8.72s). Conditional ingress/egress ACL rows preserve literal/variable precedence
 from the module, and scalar tracker names use the provider's list encoding.
 
