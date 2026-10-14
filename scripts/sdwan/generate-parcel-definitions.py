@@ -444,4 +444,7 @@ folder.mkdir(exist_ok=True)
     kind: json.loads((args.provider / "gen/models/profile_parcels" / f"transport_{kind}_vpn.json").read_text())["request"]["properties"]["data"]
     for kind in ("management", "wan")
 }, indent=2, sort_keys=True) + "\n")
+(folder / "transport-management-interface-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/transport_management_vpn_interface_ethernet.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
 (folder / "LICENSE").write_text((args.provider / "LICENSE").read_text())

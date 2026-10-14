@@ -48,6 +48,40 @@ func (c *Client) collection(ctx context.Context, r Resource) (string, error) {
 	if parcel == "" {
 		parcel = "banner"
 	}
+	if r.ParentParcelPath != "" {
+		if r.ParentParcelName == "" {
+			return "", errors.New("nested parcel requires parent name")
+		}
+		parentPath := r.Collection + "/" + url.PathEscape(id) + "/" + r.ParentParcelPath
+		var result struct {
+			Data []struct {
+				ID      string `json:"parcelId"`
+				Payload struct {
+					Name string `json:"name"`
+				} `json:"payload"`
+				Name string `json:"name"`
+			} `json:"data"`
+		}
+		if e := c.Request(ctx, "GET", parentPath, nil, &result); e != nil {
+			return "", e
+		}
+		if result.Data == nil {
+			return "", ErrResponse
+		}
+		parentID := ""
+		for _, item := range result.Data {
+			if item.Name == r.ParentParcelName || item.Payload.Name == r.ParentParcelName {
+				if parentID != "" || !validID.MatchString(item.ID) {
+					return "", ErrResponse
+				}
+				parentID = item.ID
+			}
+		}
+		if parentID == "" {
+			return "", ErrDependencyPending
+		}
+		return parentPath + "/" + url.PathEscape(parentID) + "/" + parcel, nil
+	}
 	return r.Collection + "/" + url.PathEscape(id) + "/" + parcel, nil
 }
 func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, error) {

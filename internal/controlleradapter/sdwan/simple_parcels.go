@@ -53,7 +53,7 @@ func option[T any](value *T, variable *string, defaultValue any, hasDefault bool
 	}
 	return out
 }
-func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error) {
+func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]Resource, error) {
 	out := []Resource{}
 	add := func(field, path string, meta ParcelMetadata, data map[string]any) error {
 		name := field
@@ -129,6 +129,11 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		return nil, err
 	}
 	out = append(out, wanVPN...)
+	managementInterfaces, err := compileManagementInterfaces(p, collection, key, managerVersion)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, managementInterfaces...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any

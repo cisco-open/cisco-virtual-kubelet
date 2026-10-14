@@ -1225,8 +1225,11 @@
       "type": "sdwan_transport_management_vpn_interface_ethernet_feature",
       "name": "transport_management_vpn_interface_ethernet_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-management-interface.yaml",
+      "limits": "Unattached Ethernet interface qualified through native CRUD and Kubernetes reconciliation; device activation excluded"
     },
     {
       "type": "sdwan_transport_routing_ospf_feature",

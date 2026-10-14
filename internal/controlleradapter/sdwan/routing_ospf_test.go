@@ -63,7 +63,7 @@ func TestRoutingOSPFRejectsInvalidInputs(t *testing.T) {
 		t.Fatal("undeclared route policy accepted")
 	}
 	for _, family := range []string{"system", "sse"} {
-		if _, err := simpleParcels(FeatureProfile{Name: "bad", OSPF: []map[string]any{{"name": "ospf"}}}, family, "key"); err == nil {
+		if _, err := simpleParcels(FeatureProfile{Name: "bad", OSPF: []map[string]any{{"name": "ospf"}}}, family, "key", ""); err == nil {
 			t.Fatal("wrong family accepted")
 		}
 	}

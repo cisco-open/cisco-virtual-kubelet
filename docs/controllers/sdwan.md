@@ -7,7 +7,7 @@ schemas, defaults and API behavior. Terraform is not a build, test or deployment
 dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 115 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 116 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -55,6 +55,7 @@ parity**. The pinned upstream module has 226 resource declarations. 115 resource
 | `examples/configs/sdwan/ipv6-acls.yaml` | Service and transport IPv6 ACL parcels | Native lifecycle, Kubernetes reconciliation; policy-object references local only |
 | `examples/configs/sdwan/route-policies.yaml` | Service and transport route-policy parcels | Native lifecycle, Kubernetes reconciliation; policy-object references local only |
 | `examples/configs/sdwan/transport-management-vpn.yaml` | Transport management VPN with DNS, host mapping, and static routes | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/transport-management-interface.yaml` | Transport management VPN Ethernet interface with static IPv4/IPv6, secondary address, ARP, and MTU | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/transport-wan-vpn.yaml` | Transport WAN VPN with ECMP, NAT64, TE service, and static routes | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/zscaler-sse.yaml` | Zscaler SSE parcel | Native lifecycle, Kubernetes reconciliation |
 
@@ -71,7 +72,7 @@ An additional 35 declarations have native implementations but remain unqualified
 the policy-object profile and all 32 modern policy-object collections, system
 CA certificates, and custom applications (the lab lacks SD-AVC). SIG credential creation now passes after fixing the global flag
 and variable-secret payloads.
-75 declarations remain pending and TrustSec remains compatibility-blocked.
+74 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 

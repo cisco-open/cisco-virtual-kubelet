@@ -5,12 +5,12 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 115 |
+| Fixture-qualified against live Manager | 116 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 75 |
+| Implementation still pending | 74 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
+The latest increment qualifies the transport management VPN Ethernet child and its nested Manager path. The preceding increment qualified the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
 
 The previous increment qualified seven declarations: classic SVI, cellular and
 switchport templates, service EIGRP, service switchport, service multicast, and Zscaler SSE. Each passed native live
@@ -176,7 +176,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_transport_routing_bgp_feature.transport_routing_bgp_feature`
 - `sdwan_transport_ipv4_acl_feature.transport_ipv4_acl_feature`
 - `sdwan_transport_route_policy_feature.transport_route_policy_feature`
-- `sdwan_transport_management_vpn_interface_ethernet_feature.transport_management_vpn_interface_ethernet_feature`
 - `sdwan_transport_wan_vpn_feature_associate_routing_bgp_feature.transport_wan_vpn_feature_associate_routing_bgp_feature`
 - `sdwan_transport_wan_vpn_feature_associate_routing_ospf_feature.transport_wan_vpn_feature_associate_routing_ospf_feature`
 - `sdwan_transport_wan_vpn_interface_cellular_feature.transport_wan_vpn_interface_cellular_feature`

@@ -77,7 +77,7 @@ type ProfileBanner struct {
 
 var profileCollections = map[string]string{"system_profiles": "system", "transport_profiles": "transport", "service_profiles": "service", "cli_profiles": "cli", "other_profiles": "other", "application_priority_profiles": "application-priority", "ngfw_security_profiles": "embedded-security", "sse_profiles": "sse", "topology_profiles": "topology"}
 
-func compileProfiles(raw map[string]json.RawMessage) ([]Resource, error) {
+func compileProfiles(raw map[string]json.RawMessage, managerVersion string) ([]Resource, error) {
 	out := []Resource{}
 	for section, data := range raw {
 		if section == "policy_object_profile" {
@@ -105,7 +105,7 @@ func compileProfiles(raw map[string]json.RawMessage) ([]Resource, error) {
 			seen[p.Name] = true
 			key := "feature_profiles/" + section + "/" + p.Name
 			out = append(out, Resource{Key: key, Name: p.Name, Section: "feature_profiles", Kind: "profile", Type: collection, Collection: "/dataservice/v1/feature-profile/sdwan/" + collection, Body: map[string]any{"name": p.Name, "description": p.Description}})
-			parcels, e := simpleParcels(p, collection, key)
+			parcels, e := simpleParcels(p, collection, key, managerVersion)
 			if e != nil {
 				return nil, e
 			}

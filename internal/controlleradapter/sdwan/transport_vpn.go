@@ -60,6 +60,7 @@ func compileManagementVPN(p FeatureProfile, collection, key string) ([]Resource,
 	for field := range input {
 		switch field {
 		case "name", "description", "vpn_description", "vpn_description_variable", "ipv4_primary_dns_address", "ipv4_primary_dns_address_variable", "ipv4_secondary_dns_address", "ipv4_secondary_dns_address_variable", "ipv6_primary_dns_address", "ipv6_primary_dns_address_variable", "ipv6_secondary_dns_address", "ipv6_secondary_dns_address_variable", "host_mappings", "ipv4_static_routes", "ipv6_static_routes":
+		case "ethernet_interfaces":
 		default:
 			return nil, fmt.Errorf("unsupported management VPN field %s", field)
 		}

@@ -59,14 +59,15 @@ type ParcelReference struct {
 	BodyPath               []string
 }
 type Resource struct {
-	ParcelRefs                   []ParcelReference
-	HierarchySites, SiteGroups   []string
-	HubSpoke                     *hubSpokeInput
-	ParcelPath                   string
-	Key, Name, Section, Type     string
-	Kind, Collection, ParentName string
-	ProfileRefs                  map[string]string
-	Body                         map[string]any
+	ParcelRefs                         []ParcelReference
+	HierarchySites, SiteGroups         []string
+	HubSpoke                           *hubSpokeInput
+	ParcelPath                         string
+	ParentParcelPath, ParentParcelName string
+	Key, Name, Section, Type           string
+	Kind, Collection, ParentName       string
+	ProfileRefs                        map[string]string
+	Body                               map[string]any
 }
 
 func Compile(data []byte) ([]Resource, error) {
@@ -161,7 +162,7 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, customApps...)
-	profiles, err := compileProfiles(doc.SDWAN.FeatureProfiles)
+	profiles, err := compileProfiles(doc.SDWAN.FeatureProfiles, doc.SDWAN.ManagerVersion)
 	if err != nil {
 		return nil, err
 	}

@@ -64,6 +64,16 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		if r.ParentParcelPath != "" {
+			parent := r
+			parent.Name = r.ParentParcelName
+			parent.ParcelPath = r.ParentParcelPath
+			j, exists := indices[identity(parent)]
+			if !exists {
+				return nil, errors.New("nested parcel parent is not declared")
+			}
+			dependencies[i] = append(dependencies[i], j)
+		}
 		if r.HubSpoke != nil && r.HubSpoke.UUIDMode {
 			for _, site := range r.HubSpoke.names() {
 				found := -1

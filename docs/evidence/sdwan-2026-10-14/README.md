@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 115 resource declarations
+Native fixture coverage now includes 116 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -432,3 +432,5 @@ singleton policy-object profile. No policy was activated on a router.
 ## Transport VPN fixtures
 
 `transport-management-vpn.yaml` and `transport-wan-vpn.yaml` each passed native create/observe/update/observe/cleanup against Manager 20.18.2.2 and live Kubernetes reconciliation with repeated idempotent observation. The management fixture covers DNS, host mapping, and IPv4/IPv6 next-hop routes. The WAN fixture covers ECMP, DNS, host mapping, IPv4 next-hop and IPv6 null routes, a NAT64 pool, and TE service. Both are unattached parcels; interface associations and device forwarding are untested.
+
+`transport-management-interface.yaml` passed native create/observe/update/observe/cleanup and live Kubernetes reconciliation. The child parcel resolved its management VPN parent ID, used the nested Ethernet endpoint, and cleaned up before its parent. The fixture covers static IPv4/IPv6, a secondary IPv4 address, an ARP entry and MTU options. Device attachment remains untested.
