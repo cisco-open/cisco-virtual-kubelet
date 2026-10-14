@@ -29,6 +29,7 @@ type classicField struct {
 	VariableValueFromInput bool    `json:"variable_value_from_input"`
 	ConstantVariableName   bool    `json:"constant_variable_name"`
 	Source                 string
+	Fallback               string
 	Predicate              *classicPredicate
 	Container              bool
 	ArrayValues            map[string]string `json:"array_values"`
@@ -186,6 +187,9 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			public = field.Source
 		}
 		value := classicInput(input, public)
+		if value == nil && field.Fallback != "" {
+			value = classicInput(input, field.Fallback)
+		}
 		if value == nil {
 			value = field.InputDefault
 		}
@@ -226,6 +230,9 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			}
 		} else {
 			allowed[public] = true
+			if field.Fallback != "" {
+				allowed[field.Fallback] = true
+			}
 		}
 		if field.Container {
 			if value != nil {
@@ -585,7 +592,7 @@ func normalizeVIP(value any) (any, error) {
 		}
 		out := map[string]any{"vipObjectType": kind, "vipType": object["vipType"]}
 		switch object["vipType"] {
-		case "constant":
+		case "constant", "notIgnore":
 			v, exists := object["vipValue"]
 			if !exists {
 				return nil, ErrResponse

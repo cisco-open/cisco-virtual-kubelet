@@ -562,8 +562,12 @@
       "type": "sdwan_cisco_vpn_interface_feature_template",
       "name": "cisco_vpn_interface_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "classic-ethernet-interface"
+      ]
     },
     {
       "type": "sdwan_cisco_vpn_interface_ipsec_feature_template",

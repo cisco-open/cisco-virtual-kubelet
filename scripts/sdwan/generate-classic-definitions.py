@@ -60,7 +60,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
     struct_match = re.search(r"type " + (re.escape(struct_name) if struct_name else r"\w+") + r" struct \{", model)
     struct_body = block(model, struct_match.end()-1)
     fields = {tf: (name, typ) for name, typ, tf in re.findall(r'(\w+)\s+types\.(\w+)\s+`tfsdk:"([^"]+)"`', struct_body)}
-    inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}
+    inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps, fallbacks = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}, {}
     predicates = {}
     conditional_trees = []
     for tf, expression in re.findall(r'^' + ' ' * indent + r'(\w+)\s*=\s*(.*)$', source, re.M):
@@ -125,6 +125,11 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             continue
         match = re.fullmatch(r'try\(' + re.escape(alias) + r'\.([\w.]+), null\)', expression)
         direct = re.fullmatch(re.escape(alias) + r'\.(\w+)', expression)
+        coalesce = re.fullmatch(r'try\(' + re.escape(alias) + r'\.([\w.]+), ' + re.escape(alias) + r'\.([\w.]+), null\)', expression)
+        if coalesce:
+            inputs[tf] = coalesce.group(1)
+            fallbacks[tf] = coalesce.group(2)
+            continue
         if tf == "optional" and match:
             if '"vipOptional", ' + receiver + '.Optional.ValueBool()' not in body:
                 if alias == "addr" and "data.RpAddresses" in model and "pim.rp-addr" in model:
@@ -176,9 +181,9 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if tf.endswith("_variable"):
             continue
         name, typ = fields[tf]
-        if tf in ("stub", "nssa", "default_information_originate", "nat") and typ == "Bool" and tf not in literals and (tf != "nat" or target == "body"):
+        if tf in ("stub", "nssa", "default_information_originate", "nat", "nat64_interface", "nat66_interface") and typ == "Bool" and tf not in literals and (tf != "nat" or target == "body"):
             # These booleans enable a container rather than a vipValue leaf.
-            expected_path = "ospf.default-information.originate" if tf == "default_information_originate" else tf
+            expected_path = {"default_information_originate":"ospf.default-information.originate", "nat64_interface":"nat64", "nat66_interface":"nat66"}.get(tf, tf)
             if not re.search(r'sjson.Set\(' + target + ', ' + prefix + '"' + re.escape(expected_path) + r'", map\[string\]interface\{\}\{\}\)', body):
                 raise SystemExit(f"Unreviewed classic container marker: {tf} in {receiver}/{target}, alias={alias}, expression={expression}, public={public}, literal={literals.get(tf)}")
             mapping[public] = {"path":expected_path, "container":True, "object_type":"node-only" if tf in ("default_information_originate", "nat") else ""}
@@ -196,7 +201,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if leaf["objectType"] not in ("object", "node-only", "list"):
             raise SystemExit("Unreviewed classic leaf type")
         datatype = leaf["dataType"]
-        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range"}:
+        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList", "xConnect", "tlocExtension", "numberFixedInterval") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range", "interval"}:
             raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
         value_type = {"String": "string", "Bool": "boolean", "Int64": "integer", "Float64": "number"}.get(typ)
         if typ in ("Set", "List"):
@@ -207,6 +212,8 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         for before, after in [("min", "minimum"), ("max", "maximum"), ("minLength", "minLength"), ("maxLength", "maxLength"), ("pattern", "pattern")]:
             if before in datatype and datatype["type"] != "datetimelocal":
                 value_schema[after] = datatype[before]
+        if datatype["type"] == "numberFixedInterval":
+            value_schema["multipleOf"] = datatype["interval"]
         if datatype["type"] == "datetimelocal":
             # Manager UI datetime hints are not wire constraints: provider sends
             # the model epoch string verbatim and declares no date validator.
@@ -258,6 +265,8 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             mapping[public]["wrap_list"] = True
         if tf in ranges:
             mapping[public]["ranges"] = ranges[tf]
+        if tf in fallbacks:
+            mapping[public]["fallback"] = fallbacks[tf]
         if tf in literals:
             value = literals[tf]
             if typ == "String":
@@ -287,7 +296,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template", "sdwan_cisco_vpn_interface_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
     ospf_policy_source = None
     if resource == "sdwan_cisco_ospf_feature_template":
@@ -321,13 +330,13 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
             svi_acl_sources.append((family, acl_source))
             source = source[:start] + source[end:]
     cellular_encapsulation_source = None
-    if resource == "sdwan_vpn_interface_cellular_feature_template":
+    if resource in ("sdwan_vpn_interface_cellular_feature_template", "sdwan_cisco_vpn_interface_feature_template"):
         start = source.index("  tunnel_interface_encapsulations =")
         end = source.index("  ])", start) + len("  ])")
         cellular_encapsulation_source = source[start:end]
         expected = 'tunnel_interface_encapsulations = try(each.value.tunnel_interface.gre_encapsulation, each.value.tunnel_interface.ipsec_encapsulation, null) == null ? null : flatten(['
         if not cellular_encapsulation_source.strip().startswith(expected):
-            raise SystemExit("Cellular encapsulation condition changed")
+            raise SystemExit("Tunnel encapsulation condition changed")
         source = source[:start] + source[end:]
     cellular_policer_source = None
     if resource == "sdwan_vpn_interface_cellular_feature_template":
@@ -335,19 +344,23 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         end = source.index("  ])", start) + len("  ])")
         cellular_policer_source = source[start:end]
         source = source[:start] + source[end:]
-    gre_acl_source = None
-    if resource == "sdwan_cisco_vpn_interface_gre_feature_template":
-        start = source.index("  access_lists =")
-        end = source.index("  ])", start) + len("  ])")
-        gre_acl_source = source[start:end]
-        outer = 'access_lists = try(each.value.ipv4_ingress_access_list, each.value.ipv4_ingress_access_list_variable, each.value.ipv4_egress_access_list, each.value.ipv4_egress_access_list_variable, null) == null ? null : flatten(['
-        if not gre_acl_source.strip().startswith(outer):
-            raise SystemExit("GRE ACL outer condition changed")
-        for direction in ("ingress", "egress"):
-            condition = 'try(each.value.ipv4_' + direction + '_access_list, each.value.ipv4_' + direction + '_access_list_variable, null) == null ? [] : [{'
-            if gre_acl_source.count(condition) != 1:
-                raise SystemExit("GRE ACL row condition changed")
-        source = source[:start] + source[end:]
+    gre_acl_sources = []
+    if resource in ("sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_vpn_interface_feature_template"):
+        families = ("ipv4",) if resource.endswith("_gre_feature_template") else ("ipv4", "ipv6")
+        for family in families:
+            field = "access_lists" if family == "ipv4" else "ipv6_access_lists"
+            start = source.index("  " + field + " =")
+            end = source.index("  ])", start) + len("  ])")
+            acl_source = source[start:end]
+            outer = field + ' = try(each.value.' + family + '_ingress_access_list, each.value.' + family + '_ingress_access_list_variable, each.value.' + family + '_egress_access_list, each.value.' + family + '_egress_access_list_variable, null) == null ? null : flatten(['
+            if not acl_source.strip().startswith(outer):
+                raise SystemExit("VPN interface ACL outer condition changed")
+            for direction in ("ingress", "egress"):
+                condition = 'try(each.value.' + family + '_' + direction + '_access_list, each.value.' + family + '_' + direction + '_access_list_variable, null) == null ? [] : [{'
+                if acl_source.count(condition) != 1:
+                    raise SystemExit("VPN interface ACL row condition changed")
+            gre_acl_sources.append((family, field, acl_source))
+            source = source[:start] + source[end:]
     if resource == "sdwan_cisco_logging_feature_template":
         broken = r'^    ciphersuite_list_variable\s*= try\(prof.version_ciphersuites_variablevariable, null\)\n'
         source, count = re.subn(broken, '', source, flags=re.M)
@@ -397,6 +410,13 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
             if source.count(derived) != 1:
                 raise SystemExit("VPN route leak subtype mapping changed")
             source = source.replace(derived, '')
+    if resource == "sdwan_cisco_vpn_interface_feature_template":
+        # The published model expresses DHCP as a boolean selector; keep the
+        # input name while the compiler handles the provider's VIP boolean.
+        dhcp = 'dhcp                                           = try(each.value.ipv4_address_dhcp, null) == true ? true : null'
+        if source.count(dhcp) != 1:
+            raise SystemExit("VPN interface DHCP selector changed")
+        source = source.replace(dhcp, 'dhcp = try(each.value.ipv4_address_dhcp, null)')
     public_collection = re.search(r'local.edge_feature_templates\.(\w+)', source).group(1)
     model = (args.provider / "internal/provider" / ("model_" + resource + ".go")).read_text()
     body = model[model.index("toBody(ctx"):model.index("return body")]
@@ -439,20 +459,21 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
                 field["constant_variable_name"] = True
         generated["description_by_name"] = {"Cisco-Umbrella-Global-Credentials":"Global credentials for umbrella"}
         generated["description_default"] = "Global credentials for zscaler"
-    if gre_acl_source:
-        loop = re.search(r'for _, item := range data.AccessLists \{', body)
+    for family, collection, gre_acl_source in gre_acl_sources:
+        go_collection = "AccessLists" if family == "ipv4" else "Ipv6AccessLists"
+        loop = re.search(r'for _, item := range data.' + go_collection + r' \{', body)
         item_body = block(body, loop.end() - 1)
         path = re.search(r'sjson.SetRaw\(body, path\+"([^"]+)\."\+"vipValue\.-1", itemBody\)', item_body).group(1)
         leaf = next(x for x in schema["fields"] if ".".join(x["dataPath"] + [x["key"]]) == path)
-        child_struct = re.search(r'AccessLists\s+\[\](\w+)', model).group(1)
+        child_struct = re.search(go_collection+r'\s+\[\](\w+)', model).group(1)
         children = list(re.finditer(r'\[\] : \[\{', gre_acl_source))
         if len(children) != 2:
             raise SystemExit("GRE ACL conditions changed")
-        generated["conditional_trees"] = []
+        generated.setdefault("conditional_trees", [])
         for match, direction in zip(children, ["ingress", "egress"]):
             item_source = block(gre_acl_source, match.end() - 1)
             child = definition(item_source, "each.value", 6, model, item_body, leaf["children"], "item", "itemBody", child_struct)
-            generated["conditional_trees"].append({"path":path, "primary_keys":leaf["primaryKeys"], "definition":child, "triggers":["ipv4_"+direction+"_access_list", "ipv4_"+direction+"_access_list_variable"]})
+            generated["conditional_trees"].append({"path":path, "primary_keys":leaf["primaryKeys"], "definition":child, "triggers":[family+"_"+direction+"_access_list", family+"_"+direction+"_access_list_variable"]})
     if cellular_encapsulation_source:
         loop = re.search(r'for _, item := range data.TunnelInterfaceEncapsulations \{', body)
         item_body = block(body, loop.end()-1)
