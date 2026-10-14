@@ -101,7 +101,7 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 			}
 		}
 		for _, site := range r.HierarchySites {
-			if r.Type != "topology_mesh" {
+			if r.Type != "topology_mesh" && r.Type != "topology_custom_control" {
 				continue
 			}
 			found := -1
@@ -112,7 +112,7 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 				}
 			}
 			if found < 0 {
-				return nil, errors.New("mesh site is not declared")
+				return nil, errors.New("topology site is not declared")
 			}
 			dependencies[i] = append(dependencies[i], found)
 		}

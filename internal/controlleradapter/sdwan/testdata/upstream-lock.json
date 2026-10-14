@@ -1144,8 +1144,8 @@
       "type": "sdwan_topology_custom_control_feature",
       "name": "topology_custom_control_feature",
       "source": "sdwan_features_topology.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_topology_hub_spoke_feature",

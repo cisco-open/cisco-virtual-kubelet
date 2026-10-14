@@ -169,6 +169,9 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 	if e := c.resolveMeshSites(ctx, r); e != nil {
 		return nil, e
 	}
+	if e := c.resolveCustomControlSites(ctx, r); e != nil {
+		return nil, e
+	}
 	if e := c.resolveHubSpokeSites(ctx, r); e != nil {
 		return nil, e
 	}
@@ -179,6 +182,9 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 		return "", e
 	}
 	if e := c.resolveMeshSites(ctx, r); e != nil {
+		return "", e
+	}
+	if e := c.resolveCustomControlSites(ctx, r); e != nil {
 		return "", e
 	}
 	if e := c.resolveHubSpokeSites(ctx, r); e != nil {
@@ -221,6 +227,9 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 		return e
 	}
 	if e := c.resolveMeshSites(ctx, r); e != nil {
+		return e
+	}
+	if e := c.resolveCustomControlSites(ctx, r); e != nil {
 		return e
 	}
 	if e := c.resolveHubSpokeSites(ctx, r); e != nil {

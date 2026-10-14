@@ -1,0 +1,20 @@
+sdwan:
+  network_hierarchy:
+    groups:
+      - name: CVK-CUSTOM-GROUP
+        sites:
+          - name: CVK-CUSTOM-SITE
+            site_id: 4294966993
+  feature_profiles:
+    topology_profiles:
+      - name: CVK-TOPOLOGY-CUSTOM-PROFILE
+        custom_policies:
+          - name: CVK-TOPOLOGY-CUSTOM
+            default_action: reject
+            inbound_sites: [CVK-CUSTOM-SITE]
+            sequences:
+              - sequence_id: 1
+                sequence_name: CVK-ROUTE-RULE
+                base_action: accept
+                type: route
+                protocol: ipv4

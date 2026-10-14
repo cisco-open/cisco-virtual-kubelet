@@ -66,6 +66,7 @@ type Resource struct {
 	ParcelAncestors                    []ParcelAncestor
 	HierarchySites, SiteGroups         []string
 	HubSpoke                           *hubSpokeInput
+	CustomControlSites                 map[string][]string
 	ParcelPath                         string
 	ParentParcelPath, ParentParcelName string
 	Key, Name, Section, Type           string
