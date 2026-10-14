@@ -25,6 +25,9 @@ func collectScalarReferences(def scalarDefinition, input map[string]any, prefix 
 		refs = append(refs, ParcelReference{Kind: field.ReferenceKind, Name: name, ParcelPath: field.Reference, BodyPath: append(path, "value")})
 	}
 	for _, wrapper := range def.Wrappers {
+		if wrapper.Nonempty != "" && (input[wrapper.Nonempty] == nil || input[wrapper.Nonempty] == "") {
+			continue
+		}
 		path := append(append([]string{}, prefix...), strings.Split(wrapper.Path, ".")...)
 		refs = append(refs, collectScalarReferences(wrapper.Definition, input, append(path, "0"))...)
 	}

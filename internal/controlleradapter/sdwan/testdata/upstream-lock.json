@@ -443,8 +443,11 @@
       "type": "sdwan_cisco_ospf_feature_template",
       "name": "cisco_ospf_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "classic-ospf.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; VPN association and device activation excluded"
     },
     {
       "type": "sdwan_cedge_pim_feature_template",
@@ -466,19 +469,21 @@
       "type": "sdwan_cisco_security_feature_template",
       "name": "cisco_security_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "classic-security.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; VPN association and device activation excluded"
     },
     {
       "type": "sdwan_cisco_sig_credentials_feature_template",
       "name": "cisco_sig_credentials_feature_template",
       "source": "sdwan_feature_templates.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "fixtures": [
-        "classic-sig-credentials"
-      ],
-      "local_tested": true
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "classic-sig-credentials.yaml",
+      "limits": "Unattached Umbrella credential variable fixture qualified through native CRUD and Kubernetes reconciliation; external credential validation and device activation excluded"
     },
     {
       "type": "sdwan_cisco_snmp_feature_template",
@@ -848,22 +853,31 @@
       "type": "sdwan_service_routing_ospf_feature",
       "name": "service_routing_ospf_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "routing-ospf.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; VPN association and device activation excluded"
     },
     {
       "type": "sdwan_service_routing_ospfv3_ipv4_feature",
       "name": "service_routing_ospfv3_ipv4_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "routing-ospf.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; VPN association and device activation excluded"
     },
     {
       "type": "sdwan_service_routing_ospfv3_ipv6_feature",
       "name": "service_routing_ospfv3_ipv6_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "routing-ospf.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; VPN association and device activation excluded"
     },
     {
       "type": "sdwan_service_route_policy_feature",
@@ -897,12 +911,11 @@
       "type": "sdwan_sse_cisco_feature",
       "name": "sse_cisco_feature",
       "source": "sdwan_features_sse.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "fixtures": [
-        "cisco-sse"
-      ],
-      "local_tested": true
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "cisco-sse.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; device activation excluded"
     },
     {
       "type": "sdwan_system_aaa_feature",
@@ -1093,45 +1106,41 @@
       "type": "sdwan_transport_tracker_group_feature",
       "name": "transport_tracker_group_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "fixtures": [
-        "transport-trackers"
-      ],
-      "local_tested": true
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-trackers.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; device activation excluded"
     },
     {
       "type": "sdwan_transport_tracker_feature",
       "name": "transport_tracker_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "fixtures": [
-        "transport-trackers"
-      ],
-      "local_tested": true
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-trackers.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; device activation excluded"
     },
     {
       "type": "sdwan_transport_ipv6_tracker_group_feature",
       "name": "transport_ipv6_tracker_group_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "fixtures": [
-        "transport-trackers"
-      ],
-      "local_tested": true
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-trackers.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; device activation excluded"
     },
     {
       "type": "sdwan_transport_ipv6_tracker_feature",
       "name": "transport_ipv6_tracker_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
-      "fixtures": [
-        "transport-trackers"
-      ],
-      "local_tested": true
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-trackers.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; device activation excluded"
     },
     {
       "type": "sdwan_transport_management_vpn_feature",
@@ -1151,8 +1160,11 @@
       "type": "sdwan_transport_routing_ospf_feature",
       "name": "transport_routing_ospf_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "routing-ospf.yaml",
+      "limits": "Unattached fixture attributes qualified through native CRUD and Kubernetes reconciliation; VPN association and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_feature",

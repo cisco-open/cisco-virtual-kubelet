@@ -3407,6 +3407,830 @@
       "type": "cisco_omp",
       "unavailable_inputs": {}
     },
+    "ospf_templates": {
+      "conditional_trees": [
+        {
+          "definition": {
+            "defaults": {},
+            "fields": {
+              "$literal:direction": {
+                "boolean_string": false,
+                "literal": "in",
+                "object_type": "object",
+                "omit_null": true,
+                "path": "direction",
+                "schema": {
+                  "enum": [
+                    "in"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "route_policy": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "pol-name",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "route_policy_variable"
+              }
+            },
+            "optional": "",
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "ospf.route-policy",
+          "primary_keys": [
+            "direction"
+          ],
+          "triggers": [
+            "route_policy",
+            "route_policy_variable"
+          ]
+        }
+      ],
+      "defaults": {
+        "ospf": {
+          "area": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "a-num"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "auto-cost": {
+            "reference-bandwidth": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          },
+          "compatible": {
+            "rfc1583": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          },
+          "distance": {
+            "external": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "inter-area": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "intra-area": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          },
+          "max-metric": {
+            "router-lsa": {
+              "vipObjectType": "tree",
+              "vipPrimaryKey": [
+                "ad-type"
+              ],
+              "vipType": "ignore",
+              "vipValue": []
+            }
+          },
+          "redistribute": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "protocol"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "router-id": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "timers": {
+            "spf": {
+              "delay": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "initial-hold": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "max-hold": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            }
+          }
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "auto_cost_reference_bandwidth": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.auto-cost.reference-bandwidth",
+          "schema": {
+            "maximum": 4294967,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "auto_cost_reference_bandwidth_variable"
+        },
+        "compatible_rfc1583": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.compatible.rfc1583",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "compatible_rfc1583_variable"
+        },
+        "default_information_originate": {
+          "container": true,
+          "object_type": "node-only",
+          "path": "ospf.default-information.originate"
+        },
+        "default_information_originate_always": {
+          "boolean_string": true,
+          "object_type": "node-only",
+          "omit_null": true,
+          "path": "ospf.default-information.originate.always",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "default_information_originate_always_variable"
+        },
+        "default_information_originate_metric": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "ospf.default-information.originate.metric",
+          "schema": {
+            "maximum": 16777214,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "default_information_originate_metric_variable"
+        },
+        "default_information_originate_metric_type": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "ospf.default-information.originate.metric-type",
+          "schema": {
+            "enum": [
+              "type1",
+              "type2"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "default_information_originate_metric_type_variable"
+        },
+        "distance_external": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.distance.external",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "distance_external_variable"
+        },
+        "distance_inter_area": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.distance.inter-area",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "distance_inter_area_variable"
+        },
+        "distance_intra_area": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.distance.intra-area",
+          "schema": {
+            "maximum": 255,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "distance_intra_area_variable"
+        },
+        "router_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.router-id",
+          "schema": {
+            "format": "ipv4",
+            "type": "string"
+          },
+          "set": false,
+          "variable": "router_id_variable"
+        },
+        "timers_spf_delay": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.timers.spf.delay",
+          "schema": {
+            "maximum": 600000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "timers_spf_delay_variable"
+        },
+        "timers_spf_initial_hold": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.timers.spf.initial-hold",
+          "schema": {
+            "maximum": 600000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "timers_spf_initial_hold_variable"
+        },
+        "timers_spf_max_hold": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ospf.timers.spf.max-hold",
+          "schema": {
+            "maximum": 600000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "timers_spf_max_hold_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "areas": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "interface": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "name"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "range": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "address"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              }
+            },
+            "fields": {
+              "$derived:nssa": {
+                "container": true,
+                "object_type": "",
+                "path": "nssa",
+                "predicate": {
+                  "equals": "nssa",
+                  "field": "area_type"
+                }
+              },
+              "$derived:nssa_no_summary": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "nssa.no-summary",
+                "predicate": {
+                  "boolean": "no_summary",
+                  "equals": "nssa",
+                  "field": "area_type"
+                },
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "$derived:stub": {
+                "container": true,
+                "object_type": "",
+                "path": "stub",
+                "predicate": {
+                  "equals": "stub",
+                  "field": "area_type"
+                }
+              },
+              "$derived:stub_no_summary": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "stub.no-summary",
+                "predicate": {
+                  "boolean": "no_summary",
+                  "equals": "stub",
+                  "field": "area_type"
+                },
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "area_number": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "a-num",
+                "schema": {
+                  "maximum": 4294967295,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "area_number_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "a-num",
+              "stub",
+              "stub",
+              "nssa",
+              "nssa",
+              "interface",
+              "range"
+            ],
+            "required": [],
+            "trees": {
+              "interfaces": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "authentication": {
+                      "message-digest": {
+                        "md5": {
+                          "vipObjectType": "object",
+                          "vipType": "ignore"
+                        },
+                        "message-digest-key": {
+                          "vipObjectType": "object",
+                          "vipType": "ignore"
+                        }
+                      },
+                      "type": {
+                        "vipObjectType": "object",
+                        "vipType": "ignore"
+                      }
+                    },
+                    "cost": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "dead-interval": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "hello-interval": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "network": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "passive-interface": {
+                      "vipObjectType": "node-only",
+                      "vipType": "ignore"
+                    },
+                    "priority": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "retransmit-interval": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "authentication_message_digest_key": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "authentication.message-digest.md5",
+                      "schema": {
+                        "maxLength": 31,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "authentication_message_digest_key_variable"
+                    },
+                    "authentication_message_digest_key_id": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "authentication.message-digest.message-digest-key",
+                      "schema": {
+                        "maximum": 255,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "authentication_message_digest_key_id_variable"
+                    },
+                    "authentication_type": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "authentication.type",
+                      "schema": {
+                        "enum": [
+                          "simple",
+                          "message-digest",
+                          "null"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "authentication_type_variable"
+                    },
+                    "cost": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "cost",
+                      "schema": {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "cost_variable"
+                    },
+                    "dead_interval": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "dead-interval",
+                      "schema": {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "dead_intervale_variable"
+                    },
+                    "hello_interval": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "hello-interval",
+                      "schema": {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "hello_interval_variable"
+                    },
+                    "name": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "name",
+                      "schema": {
+                        "maxLength": 32,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "name_variable"
+                    },
+                    "network_type": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "network",
+                      "schema": {
+                        "enum": [
+                          "broadcast",
+                          "point-to-point",
+                          "non-broadcast",
+                          "point-to-multipoint"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "network_type_variable"
+                    },
+                    "passive_interface": {
+                      "boolean_string": true,
+                      "object_type": "node-only",
+                      "omit_null": false,
+                      "path": "passive-interface",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "passive_interface_variable"
+                    },
+                    "priority": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "priority",
+                      "schema": {
+                        "maximum": 255,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "priority_variable"
+                    },
+                    "retransmit_interval": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "retransmit-interval",
+                      "schema": {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "retransmit_interval_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "name",
+                    "hello-interval",
+                    "dead-interval",
+                    "retransmit-interval",
+                    "cost",
+                    "priority",
+                    "network",
+                    "passive-interface",
+                    "authentication",
+                    "authentication",
+                    "authentication"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "interface",
+                "primary_keys": [
+                  "name"
+                ],
+                "primitive": false
+              },
+              "ranges": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "cost": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "no-advertise": {
+                      "vipObjectType": "node-only",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "address": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "address",
+                      "schema": {
+                        "format": "ipv4-prefix",
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "address_variable"
+                    },
+                    "cost": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "cost",
+                      "schema": {
+                        "maximum": 16777214,
+                        "minimum": 0,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "cost_variable"
+                    },
+                    "no_advertise": {
+                      "boolean_string": true,
+                      "object_type": "node-only",
+                      "omit_null": false,
+                      "path": "no-advertise",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "no_advertise_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "address",
+                    "cost",
+                    "no-advertise"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "range",
+                "primary_keys": [
+                  "address"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "ospf.area",
+          "primary_keys": [
+            "a-num"
+          ],
+          "primitive": false
+        },
+        "max_metric_router_lsas": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "time": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "time",
+                "schema": {
+                  "maximum": 86400,
+                  "minimum": 5,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "time_variable"
+              },
+              "type": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ad-type",
+                "schema": {
+                  "enum": [
+                    "administrative",
+                    "on-startup"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "ad-type",
+              "time"
+            ],
+            "required": [
+              "type"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "ospf.max-metric.router-lsa",
+          "primary_keys": [
+            "ad-type"
+          ],
+          "primitive": false
+        },
+        "redistributes": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "dia": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "route-policy": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "nat_dia": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "dia",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "nat_dia_variable"
+              },
+              "protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "protocol",
+                "schema": {
+                  "enum": [
+                    "static",
+                    "connected",
+                    "bgp",
+                    "omp",
+                    "nat",
+                    "eigrp"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "protocol_variable"
+              },
+              "route_policy": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "route-policy",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "route_policy_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "protocol",
+              "route-policy",
+              "dia"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "ospf.redistribute",
+          "primary_keys": [
+            "protocol"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_ospf",
+      "unavailable_inputs": {
+        "areas[].interfaces[].dead_interval_variable": "Pinned module reads dead_intervale_variable instead"
+      }
+    },
     "pim_templates": {
       "defaults": {
         "pim": {
@@ -4000,8 +4824,628 @@
         ]
       }
     },
+    "security_templates": {
+      "defaults": {
+        "ipsec": {
+          "authentication-type": {
+            "vipObjectType": "list",
+            "vipType": "ignore"
+          },
+          "extended-ar-window": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "integrity-type": {
+            "vipObjectType": "list",
+            "vipType": "ignore"
+          },
+          "pairwise-keying": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "rekey": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "replay-window": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "key": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "id",
+            "chain-name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "trustsec": {
+          "keychain": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "name",
+              "keyid"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          }
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "$field:authentication_type": {
+          "array_values": {
+            "esp": "sha1-hmac",
+            "ip-udp-esp": "ah-sha1-hmac",
+            "ip-udp-esp-no-id": "ah-no-id"
+          },
+          "boolean_string": false,
+          "object_type": "list",
+          "omit_null": false,
+          "path": "ipsec.authentication-type",
+          "schema": {
+            "items": {
+              "enum": [
+                "none",
+                "sha1-hmac",
+                "ah-sha1-hmac",
+                "ah-no-id"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "set": true,
+          "source": "authentication_types",
+          "variable": "authentication_types_variable"
+        },
+        "authentication_types": {
+          "boolean_string": false,
+          "object_type": "list",
+          "omit_null": false,
+          "path": "ipsec.integrity-type",
+          "schema": {
+            "items": {
+              "enum": [
+                "none",
+                "esp",
+                "ip-udp-esp",
+                "ip-udp-esp-no-id"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "set": true,
+          "variable": "authentication_types_variable"
+        },
+        "extended_anti_replay_window": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.extended-ar-window",
+          "schema": {
+            "maximum": 2048,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "extended_anti_replay_window_variable"
+        },
+        "pairwise_keying": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.pairwise-keying",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "pairwise_keying_variable"
+        },
+        "rekey_interval": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.rekey",
+          "schema": {
+            "maximum": 1209600,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "rekey_interval_variable"
+        },
+        "replay_window": {
+          "boolean_string": false,
+          "decimal_string": true,
+          "input_schema": {
+            "anyOf": [
+              {
+                "enum": [
+                  "64",
+                  "128",
+                  "256",
+                  "512",
+                  "1024",
+                  "2048",
+                  "4096",
+                  "8192"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  64,
+                  128,
+                  256,
+                  512,
+                  1024,
+                  2048,
+                  4096,
+                  8192
+                ],
+                "type": "integer"
+              }
+            ]
+          },
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.replay-window",
+          "schema": {
+            "enum": [
+              "64",
+              "128",
+              "256",
+              "512",
+              "1024",
+              "2048",
+              "4096",
+              "8192"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "replay_window_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "key_chains": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "key_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "keyid",
+                "schema": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 236,
+                  "type": "string"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "name",
+              "keyid"
+            ],
+            "required": [
+              "key_id",
+              "name"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "trustsec.keychain",
+          "primary_keys": [
+            "name",
+            "keyid"
+          ],
+          "primitive": false
+        },
+        "keys": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "accept-ao-mismatch": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "accept-lifetime": {
+                "lifetime-group-v1": {
+                  "end-choice": {
+                    "vipObjectType": "object",
+                    "vipType": "ignore"
+                  }
+                }
+              },
+              "cryptographic-algorithm-choice": {},
+              "include-tcp-options": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "send-lifetime": {
+                "lifetime-group-v1": {
+                  "end-choice": {
+                    "vipObjectType": "object",
+                    "vipType": "ignore"
+                  }
+                }
+              }
+            },
+            "fields": {
+              "$derived:accept_lifetime_infinite": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "accept-lifetime.lifetime-group-v1.infinite",
+                "predicate": {
+                  "equals": "infinite",
+                  "field": "accept_lifetime_end_time_format"
+                },
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "$derived:send_lifetime_infinite": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "send-lifetime.lifetime-group-v1.infinite",
+                "predicate": {
+                  "equals": "infinite",
+                  "field": "send_lifetime_end_time_format"
+                },
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "accept_ao_mismatch": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "accept-ao-mismatch",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "accept_ao_mismatch_variable"
+              },
+              "accept_lifetime": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "accept-lifetime.lifetime-group-v1.local",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "accept_lifetime_variable"
+              },
+              "accept_lifetime_duration_seconds": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "accept-lifetime.lifetime-group-v1.duration",
+                "schema": {
+                  "maximum": 2147483646,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "accept_lifetime_duration_variable"
+              },
+              "accept_lifetime_end_time_epoch": {
+                "boolean_string": false,
+                "decimal_string": true,
+                "input_schema": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ]
+                },
+                "object_type": "object",
+                "omit_null": true,
+                "path": "accept-lifetime.lifetime-group-v1.end-epoch",
+                "schema": {
+                  "description": "Manager datetime epoch string",
+                  "type": "string"
+                },
+                "set": false
+              },
+              "accept_lifetime_end_time_format": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "accept-lifetime.lifetime-group-v1.end-choice",
+                "schema": {
+                  "enum": [
+                    "infinite",
+                    "duration",
+                    "end-epoch"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "accept_lifetime_start_time_epoch": {
+                "boolean_string": false,
+                "decimal_string": true,
+                "input_schema": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ]
+                },
+                "object_type": "object",
+                "omit_null": true,
+                "path": "accept-lifetime.lifetime-group-v1.start-epoch",
+                "schema": {
+                  "description": "Manager datetime epoch string",
+                  "type": "string"
+                },
+                "set": false
+              },
+              "crypto_algorithm": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "cryptographic-algorithm-choice.tcp",
+                "schema": {
+                  "enum": [
+                    "aes-128-cmac",
+                    "hmac-sha-1",
+                    "hmac-sha-256"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "id": {
+                "boolean_string": false,
+                "decimal_string": true,
+                "input_schema": {
+                  "maximum": 2147483647,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "object_type": "object",
+                "omit_null": true,
+                "path": "id",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false
+              },
+              "include_tcp_options": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "include-tcp-options",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "key_chain_name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "chain-name",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false
+              },
+              "key_string": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "key-string",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "key_string_variable"
+              },
+              "receive_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "recv-id",
+                "schema": {
+                  "maximum": 255,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "receive_id_variable"
+              },
+              "send_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "send-id",
+                "schema": {
+                  "maximum": 255,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "send_id_variable"
+              },
+              "send_lifetime": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "send-lifetime.lifetime-group-v1.local",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "send_lifetime_variable"
+              },
+              "send_lifetime_duration_seconds": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "send-lifetime.lifetime-group-v1.duration",
+                "schema": {
+                  "maximum": 2147483646,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "send_lifetime_duration_variable"
+              },
+              "send_lifetime_end_time_epoch": {
+                "boolean_string": false,
+                "decimal_string": true,
+                "input_schema": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ]
+                },
+                "object_type": "object",
+                "omit_null": true,
+                "path": "send-lifetime.lifetime-group-v1.end-epoch",
+                "schema": {
+                  "description": "Manager datetime epoch string",
+                  "type": "string"
+                },
+                "set": false
+              },
+              "send_lifetime_end_time_format": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "send-lifetime.lifetime-group-v1.end-choice",
+                "schema": {
+                  "enum": [
+                    "infinite",
+                    "duration",
+                    "end-epoch"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "send_lifetime_start_time_epoch": {
+                "boolean_string": false,
+                "decimal_string": true,
+                "input_schema": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    }
+                  ]
+                },
+                "object_type": "object",
+                "omit_null": true,
+                "path": "send-lifetime.lifetime-group-v1.start-epoch",
+                "schema": {
+                  "description": "Manager datetime epoch string",
+                  "type": "string"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "id",
+              "chain-name",
+              "send-id",
+              "recv-id",
+              "cryptographic-algorithm-choice",
+              "key-string",
+              "send-lifetime",
+              "send-lifetime",
+              "send-lifetime",
+              "send-lifetime",
+              "send-lifetime",
+              "send-lifetime",
+              "accept-lifetime",
+              "accept-lifetime",
+              "accept-lifetime",
+              "accept-lifetime",
+              "accept-lifetime",
+              "accept-lifetime",
+              "include-tcp-options",
+              "accept-ao-mismatch"
+            ],
+            "required": [
+              "key_chain_name",
+              "id"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "key",
+          "primary_keys": [
+            "id",
+            "chain-name"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_security",
+      "unavailable_inputs": {}
+    },
     "sig_credentials_templates": {
       "defaults": {},
+      "description_by_name": {
+        "Cisco-Umbrella-Global-Credentials": "Global credentials for umbrella"
+      },
+      "description_default": "Global credentials for zscaler",
       "device_types": [
         "C8000V",
         "C8300-1N1S-4T2X",
@@ -4025,7 +5469,8 @@
             "type": "string"
           },
           "set": false,
-          "variable": "umbrella_api_key_variable"
+          "variable": "umbrella_api_key_variable",
+          "variable_value": ""
         },
         "umbrella_api_secret": {
           "boolean_string": false,
@@ -4036,7 +5481,8 @@
             "type": "string"
           },
           "set": false,
-          "variable": "umbrella_api_secret_variable"
+          "variable": "umbrella_api_secret_variable",
+          "variable_value": ""
         },
         "umbrella_organization_id": {
           "boolean_string": false,
@@ -4051,6 +5497,7 @@
         },
         "zscaler_organization": {
           "boolean_string": false,
+          "constant_variable_name": true,
           "object_type": "object",
           "omit_null": true,
           "path": "zscaler.organization",
@@ -4058,10 +5505,12 @@
             "type": "string"
           },
           "set": false,
-          "variable": "zscaler_organization_variable"
+          "variable": "zscaler_organization_variable",
+          "variable_value_from_input": true
         },
         "zscaler_partner_api_key": {
           "boolean_string": false,
+          "constant_variable_name": true,
           "object_type": "object",
           "omit_null": true,
           "path": "zscaler.partner-key",
@@ -4069,10 +5518,12 @@
             "type": "string"
           },
           "set": false,
-          "variable": "zscaler_partner_api_key_variable"
+          "variable": "zscaler_partner_api_key_variable",
+          "variable_value_from_input": true
         },
         "zscaler_partner_base_uri": {
           "boolean_string": false,
+          "constant_variable_name": true,
           "object_type": "object",
           "omit_null": true,
           "path": "zscaler.partner-base-uri",
@@ -4080,10 +5531,12 @@
             "type": "string"
           },
           "set": false,
-          "variable": "zscaler_partner_base_uri_variable"
+          "variable": "zscaler_partner_base_uri_variable",
+          "variable_value_from_input": true
         },
         "zscaler_password": {
           "boolean_string": false,
+          "constant_variable_name": true,
           "object_type": "object",
           "omit_null": true,
           "path": "zscaler.password",
@@ -4091,10 +5544,12 @@
             "type": "string"
           },
           "set": false,
-          "variable": "zscaler_password_variable"
+          "variable": "zscaler_password_variable",
+          "variable_value_from_input": true
         },
         "zscaler_username": {
           "boolean_string": false,
+          "constant_variable_name": true,
           "object_type": "object",
           "omit_null": true,
           "path": "zscaler.username",
@@ -4102,9 +5557,11 @@
             "type": "string"
           },
           "set": false,
-          "variable": "zscaler_username_variable"
+          "variable": "zscaler_username_variable",
+          "variable_value_from_input": true
         }
       },
+      "global": true,
       "optional": "",
       "required": [],
       "trees": {},

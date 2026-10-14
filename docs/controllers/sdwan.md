@@ -7,7 +7,7 @@ schemas, defaults and API behavior. Terraform is not a build, test or deployment
 dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 84 resource declarations (78 distinct resource types) have fixture-level native live coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 96 resource declarations (90 distinct resource types) have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -36,6 +36,12 @@ parity**. The pinned upstream module has 226 resource declarations. 84 resource 
 | `examples/configs/sdwan/classic-snmp.yaml` | Classic SNMP nested OIDs, communities and users | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-logging.yaml` | Classic logging TLS profile and IPv4/IPv6 servers | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-gre.yaml` | Classic GRE with conditional ingress/egress ACL variables | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-security.yaml` | Classic security with key chains and authentication translation | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-ospf.yaml` | Classic OSPF areas, interfaces, ranges and policy variable | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/routing-ospf.yaml` | Service OSPF, service OSPFv3 IPv4/IPv6, transport OSPF | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/transport-trackers.yaml` | Transport IPv4/IPv6 trackers and tracker groups | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-sig-credentials.yaml` | Global Umbrella credentials using variables | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/cisco-sse.yaml` | Cisco SSE parcel | Native lifecycle, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -46,11 +52,11 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
-An additional 40 declarations have native implementations and locally validated
-fixtures but still need live qualification. This includes the policy-object profile
-and all 32 modern policy-object collections, Cisco SSE, system CA certificates,
-classic SIG credentials, and transport IPv4/IPv6 trackers and tracker groups.
-101 declarations remain pending and TrustSec remains compatibility-blocked.
+An additional 34 declarations have native implementations but remain unqualified:
+the policy-object profile and all 32 modern policy-object collections, plus system
+CA certificates. SIG credential creation now passes after fixing the global flag
+and variable-secret payloads.
+95 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 

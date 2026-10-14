@@ -11,6 +11,9 @@ import (
 )
 
 type FeatureProfile struct {
+	OSPF                  []map[string]any             `json:"ospf_features,omitempty"`
+	OSPFv3IPv4            []map[string]any             `json:"ospfv3_ipv4_features,omitempty"`
+	OSPFv3IPv6            []map[string]any             `json:"ospfv3_ipv6_features,omitempty"`
 	IPv6Trackers          []map[string]any             `json:"ipv6_trackers,omitempty"`
 	IPv6TrackerGroups     []map[string]any             `json:"ipv6_tracker_groups,omitempty"`
 	CACertificate         map[string]any               `json:"ca_certificate,omitempty"`

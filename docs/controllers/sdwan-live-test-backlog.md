@@ -5,16 +5,16 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 84 |
-| Implemented with local fixtures; live tests outstanding | 40 |
-| Implementation still pending | 101 |
+| Fixture-qualified against live Manager | 96 |
+| Implemented with local fixtures; live tests outstanding | 34 |
+| Implementation still pending | 95 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment implements 24 previously pending declarations: all seventeen
-remaining modern policy-object declarations, four transport tracker declarations,
-Cisco SSE, system CA certificates, and classic SIG credentials. Existing qualified
-mapping metadata is unchanged. Local validation covers the supplied fixture fields;
-it does not establish device behavior or exhaustive schema parity.
+The latest increment implements six previously pending declarations: classic security
+and OSPF templates plus service OSPF, service OSPFv3 IPv4/IPv6 and transport OSPF.
+All six passed native live CRUD and Kubernetes reconciliation. Six earlier definitions
+(transport IPv4/IPv6 trackers and groups, Cisco SSE and SIG credentials) also passed those tests.
+Qualification covers unattached fixture attributes, not router behavior or full parity.
 
 ## Live tests required for implemented definitions
 
@@ -30,13 +30,7 @@ implemented existing-parent workflow is needed. CVK does not adopt that profile.
 | Upstream declaration | Native model path (under `sdwan`) | Fixture(s) | Prerequisite |
 |---|---|---|---|
 | `sdwan_policy_object_feature_profile` | `feature_profiles.policy_object_profile` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Manager permits only one policy-object profile |
-| `sdwan_cisco_sig_credentials_feature_template` | `edge_feature_templates.sig_credentials_templates` | [classic-sig-credentials.yaml](../../examples/configs/sdwan/classic-sig-credentials.yaml) | Unattached template; credential variables only |
-| `sdwan_sse_cisco_feature` | `feature_profiles.sse_profiles.cisco` | [cisco-sse.yaml](../../examples/configs/sdwan/cisco-sse.yaml) | Unattached SSE profile; activation/forwarding testing is separate |
 | `sdwan_system_ca_certificate_feature` | `feature_profiles.system_profiles.ca_certificate` | [ca-certificate.yaml](../../examples/configs/sdwan/ca-certificate.yaml) | Replace placeholder certificate ID with an existing lab certificate |
-| `sdwan_transport_tracker_group_feature` | `feature_profiles.transport_profiles.ipv4_tracker_groups` | [transport-trackers.yaml](../../examples/configs/sdwan/transport-trackers.yaml) | Unattached profile; verify both HTTP and ICMP variants |
-| `sdwan_transport_tracker_feature` | `feature_profiles.transport_profiles.ipv4_trackers` | [transport-trackers.yaml](../../examples/configs/sdwan/transport-trackers.yaml) | Unattached profile; verify both HTTP and ICMP variants |
-| `sdwan_transport_ipv6_tracker_group_feature` | `feature_profiles.transport_profiles.ipv6_tracker_groups` | [transport-trackers.yaml](../../examples/configs/sdwan/transport-trackers.yaml) | Unattached profile; verify both HTTP and ICMP variants |
-| `sdwan_transport_ipv6_tracker_feature` | `feature_profiles.transport_profiles.ipv6_trackers` | [transport-trackers.yaml](../../examples/configs/sdwan/transport-trackers.yaml) | Unattached profile; verify both HTTP and ICMP variants |
 | `sdwan_policy_object_app_probe_class` | `feature_profiles.policy_object_profile.app_probe_classes` | [policy-dependencies.yaml](../../examples/configs/sdwan/policy-dependencies.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
 | `sdwan_policy_object_application_list` | `feature_profiles.policy_object_profile.application_lists` | [policy-security.yaml](../../examples/configs/sdwan/policy-security.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
 | `sdwan_policy_object_as_path_list` | `feature_profiles.policy_object_profile.as_path_lists` | [policy-profile.yaml](../../examples/configs/sdwan/policy-profile.yaml) | Isolated policy-object profile; referenced parcels declared in the fixture |
@@ -77,8 +71,8 @@ LAN VPNs. See the [NaC security-zone model](https://netascode.cisco.com/docs/dat
 ## Native test commands
 
 Provide Manager credentials through the existing environment/secret mechanism.
-The following commands are templates; they were not executed against the lab for
-the new fixtures. Select one fixture at a time, starting with absent fixture names.
+The transport example below has passed; use the table above to select remaining
+fixtures. Select one fixture at a time, starting with absent fixture names.
 
 ```bash
 CVK_SDWAN_LIVE=1 CVK_SDWAN_MUTATE=1 \
@@ -96,7 +90,7 @@ All examples have report-mode companion `NetworkControllerConfig` manifests.
 
 ## Implementation still required
 
-These 101 declarations are not merely waiting for live tests. Their native mapping
+These 95 declarations are not merely waiting for live tests. Their native mapping
 and/or lifecycle implementation remains unfinished. They must not be counted as parity.
 
 ### sdwan_application_catalog.tf
@@ -124,9 +118,7 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 
 - `sdwan_cedge_aaa_feature_template.cedge_aaa_feature_template`
 - `sdwan_cisco_bgp_feature_template.cisco_bgp_feature_template`
-- `sdwan_cisco_ospf_feature_template.cisco_ospf_feature_template`
 - `sdwan_cisco_secure_internet_gateway_feature_template.cisco_secure_internet_gateway_feature_template`
-- `sdwan_cisco_security_feature_template.cisco_security_feature_template`
 - `sdwan_cisco_system_feature_template.cisco_system_feature_template`
 - `sdwan_cisco_vpn_feature_template.cisco_vpn_feature_template`
 - `sdwan_cisco_vpn_interface_feature_template.cisco_vpn_interface_feature_template`
@@ -167,9 +159,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_service_lan_vpn_interface_svi_feature.service_lan_vpn_interface_svi_feature`
 - `sdwan_service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature.service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature`
 - `sdwan_service_multicast_feature.service_multicast_feature`
-- `sdwan_service_routing_ospf_feature.service_routing_ospf_feature`
-- `sdwan_service_routing_ospfv3_ipv4_feature.service_routing_ospfv3_ipv4_feature`
-- `sdwan_service_routing_ospfv3_ipv6_feature.service_routing_ospfv3_ipv6_feature`
 - `sdwan_service_route_policy_feature.service_route_policy_feature`
 - `sdwan_service_switchport_feature.service_switchport_feature`
 - `sdwan_service_ipv6_acl_feature.service_ipv6_acl_feature`
@@ -196,7 +185,6 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 - `sdwan_transport_route_policy_feature.transport_route_policy_feature`
 - `sdwan_transport_management_vpn_feature.transport_management_vpn_feature`
 - `sdwan_transport_management_vpn_interface_ethernet_feature.transport_management_vpn_interface_ethernet_feature`
-- `sdwan_transport_routing_ospf_feature.transport_routing_ospf_feature`
 - `sdwan_transport_wan_vpn_feature.transport_wan_vpn_feature`
 - `sdwan_transport_wan_vpn_feature_associate_routing_bgp_feature.transport_wan_vpn_feature_associate_routing_bgp_feature`
 - `sdwan_transport_wan_vpn_feature_associate_routing_ospf_feature.transport_wan_vpn_feature_associate_routing_ospf_feature`

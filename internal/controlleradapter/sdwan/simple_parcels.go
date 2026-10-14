@@ -3,6 +3,7 @@
 package sdwan
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 )
@@ -87,6 +88,41 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		}
 		if err := add(feature.public, feature.path, meta, data); err != nil {
 			return nil, err
+		}
+	}
+	if p.OSPF != nil && collection != "service" && collection != "transport" {
+		return nil, errors.New("OSPF requires a service or transport profile")
+	}
+	if (p.OSPFv3IPv4 != nil || p.OSPFv3IPv6 != nil) && collection != "service" {
+		return nil, errors.New("OSPFv3 requires a service profile")
+	}
+	var registry struct{ Parcels map[string]scalarDefinition }
+	if len(p.OSPF)+len(p.OSPFv3IPv4)+len(p.OSPFv3IPv6) > 0 {
+		if json.Unmarshal(scalarDefinitions, &registry) != nil {
+			return nil, ErrResponse
+		}
+	}
+	for _, routing := range []struct {
+		public, kind, path string
+		inputs             []map[string]any
+	}{
+		{"ospf_features", collection + "_routing_ospf", "routing/ospf", p.OSPF},
+		{"ospfv3_ipv4_features", "service_routing_ospfv3_ipv4", "routing/ospfv3/ipv4", p.OSPFv3IPv4},
+		{"ospfv3_ipv6_features", "service_routing_ospfv3_ipv6", "routing/ospfv3/ipv6", p.OSPFv3IPv6},
+	} {
+		for _, input := range routing.inputs {
+			meta, data, err := scalarParcelData(routing.kind, input)
+			if err != nil {
+				return nil, err
+			}
+			if meta.Name == nil || *meta.Name == "" {
+				return nil, errors.New("routing feature requires a name")
+			}
+			if err = add(routing.public+"/"+*meta.Name, routing.path, meta, data); err != nil {
+				return nil, err
+			}
+			out[len(out)-1].Type = routing.kind
+			out[len(out)-1].ParcelRefs = collectScalarReferences(registry.Parcels[routing.kind], input, []string{"data"})
 		}
 	}
 	if (p.DHCPServers != nil || p.ObjectTrackers != nil || p.ObjectTrackerGroups != nil) && collection != "service" {

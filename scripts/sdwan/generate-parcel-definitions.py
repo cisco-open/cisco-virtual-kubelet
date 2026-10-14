@@ -69,8 +69,10 @@ def property_schema(node, name):
         return candidates[0]
     if len(candidates) > 1 and all(x.get("properties", {}).get("optionType", {}).get("enum") == ["global"] for x in candidates):
         return {"oneOf": candidates}
+    if len(candidates) > 1 and key.startswith(("service_routing_", "transport_routing_")):
+        return {"oneOf":candidates}
     if len(candidates) != 1:
-        raise SystemExit(f"Ambiguous or missing schema property {name}")
+        raise SystemExit(f"Ambiguous or missing schema property {name} in {key}")
     return candidates[0]
 
 def repair_sse_schema(node):
@@ -132,6 +134,12 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
             public_defaults["block_page_content_body"] = module_defaults["defaults"]["sdwan"]["feature_profiles"]["policy_object_profile"]["security_url_filtering_profiles"]["block_page_content_body"]
             transforms[tf] = {"prefix":"Access to the requested page has been denied. ", "condition_field":"block_page_action", "condition_value":"text"}
             continue
+        routing_ref = re.fullmatch(r'try\(sdwan_((?:service|transport)_route_policy)_feature\.\w+\["\$\{each.value.profile.name\}-\$\{' + re.escape(alias) + r'\.(\w+)\}"\]\.id, null\)', expr)
+        if routing_ref:
+            target_kind, public = routing_ref.groups()
+            references[tf] = ("route-policy", target_kind)
+            inputs[tf] = public
+            continue
         reference = re.fullmatch(r'(?:try\()?sdwan_(policy_object_\w+)\.\w+\[' + re.escape(alias) + r'\.(\w+)\]\.id(?:, null\))?', expr)
         if reference:
             reference_target, public = reference.groups()
@@ -188,7 +196,8 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
             required.append(direct.group(1))
             continue
         array = re.search(r'\[for (?:index, )?(\w+) in (?:try\()?' + re.escape(alias) + r'\.(\w+)(?:, \[\]\))? : \{', expr)
-        if not array and expr != "[{":
+        conditional_wrapper = re.fullmatch(r'try\(length\(' + re.escape(alias) + r'\.(\w+)\) == 0, true\) \? null : \[\{', expr)
+        if not array and expr != "[{" and not conditional_wrapper:
             raise SystemExit(f"Unsupported expression {tf}: {expr}")
         item_alias, public = array.groups() if array else (alias, None)
         item_source = block(source, source.index("{", source.index(expr) + (array.start() if array else 0)))
@@ -198,7 +207,8 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         item_body = block(body, loop.end() - 1)
         item_target = re.search(r'(\w+) := ""', item_body).group(1)
         array_paths = re.findall(setter + r'"([^"]+)", \[\]interface\{\}\{\}\)', body[:loop.start()])
-        array_path = array_paths[-1] if array_paths else re.findall(r'sjson.SetRaw\(' + target + r', ' + prefix + r'"([^"]+)\.-1", ' + item_target + r'\)', body)[0]
+        array_path = re.search(r'sjson.SetRaw\(' + target + r', ' + prefix + r'"([^" ]+)\.-1", ' + item_target + r'\)', body[loop.start():]).group(1)
+        array_paths = [p for p in array_paths if p == array_path]
         node = schema
         for part in array_path.split("."):
             node = property_schema(node, part)
@@ -210,6 +220,8 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
             entry["omit_empty"] = not bool(array_paths)
             lists[public] = entry
         else:
+            if conditional_wrapper:
+                entry["nonempty"] = conditional_wrapper.group(1)
             wrappers.append(entry)
         if array_paths:
             put(baseline, array_path, [])
@@ -228,7 +240,7 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         node = schema
         for part in path.split("."):
             node = property_schema(node, part)
-        global_values = [x["properties"]["value"] for x in node.get("oneOf", [node]) if x["properties"]["optionType"]["enum"] == ["global"]]
+        global_values = [x["properties"]["value"] for x in node.get("oneOf", [node]) if "global" in x["properties"]["optionType"].get("enum", [x["properties"]["optionType"].get("const")])]
         if not global_values:
             raise SystemExit(f"Missing global value schema {tf}")
         global_schema = global_values[0] if len(global_values) == 1 else {"anyOf": global_values}
@@ -270,6 +282,7 @@ policy_features = ["as_path_list", "class_map", "color_list", "extended_communit
 reviewed += [("policy_object", f, "", "policy_object_" + f) for f in policy_features]
 reviewed += [("transport", f, "tracker", "transport_" + f) for f in ("tracker", "ipv6_tracker", "tracker_group", "ipv6_tracker_group")]
 reviewed += [("sse", "cisco", "cisco", "sse_cisco"), ("system", "ca_certificate", "ca_certificate", "ca_certificate")]
+reviewed += [(family, feature, "ospf", family+"_"+feature) for family, feature in [("service","routing_ospf"),("service","routing_ospfv3_ipv4"),("service","routing_ospfv3_ipv6"),("transport","routing_ospf")]]
 for family, feature, alias, key in reviewed:
     hcl = (args.module / ("sdwan_policy_objects.tf" if family == "policy_object" else "sdwan_features_" + family + ".tf")).read_text()
     resource = "sdwan_" + family + "_" + feature + ("" if family == "policy_object" else "_feature")
@@ -365,7 +378,7 @@ for family, feature, alias, key in reviewed:
             if field["path"] in ("interval", "icmpInterval"):
                 field.update(condition_field="endpoint_tracker_type", condition_value="http" if field["path"] == "interval" else "icmp", condition_default="http")
     existing_policy = {"as_path_list", "class_map", "color_list", "extended_community_list", "mirror", "policer", "security_data_ipv4_prefix_list", "security_fqdn_list", "security_local_domain_list", "security_port_list", "security_protocol_list", "security_url_allow_list", "security_url_block_list", "standard_community_list", "tloc_list"}
-    if family == "service" or key.startswith("transport_cellular") or key in ("transport_tracker", "transport_ipv6_tracker", "transport_tracker_group", "transport_ipv6_tracker_group") or key in ("sse_cisco", "ca_certificate") or (family == "policy_object" and feature not in existing_policy):
+    if family == "service" or key.startswith("transport_routing_") or key.startswith("transport_cellular") or key in ("transport_tracker", "transport_ipv6_tracker", "transport_tracker_group", "transport_ipv6_tracker_group") or key in ("sse_cisco", "ca_certificate") or (family == "policy_object" and feature not in existing_policy):
         validate_schema(schema)
         generated["output_schema"] = schema
     if key == "snmp":

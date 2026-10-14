@@ -61,6 +61,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
     struct_body = block(model, struct_match.end()-1)
     fields = {tf: (name, typ) for name, typ, tf in re.findall(r'(\w+)\s+types\.(\w+)\s+`tfsdk:"([^"]+)"`', struct_body)}
     inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}
+    predicates = {}
     for tf, expression in re.findall(r'^' + ' ' * indent + r'(\w+)\s*=\s*(.*)$', source, re.M):
         if indent == 2 and tf in {"for_each", "name", "description", "device_types", "depends_on"}:
             continue
@@ -93,6 +94,19 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
                 raise SystemExit("Logging authentication expression changed")
             inputs[tf] = "authentication_type"
             value_maps[tf] = {"server":"Server", "mutual":"Mutual"}
+            continue
+        predicate = re.fullmatch(r'try\(' + re.escape(alias) + r'\.(\w+), null\) == "([^"\n]+)" \? true : null', expression)
+        if predicate:
+            inputs[tf] = "$derived:" + tf
+            predicates[tf] = {"field":predicate.group(1), "equals":predicate.group(2)}
+            continue
+        if tf in ("stub_no_summary", "nssa_no_summary"):
+            area_type = tf.split("_")[0]
+            expected = 'try(a.area_type, null) == "' + area_type + '" && try(a.no_summary, null) == true ? true : try(a.area_type, null) == "' + area_type + '" && try(a.no_summary, null) == null ? false : null'
+            if expression != expected:
+                raise SystemExit("OSPF area summary condition changed")
+            inputs[tf] = "$derived:" + tf
+            predicates[tf] = {"field":"area_type", "equals":area_type, "boolean":"no_summary"}
             continue
         if expression == alias:
             inputs[tf] = "$value"
@@ -145,6 +159,15 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if tf.endswith("_variable"):
             continue
         name, typ = fields[tf]
+        if tf in ("stub", "nssa", "default_information_originate"):
+            # These booleans enable a container rather than a vipValue leaf.
+            expected_path = "ospf.default-information.originate" if tf == "default_information_originate" else tf
+            if not re.search(r'sjson.Set\(' + target + ', ' + prefix + '"' + re.escape(expected_path) + r'", map\[string\]interface\{\}\{\}\)', body):
+                raise SystemExit("Unreviewed classic container marker: " + tf)
+            mapping[public] = {"path":expected_path, "container":True, "object_type":"node-only" if tf == "default_information_originate" else ""}
+            if tf in predicates:
+                mapping[public]["predicate"] = predicates[tf]
+            continue
         paths = set(re.findall(prefix + r'"([^"]+)\."\+"vipValue", (?:strconv.FormatBool\()?' + receiver + r'\.' + name + r'\.Value\w+\(\)', body))
         if typ in ("Set", "List"):
             match = re.search(receiver + r'\.' + name + r'\.ElementsAs[^\n]*\n\s*' + target + r', _ = sjson.Set\(' + target + ', ' + prefix + r'"([^"]+)\."\+"vipValue", values\)', body)
@@ -156,8 +179,8 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if leaf["objectType"] not in ("object", "node-only", "list"):
             raise SystemExit("Unreviewed classic leaf type")
         datatype = leaf["dataType"]
-        if datatype["type"] not in ("string", "boolean", "number", "enum", "ipv4", "ipv4-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "label", "range"}:
-            raise SystemExit("Unreviewed classic value constraints")
+        if datatype["type"] not in ("string", "boolean", "number", "enum", "ipv4", "ipv4-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "label", "range"}:
+            raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
         value_type = {"String": "string", "Bool": "boolean", "Int64": "integer"}.get(typ)
         if typ in ("Set", "List"):
             value_type = "integer" if datatype["type"] == "number" else "string"
@@ -165,8 +188,12 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             raise SystemExit("Unsupported classic field type")
         value_schema = {"type": value_type}
         for before, after in [("min", "minimum"), ("max", "maximum"), ("minLength", "minLength"), ("maxLength", "maxLength"), ("pattern", "pattern")]:
-            if before in datatype:
+            if before in datatype and datatype["type"] != "datetimelocal":
                 value_schema[after] = datatype[before]
+        if datatype["type"] == "datetimelocal":
+            # Manager UI datetime hints are not wire constraints: provider sends
+            # the model epoch string verbatim and declares no date validator.
+            value_schema["description"] = "Manager datetime epoch string"
         if "range" in datatype:
             alternatives = []
             for part in datatype["range"].split(","):
@@ -194,7 +221,14 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             value_schema = {"type": "array", "items": value_schema}
         null = re.search(r'if ' + receiver + r'\.' + name + r'\.IsNull\(\) \{', body)
         omit = null is None or '"vipType", "ignore"' not in block(body, null.end() - 1)
+        original_public = public
+        if public in mapping:
+            public = "$field:" + tf
         mapping[public] = {"path": path, "schema": value_schema, "set": typ == "Set", "omit_null": omit, "object_type": leaf["objectType"], "boolean_string": "strconv.FormatBool(" + receiver + "." + name + ".ValueBool())" in body}
+        if original_public != public:
+            mapping[public]["source"] = original_public
+        if tf in predicates:
+            mapping[public]["predicate"] = predicates[tf]
         if tf in present:
             mapping[public].update(derived=True, present=present[tf], derived_value=True)
         if tf in value_maps:
@@ -219,8 +253,21 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
+    ospf_policy_source = None
+    if resource == "sdwan_cisco_ospf_feature_template":
+        start = source.index("  route_policies =")
+        end = source.index("  }]", start) + len("  }]")
+        ospf_policy_source = source[start:end]
+        source = source[:start] + source[end:]
+    if resource == "sdwan_cisco_security_feature_template":
+        start = source.index("  authentication_type =")
+        end = source.index("  a]", start) + len("  a]")
+        expected = '  authentication_type = try(length(each.value.authentication_types) == 0, true) ? null : [for a in each.value.authentication_types :\n    a == "esp" ? "sha1-hmac" :\n    a == "ip-udp-esp" ? "ah-sha1-hmac" :\n    a == "ip-udp-esp-no-id" ? "ah-no-id" :\n  a]'
+        if source[start:end] != expected:
+            raise SystemExit("Security authentication translation changed")
+        source = source[:start] + '  authentication_type = try(each.value.authentication_types, null)' + source[end:]
     gre_acl_source = None
     if resource == "sdwan_cisco_vpn_interface_gre_feature_template":
         start = source.index("  access_lists =")
@@ -255,6 +302,32 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         generated["wrapper"] = {"path": path, "primary_keys": leaf["primaryKeys"]}
     else:
         generated = definition(source, "each.value", 2, model, body, schema["fields"])
+    if ospf_policy_source:
+        expected = 'route_policies = try(each.value.route_policy, each.value.route_policy_variable, null) == null ? null : [{'
+        if not ospf_policy_source.strip().startswith(expected):
+            raise SystemExit("OSPF policy condition changed")
+        item_source = block(ospf_policy_source, ospf_policy_source.index("{"))
+        loop = re.search(r'for _, item := range data.RoutePolicies \{', body)
+        item_body = block(body, loop.end()-1)
+        path = re.search(r'sjson.SetRaw\(body, path\+"([^" ]+)\."\+"vipValue\.-1", itemBody\)', item_body).group(1)
+        leaf = next(x for x in schema["fields"] if ".".join(x["dataPath"]+[x["key"]]) == path)
+        child_struct = re.search(r'RoutePolicies\s+\[\](\w+)',model).group(1)
+        child = definition(item_source,"each.value",4,model,item_body,leaf["children"],"item","itemBody",child_struct)
+        generated["conditional_trees"] = [{"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":["route_policy","route_policy_variable"]}]
+    if resource == "sdwan_cisco_security_feature_template":
+        generated["fields"]["$field:authentication_type"]["array_values"] = {"esp":"sha1-hmac", "ip-udp-esp":"ah-sha1-hmac", "ip-udp-esp-no-id":"ah-no-id"}
+    if resource == "sdwan_cisco_sig_credentials_feature_template":
+        if 'sjson.Set(body, "isGlobal", true)' not in body:
+            raise SystemExit("SIG global template flag changed")
+        generated["global"] = True
+        for public, field in generated["fields"].items():
+            if public in ("umbrella_api_key", "umbrella_api_secret"):
+                field["variable_value"] = ""
+            elif public.startswith("zscaler_"):
+                field["variable_value_from_input"] = True
+                field["constant_variable_name"] = True
+        generated["description_by_name"] = {"Cisco-Umbrella-Global-Credentials":"Global credentials for umbrella"}
+        generated["description_default"] = "Global credentials for zscaler"
     if gre_acl_source:
         loop = re.search(r'for _, item := range data.AccessLists \{', body)
         item_body = block(body, loop.end() - 1)
@@ -274,6 +347,25 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         field = generated["fields"]["ike.group"]
         field["input_schema"] = {"anyOf": [field["schema"], {"type":"integer", "enum":[int(v) for v in field["schema"]["enum"]]}]}
         field["decimal_string"] = True
+    if resource == "sdwan_cisco_security_feature_template":
+        field = generated["fields"]["replay_window"]
+        field["input_schema"] = {"anyOf":[field["schema"], {"type":"integer", "enum":[int(v) for v in field["schema"]["enum"]]}]}
+        field["decimal_string"] = True
+        key_fields = generated["trees"]["keys"]["definition"]["fields"]
+        # Manager populates these dropdowns from keychains; an empty UI enum
+        # does not mean no wire values are valid.
+        for public in ("id", "key_chain_name"):
+            if key_fields[public]["schema"] != {"type":"string", "enum":[]}:
+                raise SystemExit("Security dynamic key dropdown changed")
+            key_fields[public]["schema"] = {"type":"string"}
+        key_fields["id"]["input_schema"] = {"type":"integer", "minimum":0, "maximum":2147483647}
+        key_fields["id"]["decimal_string"] = True
+        for public, field in generated["trees"]["keys"]["definition"]["fields"].items():
+            if public.endswith("_epoch"):
+                field["input_schema"] = {"anyOf":[{"type":"string"}, {"type":"integer"}]}
+                field["decimal_string"] = True
+    if resource == "sdwan_cisco_ospf_feature_template":
+        generated["unavailable_inputs"]["areas[].interfaces[].dead_interval_variable"] = "Pinned module reads dead_intervale_variable instead"
     if resource == "sdwan_cisco_logging_feature_template":
         generated["unavailable_inputs"]["tls_profiles[].ciphersuites_variable"] = "Pinned module reads version_ciphersuites_variablevariable instead"
     generated.update(type=template_type, device_types=defaults[public_collection]["device_types"])

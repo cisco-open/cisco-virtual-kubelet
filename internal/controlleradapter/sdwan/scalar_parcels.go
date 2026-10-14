@@ -39,6 +39,7 @@ type scalarField struct {
 	Schema               map[string]any
 }
 type scalarList struct {
+	Nonempty   string
 	Primitive  bool
 	OmitEmpty  bool `json:"omit_empty"`
 	Path       string
@@ -341,6 +342,15 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 			allowed[public] = true
 			if value, ok := input[public]; ok {
 				subset[public] = value
+			}
+		}
+		if wrapper.Nonempty != "" {
+			control := input[wrapper.Nonempty]
+			if control == nil || control == "" {
+				continue
+			}
+			if _, ok := control.(string); !ok {
+				return nil, fmt.Errorf("%s must be a string", wrapper.Nonempty)
 			}
 		}
 		mapped, err := applyScalarDefinition(wrapper.Definition, subset, false)

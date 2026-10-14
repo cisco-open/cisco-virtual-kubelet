@@ -1,0 +1,19 @@
+sdwan:
+  edge_feature_templates:
+    security_templates:
+      - name: CVK-CLASSIC-SECURITY
+        description: Unattached security template fixture
+        authentication_types: [esp, ip-udp-esp]
+        pairwise_keying: true
+        rekey_interval: 86400
+        replay_window: 512
+        key_chains:
+          - name: CVK-CHAIN
+            key_id: 1
+        keys:
+          - key_chain_name: CVK-CHAIN
+            id: 1
+            crypto_algorithm: hmac-sha-256
+            key_string_variable: security_key
+            accept_lifetime_end_time_format: infinite
+            send_lifetime_end_time_format: infinite

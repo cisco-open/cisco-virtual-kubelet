@@ -16,25 +16,35 @@ import (
 //go:embed definitions/classic-templates.json
 var classicDefinitions []byte
 
+type classicPredicate struct {
+	Field, Equals, Boolean string
+}
 type classicField struct {
-	Present        string
-	Values         map[string]string
-	BooleanChoice  string         `json:"boolean_choice"`
-	InputDefault   any            `json:"input_default"`
-	InputSchema    map[string]any `json:"input_schema"`
-	DecimalString  bool           `json:"decimal_string"`
-	WrapList       bool           `json:"wrap_list"`
-	Ranges         string
-	Literal        any
-	Derived        bool
-	When           string
-	DerivedValue   any `json:"derived_value"`
-	Set            bool
-	ObjectType     string `json:"object_type"`
-	Path, Variable string
-	Schema         map[string]any
-	OmitNull       bool `json:"omit_null"`
-	BooleanString  bool `json:"boolean_string"`
+	VariableValue          *string `json:"variable_value"`
+	VariableValueFromInput bool    `json:"variable_value_from_input"`
+	ConstantVariableName   bool    `json:"constant_variable_name"`
+	Source                 string
+	Predicate              *classicPredicate
+	Container              bool
+	ArrayValues            map[string]string `json:"array_values"`
+	Present                string
+	Values                 map[string]string
+	BooleanChoice          string         `json:"boolean_choice"`
+	InputDefault           any            `json:"input_default"`
+	InputSchema            map[string]any `json:"input_schema"`
+	DecimalString          bool           `json:"decimal_string"`
+	WrapList               bool           `json:"wrap_list"`
+	Ranges                 string
+	Literal                any
+	Derived                bool
+	When                   string
+	DerivedValue           any `json:"derived_value"`
+	Set                    bool
+	ObjectType             string `json:"object_type"`
+	Path, Variable         string
+	Schema                 map[string]any
+	OmitNull               bool `json:"omit_null"`
+	BooleanString          bool `json:"boolean_string"`
 }
 type classicTree struct {
 	Triggers    []string
@@ -44,7 +54,10 @@ type classicTree struct {
 	Definition  classicDefinition
 }
 type classicDefinition struct {
-	ConditionalTrees    []classicTree `json:"conditional_trees"`
+	Global              bool
+	DescriptionByName   map[string]string `json:"description_by_name"`
+	DescriptionDefault  string            `json:"description_default"`
+	ConditionalTrees    []classicTree     `json:"conditional_trees"`
 	Wrapper             *classicTree
 	AlwaysPriorityOrder bool `json:"always_priority_order"`
 	Trees               map[string]classicTree
@@ -75,7 +88,12 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 		}
 		seen[name] = true
 		description, ok := input["description"].(string)
-		if !ok {
+		if definition.DescriptionDefault != "" {
+			description = definition.DescriptionDefault
+			if derived, exists := definition.DescriptionByName[name]; exists {
+				description = derived
+			}
+		} else if !ok {
 			return nil, errors.New("classic template description is required")
 		}
 		devices := definition.DeviceTypes
@@ -121,6 +139,9 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 			data = wrapped
 		}
 		out = append(out, Resource{Key: "edge_feature_templates/" + collection + "/" + name, Name: name, Section: "edge_feature_templates", Type: definition.Type, Body: map[string]any{"deviceType": mapped, "factoryDefault": false, "templateDescription": description, "templateMinVersion": "15.0.0", "templateName": name, "templateType": definition.Type, "templateDefinition": data}})
+		if definition.Global {
+			out[len(out)-1].Body["isGlobal"] = true
+		}
 	}
 	return out, nil
 }
@@ -146,11 +167,42 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 		return nil, err
 	}
 	for public, field := range definition.Fields {
+		if field.Source != "" {
+			public = field.Source
+		}
 		value := classicInput(input, public)
 		if value == nil {
 			value = field.InputDefault
 		}
-		if field.Literal != nil {
+		if field.Predicate != nil {
+			predicate := field.Predicate
+			allowed[predicate.Field] = true
+			control := classicInput(input, predicate.Field)
+			if control != nil {
+				if _, ok := control.(string); !ok {
+					return nil, fmt.Errorf("%s must be a string", predicate.Field)
+				}
+			}
+			value = nil
+			if predicate.Boolean != "" {
+				allowed[predicate.Boolean] = true
+				flag := classicInput(input, predicate.Boolean)
+				if flag != nil {
+					if _, ok := flag.(bool); !ok {
+						return nil, fmt.Errorf("%s must be Boolean", predicate.Boolean)
+					}
+				}
+				if control == predicate.Equals {
+					if flag == nil {
+						value = false
+					} else if flag == true {
+						value = true
+					}
+				}
+			} else if control == predicate.Equals {
+				value = true
+			}
+		} else if field.Literal != nil {
 			value = field.Literal
 		} else if field.Derived {
 			value = nil
@@ -159,6 +211,22 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			}
 		} else {
 			allowed[public] = true
+		}
+		if field.Container {
+			if value != nil {
+				enabled, ok := value.(bool)
+				if !ok {
+					return nil, fmt.Errorf("%s must be Boolean", public)
+				}
+				if !enabled {
+					// Merge flags so map iteration order cannot remove sibling child leaves.
+					setScalarPath(data, field.Path+".vipObjectType", field.ObjectType)
+					setScalarPath(data, field.Path+".vipType", "ignore")
+				} else if classicInput(data, field.Path) == nil {
+					setScalarPath(data, field.Path, map[string]any{})
+				}
+			}
+			continue
 		}
 		if field.Ranges != "" {
 			allowed[field.Ranges] = true
@@ -216,12 +284,54 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			}
 			leaf["vipType"] = "variableName"
 			leaf["vipVariableName"] = v
+			if field.VariableValue != nil {
+				leaf["vipValue"] = *field.VariableValue
+			}
+			if field.VariableValueFromInput {
+				str := ""
+				if value != nil {
+					var ok bool
+					str, ok = value.(string)
+					if !ok {
+						return nil, fmt.Errorf("invalid %s value", public)
+					}
+				}
+				leaf["vipValue"] = str
+			}
 		} else if value != nil {
+			if field.ConstantVariableName {
+				leaf["vipVariableName"] = ""
+			}
 			if field.InputSchema != nil && !validScalarValue(value, field.InputSchema) {
 				return nil, fmt.Errorf("invalid %s model value", public)
 			}
 			if field.Values != nil {
 				value = field.Values[value.(string)]
+			}
+			if field.ArrayValues != nil {
+				raw, ok := value.([]any)
+				if !ok {
+					return nil, fmt.Errorf("%s must be an array", public)
+				}
+				translated := make([]any, len(raw))
+				for i, item := range raw {
+					str, ok := item.(string)
+					if !ok {
+						return nil, fmt.Errorf("%s entries must be strings", public)
+					}
+					translated[i] = str
+					if mapped, exists := field.ArrayValues[str]; exists {
+						translated[i] = mapped
+					}
+				}
+				value = translated
+				if len(translated) == 0 {
+					if !field.OmitNull {
+						leaf["vipType"] = "ignore"
+						setScalarPath(data, field.Path, leaf)
+					}
+					continue
+				}
 			}
 			if field.DecimalString {
 				if n, ok := value.(float64); ok {

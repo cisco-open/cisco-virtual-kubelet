@@ -215,6 +215,13 @@ func bannerValue(value, variable *string) map[string]any {
 }
 func normalized(body map[string]any) (string, error) {
 	result := map[string]any{}
+	if body["templateType"] == "cisco_sig_credentials" {
+		global, ok := body["isGlobal"].(bool)
+		if !ok {
+			return "", ErrResponse
+		}
+		result["isGlobal"] = global
+	}
 	for _, key := range []string{"deviceType", "templateDescription", "templateName", "templateType", "templateDefinition"} {
 		v, ok := body[key]
 		if !ok {

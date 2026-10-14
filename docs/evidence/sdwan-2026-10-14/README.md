@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 84 resource declarations (78 distinct types)
+Native fixture coverage now includes 96 resource declarations (90 distinct types)
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -256,8 +256,54 @@ fixture audit passed. Both metadata generators reproduced byte-for-byte, and all
 previously qualified mapping definitions were unchanged.
 
 No new live Manager or router tests were run for this increment. The status is
-84 fixture-qualified declarations, 40 implemented but awaiting live tests, 101
+At that checkpoint: 84 fixture-qualified declarations, 40 awaiting live tests, 101
 pending implementation, and one compatibility-blocked declaration. See the
 [complete live-test and implementation backlog](../../controllers/sdwan-live-test-backlog.md)
 for individual resources, fixtures and prerequisites. Full deployment parity is
 still incomplete.
+
+## OSPF and security continuation
+
+Six of the remaining 101 declarations now have native mappings and working live
+fixtures: classic security, classic OSPF, service OSPF, service OSPFv3 IPv4 and IPv6,
+and transport OSPF. Added report-mode companion configs for all three fixture sets.
+
+| Fixture | Native create/read/update/read and cleanup | Live Manager through Kubernetes envtest |
+|---|---|---|
+| `classic-security.yaml` | Passed, 3.25s | Passed, 8.52s |
+| `classic-ospf.yaml` | Passed, 3.30s | Passed, 9.28s |
+| `routing-ospf.yaml` | Passed, 19.10s | Passed, 38.22s |
+| `transport-trackers.yaml` | Passed, 31.57s | Passed, 57.86s |
+| `cisco-sse.yaml` | Passed, 6.47s | Passed, 12.93s |
+| `classic-sig-credentials.yaml` | Passed, 3.34s | Passed, 8.95s |
+
+The tracker, SSE and SIG fixtures were implemented in the preceding increment. Together these
+runs increase live fixture qualification from 84 to 96 upstream declarations.
+All registered cleanup calls passed. Kubernetes tests used local API server/etcd
+1.35.0 with the native adapter and live Manager; no user-cluster rollout or router
+attachment was performed. Counts now stand at **96 fixture-qualified, 34 implemented
+but unqualified, 95 implementation-pending, and one TrustSec compatibility block**.
+
+Security tests cover authentication-type translation, preservation of integrity
+values, numeric-to-string replay-window/key-ID/epoch encoding, and conditional
+infinite-lifetime flags. OSPF tests cover area container construction, the pinned
+module's missing/true/false `no_summary` semantics, nested interfaces, conditional
+LSA rows, policy variables, invalid inputs and missing-reference rejection.
+The pinned classic OSPF module reads `dead_intervale_variable`; its correctly spelled
+counterpart remains unavailable. Modern OSPF route-policy names are validated as
+dependencies; using them still requires the pending native route-policy definitions.
+VPN associations, device deployment and routing behavior remain unqualified.
+
+SIG credential descriptions now follow the upstream name-dependent mapping.
+Initial live attempts returned HTTP 400 `GTEMP0007`, “Data validation failed”.
+Source review identified missing `isGlobal: true` and explicit empty `vipValue`
+fields for variable secrets. After correcting those fields, the canonical Umbrella
+fixture passed both native CRUD and Kubernetes reconciliation. Zscaler field
+mappings also preserve the provider's paired value/variable-name fields; Zscaler
+credential values and external authentication remain untested. The fixture contains
+only variable names, and no credentials are stored in evidence. Its canonical name
+must be absent before testing; existing global templates must not be adopted.
+
+Both source generators reproduced metadata byte-for-byte. Previously qualified
+metadata is unchanged. `go test ./...` passed; adapter race checks passed. Terraform was not executed or added as a
+dependency.
