@@ -81,7 +81,7 @@ func TestGroupDeploymentLifecycle(t *testing.T) {
 					switch request.Method {
 					case "GET":
 						if associated {
-							fmt.Fprintf(w, `{"devices":[{"id":"router1","groupTopologyLabel":%q,"configGroupUpToDate":true,"policyGroupUpToDate":true}]}`, label)
+							fmt.Fprintf(w, `{"devices":[{"id":"router1","groupTopologyLabel":%q,"configGroupUpToDate":"True","policyGroupUpToDate":"True"}]}`, label)
 						} else {
 							fmt.Fprint(w, `{"devices":[]}`)
 						}

@@ -216,7 +216,12 @@ func (c *Client) observeGroupDeployment(ctx context.Context, r Resource) (*Obser
 			if r.Type == "policy_group" {
 				field = "policyGroupUpToDate"
 			}
-			upToDate, _ = device[field].(bool)
+			switch value := device[field].(type) {
+			case bool:
+				upToDate = value
+			case string:
+				upToDate = strings.EqualFold(value, "true")
+			}
 		}
 		observed[target.ID] = map[string]any{"label": label, "up_to_date": upToDate, "variables": variables[target.ID]}
 	}

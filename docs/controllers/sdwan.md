@@ -120,10 +120,10 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
-An additional 40 declarations have native implementations but remain unqualified:
+An additional 39 declarations have native implementations but remain unqualified:
 the policy-object profile and all 32 modern policy-object collections, system
-CA certificates, custom applications (the lab lacks SD-AVC), device tags awaiting a selected router, cloud-provider settings (the lab already has the singleton), device-template attachment, centralized policy activation and topology-group activation. SIG credential creation now passes after fixing the global flag and variable-secret payloads.
-No resource declarations remain pending; TrustSec remains compatibility-blocked. This inventory does not imply full field-level parity or router deployment qualification.
+CA certificates, custom applications (the lab lacks SD-AVC), cloud-provider settings (the lab already has the singleton), device-template attachment, centralized policy activation and topology-group activation. SIG credential creation now passes after fixing the global flag and variable-secret payloads.
+Site/router tag association passed live on BR-2-WAN with removal and cleanup. Configuration and policy group association also passed live on that router, but device deployment has not been pushed. No resource declarations remain pending; TrustSec remains compatibility-blocked. This inventory does not imply full field-level parity or router deployment qualification.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 

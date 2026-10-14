@@ -1540,13 +1540,13 @@
       "type": "sdwan_tag",
       "name": "tag",
       "source": "sdwan_inventory.tf",
-      "implementation": "implemented-unqualified",
-      "live_tested": false,
+      "implementation": "fixture-qualified",
+      "live_tested": true,
       "local_tested": true,
       "fixtures": [
         "tags"
       ],
-      "reason": "NetAsCode site/router tags compile and local overlapping-association test passes; unassigned tag lifecycle passed live, but device association needs an authorized lab router."
+      "reason": "NetAsCode site/router tags compile; create, router association, removal, readback, and cleanup passed against BR-2-WAN."
     },
     {
       "type": "sdwan_qos_map_policy_definition",
