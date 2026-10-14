@@ -30,6 +30,7 @@ type classicField struct {
 	ConstantVariableName   bool    `json:"constant_variable_name"`
 	Source                 string
 	Fallback               string
+	JoinComma              bool `json:"join_comma"`
 	Predicate              *classicPredicate
 	Container              bool
 	ArrayValues            map[string]string `json:"array_values"`
@@ -343,6 +344,17 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 				value = float64(0)
 			}
 		}
+		if field.JoinComma && value != nil {
+			if !validScalarValue(value, field.InputSchema) {
+				return nil, fmt.Errorf("invalid %s string list", public)
+			}
+			parts := []string{}
+			for _, part := range value.([]any) {
+				parts = append(parts, part.(string))
+			}
+			value = strings.Join(parts, ",")
+			field.InputSchema = nil
+		}
 		leaf := map[string]any{"vipObjectType": field.ObjectType}
 		if variable != nil {
 			v, ok := variable.(string)
@@ -474,13 +486,24 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			}
 			output := []any{}
 			identities := map[string]bool{}
-			for _, row := range rows {
+			for rowIndex, row := range rows {
 				object, ok := row.(map[string]any)
 				if tree.Primitive {
 					object, ok = map[string]any{"$value": row}, true
 				}
 				if !ok {
 					return nil, errors.New("classic rows must be objects")
+				}
+				for public, field := range tree.Definition.Fields {
+					if public == "$index" || field.Source == "$index" {
+						copyRow := make(map[string]any, len(object)+1)
+						for key, value := range object {
+							copyRow[key] = value
+						}
+						copyRow["$index"] = strconv.Itoa(rowIndex)
+						object = copyRow
+						break
+					}
 				}
 				mapped, err := classicData(tree.Definition, object, false)
 				if err != nil {
@@ -520,7 +543,7 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 				}
 			}
 		}
-		enabled := false
+		enabled := len(tree.Triggers) == 0
 		for _, field := range tree.Triggers {
 			allowed[field] = true
 			if value := classicInput(input, field); value != nil {

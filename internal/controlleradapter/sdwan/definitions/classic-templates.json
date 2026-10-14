@@ -3,6 +3,1167 @@
   "module_commit": "5fbf037ea57368c7e6e77694c81330b6f7b16666",
   "provider_commit": "d3194b612c3f24421ec1727b6fa6e9c0bc98b07f",
   "templates": {
+    "aaa_templates": {
+      "defaults": {
+        "accounting": {
+          "accounting-rule": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "rule-id"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "dot1x": {
+            "default": {
+              "start-stop": {
+                "accounting_group": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              }
+            }
+          }
+        },
+        "authentication": {
+          "dot1x": {
+            "default": {
+              "authentication_group": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            }
+          }
+        },
+        "authorization": {
+          "authorization-config-commands": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "authorization-console": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "authorization-rule": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "rule-id"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          }
+        },
+        "radius": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "group-name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "radius-dynamic-author": {
+          "auth-type": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "domain-stripping": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "port": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "radius-client": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "ip"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          },
+          "rda-server-key": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "radius-trustsec": {
+          "cts-auth-list": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "radius-trustsec-group": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "tacacs": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "group-name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "user": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "authentication_and_authorization_order": {
+          "boolean_string": false,
+          "input_default": [
+            "local"
+          ],
+          "input_schema": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "join_comma": true,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "server-auth-order",
+          "schema": {
+            "maxLength": 220,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false
+        },
+        "authorization_config_commands": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "authorization.authorization-config-commands",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "authorization_config_commands_variable"
+        },
+        "authorization_console": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "authorization.authorization-console",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "authorization_console_variable"
+        },
+        "dot1x_accounting": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "accounting.dot1x.default.start-stop.accounting_group",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "dot1x_accounting_variable"
+        },
+        "dot1x_authentication": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "authentication.dot1x.default.authentication_group",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "dot1x_authentication_variable"
+        },
+        "radius_dynamic_author.authentication_type": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "radius-dynamic-author.auth-type",
+          "schema": {
+            "enum": [
+              "any",
+              "all",
+              "session-key"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "radius_dynamic_author.authentication_type_variable"
+        },
+        "radius_dynamic_author.domain_stripping": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "radius-dynamic-author.domain-stripping",
+          "schema": {
+            "enum": [
+              "yes",
+              "no",
+              "right-to-left"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "radius_dynamic_author.domain_stripping_variable"
+        },
+        "radius_dynamic_author.port": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "radius-dynamic-author.port",
+          "schema": {
+            "maximum": 65535,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "radius_dynamic_author.port_variable"
+        },
+        "radius_dynamic_author.server_key": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "radius-dynamic-author.rda-server-key",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "radius_dynamic_author.server_key_variable"
+        },
+        "radius_trustsec.cts_authorization_list": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "radius-trustsec.cts-auth-list",
+          "schema": {
+            "maxLength": 64,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "radius_trustsec.cts_authorization_list_variable"
+        },
+        "radius_trustsec.server_group": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "radius-trustsec.radius-trustsec-group",
+          "schema": {
+            "enum": [],
+            "type": "string"
+          },
+          "set": false
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "accounting_rules": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "level": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "$index": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "rule-id",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "groups": {
+                "boolean_string": false,
+                "input_schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "type": "array"
+                },
+                "join_comma": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "group",
+                "schema": {
+                  "maximum": 4,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "method": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "method",
+                "schema": {
+                  "enum": [
+                    "commands",
+                    "exec",
+                    "network",
+                    "system"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "privilege_level": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "level",
+                "schema": {
+                  "enum": [
+                    "1",
+                    "15"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "start_stop": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "start-stop",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "start_stop_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "rule-id",
+              "method",
+              "level",
+              "start-stop",
+              "group"
+            ],
+            "required": [
+              "method"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "accounting.accounting-rule",
+          "primary_keys": [
+            "rule-id"
+          ],
+          "primitive": false
+        },
+        "authorization_rules": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "$index": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "rule-id",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "authenticated": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "if-authenticated",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "groups": {
+                "boolean_string": false,
+                "input_schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 4,
+                  "type": "array"
+                },
+                "join_comma": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "group",
+                "schema": {
+                  "maximum": 4,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "method": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "method",
+                "schema": {
+                  "enum": [
+                    "commands"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "privilege_level": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "level",
+                "schema": {
+                  "enum": [
+                    "1",
+                    "15"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "rule-id",
+              "method",
+              "level",
+              "group",
+              "if-authenticated"
+            ],
+            "required": [
+              "method",
+              "privilege_level"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "authorization.authorization-rule",
+          "primary_keys": [
+            "rule-id"
+          ],
+          "primitive": false
+        },
+        "radius_dynamic_author.clients": {
+          "definition": {
+            "always_priority_order": false,
+            "conditional_trees": [
+              {
+                "definition": {
+                  "defaults": {
+                    "server-key": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "server_key": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "server-key",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "vpn_id": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "name",
+                      "schema": {
+                        "maxLength": 32,
+                        "minLength": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "vpn_id_variable"
+                    }
+                  },
+                  "optional": "",
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "vpn",
+                "primary_keys": [
+                  "name"
+                ],
+                "triggers": []
+              }
+            ],
+            "defaults": {
+              "vpn": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "name"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              }
+            },
+            "fields": {
+              "ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ip",
+                "schema": {
+                  "format": "ip",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ip_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "ip",
+              "vpn"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "radius-dynamic-author.radius-client",
+          "primary_keys": [
+            "ip"
+          ],
+          "primitive": false
+        },
+        "radius_server_groups": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "server": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "address"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "source-interface": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "vpn": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "group-name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "source-interface",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_interface_variable"
+              },
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "group-name",
+              "vpn",
+              "source-interface",
+              "server"
+            ],
+            "required": [
+              "name"
+            ],
+            "trees": {
+              "servers": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "acct-port": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "auth-port": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "key-enum": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "key-type": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "retransmit": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "secret-key": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "timeout": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "$literal:encryption_type": {
+                      "boolean_string": false,
+                      "literal": "6",
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "key-enum",
+                      "schema": {
+                        "enum": [
+                          "6",
+                          "7"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "accounting_port": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "acct-port",
+                      "schema": {
+                        "maximum": 65534,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "accounting_port_variable"
+                    },
+                    "address": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "address",
+                      "schema": {
+                        "format": "ipv4",
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "authentication_port": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "auth-port",
+                      "schema": {
+                        "maximum": 65534,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "authentication_port_variable"
+                    },
+                    "key": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "key",
+                      "schema": {
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "key_type": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "key-type",
+                      "schema": {
+                        "enum": [
+                          "key",
+                          "pac"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "key_type_variable"
+                    },
+                    "retransmit_count": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "retransmit",
+                      "schema": {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "retransmit_count_variable"
+                    },
+                    "secret_key": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "secret-key",
+                      "schema": {
+                        "maxLength": 150,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "timeout": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "timeout",
+                      "schema": {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "timeout_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "address",
+                    "auth-port",
+                    "acct-port",
+                    "timeout",
+                    "retransmit",
+                    "key",
+                    "secret-key",
+                    "key-enum",
+                    "key-type"
+                  ],
+                  "required": [
+                    "address",
+                    "key",
+                    "secret_key"
+                  ],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "server",
+                "primary_keys": [
+                  "address"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "radius",
+          "primary_keys": [
+            "group-name"
+          ],
+          "primitive": false
+        },
+        "tacacs_server_groups": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "server": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "address"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              },
+              "source-interface": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "vpn": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "group-name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "source-interface",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_interface_variable"
+              },
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "group-name",
+              "vpn",
+              "source-interface",
+              "server"
+            ],
+            "required": [
+              "name"
+            ],
+            "trees": {
+              "servers": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "key-enum": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "port": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "timeout": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "$literal:encryption_type": {
+                      "boolean_string": false,
+                      "literal": "6",
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "key-enum",
+                      "schema": {
+                        "enum": [
+                          "6",
+                          "7"
+                        ],
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "address": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "address",
+                      "schema": {
+                        "format": "ipv4",
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "key": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "key",
+                      "schema": {
+                        "maxLength": 256,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "port": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "port",
+                      "schema": {
+                        "maximum": 65535,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "port_variable"
+                    },
+                    "secret_key": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "secret-key",
+                      "schema": {
+                        "maxLength": 150,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "timeout": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "timeout",
+                      "schema": {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false,
+                      "variable": "timeout_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "address",
+                    "port",
+                    "timeout",
+                    "key",
+                    "secret-key",
+                    "key-enum"
+                  ],
+                  "required": [
+                    "address",
+                    "key",
+                    "secret_key"
+                  ],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "server",
+                "primary_keys": [
+                  "address"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "tacacs",
+          "primary_keys": [
+            "group-name"
+          ],
+          "primitive": false
+        },
+        "users": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "privilege": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "pubkey-chain": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "key-string"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              }
+            },
+            "fields": {
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 64,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "password": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "password",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "privilege_level": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "privilege",
+                "schema": {
+                  "enum": [
+                    "1",
+                    "15"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "privilege_level_variable"
+              },
+              "secret": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "secret",
+                "schema": {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                "set": false
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "name",
+              "password",
+              "secret",
+              "privilege",
+              "pubkey-chain"
+            ],
+            "required": [
+              "name",
+              "password",
+              "secret"
+            ],
+            "trees": {
+              "ssh_rsa_keys": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "key-type": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "$literal:key_type": {
+                      "boolean_string": false,
+                      "literal": "rsa",
+                      "object_type": "object",
+                      "omit_null": false,
+                      "path": "key-type",
+                      "schema": {
+                        "maxLength": 32,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "$value": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "key-string",
+                      "schema": {
+                        "maxLength": 1024,
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "key-string",
+                    "key-type"
+                  ],
+                  "required": [
+                    "$value"
+                  ],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "pubkey-chain",
+                "primary_keys": [
+                  "key-string"
+                ],
+                "primitive": true
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "user",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cedge_aaa",
+      "unavailable_inputs": {}
+    },
     "bfd_templates": {
       "defaults": {
         "app-route": {

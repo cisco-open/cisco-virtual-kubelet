@@ -60,7 +60,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
     struct_match = re.search(r"type " + (re.escape(struct_name) if struct_name else r"\w+") + r" struct \{", model)
     struct_body = block(model, struct_match.end()-1)
     fields = {tf: (name, typ) for name, typ, tf in re.findall(r'(\w+)\s+types\.(\w+)\s+`tfsdk:"([^"]+)"`', struct_body)}
-    inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps, fallbacks = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}, {}
+    inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps, fallbacks, joins = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}, {}, {}
     predicates = {}
     conditional_trees = []
     for tf, expression in re.findall(r'^' + ' ' * indent + r'(\w+)\s*=\s*(.*)$', source, re.M):
@@ -69,6 +69,11 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if re.fullmatch(r'"[^"\n]*"|[0-9]+|true|false', expression):
             inputs[tf] = "$literal:" + tf
             literals[tf] = json.loads(expression)
+            continue
+        joined = re.fullmatch(r'join\(",", (?:try\()?'+re.escape(alias)+r'\.([\w.]+)(?:, local\.defaults\.sdwan\.edge_feature_templates\.[\w.]+\))?\)', expression)
+        if joined:
+            inputs[tf] = joined.group(1)
+            joins[tf] = True
             continue
         if tf == "exclude_addresses" and alias == "each.value":
             expected = 'try(each.value.exclude_addresses, each.value.exclude_addresses_ranges, null) == null ? null : concat(try(each.value.exclude_addresses, []), [for r in try(each.value.exclude_addresses_ranges, []) : "${r.from}-${r.to}"])'
@@ -143,6 +148,22 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             if direct:
                 required.append(direct.group(1))
             continue
+        if expression == "[{":
+            item_source = block(source, source.index("{", source.index(expression)))
+            go_name, child_struct = re.search(r'(\w+)\s+\[\](\w+)\s+`tfsdk:"' + tf + '"`', struct_body).groups()
+            loop = re.search(r'for _, (\w+) := range ' + receiver + r'\.' + go_name + r' \{', body)
+            item_body = block(body, loop.end()-1)
+            item_receiver = loop.group(1)
+            item_target = re.search(r'(\w+) := ""', item_body).group(1)
+            path = re.search(r'sjson.SetRaw\(' + target + ', ' + prefix + r'"([^" ]+)\."\+"vipValue\.-1", ' + item_target + r'\)', item_body).group(1)
+            leaf = leaves[path]
+            child = definition(item_source, alias, indent+2, model, item_body, leaf["children"], item_receiver, item_target, child_struct)
+            conditional_trees.append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":[]})
+            continue
+        index = re.fullmatch(r'index\(each\.value\.([\w.]+), ' + re.escape(alias) + r'\)', expression)
+        if index and tf == "name":
+            inputs[tf] = "$index"
+            continue
         conditional = re.fullmatch(r'try\((.+), null\) == null \? null : \[\{', expression)
         if conditional:
             triggers = [part.removeprefix(alias + ".") for part in conditional.group(1).split(", ")]
@@ -159,9 +180,9 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             child = definition(item_source, alias, indent+2, model, item_body, leaf["children"], item_receiver, item_target, child_struct)
             conditional_trees.append({"path":path,"primary_keys":leaf["primaryKeys"],"definition":child,"triggers":triggers})
             continue
-        array = re.search(r'\[for (\w+) in (?:try\()?' + re.escape(alias) + r'\.(\w+)(?:, \[\]\))? : \{', expression)
+        array = re.search(r'\[for (\w+) in (?:try\()?' + re.escape(alias) + r'\.([\w.]+)(?:, \[\]\))? : \{', expression)
         if not array:
-            raise SystemExit(f"Unreviewed classic expression: {tf}")
+            raise SystemExit(f"Unreviewed classic expression: {tf} ({alias}: {expression})")
         item_alias, public = array.groups()
         item_source = block(source, source.index("{", source.index(expression) + array.start()))
         go_name, child_struct = re.search(r'(\w+)\s+\[\](\w+)\s+`tfsdk:"' + tf + '"`', struct_body).groups()
@@ -201,7 +222,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if leaf["objectType"] not in ("object", "node-only", "list"):
             raise SystemExit("Unreviewed classic leaf type")
         datatype = leaf["dataType"]
-        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList", "xConnect", "tlocExtension", "numberFixedInterval") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range", "interval"}:
+        if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList", "xConnect", "tlocExtension", "numberFixedInterval", "stringList") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range", "interval"}:
             raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
         value_type = {"String": "string", "Bool": "boolean", "Int64": "integer", "Float64": "number"}.get(typ)
         if typ in ("Set", "List"):
@@ -267,6 +288,11 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             mapping[public]["ranges"] = ranges[tf]
         if tf in fallbacks:
             mapping[public]["fallback"] = fallbacks[tf]
+        if tf in joins:
+            mapping[public]["join_comma"] = True
+            mapping[public]["input_schema"] = {"type":"array", "items":{"type":"string"}}
+            if datatype["type"] == "stringList" and datatype.get("max"):
+                mapping[public]["input_schema"]["maxItems"] = datatype["max"]
         if tf in literals:
             value = literals[tf]
             if typ == "String":
@@ -296,7 +322,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template", "sdwan_cisco_vpn_interface_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template", "sdwan_cisco_vpn_interface_feature_template", "sdwan_cedge_aaa_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
     ospf_policy_source = None
     if resource == "sdwan_cisco_ospf_feature_template":
@@ -567,6 +593,8 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         generated["unavailable_inputs"]["omp_advertise_ipv4_routes[].protocol_sub_type"] = "Pinned module derives external subtype for OSPF"
         generated["unavailable_inputs"]["route_global_exports[].protocol_sub_type"] = "Pinned module derives external subtype"
         generated["unavailable_inputs"]["route_global_imports[].protocol_sub_type"] = "Pinned module derives external subtype"
+    if resource == "sdwan_cedge_aaa_feature_template":
+        generated["fields"]["authentication_and_authorization_order"]["input_default"] = defaults["aaa_templates"]["authentication_and_authorization_order"]
     if resource == "sdwan_cisco_logging_feature_template":
         generated["unavailable_inputs"]["tls_profiles[].ciphersuites_variable"] = "Pinned module reads version_ciphersuites_variablevariable instead"
     generated.update(type=template_type, device_types=defaults[public_collection]["device_types"])
