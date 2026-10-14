@@ -1,0 +1,5512 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "aclQos": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "shapingRateDownstream": {
+                "properties": {
+                  "value": {
+                    "const": true
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "shapingRateDownstream"
+            ]
+          },
+          "then": {
+            "required": [
+              "shapingRateDownstreamConfig"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "shapingRateUpstream": {
+                "properties": {
+                  "value": {
+                    "const": true
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "required": [
+              "shapingRateUpstream"
+            ]
+          },
+          "then": {
+            "required": [
+              "shapingRateUpstreamConfig"
+            ]
+          }
+        }
+      ],
+      "dependencies": {
+        "adaptPeriod": {
+          "properties": {
+            "adaptiveQoS": {
+              "properties": {
+                "value": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "adaptiveQoS"
+          ]
+        },
+        "shapingRate": {
+          "not": {
+            "required": [
+              "shapingRateUpstreamConfig"
+            ]
+          }
+        },
+        "shapingRateDownstream": {
+          "properties": {
+            "adaptiveQoS": {
+              "properties": {
+                "value": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "adaptiveQoS"
+          ]
+        },
+        "shapingRateDownstreamConfig": {
+          "properties": {
+            "shapingRateDownstream": {
+              "properties": {
+                "value": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "shapingRateDownstream"
+          ]
+        },
+        "shapingRateUpstream": {
+          "properties": {
+            "adaptiveQoS": {
+              "properties": {
+                "value": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "adaptiveQoS"
+          ]
+        },
+        "shapingRateUpstreamConfig": {
+          "properties": {
+            "shapingRateUpstream": {
+              "properties": {
+                "value": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "shapingRateUpstream"
+          ]
+        }
+      },
+      "description": "ACL/QOS",
+      "properties": {
+        "adaptPeriod": {
+          "description": "Adapt Period(Minutes)",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 15,
+                  "maximum": 720,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 15,
+                  "maximum": 720,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 15,
+                  "minimum": 15,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "adaptiveQoS": {
+          "description": "Adaptive QoS",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "ipv4AclEgress": {
+          "additionalProperties": false,
+          "description": "ipv4 acl egress",
+          "properties": {
+            "refId": {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "refId"
+          ],
+          "type": "object"
+        },
+        "ipv4AclIngress": {
+          "additionalProperties": false,
+          "description": "ipv4 acl ingress",
+          "properties": {
+            "refId": {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "refId"
+          ],
+          "type": "object"
+        },
+        "ipv6AclEgress": {
+          "additionalProperties": false,
+          "description": "ipv6 acl egress",
+          "properties": {
+            "refId": {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "refId"
+          ],
+          "type": "object"
+        },
+        "ipv6AclIngress": {
+          "additionalProperties": false,
+          "description": "ipv6 acl ingress",
+          "properties": {
+            "refId": {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          },
+          "required": [
+            "refId"
+          ],
+          "type": "object"
+        },
+        "shapingRate": {
+          "description": "Shaping Rate (Kbps)",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 100000000,
+                  "minimum": 8,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "maximum": 100000000,
+                  "minimum": 8,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "shapingRateDownstream": {
+          "description": "Shaping Rate Downstream",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "shapingRateDownstreamConfig": {
+          "additionalProperties": false,
+          "description": "adaptiveQoS Shaping Rate Downstream config",
+          "properties": {
+            "defaultShapingRateDownstream": {
+              "description": "Adaptive QoS default downstream bandwidth (kbps)",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "maxShapingRateDownstream": {
+              "description": "Downstream max bandwidth limit (kbps)",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "minShapingRateDownstream": {
+              "description": "Downstream min bandwidth limit (kbps)",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "minShapingRateDownstream",
+            "maxShapingRateDownstream",
+            "defaultShapingRateDownstream"
+          ],
+          "type": "object"
+        },
+        "shapingRateUpstream": {
+          "description": "Shaping Rate Upstream",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "shapingRateUpstreamConfig": {
+          "additionalProperties": false,
+          "description": "adaptiveQoS Shaping Rate Upstream config",
+          "properties": {
+            "defaultShapingRateUpstream": {
+              "description": "Adaptive QoS default upstream bandwidth (kbps)",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "maxShapingRateUpstream": {
+              "description": "Upstream max bandwidth limit (kbps)",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            },
+            "minShapingRateUpstream": {
+              "description": "Upstream min bandwidth limit (kbps)",
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "optionType": {
+                      "enum": [
+                        "global"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "default": {
+                      "maximum": 100000000,
+                      "minimum": 8,
+                      "type": "integer"
+                    },
+                    "description": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "optionType": {
+                      "enum": [
+                        "variable"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "maxLength": 128,
+                      "minLength": 1,
+                      "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "optionType",
+                    "value"
+                  ]
+                }
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "minShapingRateUpstream",
+            "maxShapingRateUpstream",
+            "defaultShapingRateUpstream"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "adaptiveQoS"
+      ],
+      "type": "object"
+    },
+    "advanced": {
+      "additionalProperties": false,
+      "description": "Advanced Attributes",
+      "properties": {
+        "intrfMtu": {
+          "description": "Interface MTU GigabitEthernet0 <1500..1518>, Other GigabitEthernet <1500..9216> in bytes",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 1500,
+                  "maximum": 9216,
+                  "minimum": 1500,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 1500,
+                  "maximum": 9216,
+                  "minimum": 1500,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 1500,
+                  "minimum": 1500,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "ipDirectedBroadcast": {
+          "description": "IP Directed-Broadcast",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "ipMtu": {
+          "description": "IP MTU for GigabitEthernet main <576..Interface MTU>, GigabitEthernet subinterface <576..9216>, Other Interfaces <576..2000> in bytes",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 1500,
+                  "maximum": 9216,
+                  "minimum": 576,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 1500,
+                  "maximum": 9216,
+                  "minimum": 576,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 1500,
+                  "minimum": 1500,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "tcpMss": {
+          "description": "TCP MSS on SYN packets, in bytes",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 1460,
+                  "minimum": 500,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "maximum": 1460,
+                  "minimum": 500,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "tlocExtension": {
+          "description": "Extends a local TLOC to a remote node only for vpn 0",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "string"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "tracker": {
+          "description": "Enable tracker for this interface",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "string"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "allowService": {
+      "additionalProperties": false,
+      "description": "Tunnel Interface Attributes",
+      "properties": {
+        "all": {
+          "description": "Allow all traffic. Overrides all other allow-service options if allow-service all is set",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "bfd": {
+          "description": "Allow/Deny BFD",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "bgp": {
+          "description": "Allow/deny BGP",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "dhcp": {
+          "description": "Allow/Deny DHCP",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    true
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "dns": {
+          "description": "Allow/Deny DNS",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    true
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "https": {
+          "description": "Allow/Deny HTTPS",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    true
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "icmp": {
+          "description": "Allow/Deny ICMP",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    true
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "netconf": {
+          "description": "Allow/Deny NETCONF",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "ntp": {
+          "description": "Allow/Deny NTP",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    true
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "ospf": {
+          "description": "Allow/Deny OSPF",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "snmp": {
+          "description": "Allow/Deny SNMP",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "ssh": {
+          "description": "Allow/Deny SSH",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    true
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "stun": {
+          "description": "Allow/Deny STUN",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "arp": {
+      "description": "Configure ARP entries",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "ipAddress": {
+            "description": "IP V4 Address",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "format": "ipv4",
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "format": "ipv4",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "macAddress": {
+            "description": "MAC Address",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "ipAddress",
+          "macAddress"
+        ],
+        "type": "object"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "bandwidthDownstream": {
+      "description": "Interface downstream bandwidth capacity, in kbps",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "bandwidthUpstream": {
+      "description": "Interface upstream bandwidth capacity, in kbps",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "description": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "dhcpHelper": {
+      "description": "List of DHCP IPv4 helper addresses (min 1, max 8)",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "items": {
+                "additionalProperties": false,
+                "format": "ipv4",
+                "type": "string",
+                "uniqueItems": true
+              },
+              "type": "array"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "items": {
+                "additionalProperties": false,
+                "format": "ipv4",
+                "type": "string",
+                "uniqueItems": true
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "enableIpv6": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "boolean"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "enum": [
+                true
+              ],
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "encapsulation": {
+      "description": "Encapsulation for TLOC",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "encap": {
+            "description": "Encapsulation",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "enum": [
+                      "gre",
+                      "ipsec"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "preference": {
+            "description": "Set preference for TLOC",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maximum": 4294967295,
+                    "minimum": 0,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "maximum": 4294967295,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "weight": {
+            "description": "Set weight for TLOC",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "default": 1,
+                    "maximum": 255,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "default": 1,
+                    "maximum": 255,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maximum": 1,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "encap"
+        ],
+        "type": "object"
+      },
+      "type": "array",
+      "uniqueItems": true
+    },
+    "interfaceName": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 32,
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "maxLength": 32,
+              "minLength": 1,
+              "type": "string"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "multiRegionFabric": {
+      "additionalProperties": false,
+      "description": "Multi-Region Fabric",
+      "properties": {
+        "coreRegion": {
+          "description": "Core Region",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "core-shared",
+                    "core"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "core-shared"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "enableCoreRegion": {
+          "description": "Enable Core Region",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "enableSecondaryRegion": {
+          "description": "Enable Secondary Region",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "secondaryRegion": {
+          "description": "Enable secondary region",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "secondary-shared",
+                    "secondary-only"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "secondary-shared"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "nat": {
+      "description": "Network Address Translation on this interface",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "boolean"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "enum": [
+                false
+              ],
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "natAttributesIpv4": {
+      "additionalProperties": false,
+      "description": "NAT Attributes",
+      "properties": {
+        "tcpTimeout": {
+          "description": "Set NAT TCP session timeout, in minutes",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 60,
+                  "maximum": 8947,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 60,
+                  "maximum": 8947,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 60,
+                  "minimum": 60,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "udpTimeout": {
+          "description": "Set NAT UDP session timeout, in minutes",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 1,
+                  "maximum": 8947,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 1,
+                  "maximum": 8947,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 1,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "udpTimeout",
+        "tcpTimeout"
+      ],
+      "type": "object"
+    },
+    "serviceProvider": {
+      "description": "Service Provider Name",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "string"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "shutdown": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "default": {
+              "type": "boolean"
+            },
+            "description": {
+              "maxLength": 128,
+              "minLength": 1,
+              "type": "string"
+            },
+            "optionType": {
+              "enum": [
+                "variable"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "maxLength": 128,
+              "minLength": 1,
+              "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "enum": [
+                true
+              ],
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    },
+    "tunnel": {
+      "additionalProperties": false,
+      "dependencies": {
+        "mode": {
+          "properties": {
+            "perTunnelQos": {
+              "properties": {
+                "value": {
+                  "const": true
+                }
+              },
+              "type": "object"
+            }
+          }
+        }
+      },
+      "description": "Tunnel Interface Attributes",
+      "properties": {
+        "bind": {
+          "description": "Bind loopback tunnel interface to a physical interface",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "border": {
+          "description": "Set TLOC as border TLOC",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "carrier": {
+          "description": "Set carrier for TLOC",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": "default",
+                  "enum": [
+                    "default",
+                    "carrier1",
+                    "carrier2",
+                    "carrier3",
+                    "carrier4",
+                    "carrier5",
+                    "carrier6",
+                    "carrier7",
+                    "carrier8"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": "default",
+                  "enum": [
+                    "default",
+                    "carrier1",
+                    "carrier2",
+                    "carrier3",
+                    "carrier4",
+                    "carrier5",
+                    "carrier6",
+                    "carrier7",
+                    "carrier8"
+                  ],
+                  "type": "string"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "clearDontFragment": {
+          "description": "Enable clear dont fragment (Currently Only SDWAN Tunnel Interface)",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "color": {
+          "description": "Set color for TLOC",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "default",
+                    "mpls",
+                    "metro-ethernet",
+                    "biz-internet",
+                    "public-internet",
+                    "lte",
+                    "3g",
+                    "red",
+                    "green",
+                    "blue",
+                    "gold",
+                    "silver",
+                    "bronze",
+                    "custom1",
+                    "custom2",
+                    "custom3",
+                    "private1",
+                    "private2",
+                    "private3",
+                    "private4",
+                    "private5",
+                    "private6"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "enum": [
+                    "default",
+                    "mpls",
+                    "metro-ethernet",
+                    "biz-internet",
+                    "public-internet",
+                    "lte",
+                    "3g",
+                    "red",
+                    "green",
+                    "blue",
+                    "gold",
+                    "silver",
+                    "bronze",
+                    "custom1",
+                    "custom2",
+                    "custom3",
+                    "private1",
+                    "private2",
+                    "private3",
+                    "private4",
+                    "private5",
+                    "private6"
+                  ],
+                  "type": "string"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "mpls"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "colorDescription": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "description": "Set color description for TLOC",
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "description": "Set color description for TLOC",
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ]
+        },
+        "excludeControllerGroupList": {
+          "description": "Exclude the following controller groups defined in this list.",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "additionalProperties": false,
+                  "items": {
+                    "maximum": 100,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "additionalProperties": false,
+                  "items": {
+                    "maximum": 100,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "fullPortHop": {
+          "description": "Enable port hopping on the tunnel interface",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "group": {
+          "description": "List of groups",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 4294967295,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "maximum": 4294967295,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "helloInterval": {
+          "description": "Set time period of control hello packets <100..600000> milli seconds",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 1000,
+                  "maximum": 600000,
+                  "minimum": 100,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 1000,
+                  "maximum": 600000,
+                  "minimum": 100,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 1000,
+                  "minimum": 1000,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "helloTolerance": {
+          "description": "Set tolerance of control hello packets <12..6000> seconds",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 12,
+                  "maximum": 6000,
+                  "minimum": 12,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 12,
+                  "maximum": 6000,
+                  "minimum": 12,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 12,
+                  "minimum": 12,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "lastResortCircuit": {
+          "description": "Set TLOC as last resort",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "lowBandwidthLink": {
+          "description": "Set the interface as a low-bandwidth circuit",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "maxControlConnections": {
+          "description": "Maximum Control Connections",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "mode": {
+          "description": "Set tunnel QoS mode",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    "spoke"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "enum": [
+                    "spoke"
+                  ],
+                  "type": "string"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "natRefreshInterval": {
+          "description": "Set time period of nat refresh packets <1...60> seconds",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 5,
+                  "maximum": 60,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 5,
+                  "maximum": 60,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 5,
+                  "minimum": 5,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "networkBroadcast": {
+          "description": "Accept and respond to network-prefix-directed broadcasts",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "perTunnelQos": {
+          "description": "Per-tunnel Qos",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "portHop": {
+          "description": "The port hop functionality is deprecated for devices 17.18 and higher. Use the full-port-hop field instead",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    true
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "restrict": {
+          "description": "Restrict this TLOC behavior",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "tunnelTcpMss": {
+          "description": "Tunnel TCP MSS on SYN packets, in bytes",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 1460,
+                  "minimum": 500,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "maximum": 1460,
+                  "minimum": 500,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "vBondAsStunServer": {
+          "description": "Put this wan interface in STUN mode only",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "type": "boolean"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "enum": [
+                    false
+                  ],
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        },
+        "vManageConnectionPreference": {
+          "description": "Set interface preference for control connection to vManage <0..8>",
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "global"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "default": 5,
+                  "maximum": 8,
+                  "minimum": 0,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "default": {
+                  "default": 5,
+                  "maximum": 8,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "description": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "optionType": {
+                  "enum": [
+                    "variable"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "optionType": {
+                  "enum": [
+                    "default"
+                  ],
+                  "type": "string"
+                },
+                "value": {
+                  "maximum": 5,
+                  "minimum": 5,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "optionType",
+                "value"
+              ]
+            }
+          ],
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "tunnelInterface": {
+      "description": "Tunnel Interface on/off",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "global"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "optionType": {
+              "enum": [
+                "default"
+              ],
+              "type": "string"
+            },
+            "value": {
+              "enum": [
+                false
+              ],
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "optionType",
+            "value"
+          ]
+        }
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "shutdown",
+    "interfaceName",
+    "description",
+    "tunnelInterface",
+    "encapsulation",
+    "nat"
+  ],
+  "type": "object"
+}

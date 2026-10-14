@@ -322,7 +322,7 @@ func compileWANVPN(p FeatureProfile, collection, key string) ([]Resource, error)
 	base := make(map[string]any, len(input))
 	for field, value := range input {
 		switch field {
-		case "enhance_ecmp_keying", "enhance_ecmp_keying_variable", "nat_64_v4_pools", "services", "ospf", "gre_interfaces", "ipsec_interfaces", "ethernet_interfaces":
+		case "enhance_ecmp_keying", "enhance_ecmp_keying_variable", "nat_64_v4_pools", "services", "ospf", "gre_interfaces", "ipsec_interfaces", "ethernet_interfaces", "cellular_interfaces":
 		default:
 			base[field] = value
 		}

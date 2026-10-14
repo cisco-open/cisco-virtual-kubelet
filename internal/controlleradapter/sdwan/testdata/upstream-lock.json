@@ -1317,22 +1317,31 @@
       "type": "sdwan_transport_wan_vpn_interface_cellular_feature",
       "name": "transport_wan_vpn_interface_cellular_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-wan-vpn-cellular.yaml",
+      "limits": "Unattached non-tunnel cellular parcel or tracker association qualified through native lifecycle and live Kubernetes reconciliation; tunnel attributes and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_feature",
       "name": "transport_wan_vpn_interface_cellular_feature_associate_tracker_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-wan-vpn-cellular-tracker-association.yaml",
+      "limits": "Unattached non-tunnel cellular parcel or tracker association qualified through native lifecycle and live Kubernetes reconciliation; tunnel attributes and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature",
       "name": "transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-wan-vpn-cellular-tracker-group-association.yaml",
+      "limits": "Unattached non-tunnel cellular parcel or tracker association qualified through native lifecycle and live Kubernetes reconciliation; tunnel attributes and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_interface_ethernet_feature",

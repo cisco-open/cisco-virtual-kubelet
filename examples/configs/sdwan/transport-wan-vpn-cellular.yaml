@@ -1,0 +1,12 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-WAN-CELLULAR-PROFILE
+        wan_vpn:
+          name: CVK-WAN-CELLULAR-VPN
+          cellular_interfaces:
+            - name: CVK-WAN-CELLULAR
+              interface_name: Cellular0/1/0
+              shutdown: true
+              tunnel_interface: false
+              service_provider: CVK-LAB-CARRIER

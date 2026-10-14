@@ -194,6 +194,16 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, wanEthernetTrackers...)
+	wanCellulars, err := compileWANCellulars(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, wanCellulars...)
+	wanCellularTrackers, err := compileWANCellularTrackerAssociations(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, wanCellularTrackers...)
 	sviAssociations, err := compileSVIDHCPAssociations(p, collection, key)
 	if err != nil {
 		return nil, err

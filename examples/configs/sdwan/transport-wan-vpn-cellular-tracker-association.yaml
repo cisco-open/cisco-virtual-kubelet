@@ -1,0 +1,18 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-WAN-CELLULAR-TRACKER-PROFILE
+        ipv4_trackers:
+          - name: CVK-WAN-CELLULAR-TRACKER
+            tracker_name: cvkcellprobe
+            endpoint_tracker_type: icmp
+            endpoint_ip: 192.0.2.102
+            interval: 60
+        wan_vpn:
+          name: CVK-WAN-CELLULAR-TRACKER-VPN
+          cellular_interfaces:
+            - name: CVK-WAN-CELLULAR-TRACKER-IF
+              interface_name: Cellular0/1/0
+              shutdown: true
+              tunnel_interface: false
+              ipv4_tracker: CVK-WAN-CELLULAR-TRACKER
