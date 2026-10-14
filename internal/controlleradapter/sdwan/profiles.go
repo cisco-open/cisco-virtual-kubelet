@@ -26,6 +26,8 @@ type FeatureProfile struct {
 	RoutePolicies         []map[string]any             `json:"route_policies,omitempty"`
 	ManagementVPN         map[string]any               `json:"management_vpn,omitempty"`
 	WANVPN                map[string]any               `json:"wan_vpn,omitempty"`
+	LANVPNs               []map[string]any             `json:"lan_vpns,omitempty"`
+	DualRouterHA          []map[string]any             `json:"dual_router_ha_features,omitempty"`
 	IPv6Trackers          []map[string]any             `json:"ipv6_trackers,omitempty"`
 	IPv6TrackerGroups     []map[string]any             `json:"ipv6_tracker_groups,omitempty"`
 	CACertificate         map[string]any               `json:"ca_certificate,omitempty"`

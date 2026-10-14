@@ -691,8 +691,11 @@
       "type": "sdwan_service_dual_router_ha_feature",
       "name": "service_dual_router_ha_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "service-dual-router-ha.yaml",
+      "limits": "Single redundancy group with declared LAN VPN reference; unattached native CRUD and Kubernetes reconciliation only"
     },
     {
       "type": "sdwan_service_routing_eigrp_feature",
@@ -720,8 +723,11 @@
       "type": "sdwan_service_lan_vpn_feature",
       "name": "service_lan_vpn_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "service-lan-vpn.yaml",
+      "limits": "Core LAN VPN ID, name, OMP distance, DNS and remote-access attributes only; nested routes, NAT, OMP advertisements and child interfaces remain unsupported"
     },
     {
       "type": "sdwan_service_lan_vpn_feature_associate_routing_bgp_feature",

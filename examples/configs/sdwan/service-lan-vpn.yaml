@@ -1,0 +1,12 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-LAN-VPN-PROFILE
+        lan_vpns:
+          - name: CVK-SERVICE-LAN-VPN
+            vpn_id: 110
+            vpn_name: CVK service VPN
+            ipv4_omp_admin_distance: 251
+            ipv4_primary_dns_address: 192.0.2.53
+            ipv6_primary_dns_address: 2001:db8::53
+            sdwan_remote_access: false

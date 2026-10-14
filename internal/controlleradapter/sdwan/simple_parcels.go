@@ -134,6 +134,16 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, managementInterfaces...)
+	serviceLANVPNs, err := compileServiceLANVPNs(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, serviceLANVPNs...)
+	dualRouterHA, err := compileDualRouterHA(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, dualRouterHA...)
 	for _, item := range []struct {
 		ip    string
 		input map[string]any

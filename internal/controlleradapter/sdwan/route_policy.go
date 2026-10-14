@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -143,6 +144,7 @@ func routePolicyData(input map[string]any, family string) (string, map[string]an
 	if json.Unmarshal(routePolicySchemas, &schemas) != nil || json.Unmarshal(encoded, &normalized) != nil || !validScalarValue(normalized, schemas[family]) {
 		return "", nil, nil, errors.New("route policy intent violates provider schema")
 	}
+	sort.Slice(refs, func(i, j int) bool { return strings.Join(refs[i].BodyPath, "/") < strings.Join(refs[j].BodyPath, "/") })
 	return name, map[string]any{"name": name, "description": description, "data": data}, refs, nil
 }
 

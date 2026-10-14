@@ -447,4 +447,10 @@ folder.mkdir(exist_ok=True)
 (folder / "transport-management-interface-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/transport_management_vpn_interface_ethernet.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "service-lan-vpn-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/service_lan_vpn.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "service-dual-router-ha-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/service_dual_router_ha.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
 (folder / "LICENSE").write_text((args.provider / "LICENSE").read_text())

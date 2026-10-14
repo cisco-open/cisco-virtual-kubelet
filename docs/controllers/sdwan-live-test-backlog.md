@@ -5,12 +5,12 @@ NetAsCode v1.5.0 module contains 226 resource declarations. Current status:
 
 | Status | Declarations |
 |---|---:|
-| Fixture-qualified against live Manager | 116 |
+| Fixture-qualified against live Manager | 118 |
 | Implemented with local fixtures; live tests outstanding | 35 |
-| Implementation still pending | 74 |
+| Implementation still pending | 72 |
 | Compatibility-blocked (TrustSec) | 1 |
 
-The latest increment qualifies the transport management VPN Ethernet child and its nested Manager path. The preceding increment qualified the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
+The latest increment qualifies the core service LAN VPN parent and dual-router HA with a resolved VPN reference. The LAN VPN compiler currently accepts ID, name, OMP distance, DNS and remote-access fields; its many nested routes, NAT, advertisements and child interfaces are still outstanding. The preceding increment qualified the transport management VPN Ethernet child and its nested Manager path. The preceding increment qualified the transport management and WAN VPN parent parcels with native lifecycle and live Kubernetes reconciliation. The fixtures cover DNS, host mappings, IPv4 and IPv6 static routes, WAN ECMP, NAT64 pools, and the TE service. Interface children and device activation remain pending. The preceding increments qualified route policies, IPv4 and IPv6 ACLs, topology mesh and hub-and-spoke, and system device access. Policy-object references compile and order locally but need a lab where CVK can create the singleton policy-object profile; this lab already has one.
 
 The previous increment qualified seven declarations: classic SVI, cellular and
 switchport templates, service EIGRP, service switchport, service multicast, and Zscaler SSE. Each passed native live
@@ -136,9 +136,7 @@ and/or lifecycle implementation remains unfinished. They must not be counted as 
 ### sdwan_features_service.tf
 
 - `sdwan_service_routing_bgp_feature.service_routing_bgp_feature`
-- `sdwan_service_dual_router_ha_feature.service_dual_router_ha_feature`
 - `sdwan_service_ipv4_acl_feature.service_ipv4_acl_feature`
-- `sdwan_service_lan_vpn_feature.service_lan_vpn_feature`
 - `sdwan_service_lan_vpn_feature_associate_routing_bgp_feature.service_lan_vpn_feature_associate_routing_bgp_feature`
 - `sdwan_service_lan_vpn_feature_associate_routing_eigrp_feature.service_lan_vpn_feature_associate_routing_eigrp_feature`
 - `sdwan_service_lan_vpn_feature_associate_multicast_feature.service_lan_vpn_feature_associate_multicast_feature`
