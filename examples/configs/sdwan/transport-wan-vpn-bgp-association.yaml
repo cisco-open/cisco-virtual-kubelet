@@ -9,6 +9,8 @@ sdwan:
             ipv6_neighbors:
               - address: "2001:db8::21"
                 remote_as: 65021
+            ipv6_networks:
+              - prefix: "2001:db8:21::/64"
         wan_vpn:
           name: CVK-TRANSPORT-BGP-VPN
           bgp: CVK-TRANSPORT-BGP

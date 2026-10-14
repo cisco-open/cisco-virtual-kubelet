@@ -455,4 +455,4 @@ Six VPN routing associations passed native create/observe/idempotent-update/obse
 
 `transport-wan-vpn-cellular.yaml` and its tracker and tracker-group association fixtures passed native lifecycle and live Kubernetes reconciliation. Manager stores the cellular tracker-group link under `trackergroup/` despite the pinned provider model listing `tracker/` for both link types; CVK uses the observed readback path. The fixtures are unattached non-tunnel parcels.
 
-`service-lan-vpn-bgp-association.yaml` and `transport-wan-vpn-bgp-association.yaml` passed native lifecycle and live Kubernetes reconciliation. Each fixture creates a BGP parcel with an AS number, router ID, and one IPv4 or IPv6 neighbor, then resolves the VPN association. Address-family and device forwarding behavior remain untested.
+`service-lan-vpn-bgp-association.yaml` and `transport-wan-vpn-bgp-association.yaml` passed native lifecycle and live Kubernetes reconciliation. Each fixture creates a BGP parcel with an AS number, router ID, and one IPv4 or IPv6 neighbor and advertised network, then resolves the VPN association. Redistribution and device forwarding behavior remain untested.

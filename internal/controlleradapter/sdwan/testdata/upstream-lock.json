@@ -679,7 +679,7 @@
       "live_tested": true,
       "local_tested": true,
       "fixture": "service-lan-vpn-bgp-association.yaml",
-      "limits": "BGP AS/router-ID plus one IPv4 or IPv6 neighbor and VPN association qualified through native lifecycle and live Kubernetes reconciliation; address families and device activation excluded"
+      "limits": "BGP AS/router-ID, one IPv4/IPv6 neighbor and one advertised network plus VPN association qualified through native lifecycle and live Kubernetes reconciliation; redistribution, policy references and device activation excluded"
     },
     {
       "type": "sdwan_service_dhcp_server_feature",
@@ -740,7 +740,7 @@
       "live_tested": true,
       "local_tested": true,
       "fixture": "service-lan-vpn-bgp-association.yaml",
-      "limits": "BGP AS/router-ID plus one IPv4 or IPv6 neighbor and VPN association qualified through native lifecycle and live Kubernetes reconciliation; address families and device activation excluded"
+      "limits": "BGP AS/router-ID, one IPv4/IPv6 neighbor and one advertised network plus VPN association qualified through native lifecycle and live Kubernetes reconciliation; redistribution, policy references and device activation excluded"
     },
     {
       "type": "sdwan_service_lan_vpn_feature_associate_routing_eigrp_feature",
@@ -1174,7 +1174,7 @@
       "live_tested": true,
       "local_tested": true,
       "fixture": "transport-wan-vpn-bgp-association.yaml",
-      "limits": "BGP AS/router-ID plus one IPv4 or IPv6 neighbor and VPN association qualified through native lifecycle and live Kubernetes reconciliation; address families and device activation excluded"
+      "limits": "BGP AS/router-ID, one IPv4/IPv6 neighbor and one advertised network plus VPN association qualified through native lifecycle and live Kubernetes reconciliation; redistribution, policy references and device activation excluded"
     },
     {
       "type": "sdwan_transport_cellular_controller_feature",
@@ -1313,7 +1313,7 @@
       "live_tested": true,
       "local_tested": true,
       "fixture": "transport-wan-vpn-bgp-association.yaml",
-      "limits": "BGP AS/router-ID plus one IPv4 or IPv6 neighbor and VPN association qualified through native lifecycle and live Kubernetes reconciliation; address families and device activation excluded"
+      "limits": "BGP AS/router-ID, one IPv4/IPv6 neighbor and one advertised network plus VPN association qualified through native lifecycle and live Kubernetes reconciliation; redistribution, policy references and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_feature_associate_routing_ospf_feature",
