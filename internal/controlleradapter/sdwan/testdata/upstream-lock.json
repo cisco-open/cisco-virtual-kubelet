@@ -1619,15 +1619,23 @@
       "type": "sdwan_network_hierarchy_cflowd",
       "name": "network_hierarchy_cflowd",
       "source": "sdwan_network_hierarchy.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "network-hierarchy-collectors"
+      ]
     },
     {
       "type": "sdwan_network_hierarchy_security_logging",
       "name": "network_hierarchy_security_logging",
       "source": "sdwan_network_hierarchy.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "network-hierarchy-collectors"
+      ]
     },
     {
       "type": "sdwan_policy_group",

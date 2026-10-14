@@ -67,7 +67,15 @@ func liveParcelLifecycle(t *testing.T, resources []Resource) {
 		if e != nil || !same {
 			t.Fatal(r.Type, "create verification", e)
 		}
-		if r.Kind == "" {
+		if r.Kind == "hierarchy-setting" {
+			data := r.Body["data"].(map[string]any)
+			if r.Type == "cflowd" {
+				data["flowActiveTimeout"] = globalOption(601)
+			} else {
+				servers := data["highSpeedLogging"].([]any)
+				servers[0].(map[string]any)["port"] = globalOption(2056)
+			}
+		} else if r.Kind == "" {
 			r.Body["templateDescription"] = "CVK updated isolated fixture"
 		} else {
 			r.Body["description"] = "CVK updated isolated fixture"

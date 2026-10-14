@@ -178,6 +178,9 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 	return &Observation{ID: id, Body: body}, nil
 }
 func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
+	if r.Kind == "hierarchy-setting" {
+		return c.createHierarchySetting(ctx, r)
+	}
 	if e := c.resolveParcelRefs(ctx, r); e != nil {
 		return "", e
 	}
@@ -226,6 +229,9 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 	return id, nil
 }
 func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) error {
+	if r.Kind == "hierarchy-setting" {
+		return c.updateHierarchySetting(ctx, r, o)
+	}
 	if e := c.resolveParcelRefs(ctx, r); e != nil {
 		return e
 	}
@@ -259,6 +265,9 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 	return c.Request(ctx, "PUT", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(o.ID), r.Body, nil)
 }
 func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id string) error {
+	if r.Kind == "hierarchy-setting" {
+		return c.deleteHierarchySetting(ctx, r, id)
+	}
 	if r.Kind == "localized-policy" || r.Kind == "centralized-policy" || r.Kind == "security-policy" {
 		return c.deleteLocalizedPolicy(ctx, r, id)
 	}

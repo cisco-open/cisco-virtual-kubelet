@@ -164,6 +164,13 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, hierarchy...)
+	if doc.SDWAN.NetworkHierarchy != nil {
+		collectors, err := compileHierarchyCollectors(doc.SDWAN.NetworkHierarchy.Collectors)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, collectors...)
+	}
 	policies, err := compilePolicyObjects(doc.SDWAN.PolicyObjects)
 	if err != nil {
 		return nil, err

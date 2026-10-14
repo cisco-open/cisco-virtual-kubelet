@@ -12,9 +12,10 @@ import (
 )
 
 type NetworkHierarchy struct {
-	Groups  []HierarchyContainer `json:"groups,omitempty"`
-	Regions []HierarchyContainer `json:"regions,omitempty"`
-	Sites   []HierarchySite      `json:"sites,omitempty"`
+	Groups     []HierarchyContainer `json:"groups,omitempty"`
+	Regions    []HierarchyContainer `json:"regions,omitempty"`
+	Sites      []HierarchySite      `json:"sites,omitempty"`
+	Collectors *HierarchyCollectors `json:"collectors,omitempty"`
 }
 type HierarchyContainer struct {
 	Name        string               `json:"name"`
