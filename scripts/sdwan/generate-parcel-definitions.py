@@ -465,4 +465,10 @@ folder.mkdir(exist_ok=True)
 (folder / "transport-gre-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/transport_wan_vpn_interface_gre.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "service-ipsec-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/service_lan_vpn_interface_ipsec.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "transport-ipsec-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/transport_wan_vpn_interface_ipsec.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
 (folder / "LICENSE").write_text((args.provider / "LICENSE").read_text())

@@ -174,6 +174,16 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, transportGRETrackers...)
+	ipsecInterfaces, err := compileIPSecInterfaces(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, ipsecInterfaces...)
+	ipsecTrackers, err := compileTransportIPSecTrackerAssociations(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, ipsecTrackers...)
 	sviAssociations, err := compileSVIDHCPAssociations(p, collection, key)
 	if err != nil {
 		return nil, err
