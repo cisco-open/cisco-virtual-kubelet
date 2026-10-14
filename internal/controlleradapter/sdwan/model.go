@@ -36,6 +36,7 @@ type SDWAN struct {
 	ConfigurationGroups  []ConfigurationGroup       `json:"configuration_groups,omitempty"`
 	TopologyGroups       []TopologyGroup            `json:"topology_groups,omitempty"`
 	PolicyGroups         []PolicyGroup              `json:"policy_groups,omitempty"`
+	LocalizedPolicies    *LocalizedPolicies         `json:"localized_policies,omitempty"`
 	FeatureProfiles      map[string]json.RawMessage `json:"feature_profiles,omitempty"`
 	EdgeFeatureTemplates map[string]json.RawMessage `json:"edge_feature_templates"`
 }
@@ -195,6 +196,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, policyGroups...)
+	localized, err := compileLocalizedPolicies(doc.SDWAN.LocalizedPolicies)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, localized...)
 	policyProfile := ""
 	for _, r := range out {
 		if r.Kind == "profile" && r.Type == "policy-object" {

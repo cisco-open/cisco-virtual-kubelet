@@ -7,7 +7,7 @@ schemas, defaults and API behavior. Terraform is not a build, test or deployment
 dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 157 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 159 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -58,6 +58,7 @@ parity**. The pinned upstream module has 226 resource declarations. 157 resource
 | `examples/configs/sdwan/application-priority-traffic.yaml` | Application-priority traffic policy with VPN target and basic route-free sequence | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/embedded-security-ngfw.yaml` | NGFW policy with a source-prefix pass rule | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/embedded-security-policy.yaml` | Embedded-security assembly referencing NGFW policy with a self-to-untrusted zone pair | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-ipv4-acl-definition.yaml` and `classic-ipv6-acl-definition.yaml` | Localized classic IPv4/IPv6 ACL definitions with direct prefix rules | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/ipv4-acls.yaml` | Service and transport IPv4 ACL parcels | Native lifecycle, Kubernetes reconciliation; policy-object references local only |
 | `examples/configs/sdwan/ipv6-acls.yaml` | Service and transport IPv6 ACL parcels | Native lifecycle, Kubernetes reconciliation; policy-object references local only |
 | `examples/configs/sdwan/route-policies.yaml` | Service and transport route-policy parcels | Native lifecycle, Kubernetes reconciliation; policy-object references local only |
@@ -96,7 +97,7 @@ An additional 35 declarations have native implementations but remain unqualified
 the policy-object profile and all 32 modern policy-object collections, system
 CA certificates, and custom applications (the lab lacks SD-AVC). SIG credential creation now passes after fixing the global flag
 and variable-secret payloads.
-33 declarations remain pending and TrustSec remains compatibility-blocked.
+31 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 

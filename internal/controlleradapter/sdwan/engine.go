@@ -19,6 +19,9 @@ type Observation struct {
 }
 
 func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) {
+	if r.Kind == "classic-definition" {
+		return c.observeClassicDefinition(ctx, r)
+	}
 	if r.Kind == "custom-app" {
 		return c.observeCustomApplication(ctx, r)
 	}
@@ -77,6 +80,9 @@ func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) 
 	return &Observation{ID: id, Body: body, Attached: attached}, nil
 }
 func (c *Client) Create(ctx context.Context, r Resource) (string, error) {
+	if r.Kind == "classic-definition" {
+		return c.createClassicDefinition(ctx, r)
+	}
 	if r.Kind == "custom-app" {
 		return c.createCustomApplication(ctx, r)
 	}
@@ -99,6 +105,9 @@ func (c *Client) Update(ctx context.Context, r Resource, o *Observation) error {
 		return errors.New("SD-WAN update requires a qualified unattached resource")
 	}
 	if r.Kind != "" {
+		if r.Kind == "classic-definition" {
+			return c.updateClassicDefinition(ctx, r, o)
+		}
 		if r.Kind == "custom-app" {
 			return c.updateCustomApplication(ctx, r, o)
 		}
