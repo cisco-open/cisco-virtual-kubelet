@@ -24,6 +24,7 @@ type FeatureProfile struct {
 	CustomPolicies        []map[string]any             `json:"custom_policies,omitempty"`
 	QoSPolicies           []map[string]any             `json:"qos_policies,omitempty"`
 	TrafficPolicies       []map[string]any             `json:"traffic_policies,omitempty"`
+	NGFWPolicies          []map[string]any             `json:"policies,omitempty"`
 	HubSpokePolicies      []map[string]any             `json:"hub_spoke_policies,omitempty"`
 	IPv4ACLs              []map[string]any             `json:"ipv4_acls,omitempty"`
 	IPv6ACLs              []map[string]any             `json:"ipv6_acls,omitempty"`

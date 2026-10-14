@@ -114,6 +114,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, traffic...)
+	ngfw, err := compileNGFWPolicies(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, ngfw...)
 	hubSpoke, err := compileHubSpokePolicies(p, collection, key)
 	if err != nil {
 		return nil, err

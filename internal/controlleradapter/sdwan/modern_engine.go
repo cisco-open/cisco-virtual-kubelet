@@ -217,6 +217,9 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 		key = "parcelId"
 	}
 	id, ok := result[key].(string)
+	if r.Kind == "policy-parcel" && (!ok || !validID.MatchString(id)) {
+		id, ok = result["parcelId"].(string)
+	}
 	if !ok || !validID.MatchString(id) {
 		return "", ErrResponse
 	}
