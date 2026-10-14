@@ -86,6 +86,7 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 			"network-hierarchy-collectors.yaml":        {"network_hierarchy"},
 			"classic-system.yaml":                      {"edge_feature_templates"},
 			"classic-device-template.yaml":             {"edge_feature_templates", "edge_device_templates"},
+			"classic-device-template-nested.yaml":      {"edge_feature_templates", "edge_device_templates"},
 			"classic-vpn.yaml":                         {"edge_feature_templates"},
 			"classic-ethernet-interface.yaml":          {"edge_feature_templates"},
 			"classic-aaa.yaml":                         {"edge_feature_templates"},

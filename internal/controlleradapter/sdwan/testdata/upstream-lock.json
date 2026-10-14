@@ -298,7 +298,8 @@
       "live_tested": true,
       "local_tested": true,
       "fixtures": [
-        "classic-device-template"
+        "classic-device-template",
+        "classic-device-template-nested"
       ]
     },
     {
