@@ -1,0 +1,12 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-BGP-PROFILE
+        bgp_features:
+          - name: CVK-SERVICE-BGP
+            as_number: 65010
+            router_id: 192.0.2.10
+        lan_vpns:
+          - name: CVK-SERVICE-BGP-VPN
+            vpn_id: 126
+            bgp: CVK-SERVICE-BGP

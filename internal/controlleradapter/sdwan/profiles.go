@@ -12,6 +12,7 @@ import (
 
 type FeatureProfile struct {
 	OSPF                  []map[string]any             `json:"ospf_features,omitempty"`
+	BGP                   []map[string]any             `json:"bgp_features,omitempty"`
 	OSPFv3IPv4            []map[string]any             `json:"ospfv3_ipv4_features,omitempty"`
 	OSPFv3IPv6            []map[string]any             `json:"ospfv3_ipv6_features,omitempty"`
 	EIGRP                 []map[string]any             `json:"eigrp_features,omitempty"`

@@ -1,0 +1,11 @@
+sdwan:
+  feature_profiles:
+    transport_profiles:
+      - name: CVK-TRANSPORT-BGP-PROFILE
+        bgp_features:
+          - name: CVK-TRANSPORT-BGP
+            as_number: 65011
+            router_id: 192.0.2.11
+        wan_vpn:
+          name: CVK-TRANSPORT-BGP-VPN
+          bgp: CVK-TRANSPORT-BGP

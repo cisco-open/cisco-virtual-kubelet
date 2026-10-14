@@ -16,6 +16,7 @@ func compileVPNRoutingAssociations(p FeatureProfile, family, key string) ([]Reso
 	}
 	type associationSpec struct{ field, targetPath, targetType, childPath string }
 	serviceSpecs := []associationSpec{
+		{"bgp", "routing/bgp", "service_routing_bgp", "routing/bgp/"},
 		{"ospf", "routing/ospf", "service_routing_ospf", "routing/ospf/"},
 		{"ospfv3_ipv4", "routing/ospfv3/ipv4", "service_routing_ospfv3_ipv4", "routing/ospfv3/ipv4/"},
 		{"ospfv3_ipv6", "routing/ospfv3/ipv6", "service_routing_ospfv3_ipv6", "routing/ospfv3/ipv6/"},
@@ -56,7 +57,7 @@ func compileVPNRoutingAssociations(p FeatureProfile, family, key string) ([]Reso
 		if p.WANVPN["name"] != nil {
 			name, _ = p.WANVPN["name"].(string)
 		}
-		if err := add(name, "wan/vpn", "wan_vpn", p.WANVPN, []associationSpec{{"ospf", "routing/ospf", "transport_routing_ospf", "routing/ospf/"}}); err != nil {
+		if err := add(name, "wan/vpn", "wan_vpn", p.WANVPN, []associationSpec{{"bgp", "routing/bgp", "transport_routing_bgp", "routing/bgp/"}, {"ospf", "routing/ospf", "transport_routing_ospf", "routing/ospf/"}}); err != nil {
 			return nil, err
 		}
 	}

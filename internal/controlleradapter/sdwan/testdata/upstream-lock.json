@@ -675,8 +675,11 @@
       "type": "sdwan_service_routing_bgp_feature",
       "name": "service_routing_bgp_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "service-lan-vpn-bgp-association.yaml",
+      "limits": "BGP AS/router-ID parcel or VPN association qualified through native lifecycle and live Kubernetes reconciliation; neighbors, address families and device activation excluded"
     },
     {
       "type": "sdwan_service_dhcp_server_feature",
@@ -733,8 +736,11 @@
       "type": "sdwan_service_lan_vpn_feature_associate_routing_bgp_feature",
       "name": "service_lan_vpn_feature_associate_routing_bgp_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "service-lan-vpn-bgp-association.yaml",
+      "limits": "BGP AS/router-ID parcel or VPN association qualified through native lifecycle and live Kubernetes reconciliation; neighbors, address families and device activation excluded"
     },
     {
       "type": "sdwan_service_lan_vpn_feature_associate_routing_eigrp_feature",
@@ -1164,8 +1170,11 @@
       "type": "sdwan_transport_routing_bgp_feature",
       "name": "transport_routing_bgp_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-wan-vpn-bgp-association.yaml",
+      "limits": "BGP AS/router-ID parcel or VPN association qualified through native lifecycle and live Kubernetes reconciliation; neighbors, address families and device activation excluded"
     },
     {
       "type": "sdwan_transport_cellular_controller_feature",
@@ -1300,8 +1309,11 @@
       "type": "sdwan_transport_wan_vpn_feature_associate_routing_bgp_feature",
       "name": "transport_wan_vpn_feature_associate_routing_bgp_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixture": "transport-wan-vpn-bgp-association.yaml",
+      "limits": "BGP AS/router-ID parcel or VPN association qualified through native lifecycle and live Kubernetes reconciliation; neighbors, address families and device activation excluded"
     },
     {
       "type": "sdwan_transport_wan_vpn_feature_associate_routing_ospf_feature",

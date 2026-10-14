@@ -465,6 +465,10 @@ folder.mkdir(exist_ok=True)
 (folder / "transport-wan-cellular-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/transport_wan_vpn_interface_cellular.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "bgp-schemas.json").write_text(json.dumps({
+    family: json.loads((args.provider / "gen/models/profile_parcels" / f"{family}_routing_bgp.json").read_text())["request"]["properties"]["data"]
+    for family in ("service", "transport")
+}, indent=2, sort_keys=True) + "\n")
 (folder / "service-gre-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/service_lan_vpn_interface_gre.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")

@@ -204,6 +204,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, wanCellularTrackers...)
+	bgpFeatures, err := compileBGPFeatures(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, bgpFeatures...)
 	sviAssociations, err := compileSVIDHCPAssociations(p, collection, key)
 	if err != nil {
 		return nil, err
