@@ -48,6 +48,7 @@ type Banner struct {
 var defaultBannerDevices = []string{"C8000V", "C8300-1N1S-4T2X", "C8300-1N1S-6T", "C8300-2N2S-6T", "C8300-2N2S-4T2X", "C8500-12X4QC", "C8500-12X", "C8500-20X6C", "C8500L-8S4X", "C8200-1N-4T", "C8200L-1N-4T"}
 
 type ParcelReference struct {
+	Kind             string
 	Name, ParcelPath string
 	BodyPath         []string
 }
@@ -178,6 +179,10 @@ func Compile(data []byte) ([]Resource, error) {
 		}
 		return out[i].Key < out[j].Key
 	})
+	out, err = orderParcelDependencies(out)
+	if err != nil {
+		return nil, err
+	}
 	if len(out) > 512 {
 		return nil, errors.New("SD-WAN document exceeds 512 resource limit")
 	}

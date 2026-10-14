@@ -46,6 +46,14 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
+An additional 40 declarations have native implementations and locally validated
+fixtures but still need live qualification. This includes the policy-object profile
+and all 32 modern policy-object collections, Cisco SSE, system CA certificates,
+classic SIG credentials, and transport IPv4/IPv6 trackers and tracker groups.
+101 declarations remain pending and TrustSec remains compatibility-blocked.
+See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
+complete list, fixture paths and prerequisites.
+
 ## Model contract
 
 The public model remains the upstream `sdwan` document. The format is
@@ -188,8 +196,8 @@ These tests exercise CVK's native compiler, API client and reconciliation.
 ## Remaining deployment parity
 
 The remaining resource mappings, full upstream schema/default coverage, classic
-device templates, routing and transport/service features, modern policy-object parcels and
-policy definitions, global hierarchy collectors, topology/policy groups, settings, device variables,
+device templates, routing and transport/service features, live qualification of modern
+policy-object parcels, policy definitions, global hierarchy collectors, topology/policy groups, settings, device variables,
 attachment/deployment, asynchronous activation recovery, pruning and import are
 not complete. Reproducible device-level qualification also needs explicit WAN-edge
 targets and a restoration policy. Inventory visibility does not authorize choosing
@@ -209,9 +217,10 @@ work and does not count toward qualified coverage.
 
 ### Policy-object profile qualification
 
-`policy-profile.yaml` defines the singular policy-object profile and fifteen
-policy parcels. Compiler validation passed for all
-16 objects. Live qualification is pending: Manager already has its singleton
+`policy-profile.yaml` defines the singular policy-object profile and the original
+fifteen policy parcels. `policy-prefixes.yaml`, `policy-dependencies.yaml` and
+`policy-security.yaml` exercise the remaining seventeen modern policy-object
+declarations. All have passed local compiler and dependency tests. Live qualification is pending: Manager already has its singleton
 policy-object profile and rejects creation of another. Existing resources were
 not adopted or changed. The inventory marks these definitions
 `implemented-unqualified`.

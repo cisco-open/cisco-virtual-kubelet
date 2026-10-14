@@ -19,7 +19,8 @@ func compileTrackerGroups(p FeatureProfile, collection, key string) ([]Resource,
 		public, kind, path, target string
 		groups, trackers           []map[string]any
 	}{
-		{"ipv4_tracker_groups", "service_tracker_group", "trackergroup", "tracker", p.IPv4TrackerGroups, p.IPv4Trackers},
+		{"ipv4_tracker_groups", collection + "_tracker_group", "trackergroup", "tracker", p.IPv4TrackerGroups, p.IPv4Trackers},
+		{"ipv6_tracker_groups", "transport_ipv6_tracker_group", "ipv6-trackergroup", "ipv6-tracker", p.IPv6TrackerGroups, p.IPv6Trackers},
 		{"object_tracker_groups", "service_object_tracker_group", "objecttrackergroup", "objecttracker", p.ObjectTrackerGroups, p.ObjectTrackers},
 	} {
 		declared := map[string]bool{}
@@ -48,8 +49,7 @@ func compileTrackerGroups(p FeatureProfile, collection, key string) ([]Resource,
 				unique[name] = true
 				// Schema-valid placeholders are replaced from controller observations
 				// before every write; public intent never contains controller IDs.
-				hash := sha256.Sum256([]byte(name))
-				ids = append(ids, fmt.Sprintf("%x-%x-%x-%x-%x", hash[0:4], hash[4:6], hash[6:8], hash[8:10], hash[10:16]))
+				ids = append(ids, parcelPlaceholder(name))
 				references = append(references, ParcelReference{Name: name, ParcelPath: family.target, BodyPath: []string{"data", "trackerRefs", strconv.Itoa(i), "trackerRef", "refId", "value"}})
 			}
 			copy["trackers"] = ids
@@ -111,4 +111,9 @@ func replaceParcelReference(body any, path []string, id string) error {
 	default:
 		return ErrResponse
 	}
+}
+
+func parcelPlaceholder(name string) string {
+	hash := sha256.Sum256([]byte(name))
+	return fmt.Sprintf("%x-%x-%x-%x-%x", hash[0:4], hash[4:6], hash[6:8], hash[8:10], hash[10:16])
 }

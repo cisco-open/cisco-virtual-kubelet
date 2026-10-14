@@ -4000,6 +4000,117 @@
         ]
       }
     },
+    "sig_credentials_templates": {
+      "defaults": {},
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "umbrella_api_key": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "umbrella.api-key",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "umbrella_api_key_variable"
+        },
+        "umbrella_api_secret": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "umbrella.api-secret",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "umbrella_api_secret_variable"
+        },
+        "umbrella_organization_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "umbrella.org-id",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "umbrella_organization_id_variable"
+        },
+        "zscaler_organization": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "zscaler.organization",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "zscaler_organization_variable"
+        },
+        "zscaler_partner_api_key": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "zscaler.partner-key",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "zscaler_partner_api_key_variable"
+        },
+        "zscaler_partner_base_uri": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "zscaler.partner-base-uri",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "zscaler_partner_base_uri_variable"
+        },
+        "zscaler_password": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "zscaler.password",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "zscaler_password_variable"
+        },
+        "zscaler_username": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "zscaler.username",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "zscaler_username_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {},
+      "type": "cisco_sig_credentials",
+      "unavailable_inputs": {}
+    },
     "snmp_templates": {
       "defaults": {
         "community": {

@@ -62,10 +62,10 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 			"policy-objects.yaml": {"policy_objects"},
 			"deployment.yaml":     {"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"},
 		}
-		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular"} {
+		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular", "transport-trackers", "policy-profile", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse"} {
 			sections[name+".yaml"] = []string{"feature_profiles"}
 		}
-		for _, name := range []string{"templates", "cellular", "bfd", "igmp", "ntp", "omp", "pim", "applications", "dhcp", "ipsec", "snmp", "logging", "gre"} {
+		for _, name := range []string{"templates", "cellular", "bfd", "igmp", "ntp", "omp", "pim", "applications", "dhcp", "ipsec", "snmp", "logging", "gre", "sig-credentials"} {
 			sections["classic-"+name+".yaml"] = []string{"edge_feature_templates"}
 		}
 		managed, ok := sections[fixture]

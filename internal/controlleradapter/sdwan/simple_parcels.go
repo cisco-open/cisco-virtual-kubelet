@@ -65,14 +65,45 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		out = append(out, Resource{Key: key + "/" + field, Name: name, Section: "feature_profiles", Kind: "parcel", Type: collection + "_" + field, Collection: "/dataservice/v1/feature-profile/sdwan/" + collection, ParentName: p.Name, ParcelPath: path, Body: map[string]any{"name": name, "description": meta.Description, "data": data}})
 		return nil
 	}
-	if (p.IPv4Trackers != nil || p.DHCPServers != nil || p.ObjectTrackers != nil || p.IPv4TrackerGroups != nil || p.ObjectTrackerGroups != nil) && collection != "service" {
+	for _, feature := range []struct {
+		public, family, kind, path string
+		input                      map[string]any
+	}{
+		{"ca_certificate", "system", "ca_certificate", "ca-cert", p.CACertificate},
+		{"cisco", "sse", "sse_cisco", "cisco", p.CiscoSSE},
+	} {
+		if feature.input == nil {
+			continue
+		}
+		if collection != feature.family {
+			return nil, errors.New("feature does not belong to this profile family")
+		}
+		meta, data, err := scalarParcelData(feature.kind, feature.input)
+		if err != nil {
+			return nil, err
+		}
+		if feature.kind == "sse_cisco" && meta.Name == nil {
+			return nil, errors.New("Cisco SSE requires a name")
+		}
+		if err := add(feature.public, feature.path, meta, data); err != nil {
+			return nil, err
+		}
+	}
+	if (p.DHCPServers != nil || p.ObjectTrackers != nil || p.ObjectTrackerGroups != nil) && collection != "service" {
 		return nil, errors.New("service trackers and DHCP servers require service profile")
+	}
+	if (p.IPv4Trackers != nil || p.IPv4TrackerGroups != nil) && collection != "service" && collection != "transport" {
+		return nil, errors.New("IPv4 trackers require service or transport profile")
+	}
+	if (p.IPv6Trackers != nil || p.IPv6TrackerGroups != nil) && collection != "transport" {
+		return nil, errors.New("IPv6 trackers require transport profile")
 	}
 	for _, family := range []struct {
 		public, kind, path string
 		inputs             []map[string]any
 	}{
-		{"ipv4_trackers", "service_tracker", "tracker", p.IPv4Trackers},
+		{"ipv4_trackers", collection + "_tracker", "tracker", p.IPv4Trackers},
+		{"ipv6_trackers", "transport_ipv6_tracker", "ipv6-tracker", p.IPv6Trackers},
 		{"object_trackers", "service_object_tracker", "objecttracker", p.ObjectTrackers},
 		{"dhcp_servers", "service_dhcp_server", "dhcp-server", p.DHCPServers},
 	} {

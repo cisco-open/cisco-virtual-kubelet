@@ -11,6 +11,10 @@ import (
 )
 
 type FeatureProfile struct {
+	IPv6Trackers          []map[string]any             `json:"ipv6_trackers,omitempty"`
+	IPv6TrackerGroups     []map[string]any             `json:"ipv6_tracker_groups,omitempty"`
+	CACertificate         map[string]any               `json:"ca_certificate,omitempty"`
+	CiscoSSE              map[string]any               `json:"cisco,omitempty"`
 	IPv4TrackerGroups     []map[string]any             `json:"ipv4_tracker_groups,omitempty"`
 	ObjectTrackerGroups   []map[string]any             `json:"object_tracker_groups,omitempty"`
 	CellularControllers   []map[string]any             `json:"cellular_controllers,omitempty"`

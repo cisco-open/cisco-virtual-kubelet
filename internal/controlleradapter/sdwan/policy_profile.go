@@ -83,7 +83,7 @@ func compilePolicyObjectProfile(raw []byte) ([]Resource, error) {
 			if definition.IgnoreDescription {
 				meta.Description = ""
 			}
-			out = append(out, Resource{Key: key + "/" + public + "/" + *meta.Name, Name: *meta.Name, Section: "feature_profiles", Kind: "parcel", Type: kind, Collection: collection, ParentName: name, ParcelPath: definition.Path, Body: map[string]any{"name": *meta.Name, "description": meta.Description, "data": body}})
+			out = append(out, Resource{Key: key + "/" + public + "/" + *meta.Name, Name: *meta.Name, Section: "feature_profiles", Kind: "parcel", Type: kind, Collection: collection, ParentName: name, ParcelPath: definition.Path, ParcelRefs: collectScalarReferences(definition, fields, []string{"data"}), Body: map[string]any{"name": *meta.Name, "description": meta.Description, "data": body}})
 		}
 	}
 	return out, nil

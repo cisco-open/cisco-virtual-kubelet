@@ -22,6 +22,14 @@ import (
 var scalarDefinitions []byte
 
 type scalarField struct {
+	Alternate            string
+	ConditionDefault     any    `json:"condition_default"`
+	ReferenceKind        string `json:"reference_kind"`
+	Prefix               string
+	ConditionField       string `json:"condition_field"`
+	ConditionValue       any    `json:"condition_value"`
+	Reference            string
+	Source               string
 	Requires             string
 	Values               map[string]string
 	VariableEncoding     string         `json:"variable_encoding"`
@@ -40,7 +48,9 @@ type scalarToggle struct {
 	OffDefaults map[string]any `json:"off_defaults"`
 	Fields      []string
 }
+type scalarCombinedInput struct{ Source, Field string }
 type scalarDefinition struct {
+	CombinedLists     map[string][]scalarCombinedInput `json:"combined_lists"`
 	Toggles           map[string]scalarToggle
 	OutputSchema      map[string]any    `json:"output_schema"`
 	ComputedDefaults  map[string]string `json:"computed_defaults"`
@@ -96,6 +106,25 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 	for key, value := range input {
 		values[key] = value
 	}
+	for target, sources := range definition.CombinedLists {
+		if _, exists := values[target]; exists {
+			return nil, errors.New("internal combined field is not a public input")
+		}
+		combined := []any{}
+		for _, source := range sources {
+			if value := values[source.Source]; value != nil {
+				items, ok := value.([]any)
+				if !ok {
+					return nil, fmt.Errorf("%s must be an array", source.Source)
+				}
+				for _, item := range items {
+					combined = append(combined, map[string]any{source.Field: item})
+				}
+			}
+			delete(values, source.Source)
+		}
+		values[target] = combined
+	}
 	input = values
 	b, e := json.Marshal(definition.Defaults)
 	if e != nil {
@@ -135,13 +164,37 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 		}
 	}
 	for public, field := range definition.Fields {
+		if field.Source != "" {
+			public = field.Source
+		}
 		allowed[public] = true
 		var variable any
 		if field.Variable != "" {
 			allowed[field.Variable] = true
 			variable = input[field.Variable]
 		}
-		value := input[public]
+		value, exists := input[public]
+		if field.Alternate != "" {
+			allowed[field.Alternate] = true
+			if !exists {
+				value = input[field.Alternate]
+			}
+		}
+		condition, exists := input[field.ConditionField]
+		if !exists {
+			condition = field.ConditionDefault
+		}
+		if field.ConditionField != "" && !reflect.DeepEqual(condition, field.ConditionValue) {
+			deleteScalarPath(definition.Defaults, field.Path)
+			continue
+		}
+		if value != nil && field.Prefix != "" {
+			text, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf("%s must be a string", public)
+			}
+			value = field.Prefix + text
+		}
 		if field.Requires != "" && input[field.Requires] == nil {
 			deleteScalarPath(definition.Defaults, field.Path)
 			disabled[public] = true
@@ -165,12 +218,29 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 			}
 			setScalarPath(definition.Defaults, field.Path, map[string]any{"optionType": "variable", "value": "{{" + name + "}}"})
 		} else if value != nil {
+			if field.Reference != "" {
+				name, ok := value.(string)
+				if !ok || name == "" || len(name) > 128 {
+					return nil, errors.New("invalid parcel reference name")
+				}
+				value = parcelPlaceholder(name)
+			}
 			if field.InputSchema != nil {
 				if !validScalarValue(value, field.InputSchema) {
 					return nil, fmt.Errorf("invalid %s model value", public)
 				}
 				if field.Encode == "decimal-string" {
 					value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
+				} else if field.Encode == "prefix-address" || field.Encode == "prefix-length" {
+					prefix, err := netip.ParsePrefix(value.(string))
+					if err != nil {
+						return nil, fmt.Errorf("invalid %s prefix", public)
+					}
+					if field.Encode == "prefix-address" {
+						value = prefix.Addr().String()
+					} else {
+						value = float64(prefix.Bits())
+					}
 				} else if field.Encode == "enum-map" {
 					value = field.Values[value.(string)]
 				} else {
@@ -253,6 +323,9 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 	for _, wrapper := range definition.Wrappers {
 		subset := map[string]any{}
 		for public, field := range wrapper.Definition.Fields {
+			if field.Source != "" {
+				public = field.Source
+			}
 			allowed[public] = true
 			if value, ok := input[public]; ok {
 				subset[public] = value
@@ -369,6 +442,12 @@ func validScalarValue(value any, schema map[string]any) bool {
 		if !ok {
 			return false
 		}
+		if min, ok := schema["minProperties"].(float64); ok && float64(len(object)) < min {
+			return false
+		}
+		if max, ok := schema["maxProperties"].(float64); ok && float64(len(object)) > max {
+			return false
+		}
 		if required, ok := schema["required"].([]any); ok {
 			for _, key := range required {
 				if _, exists := object[key.(string)]; !exists {
@@ -376,7 +455,15 @@ func validScalarValue(value any, schema map[string]any) bool {
 				}
 			}
 		}
-		if dependencies, ok := schema["dependencies"].(map[string]any); ok {
+		dependencies := map[string]any{}
+		for _, keyword := range []string{"dependencies", "dependentRequired"} {
+			if rules, ok := schema[keyword].(map[string]any); ok {
+				for key, value := range rules {
+					dependencies[key] = value
+				}
+			}
+		}
+		if len(dependencies) > 0 {
 			for key, dependency := range dependencies {
 				if _, exists := object[key]; !exists {
 					continue

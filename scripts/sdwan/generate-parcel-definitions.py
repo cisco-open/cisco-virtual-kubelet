@@ -40,14 +40,14 @@ def put(obj, path, value):
     obj[parts[-1]] = value
 
 def validate_schema(schema):
-    known = {"const", "type", "enum", "minimum", "maximum", "multipleOf", "minLength", "maxLength", "pattern", "minItems", "maxItems", "items", "anyOf", "oneOf", "uniqueItems", "default", "description", "additionalProperties", "x-attributeMetadata", "format", "properties", "required", "allOf", "if", "then", "else", "dependencies", "not"}
+    known = {"const", "type", "enum", "minimum", "maximum", "multipleOf", "minLength", "maxLength", "pattern", "minItems", "maxItems", "minProperties", "maxProperties", "items", "anyOf", "oneOf", "uniqueItems", "default", "description", "additionalProperties", "x-attributeMetadata", "metadata", "format", "properties", "required", "allOf", "if", "then", "else", "dependencies", "dependentRequired", "not"}
     if set(schema) - known:
         raise SystemExit(f"Unsupported validation keywords: {set(schema) - known}")
     if schema.get("format") not in (None, "ipv4", "ipv6", "hostname"):
         raise SystemExit("Unsupported schema format")
     if "items" in schema:
         validate_schema(schema["items"])
-    for dependency in schema.get("dependencies", {}).values():
+    for dependency in (schema.get("dependencies", {}) | schema.get("dependentRequired", {})).values():
         if isinstance(dependency, dict):
             validate_schema(dependency)
         elif not isinstance(dependency, list) or not all(isinstance(x, str) for x in dependency):
@@ -73,6 +73,21 @@ def property_schema(node, name):
         raise SystemExit(f"Ambiguous or missing schema property {name}")
     return candidates[0]
 
+def repair_sse_schema(node):
+    """The pinned Cisco SSE dpdInterval schema nests required in properties."""
+    if isinstance(node, dict):
+        properties = node.get("properties", {})
+        if isinstance(properties.get("required"), list):
+            misplaced = properties.pop("required")
+            if misplaced != ["optionType", "value"] or "required" in node:
+                raise SystemExit("Unreviewed SSE schema correction")
+            node["required"] = misplaced
+        for value in node.values():
+            repair_sse_schema(value)
+    elif isinstance(node, list):
+        for value in node:
+            repair_sse_schema(value)
+
 def definition(source, alias, indent, model, body, schema, receiver="data", target="body", struct_name=None):
     struct_match = re.search(r"type " + (re.escape(struct_name) if struct_name else r"\w+") + r" struct \{", model)
     struct_body = block(model, struct_match.end()-1)
@@ -81,15 +96,16 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
     setter = r'sjson.Set\(' + target + ', ' + prefix
     baseline, inputs, lists, required, public_defaults, wrappers = {}, {}, {}, [], {}, []
     constants, computed_defaults, wrapped_variables = {}, {}, set()
+    encodings, references, transforms = {}, {}, {}
     for match in re.finditer(r'if ' + receiver + r'\.(\w+)\.IsNull\(\) \{', body):
         content = block(body, match.end() - 1)
         for path, literal in re.findall(setter + r'"([^"]+)", ([^\n]+)\)', content):
-            put(baseline, path, json.loads(literal))
-    for match in re.finditer(r'^\tif true \{', body, re.M):
+            put(baseline, path, {} if literal == "map[string]interface{}{}" else json.loads(literal))
+    for match in re.finditer(r'^\t+if true \{' if key == 'sse_cisco' else r'^\tif true \{', body, re.M):
         content = block(body, match.end() - 1)
         if 'for ' not in content and receiver + '.' not in content:
             for path, literal in re.findall(setter + r'"([^"]+)", ([^\n]+)\)', content):
-                put(baseline, path, json.loads(literal))
+                put(baseline, path, {} if literal == "map[string]interface{}{}" else json.loads(literal))
     assignments = re.findall('^' + ' ' * indent + r'(\w+)\s*=\s*(.*)$', source, re.M)
     for tf, expr in assignments:
         if indent == 2 and tf in {"for_each", "name", "description", "feature_profile_id"}:
@@ -99,6 +115,44 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         if re.fullmatch(r'"[^"]*"', expr):
             inputs[tf] = "$constant:" + tf
             constants[tf] = json.loads(expr)
+            continue
+        if tf == "tls_decryption_action":
+            expected = 'lookup({ "never_decrypt" = "neverDecrypt", "skip_decrypt" = "skipDecrypt" }, each.value.tls_action, each.value.tls_action)'
+            if expr != expected:
+                raise SystemExit("Unreviewed TLS action expression")
+            inputs[tf] = "tls_action"
+            transforms[tf] = {"encode":"enum-map", "values":{"never_decrypt":"neverDecrypt", "skip_decrypt":"skipDecrypt", "decrypt":"decrypt"}, "input_schema":{"type":"string", "enum":["never_decrypt", "skip_decrypt", "decrypt"]}}
+            required.append("tls_action")
+            continue
+        if tf == "block_page_contents":
+            expected = 'each.value.block_page_action == "text" ? try(each.value.block_page_content_body, null) != null ? "Access to the requested page has been denied. ${each.value.block_page_content_body}" : "Access to the requested page has been denied. ${local.defaults.sdwan.feature_profiles.policy_object_profile.security_url_filtering_profiles.block_page_content_body}" : null'
+            if expr != expected:
+                raise SystemExit("Unreviewed URL block-page expression")
+            inputs[tf] = "block_page_content_body"
+            public_defaults["block_page_content_body"] = module_defaults["defaults"]["sdwan"]["feature_profiles"]["policy_object_profile"]["security_url_filtering_profiles"]["block_page_content_body"]
+            transforms[tf] = {"prefix":"Access to the requested page has been denied. ", "condition_field":"block_page_action", "condition_value":"text"}
+            continue
+        reference = re.fullmatch(r'(?:try\()?sdwan_(policy_object_\w+)\.\w+\[' + re.escape(alias) + r'\.(\w+)\]\.id(?:, null\))?', expr)
+        if reference:
+            reference_target, public = reference.groups()
+            target_model = (args.provider / "internal/provider" / ("model_sdwan_" + reference_target + ".go")).read_text()
+            references[tf] = (re.search(r'/policy-object/%v/([^" ]+)', target_model).group(1), reference_target)
+            inputs[tf] = public
+            if not expr.startswith("try("):
+                required.append(public)
+            continue
+        prefix_part = re.fullmatch(r'split\("/", ' + re.escape(alias) + r'(?:\.(\w+))?\)\[([01])\]', expr)
+        decimal = re.fullmatch(r'tostring\(' + re.escape(alias) + r'\.(\w+)\)', expr)
+        if prefix_part:
+            public = prefix_part.group(1) or "$value"
+            inputs[tf] = public
+            required.append(public)
+            encodings[tf] = "prefix-address" if prefix_part.group(2) == "0" else "prefix-length"
+            continue
+        if decimal:
+            inputs[tf] = decimal.group(1)
+            required.append(decimal.group(1))
+            encodings[tf] = "decimal-string"
             continue
         computed = False
         for group_prefix in ("radius", "tacacs"):
@@ -148,7 +202,7 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         node = schema
         for part in array_path.split("."):
             node = property_schema(node, part)
-        entry = {"path": array_path, "definition": definition(item_source, item_alias, indent + 2, model, item_body, node["items"], item_receiver, item_target, child_struct)}
+        entry = {"path": array_path, "definition": definition(item_source, item_alias, indent + 2, model, item_body, (node["items"] if "items" in node else {"oneOf":[x["items"] for x in node["oneOf"]]}), item_receiver, item_target, child_struct)}
         if array:
             if expr.startswith("[for") and " in " + alias + "." in expr:
                 required.append(public)
@@ -182,7 +236,19 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         if tf in constants:
             put(baseline, path, {"optionType": "global", "value": constants[tf]})
             continue
+        source_public = public
+        if public in mapping:
+            public = "$field:" + tf
         mapping[public] = {"path": path, "type": typ, "schema": global_schema}
+        if public != source_public:
+            mapping[public]["source"] = source_public
+        if tf in transforms:
+            mapping[public].update(transforms[tf])
+        if tf in references:
+            mapping[public]["reference"], mapping[public]["reference_kind"] = references[tf]
+        if tf in encodings:
+            mapping[public]["encode"] = encodings[tf]
+            mapping[public]["input_schema"] = {"type":"integer", "minimum":0} if encodings[tf] == "decimal-string" else {"type":"string"}
         if tf + "_variable" in inputs:
             mapping[public]["variable"] = inputs[tf + "_variable"]
             if tf + "_variable" not in wrapped_variables:
@@ -200,19 +266,53 @@ reviewed += [("service", "tracker_group", "tracker", "service_tracker_group"), (
 policy_features = ["as_path_list", "class_map", "color_list", "extended_community_list",
                    "mirror", "policer", "security_data_ipv4_prefix_list", "security_fqdn_list",
                    "security_local_domain_list", "security_port_list", "security_protocol_list",
-                   "security_url_allow_list", "security_url_block_list", "standard_community_list", "tloc_list"]
+                   "security_url_allow_list", "security_url_block_list", "standard_community_list", "tloc_list", "expanded_community_list", "data_ipv4_prefix_list", "data_ipv6_prefix_list", "ipv4_prefix_list", "ipv6_prefix_list", "security_ips_signature", "unified_advanced_malware_protection", "app_probe_class", "sla_class_list", "unified_intrusion_prevention", "unified_advanced_inspection_profile", "unified_url_filtering", "preferred_color_group", "application_list", "security_local_application_list", "security_geolocation_list", "security_zone"]
 reviewed += [("policy_object", f, "", "policy_object_" + f) for f in policy_features]
+reviewed += [("transport", f, "tracker", "transport_" + f) for f in ("tracker", "ipv6_tracker", "tracker_group", "ipv6_tracker_group")]
+reviewed += [("sse", "cisco", "cisco", "sse_cisco"), ("system", "ca_certificate", "ca_certificate", "ca_certificate")]
 for family, feature, alias, key in reviewed:
     hcl = (args.module / ("sdwan_policy_objects.tf" if family == "policy_object" else "sdwan_features_" + family + ".tf")).read_text()
     resource = "sdwan_" + family + "_" + feature + ("" if family == "policy_object" else "_feature")
     start = hcl.index("{", hcl.index('resource "' + resource + '"'))
     source = block(hcl, start)
-    if key in ("service_tracker_group", "service_object_tracker_group"):
-        target = "service_tracker" if key == "service_tracker_group" else "service_object_tracker"
+    combined = {}
+    combinations = {
+        "policy_object_application_list": [("applications", "application"), ("application_families", "application_family")],
+        "policy_object_security_local_application_list": [("applications", "app"), ("application_families", "app_family")],
+        "policy_object_security_geolocation_list": [("continent_codes", "continent"), ("country_codes", "country")],
+        "policy_object_security_zone": [("vpns", "vpn"), ("interfaces", "interface")],
+    }
+    if key in combinations:
+        # These four module declarations concatenate independent public arrays
+        # into one API entries array. Preserve both arrays and their source order.
+        start_entries = source.index("  entries =")
+        source = source[:start_entries] + "  entries = [for e in each.value.entries : {\n" + "".join("    " + field + " = try(e." + field + ", null)\n" for _, field in combinations[key]) + "  }]\n"
+        combined = {"entries":[{"source":public,"field":field} for public,field in combinations[key]]}
+    if key == "ca_certificate":
+        source = source.replace("certificates :\n    {", "certificates : {")
+        source = re.sub(r"^      (trust_point_name|ca_certificate_id)", r"    \1", source, flags=re.M)
+    if key in ("service_tracker_group", "service_object_tracker_group", "transport_tracker_group", "transport_ipv6_tracker_group"):
+        target = key.removesuffix("_group")
         reference = 'sdwan_' + target + '_feature.' + target + '_feature["${each.value.profile.name}-${t}"].id'
         if source.count(reference) != 1:
             raise SystemExit("Tracker reference expression changed")
         source = source.replace(reference, 't')
+    if key in ("transport_tracker", "transport_ipv6_tracker"):
+        source = source.replace('try(each.value.tracker.endpoint_ip, each.value.tracker.endpoint_tcp_udp_ip, null)', 'try(each.value.tracker.endpoint_ip, null)')
+        ip_prefix = "ipv6-" if key == "transport_ipv6_tracker" else ""
+        expected = 'lookup({ "icmp" = "' + ip_prefix + 'interface-icmp", "http" = "' + ip_prefix + 'interface" }, try(each.value.tracker.endpoint_tracker_type, ""), null)'
+        if source.count(expected) != 1:
+            raise SystemExit("Transport tracker discriminator changed")
+        source = source.replace(expected, 'try(each.value.tracker.endpoint_tracker_type, null)')
+        for kind in ("icmp", "http"):
+            guard = 'try(each.value.tracker.endpoint_tracker_type, "http") == "' + kind + '" ? '
+            lines = source.splitlines()
+            for i, line in enumerate(lines):
+                if guard in line:
+                    if not line.endswith(' : null'):
+                        raise SystemExit("Transport interval condition changed")
+                    lines[i] = line.replace(guard, '')[:-len(' : null')]
+            source = "\n".join(lines)
     if key == "transport_cellular_profile":
         toggle_line = r'^  requires_authentication\s*= try\(each.value.cellular.authentication_enable, null\)\n'
         source, count = re.subn(toggle_line, '', source, flags=re.M)
@@ -233,7 +333,12 @@ for family, feature, alias, key in reviewed:
     model = (args.provider / "internal/provider" / ("model_" + resource + ".go")).read_text()
     body = model[model.index("toBody(ctx"):model.index("return body")]
     schema = json.loads((args.provider / "gen/models/profile_parcels" / (family + "_" + feature + ".json")).read_text())["request"]["properties"]["data"]
+    if key == "sse_cisco":
+        repair_sse_schema(schema)
     generated = definition(source, "each.value" + ("." + alias if alias else ""), 2, model, body, schema)
+    if combined:
+        generated["combined_lists"] = combined
+        generated["required"] = [x for x in generated["required"] if x != "entries"]
     if key == "service_object_tracker":
         generated["fields"]["type"].update(input_schema={"type":"string", "enum":["interface", "route", "sig"]}, encode="enum-map", values={"interface":"Interface", "route":"Route", "sig":"SIG"})
     if key == "transport_cellular_profile":
@@ -246,7 +351,21 @@ for family, feature, alias, key in reviewed:
             put(off, path, json.loads(literal))
         generated["fields"]["slice_differentiator"]["requires"] = "slice_type"
         generated["toggles"] = {"authentication_enable": {"off_defaults": off, "fields": ["authentication_type", "profile_username", "profile_password"]}}
-    if family == "service" or key.startswith("transport_cellular"):
+    if key == "policy_object_unified_url_filtering":
+        generated["fields"]["redirect_url"].update(condition_field="block_page_action", condition_value="redirect-url")
+        generated["fields"]["alerts"].update(condition_field="enable_alerts", condition_value=True)
+    if key == "policy_object_unified_advanced_malware_protection":
+        for field in ("tg_cloud_region", "file_analysis_alert_log_level", "file_analysis_file_types"):
+            generated["fields"][field].update(condition_field="file_analysis", condition_value=True)
+    if key in ("transport_tracker", "transport_ipv6_tracker"):
+        generated["fields"]["endpoint_ip"]["alternate"] = "endpoint_tcp_udp_ip"
+        ip_prefix = "ipv6-" if key == "transport_ipv6_tracker" else ""
+        generated["fields"]["endpoint_tracker_type"].update(encode="enum-map", values={"http":ip_prefix+"interface", "icmp":ip_prefix+"interface-icmp"}, input_schema={"type":"string", "enum":["http", "icmp"]})
+        for field in generated["fields"].values():
+            if field["path"] in ("interval", "icmpInterval"):
+                field.update(condition_field="endpoint_tracker_type", condition_value="http" if field["path"] == "interval" else "icmp", condition_default="http")
+    existing_policy = {"as_path_list", "class_map", "color_list", "extended_community_list", "mirror", "policer", "security_data_ipv4_prefix_list", "security_fqdn_list", "security_local_domain_list", "security_port_list", "security_protocol_list", "security_url_allow_list", "security_url_block_list", "standard_community_list", "tloc_list"}
+    if family == "service" or key.startswith("transport_cellular") or key in ("transport_tracker", "transport_ipv6_tracker", "transport_tracker_group", "transport_ipv6_tracker_group") or key in ("sse_cisco", "ca_certificate") or (family == "policy_object" and feature not in existing_policy):
         validate_schema(schema)
         generated["output_schema"] = schema
     if key == "snmp":

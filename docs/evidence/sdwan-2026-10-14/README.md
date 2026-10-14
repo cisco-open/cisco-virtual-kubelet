@@ -230,3 +230,34 @@ from the module, and scalar tracker names use the provider's list encoding.
 
 Full Go regression and focused race checks passed. Metadata regenerated
 byte-for-byte and all previously qualified classic definitions remained unchanged.
+
+## Native implementation extension awaiting live qualification
+
+Added 24 previously pending declarations: the remaining seventeen modern
+policy-object collections, transport IPv4/IPv6 trackers and tracker groups,
+Cisco SSE, system CA certificates and classic SIG credentials. Seven new fixture
+sets and report-mode companion configs exercise these definitions locally.
+
+Local tests verify source-to-API prefix splitting, numeric string encoding,
+multiple API fields derived from one input, concatenated application/family and
+geolocation arrays, conditional fields, profile-family restrictions, dependency
+ordering and native reference resolution. Missing references, reference cycles and
+references through the wrong public collection are rejected. A simulated Manager
+test confirms that an absent dependency prevents a POST.
+
+The pinned Cisco SSE schema has a `required` list misplaced inside `properties`
+for a DPD interval branch; generation explicitly repairs that structure. Nested
+tracker discriminator defaults are preserved. These changes have not been
+qualified against a live Manager.
+
+Validation: `go test ./...`, focused adapter/command race checks, and the isolated
+Kubernetes reconciliation test with a simulated Manager passed. The inventory
+fixture audit passed. Both metadata generators reproduced byte-for-byte, and all
+previously qualified mapping definitions were unchanged.
+
+No new live Manager or router tests were run for this increment. The status is
+84 fixture-qualified declarations, 40 implemented but awaiting live tests, 101
+pending implementation, and one compatibility-blocked declaration. See the
+[complete live-test and implementation backlog](../../controllers/sdwan-live-test-backlog.md)
+for individual resources, fixtures and prerequisites. Full deployment parity is
+still incomplete.
