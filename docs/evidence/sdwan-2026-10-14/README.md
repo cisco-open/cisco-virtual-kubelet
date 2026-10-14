@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 148 resource declarations
+Native fixture coverage now includes 150 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -456,3 +456,5 @@ Six VPN routing associations passed native create/observe/idempotent-update/obse
 `transport-wan-vpn-cellular.yaml` and its tracker and tracker-group association fixtures passed native lifecycle and live Kubernetes reconciliation. Manager stores the cellular tracker-group link under `trackergroup/` despite the pinned provider model listing `tracker/` for both link types; CVK uses the observed readback path. The fixtures are unattached non-tunnel parcels.
 
 `service-lan-vpn-bgp-association.yaml` and `transport-wan-vpn-bgp-association.yaml` passed native lifecycle and live Kubernetes reconciliation. Each fixture creates a BGP parcel with an AS number, router ID, and one IPv4 or IPv6 neighbor and advertised network, then resolves the VPN association. Redistribution and device forwarding behavior remain untested.
+
+`service-lan-vpn-ethernet-member.yaml` and `transport-wan-vpn-ethernet-member.yaml` passed native lifecycle and live Kubernetes reconciliation using the conditional port-channel member payload on the Ethernet endpoint. Parent port-channel behavior and device activation remain untested.

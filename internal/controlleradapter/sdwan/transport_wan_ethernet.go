@@ -48,7 +48,16 @@ func compileWANEthernets(p FeatureProfile, family, key, managerVersion string) (
 				return nil, errors.New("WAN Ethernet description must be string")
 			}
 		}
-		data, err := wanEthernetData(input, modern)
+		member, err := ethernetMemberFlag(input)
+		if err != nil {
+			return nil, err
+		}
+		var data map[string]any
+		if member {
+			data, err = ethernetMemberData(input, transportWANEthernetSchema, true)
+		} else {
+			data, err = wanEthernetData(input, modern)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("WAN Ethernet %s: %w", name, err)
 		}
@@ -68,7 +77,7 @@ func wanEthernetData(input map[string]any, modern bool) (map[string]any, error) 
 		defaultValue any
 		present      bool
 	}{{"duplex", "duplex", nil, false}, {"mac_address", "macAddress", nil, false}, {"ip_mtu", "ipMtu", float64(1500), true}, {"interface_mtu", "intrfMtu", float64(1500), true}, {"tcp_mss", "tcpMss", nil, false}, {"speed", "speed", nil, false}, {"arp_timeout", "arpTimeout", float64(1200), true}, {"autonegotiate", "autonegotiate", nil, false}, {"media_type", "mediaType", nil, false}, {"load_interval", "loadInterval", float64(30), true}, {"ip_directed_broadcast", "ipDirectedBroadcast", false, true}}
-	allowed := map[string]bool{"name": true, "description": true, "ipv4_tracker": true, "ipv4_tracker_group": true, "ipv6_tracker": true, "ipv6_tracker_group": true, "ipv4_address_type": true, "ipv4_address_type_variable": true, "ipv4_address": true, "ipv4_address_variable": true, "ipv4_subnet_mask": true, "ipv4_subnet_mask_variable": true, "ipv4_dhcp_distance": true, "ipv4_dhcp_distance_variable": true, "ipv4_secondary_addresses": true, "ipv6_address_type": true, "ipv6_address_type_variable": true, "ipv6_address": true, "ipv6_address_variable": true, "arp_entries": true, "ipv4_dhcp_helpers": true, "ipv4_dhcp_helpers_variable": true}
+	allowed := map[string]bool{"name": true, "description": true, "port_channel_member_interface": true, "ipv4_tracker": true, "ipv4_tracker_group": true, "ipv6_tracker": true, "ipv6_tracker_group": true, "ipv4_address_type": true, "ipv4_address_type_variable": true, "ipv4_address": true, "ipv4_address_variable": true, "ipv4_subnet_mask": true, "ipv4_subnet_mask_variable": true, "ipv4_dhcp_distance": true, "ipv4_dhcp_distance_variable": true, "ipv4_secondary_addresses": true, "ipv6_address_type": true, "ipv6_address_type_variable": true, "ipv6_address": true, "ipv6_address_variable": true, "arp_entries": true, "ipv4_dhcp_helpers": true, "ipv4_dhcp_helpers_variable": true}
 	for _, spec := range append(fields, advanced...) {
 		allowed[spec.source] = true
 		allowed[spec.source+"_variable"] = true
