@@ -362,7 +362,9 @@ twice (17.99s and 17.90s). The pinned provider request schemas are embedded
 from the locked source and validated before writes.
 
 `system-device-access-references.yaml` validates dependency ordering and
-policy-object prefix-list reference paths locally. Its live attempt stopped at
+policy-object prefix-list reference paths locally. A simulated Manager test
+also verified missing-reference refusal and cross-profile ID substitution.
+Its live attempt stopped at
 the policy-object profile POST: this Manager already has its singleton profile
 and rejects a second one with HTTP 400. The referenced-parcel branch therefore
 remains unqualified against a live Manager. No policy object or device-access

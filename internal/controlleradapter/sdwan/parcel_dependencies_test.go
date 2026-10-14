@@ -90,6 +90,50 @@ func TestPolicyReferenceMissingDependencyDoesNotWrite(t *testing.T) {
 	}
 }
 
+func TestDeviceAccessCrossProfileReferenceResolution(t *testing.T) {
+	var access Resource
+	for _, r := range parcelFixtures(t, "system-device-access-references") {
+		if r.Type == "system_ipv4_device_access" {
+			access = r
+		}
+	}
+	present := false
+	c := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if auth(w, r) {
+			return
+		}
+		if r.Method != "GET" {
+			t.Fatal("unexpected mutation", r.Method)
+			return
+		}
+		switch {
+		case strings.HasSuffix(r.URL.Path, "/policy-object"):
+			fmt.Fprint(w, `[{"profileId":"profile-id","profileName":"CVK-DEVICE-ACCESS-OBJECTS"}]`)
+		case strings.HasSuffix(r.URL.Path, "/data-prefix"):
+			if present {
+				fmt.Fprint(w, `{"data":[{"parcelId":"11111111-1111-4111-8111-111111111111","name":"CVK-SSH-V4-SOURCES"}]}`)
+			} else {
+				fmt.Fprint(w, `{"data":[]}`)
+			}
+		case strings.HasSuffix(r.URL.Path, "/data-prefix/11111111-1111-4111-8111-111111111111"):
+			fmt.Fprint(w, `{"payload":{"name":"CVK-SSH-V4-SOURCES","description":"","data":{}}}`)
+		default:
+			t.Error("wrong collection", r.URL.Path)
+		}
+	})
+	if err := c.resolveParcelRefs(context.Background(), access); !errors.Is(err, ErrDependencyPending) {
+		t.Fatal("missing prefix accepted", err)
+	}
+	present = true
+	if err := c.resolveParcelRefs(context.Background(), access); err != nil {
+		t.Fatal(err)
+	}
+	encoded, _ := json.Marshal(access.Body)
+	if !strings.Contains(string(encoded), "11111111-1111-4111-8111-111111111111") {
+		t.Fatal("reference ID not substituted")
+	}
+}
+
 func TestPolicyCombinedArraysAndConditions(t *testing.T) {
 	for _, r := range parcelFixtures(t, "policy-security") {
 		d, ok := r.Body["data"].(map[string]any)
