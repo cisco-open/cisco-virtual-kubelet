@@ -154,6 +154,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, svis...)
+	serviceEthernets, err := compileServiceEthernets(p, collection, key, managerVersion)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, serviceEthernets...)
 	sviAssociations, err := compileSVIDHCPAssociations(p, collection, key)
 	if err != nil {
 		return nil, err

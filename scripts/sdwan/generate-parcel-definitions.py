@@ -456,4 +456,7 @@ folder.mkdir(exist_ok=True)
 (folder / "service-svi-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/service_lan_vpn_interface_svi.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "service-ethernet-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/service_lan_vpn_interface_ethernet.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
 (folder / "LICENSE").write_text((args.provider / "LICENSE").read_text())
