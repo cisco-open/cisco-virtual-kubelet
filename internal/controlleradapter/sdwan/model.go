@@ -32,6 +32,7 @@ type SDWAN struct {
 	ManagerVersion       string                     `json:"manager_version,omitempty"`
 	ApplicationCatalog   *ApplicationCatalog        `json:"application_catalog,omitempty"`
 	NetworkHierarchy     *NetworkHierarchy          `json:"network_hierarchy,omitempty"`
+	Settings             *SDWANSettings             `json:"settings,omitempty"`
 	PolicyObjects        map[string]json.RawMessage `json:"policy_objects,omitempty"`
 	ConfigurationGroups  []ConfigurationGroup       `json:"configuration_groups,omitempty"`
 	TopologyGroups       []TopologyGroup            `json:"topology_groups,omitempty"`
@@ -164,6 +165,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, hierarchy...)
+	settings, err := compileSDWANSettings(doc.SDWAN.Settings)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, settings...)
 	if doc.SDWAN.NetworkHierarchy != nil {
 		collectors, err := compileHierarchyCollectors(doc.SDWAN.NetworkHierarchy.Collectors)
 		if err != nil {

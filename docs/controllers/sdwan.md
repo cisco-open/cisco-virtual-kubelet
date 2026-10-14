@@ -7,7 +7,7 @@ schemas, defaults and API behavior. Terraform is not a build, test or deployment
 dependency of the SD-WAN integration.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 162 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 178 resource declarations have fixture-level native live coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -15,6 +15,7 @@ parity**. The pinned upstream module has 226 resource declarations. 162 resource
 | `examples/configs/sdwan/system-profile.yaml` | System feature profile, system banner parcel, unattached configuration group | Dependency order, create, read, cleanup, Kubernetes reconciliation |
 | `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup |
 | `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup |
+| `examples/configs/sdwan/network-hierarchy-collectors.yaml` | Global cflowd and security-logging collector settings | Native create, read, update, cleanup, Kubernetes reconciliation |
 | `examples/configs/sdwan/feature-profiles.yaml` | Eight other profile containers and implicit application-priority policy settings | Create, read, changed-value update, cleanup |
 | `examples/configs/sdwan/system-features.yaml` | CLI config; system basic, BFD, global, OMP, NTP, logging, MRF, flexible port speed, performance monitoring, security | Create, read, update, cleanup |
 | `examples/configs/sdwan/peripheral-features.yaml` | Transport GPS and other-profile UCSE | Native lifecycle, Kubernetes reconciliation |
@@ -102,11 +103,11 @@ resource declaration and distinguishes fixture-qualified coverage from pending
 coverage. Qualification applies to the fixture's attributes, not every attribute
 of that resource type.
 
-An additional 35 declarations have native implementations but remain unqualified:
+An additional 36 declarations have native implementations but remain unqualified:
 the policy-object profile and all 32 modern policy-object collections, system
-CA certificates, and custom applications (the lab lacks SD-AVC). SIG credential creation now passes after fixing the global flag
+CA certificates, custom applications (the lab lacks SD-AVC), and cloud-provider settings (the lab already has the singleton). SIG credential creation now passes after fixing the global flag
 and variable-secret payloads.
-28 declarations remain pending and TrustSec remains compatibility-blocked.
+11 declarations remain pending and TrustSec remains compatibility-blocked.
 See the [implementation and live-test backlog](sdwan-live-test-backlog.md) for the
 complete list, fixture paths and prerequisites.
 

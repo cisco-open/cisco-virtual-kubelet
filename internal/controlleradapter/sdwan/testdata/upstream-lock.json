@@ -2051,8 +2051,13 @@
       "type": "sdwan_cloud_provider_settings",
       "name": "cloud_provider_settings",
       "source": "sdwan_settings.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "implemented-unqualified",
+      "live_tested": false,
+      "local_tested": true,
+      "fixtures": [
+        "cloud-provider-settings"
+      ],
+      "reason": "Native model and local lifecycle pass; live lab already has the global singleton with potentially real credentials, so CVK cannot safely create or adopt it."
     },
     {
       "type": "sdwan_activate_topology_group",

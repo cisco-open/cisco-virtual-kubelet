@@ -19,6 +19,9 @@ type Observation struct {
 }
 
 func (c *Client) Observe(ctx context.Context, r Resource) (*Observation, error) {
+	if r.Kind == "cloud-setting" {
+		return c.observeCloudSettings(ctx)
+	}
 	if r.Kind == "localized-policy" || r.Kind == "centralized-policy" || r.Kind == "security-policy" {
 		return c.observeLocalizedPolicy(ctx, r)
 	}
