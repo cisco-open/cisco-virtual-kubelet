@@ -2,7 +2,7 @@
 
 Target: supplied lab Manager, HTTPS, version **20.18.2.2**. Read-only discovery
 reported six inventory entries across `vmanage`, `vsmart`, `vbond` and `vedge`.
-No device configuration, template attachment or policy activation was performed.
+No device configuration, template attachment or successful policy activation was performed.
 The endpoint credentials and session material are excluded from this record.
 
 Baseline: NetAsCode v1.5.0 (`5fbf037ea57368c7e6e77694c81330b6f7b16666`),
@@ -458,3 +458,15 @@ Six VPN routing associations passed native create/observe/idempotent-update/obse
 `service-lan-vpn-bgp-association.yaml` and `transport-wan-vpn-bgp-association.yaml` passed native lifecycle and live Kubernetes reconciliation. Each fixture creates a BGP parcel with an AS number, router ID, and one IPv4 or IPv6 neighbor and advertised network, then resolves the VPN association. Redistribution and device forwarding behavior remain untested.
 
 `service-lan-vpn-ethernet-member.yaml` and `transport-wan-vpn-ethernet-member.yaml` passed native lifecycle and live Kubernetes reconciliation using the conditional port-channel member payload on the Ethernet endpoint. Parent port-channel behavior and device activation remain untested.
+
+## Activation attempts
+
+With explicit lab authorization, `TestLiveActivationLifecycle` created isolated
+centralized-policy and topology-group fixtures and registered restoration before
+each activation request. Centralized activation returned HTTP 400 `POLICY0006`:
+vSmart `10.255.255.2` is not in vManage mode. Topology deployment returned an
+asynchronous task failure: the vSmart control component has no attached device
+template or control-component setting. The topology fixture targeted a separate
+site ID (`4294966994`) through a mesh policy. Both fixture cleanup paths ran,
+and a subsequent inventory found zero centralized policies and zero topology
+groups. Neither activation is fixture-qualified on this lab.

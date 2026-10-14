@@ -21,8 +21,8 @@ parity**. The pinned upstream module has 226 resource declarations. 181 resource
 | `examples/configs/sdwan/classic-device-template-peripherals.yaml` | Unattached classic device template with switchport and cellular controller/profile references | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/group-device-deployment.yaml` | Site router associations to configuration and policy groups with variables and deploy flags | Local model/API lifecycle; live router deployment needs selected chassis and restoration state |
 | `examples/configs/sdwan/classic-device-attachment.yaml` | Site router to classic device template with device variables, including Adaptive QoS name resolution | Local model and API lifecycle; live router attachment pending scoped lab target |
-| `examples/configs/sdwan/topology-group-activation.yaml` | Topology group activation | Local model and API task lifecycle; live activation pending scoped lab target |
-| `examples/configs/sdwan/classic-centralized-activation.yaml` | Centralized feature policy activation | Local model and API task lifecycle; live activation pending scoped lab target |
+| `examples/configs/sdwan/topology-group-activation.yaml` | Topology group activation | Local model and API task lifecycle; live attempt blocked by missing vSmart control-component template/setting |
+| `examples/configs/sdwan/classic-centralized-activation.yaml` | Centralized feature policy activation | Local model and API task lifecycle; live attempt rejected because vSmart is not in vManage mode |
 | `examples/configs/sdwan/classic-bgp.yaml` | Cisco BGP feature template with AS number and IPv4 network | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-sig.yaml` | Secure internet gateway feature template with an `other` GRE tunnel | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-aaa.yaml` | cEdge AAA feature template with local authentication order | Native lifecycle, Kubernetes reconciliation |
@@ -245,7 +245,7 @@ raw controller payloads. Never clear the journal merely to retry a timed-out POS
 `Retain` is the supported prune/deletion policy. Deleting intent retains remote
 objects and its ownership journal; deletion does not transfer ownership to a new
 config UID. Remote pruning, explicit adoption/import, ownership release and
-live qualification of device attachment/activation is still pending. The fixture test harness cleans
+live qualification of device attachment/activation is still pending; activation attempts reached Manager but failed on lab prerequisites. The fixture test harness cleans
 up only its own created IDs in reverse dependency order.
 
 ## Native CVK tests
@@ -271,8 +271,8 @@ These tests exercise CVK's native compiler, API client and reconciliation.
 ## Remaining deployment parity
 
 Although all pinned resource declarations have CVK implementations, full upstream field/default coverage, advanced classic device-template children, routing and transport/service branches, live qualification of modern policy-object parcels, device attachment/deployment, asynchronous activation recovery, pruning and import are not complete. Reproducible device-level qualification also needs explicit WAN-edge
-targets and a restoration policy. Inventory visibility does not authorize choosing
-an arbitrary existing router as the test target.
+targets and a restoration policy. The BR-2-WAN tag and group association tests
+used the selected lab router and restored its prior state.
 
 See [the qualification record](../evidence/sdwan-2026-10-14/README.md) for measured
 results and limits.

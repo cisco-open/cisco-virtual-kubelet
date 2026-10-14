@@ -1,7 +1,17 @@
 sdwan:
+  network_hierarchy:
+    groups:
+      - name: CVK-TOPOLOGY-ACTIVATE-SITES
+        sites:
+          - name: CVK-TOPOLOGY-ACTIVATE-SITE
+            site_id: 4294966994
   feature_profiles:
     topology_profiles:
       - name: CVK-TOPOLOGY-GROUP-PROFILE
+        mesh_policies:
+          - name: CVK-TOPOLOGY-GROUP-MESH
+            lan_vpn_names: ["10"]
+            site_groups: [CVK-TOPOLOGY-ACTIVATE-SITES]
   topology_groups:
     - name: CVK-TOPOLOGY-GROUP
       description: Managed by CVK

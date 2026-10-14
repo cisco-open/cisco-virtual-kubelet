@@ -4,6 +4,7 @@ package sdwan
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -85,7 +86,7 @@ func TestTopologyActivationModel(t *testing.T) {
 		t.Fatal(err)
 	}
 	last := resources[len(resources)-1]
-	if len(resources) != 3 || last.Kind != "activation" || last.Type != "topology-group" {
+	if len(resources) != 6 || last.Kind != "activation" || last.Type != "topology-group" {
 		t.Fatal("topology activation must follow its group")
 	}
 	second := strings.Replace(string(raw), "  topology_groups:\n", "  topology_groups:\n    - name: CVK-TOPOLOGY-SECOND\n      topology_profile: CVK-TOPOLOGY-GROUP-PROFILE\n      activate: true\n", 1)
@@ -136,5 +137,46 @@ func TestTopologyActivationLifecycle(t *testing.T) {
 	same, err := Equal(r, observed.Body)
 	if err != nil || !same {
 		t.Fatal("topology activation readback", err)
+	}
+}
+
+func TestLiveActivationRestorationRequests(t *testing.T) {
+	for _, tc := range []struct {
+		name, kind, path, response string
+	}{
+		{"centralized", "centralized-policy", "/dataservice/template/policy/vsmart/deactivate/fixture", `{"id":"task1"}`},
+		{"topology", "topology-group", "/dataservice/v1/topology-group/fixture/device/deploy", `{"parentTaskId":"task1"}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			c := testClient(t, func(w http.ResponseWriter, request *http.Request) {
+				if auth(w, request) {
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				switch request.URL.Path {
+				case tc.path:
+					if request.Method != "POST" {
+						t.Errorf("restoration method = %s", request.Method)
+					}
+					if tc.kind == "topology-group" {
+						var body map[string]any
+						if err := json.NewDecoder(request.Body).Decode(&body); err != nil || body["deactivateTopology"] != true {
+							t.Errorf("topology restoration body = %v, %v", body, err)
+						}
+					}
+					calls++
+					fmt.Fprint(w, tc.response)
+				case "/dataservice/device/action/status/task1":
+					calls++
+					fmt.Fprint(w, `{"summary":{"status":"done"},"validation":{"status":"success"},"data":[]}`)
+				default:
+					t.Errorf("unexpected restoration path: %s", request.URL.Path)
+				}
+			})
+			if err := deactivateLiveFixture(c, tc.kind, "fixture"); err != nil || calls != 2 {
+				t.Errorf("restoration calls = %d, error = %v", calls, err)
+			}
+		})
 	}
 }
