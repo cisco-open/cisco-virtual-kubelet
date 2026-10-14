@@ -1,11 +1,32 @@
 sdwan:
+  policy_objects:
+    zones:
+      - name: CVK-CLASSIC-UNTRUSTED
+        vpn_ids: [10]
   security_policies:
     feature_policies:
       - name: CVK-CLASSIC-SECURITY
         description: Managed by CVK
         use_case: custom
+        firewall_policies: [CVK-CLASSIC-FIREWALL]
         intrusion_prevention_policy: CVK-CLASSIC-IPS
     definitions:
+      zone_based_firewall:
+        - name: CVK-CLASSIC-FIREWALL
+          description: Managed by CVK
+          mode: security
+          default_action_type: drop
+          zone_pairs:
+            - source_zone: self_zone
+              destination_zone: CVK-CLASSIC-UNTRUSTED
+          rules:
+            - id: 1
+              name: CVK-FIREWALL-RULE
+              base_action: pass
+              match_criterias:
+                source_ip_prefix: 192.0.2.0/24
+              actions:
+                log: true
       intrusion_prevention:
         - name: CVK-CLASSIC-IPS
           description: Managed by CVK

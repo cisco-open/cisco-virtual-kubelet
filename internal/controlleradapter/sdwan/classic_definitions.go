@@ -372,8 +372,8 @@ func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 	if description, _ := o["description"].(string); description != r.Body["description"] {
 		return false, nil
 	}
-	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" || r.Type == "vpn_membership_policy_definition" || r.Type == "mesh_topology_policy_definition" || r.Type == "hub_and_spoke_topology_policy_definition" || r.Type == "cflowd_policy_definition" || r.Type == "intrusion_prevention_policy_definition" {
-		if r.Type == "intrusion_prevention_policy_definition" && o["mode"] != r.Body["mode"] {
+	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" || r.Type == "vpn_membership_policy_definition" || r.Type == "mesh_topology_policy_definition" || r.Type == "hub_and_spoke_topology_policy_definition" || r.Type == "cflowd_policy_definition" || r.Type == "intrusion_prevention_policy_definition" || r.Type == "zone_based_firewall_policy_definition" {
+		if (r.Type == "intrusion_prevention_policy_definition" || r.Type == "zone_based_firewall_policy_definition") && o["mode"] != r.Body["mode"] {
 			return false, nil
 		}
 		actual, ok := o["definition"].(map[string]any)

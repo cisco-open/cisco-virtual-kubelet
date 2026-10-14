@@ -52,6 +52,7 @@ var classicDefinitionTypes = map[string]classicDefinitionSpec{
 	"centralized_policies/definitions/control_policy/vpn_membership":         {"vpnmembershipgroup/", "vpnMembershipGroup"},
 	"centralized_policies/definitions/data_policy/cflowd":                    {"cflowd/", "cflowd"},
 	"security_policies/definitions/intrusion_prevention":                     {"intrusionprevention/", "intrusionPrevention"},
+	"security_policies/definitions/zone_based_firewall":                      {"zonebasedfw/", "zoneBasedFW"},
 }
 
 func compileLocalizedFeaturePolicies(items []LocalizedFeaturePolicy) ([]Resource, error) {

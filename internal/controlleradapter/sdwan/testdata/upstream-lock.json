@@ -2004,8 +2004,11 @@
       "type": "sdwan_zone_based_firewall_policy_definition",
       "name": "zone_based_firewall_policy_definition",
       "source": "sdwan_security_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-security-ips"
+      ]
     },
     {
       "type": "sdwan_security_policy",
