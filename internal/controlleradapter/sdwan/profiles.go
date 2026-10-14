@@ -11,6 +11,11 @@ import (
 )
 
 type FeatureProfile struct {
+	CellularControllers   []map[string]any             `json:"cellular_controllers,omitempty"`
+	CellularProfiles      []map[string]any             `json:"cellular_profiles,omitempty"`
+	ObjectTrackers        []map[string]any             `json:"object_trackers,omitempty"`
+	IPv4Trackers          []map[string]any             `json:"ipv4_trackers,omitempty"`
+	DHCPServers           []map[string]any             `json:"dhcp_servers,omitempty"`
 	AAA                   map[string]any               `json:"aaa,omitempty"`
 	SNMP                  map[string]any               `json:"snmp,omitempty"`
 	ThousandEyes          map[string]any               `json:"thousandeyes,omitempty"`

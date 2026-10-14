@@ -176,3 +176,33 @@ diagnostic instrumentation was removed after resolving the mismatch.
 
 Full Go regression and focused race suites passed. Classic metadata regenerated
 byte-for-byte, and final read-only checks confirmed all new fixture names absent.
+
+## Service DHCP and trackers
+
+The six-object service fixture covers a service profile, DHCP server, endpoint
+tracker, and interface/route/SIG object trackers. Expanded native lifecycle passed
+in 18.82s; upstream comparison passed in 4.85s. Live Kubernetes reconciliation,
+idempotence and receipt-bound cleanup passed in 39.73s after correcting the test
+harness's managed-section selection. The failed harness run made no mutations.
+
+Generated API-data schemas enforce required properties, alternatives, conditions,
+and unique array members before deployment. Tests reject invalid DHCP option
+combinations, incomplete static leases, and missing type-dependent tracker fields.
+NaC object-tracker types retain their lowercase public spelling and map explicitly
+to the provider API's Interface/Route/SIG values.
+
+## Transport cellular features
+
+The four-object fixture covers a transport profile, cellular controller, and two
+cellular profiles (authentication off/on). Native lifecycle passed in 12.71s,
+upstream comparison in 3.57s, and live Kubernetes reconciliation with cleanup in
+25.57s. Credentials are variables and all profiles remain unattached.
+
+The metadata preserves the provider's non-eSIM discriminator, authentication
+branches, and slice-differentiator dependency. Full API-data schemas reject invalid
+profile-ID/no-overwrite/slicing combinations. Slicing follows the provider's
+20.18.1-or-newer behavior; runtime Manager qualification remains restricted to the
+existing qualified version range.
+
+Full Go regression and focused race suites passed. Parcel metadata regenerated
+byte-for-byte from the pinned upstream revisions.

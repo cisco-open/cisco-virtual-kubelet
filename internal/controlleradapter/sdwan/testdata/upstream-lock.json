@@ -647,8 +647,10 @@
       "type": "sdwan_service_dhcp_server_feature",
       "name": "service_dhcp_server_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "service-features.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_service_dual_router_ha_feature",
@@ -801,8 +803,10 @@
       "type": "sdwan_service_tracker_feature",
       "name": "service_tracker_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "service-features.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_service_object_tracker_group_feature",
@@ -815,8 +819,10 @@
       "type": "sdwan_service_object_tracker_feature",
       "name": "service_object_tracker_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "service-features.yaml",
+      "limits": "Unattached fixture attributes qualified; no device activation"
     },
     {
       "type": "sdwan_service_routing_ospf_feature",
@@ -1020,15 +1026,19 @@
       "type": "sdwan_transport_cellular_controller_feature",
       "name": "transport_cellular_controller_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "transport-cellular.yaml",
+      "limits": "Unattached fixture attributes on Manager 20.18.2.2; slicing requires 20.18.1 or newer"
     },
     {
       "type": "sdwan_transport_cellular_profile_feature",
       "name": "transport_cellular_profile_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "transport-cellular.yaml",
+      "limits": "Unattached fixture attributes on Manager 20.18.2.2; slicing requires 20.18.1 or newer"
     },
     {
       "type": "sdwan_transport_gps_feature",

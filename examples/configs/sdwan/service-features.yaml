@@ -1,0 +1,45 @@
+sdwan:
+  feature_profiles:
+    service_profiles:
+      - name: CVK-SERVICE-FEATURES
+        description: CVK unattached service feature fixtures
+        ipv4_trackers:
+          - name: CVK-SERVICE-TRACKER
+            description: CVK endpoint tracker
+            tracker_name: cvkprobe
+            endpoint_ip: 192.0.2.100
+            interval: 60
+            multiplier: 3
+            threshold: 300
+        dhcp_servers:
+          - name: CVK-SERVICE-DHCP
+            description: CVK service DHCP server
+            pool_network_address: 192.0.2.0
+            pool_subnet_mask: 255.255.255.0
+            default_gateway: 192.0.2.1
+            dns_servers: [192.0.2.53]
+            lease_time: 86400
+            exclude_addresses: [192.0.2.1]
+            static_leases:
+              - ip_address: 192.0.2.10
+                mac_address: 02:00:00:00:00:10
+            options:
+              - code: 66
+                ascii: fixture-tftp
+        object_trackers:
+          - name: CVK-SERVICE-IFTRACKER
+            description: CVK interface object tracker
+            type: interface
+            id: 10
+            interface_name: GigabitEthernet1
+          - name: CVK-SERVICE-ROUTETRACKER
+            description: CVK route object tracker
+            type: route
+            id: 11
+            route_ip: 192.0.2.0
+            route_mask: 255.255.255.0
+            vpn_id: 10
+          - name: CVK-SERVICE-SIGTRACKER
+            description: CVK SIG object tracker
+            type: sig
+            id: 12

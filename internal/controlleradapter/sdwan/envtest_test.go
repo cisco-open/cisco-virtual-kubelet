@@ -55,24 +55,24 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		if fixture == "" {
 			fixture = "banner.yaml"
 		}
-		if fixture != "banner.yaml" && fixture != "system-profile.yaml" && fixture != "policy-objects.yaml" && fixture != "deployment.yaml" && fixture != "system-features.yaml" && fixture != "peripheral-features.yaml" && fixture != "thousandeyes-feature.yaml" && fixture != "snmp-feature.yaml" && fixture != "aaa-feature.yaml" && fixture != "classic-templates.yaml" && fixture != "classic-cellular.yaml" && fixture != "classic-bfd.yaml" && fixture != "classic-igmp.yaml" && fixture != "classic-ntp.yaml" && fixture != "classic-omp.yaml" && fixture != "classic-pim.yaml" && fixture != "classic-applications.yaml" && fixture != "classic-dhcp.yaml" {
+
+		sections := map[string][]string{
+			"banner.yaml":         {"edge_feature_templates"},
+			"system-profile.yaml": {"feature_profiles", "configuration_groups"},
+			"policy-objects.yaml": {"policy_objects"},
+			"deployment.yaml":     {"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"},
+		}
+		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular"} {
+			sections[name+".yaml"] = []string{"feature_profiles"}
+		}
+		for _, name := range []string{"templates", "cellular", "bfd", "igmp", "ntp", "omp", "pim", "applications", "dhcp"} {
+			sections["classic-"+name+".yaml"] = []string{"edge_feature_templates"}
+		}
+		managed, ok := sections[fixture]
+		if !ok {
 			t.Fatal("unsupported fixture")
 		}
-		if fixture == "classic-templates.yaml" || fixture == "classic-cellular.yaml" || fixture == "classic-bfd.yaml" || fixture == "classic-igmp.yaml" || fixture == "classic-ntp.yaml" || fixture == "classic-omp.yaml" || fixture == "classic-pim.yaml" || fixture == "classic-applications.yaml" || fixture == "classic-dhcp.yaml" {
-			cfg.Spec.ManagedSections = []string{"edge_feature_templates"}
-		}
-		if fixture == "system-features.yaml" || fixture == "peripheral-features.yaml" || fixture == "thousandeyes-feature.yaml" || fixture == "snmp-feature.yaml" || fixture == "aaa-feature.yaml" {
-			cfg.Spec.ManagedSections = []string{"feature_profiles"}
-		}
-		if fixture == "deployment.yaml" {
-			cfg.Spec.ManagedSections = []string{"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"}
-		}
-		if fixture == "policy-objects.yaml" {
-			cfg.Spec.ManagedSections = []string{"policy_objects"}
-		}
-		if fixture == "system-profile.yaml" {
-			cfg.Spec.ManagedSections = []string{"feature_profiles", "configuration_groups"}
-		}
+		cfg.Spec.ManagedSections = managed
 		b, e := os.ReadFile("../../../examples/configs/sdwan/" + fixture)
 		if e != nil {
 			t.Fatal(e)

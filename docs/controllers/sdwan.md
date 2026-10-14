@@ -5,7 +5,7 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 73 resource declarations (67 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 78 resource declarations (72 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -21,7 +21,6 @@ parity**. The pinned upstream module has 226 resource declarations. 73 resource 
 | `examples/configs/sdwan/aaa-feature.yaml` | AAA users, RADIUS/TACACS and accounting/authorization rules | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-templates.yaml` | Classic CLI, global settings and multicast templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-cellular.yaml` | Classic cellular controller and cellular profile templates | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-
 | `examples/configs/sdwan/classic-bfd.yaml` | BFD color rows and variable intervals | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-igmp.yaml` | IGMP interfaces and nested join groups | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-ntp.yaml` | NTP authentication-key variables, trusted keys and servers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
@@ -29,6 +28,8 @@ parity**. The pinned upstream module has 226 resource declarations. 73 resource 
 | `examples/configs/sdwan/classic-pim.yaml` | PIM interfaces and rendezvous-point addresses | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-applications.yaml` | Classic ThousandEyes and security application hosting | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-dhcp.yaml` | DHCP address ranges, static leases and option rows | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/service-features.yaml` | Service DHCP, endpoint tracker and interface/route/SIG object trackers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/transport-cellular.yaml` | Transport cellular controller and profiles with/without authentication | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -63,6 +64,13 @@ The public model remains the upstream `sdwan` document. The format is
 - `feature_profiles.transport_profiles.gps_features` and `other_profiles.ucse` /
   `other_profiles.thousandeyes`, including the NaC GPS enable default and the
   ThousandEyes virtual-application wrapper. These fixtures are unattached.
+- `feature_profiles.service_profiles.dhcp_servers`, `ipv4_trackers` and
+  `object_trackers`, with native name-based parcel management and full generated
+  API-data schema checks for these resources.
+- `feature_profiles.transport_profiles.cellular_controllers` and
+  `cellular_profiles`, including authentication switches, credential variables and
+  network slicing on the qualified 20.18 Manager. Inactive authentication fields
+  and invalid slicing combinations are rejected before mutation.
 - `configuration_groups`: name/description and references to declared system,
   transport, service, CLI or other profiles. Device associations are not enabled.
 - Name/description mappings for the other eight profile collections, plus the

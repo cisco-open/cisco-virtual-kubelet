@@ -13,13 +13,15 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--terraform", default="terraform")
 parser.add_argument("--execute", action="store_true")
-parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular", "classic-bfd", "classic-igmp", "classic-ntp", "classic-omp", "classic-pim", "classic-applications", "classic-dhcp"], default="core")
+parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular", "classic-bfd", "classic-igmp", "classic-ntp", "classic-omp", "classic-pim", "classic-applications", "classic-dhcp", "service-features", "transport-cellular"], default="core")
 args = parser.parse_args()
 if args.fixture_set == "policy-profile" and args.execute:
     raise SystemExit("Policy-profile execution needs a qualified empty-controller or read-only-parent workflow; plan-only is available")
 root = Path(__file__).resolve().parents[2]
 oracle = root / "examples/configs/sdwan/oracle"
 sets = {
+ "transport-cellular": {"files": ["transport-cellular"], "count": 4, "absent": "TransportCellular", "oracle": "TransportCellular"},
+ "service-features": {"files": ["service-features"], "count": 6, "absent": "Service", "oracle": "Service"},
  "classic-dhcp": {"files": ["classic-dhcp"], "count": 1, "absent": "DHCP", "oracle": "DHCP"},
  "classic-applications": {"files": ["classic-applications"], "count": 2, "absent": "Applications", "oracle": "Applications"},
  "classic-pim": {"files": ["classic-pim"], "count": 1, "absent": "PIM", "oracle": "PIM"},
@@ -46,6 +48,11 @@ for key in ("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"):
         raise SystemExit(f"{key} is required")
 env.update(CVK_SDWAN_LIVE="1", CVK_SDWAN_ORACLE="1")
 allowed = {
+    "sdwan_transport_cellular_controller_feature",
+    "sdwan_transport_cellular_profile_feature",
+    "sdwan_service_object_tracker_feature",
+    "sdwan_service_tracker_feature",
+    "sdwan_service_dhcp_server_feature",
     "sdwan_cisco_dhcp_server_feature_template",
     "sdwan_cisco_thousandeyes_feature_template",
     "sdwan_security_app_hosting_feature_template",

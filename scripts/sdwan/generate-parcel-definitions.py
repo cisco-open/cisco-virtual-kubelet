@@ -40,14 +40,24 @@ def put(obj, path, value):
     obj[parts[-1]] = value
 
 def validate_schema(schema):
-    known = {"const", "type", "enum", "minimum", "maximum", "multipleOf", "minLength", "maxLength", "pattern", "minItems", "maxItems", "items", "anyOf", "oneOf", "uniqueItems", "default", "description", "additionalProperties", "x-attributeMetadata", "format"}
+    known = {"const", "type", "enum", "minimum", "maximum", "multipleOf", "minLength", "maxLength", "pattern", "minItems", "maxItems", "items", "anyOf", "oneOf", "uniqueItems", "default", "description", "additionalProperties", "x-attributeMetadata", "format", "properties", "required", "allOf", "if", "then", "else", "dependencies", "not"}
     if set(schema) - known:
         raise SystemExit(f"Unsupported validation keywords: {set(schema) - known}")
     if schema.get("format") not in (None, "ipv4", "ipv6", "hostname"):
         raise SystemExit("Unsupported schema format")
     if "items" in schema:
         validate_schema(schema["items"])
-    for item in schema.get("anyOf", []) + schema.get("oneOf", []):
+    for dependency in schema.get("dependencies", {}).values():
+        if isinstance(dependency, dict):
+            validate_schema(dependency)
+        elif not isinstance(dependency, list) or not all(isinstance(x, str) for x in dependency):
+            raise SystemExit("Unsupported schema dependency")
+    for child in schema.get("properties", {}).values():
+        validate_schema(child)
+    for key in ("if", "then", "else", "not"):
+        if key in schema:
+            validate_schema(schema[key])
+    for item in schema.get("anyOf", []) + schema.get("oneOf", []) + schema.get("allOf", []):
         validate_schema(item)
 
 def property_schema(node, name):
@@ -55,6 +65,8 @@ def property_schema(node, name):
         return node["properties"][name]
     candidates = [branch["properties"][name] for branch in node.get("oneOf", [])
                   if name in branch.get("properties", {})]
+    if candidates and all(x == candidates[0] for x in candidates):
+        return candidates[0]
     if len(candidates) > 1 and all(x.get("properties", {}).get("optionType", {}).get("enum") == ["global"] for x in candidates):
         return {"oneOf": candidates}
     if len(candidates) != 1:
@@ -71,6 +83,11 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         content = block(body, match.end() - 1)
         for path, literal in re.findall(setter + r'"([^"]+)", ([^\n]+)\)', content):
             put(baseline, path, json.loads(literal))
+    for match in re.finditer(r'^\tif true \{', body, re.M):
+        content = block(body, match.end() - 1)
+        if 'for ' not in content and receiver + '.' not in content:
+            for path, literal in re.findall(setter + r'"([^"]+)", ([^\n]+)\)', content):
+                put(baseline, path, json.loads(literal))
     assignments = re.findall('^' + ' ' * indent + r'(\w+)\s*=\s*(.*)$', source, re.M)
     for tf, expr in assignments:
         if indent == 2 and tf in {"for_each", "name", "description", "feature_profile_id"}:
@@ -175,6 +192,8 @@ reviewed = [("system", f, f, f) for f in ["global", "omp", "basic", "ntp", "logg
 reviewed += [("transport", "gps", "gps", "transport_gps"),
              ("other", "trustsec", "trustsec", "other_trustsec"), ("other", "ucse", "ucse", "other_ucse"),
              ("other", "thousandeyes", "thousandeyes", "other_thousandeyes")]
+reviewed += [("service", "tracker", "tracker", "service_tracker"), ("service", "dhcp_server", "dhcp_server", "service_dhcp_server"), ("service", "object_tracker", "tracker", "service_object_tracker")]
+reviewed += [("transport", "cellular_controller", "controller", "transport_cellular_controller"), ("transport", "cellular_profile", "cellular", "transport_cellular_profile")]
 policy_features = ["as_path_list", "class_map", "color_list", "extended_community_list",
                    "mirror", "policer", "security_data_ipv4_prefix_list", "security_fqdn_list",
                    "security_local_domain_list", "security_port_list", "security_protocol_list",
@@ -185,6 +204,16 @@ for family, feature, alias, key in reviewed:
     resource = "sdwan_" + family + "_" + feature + ("" if family == "policy_object" else "_feature")
     start = hcl.index("{", hcl.index('resource "' + resource + '"'))
     source = block(hcl, start)
+    if key == "transport_cellular_profile":
+        toggle_line = r'^  requires_authentication\s*= try\(each.value.cellular.authentication_enable, null\)\n'
+        source, count = re.subn(toggle_line, '', source, flags=re.M)
+        if count != 1:
+            raise SystemExit("Cellular authentication toggle changed")
+    if key == "service_object_tracker":
+        expr = 'each.value.tracker.type == "sig" ? "SIG" : title(each.value.tracker.type)'
+        if source.count(expr) != 1:
+            raise SystemExit("Object tracker type expression changed")
+        source = source.replace(expr, "each.value.tracker.type")
     if key == "snmp":
         # Upstream typo is unreachable for a string-valued group.view. Do not
         # expose a supposedly working variable field that the module cannot use.
@@ -196,6 +225,21 @@ for family, feature, alias, key in reviewed:
     body = model[model.index("toBody(ctx"):model.index("return body")]
     schema = json.loads((args.provider / "gen/models/profile_parcels" / (family + "_" + feature + ".json")).read_text())["request"]["properties"]["data"]
     generated = definition(source, "each.value" + ("." + alias if alias else ""), 2, model, body, schema)
+    if key == "service_object_tracker":
+        generated["fields"]["type"].update(input_schema={"type":"string", "enum":["interface", "route", "sig"]}, encode="enum-map", values={"interface":"Interface", "route":"Route", "sig":"SIG"})
+    if key == "transport_cellular_profile":
+        guard = 'if true && data.RequiresAuthentication.ValueBool() == false {'
+        if body.count(guard) != 1 or body.count('if true && data.RequiresAuthentication.ValueBool() == true {') != 6:
+            raise SystemExit("Cellular authentication guards changed")
+        content = block(body, body.index(guard) + len(guard) - 1)
+        off = {}
+        for path, literal in re.findall(r'sjson.Set\(body, path\+"([^"]+)", ([^\n]+)\)', content):
+            put(off, path, json.loads(literal))
+        generated["fields"]["slice_differentiator"]["requires"] = "slice_type"
+        generated["toggles"] = {"authentication_enable": {"off_defaults": off, "fields": ["authentication_type", "profile_username", "profile_password"]}}
+    if family == "service" or key.startswith("transport_cellular"):
+        validate_schema(schema)
+        generated["output_schema"] = schema
     if key == "snmp":
         generated["unavailable_inputs"] = {"groups[].view_variable": "Pinned module reads group.view.view_variable although group.view is a string"}
     if family == "policy_object":

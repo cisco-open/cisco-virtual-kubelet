@@ -162,3 +162,67 @@ func TestAAAFixture(t *testing.T) {
 func TestLiveAAANamesAbsent(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, "aaa-feature")) }
 func TestLiveAAALifecycle(t *testing.T)   { liveParcelLifecycle(t, parcelFixtures(t, "aaa-feature")) }
 func TestLiveAAAOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t, "aaa-feature")) }
+
+func TestServiceFeatureFixtures(t *testing.T) {
+	resources := parcelFixtures(t, "service-features")
+	if len(resources) != 6 {
+		t.Fatal("expected service profile and five parcels")
+	}
+}
+func TestLiveServiceNamesAbsent(t *testing.T) {
+	liveParcelNamesAbsent(t, parcelFixtures(t, "service-features"))
+}
+func TestLiveServiceLifecycle(t *testing.T) {
+	liveParcelLifecycle(t, parcelFixtures(t, "service-features"))
+}
+func TestLiveServiceOracle(t *testing.T) { liveParcelOracle(t, parcelFixtures(t, "service-features")) }
+
+func TestServiceSchemaCombinations(t *testing.T) {
+	for _, input := range []map[string]any{
+		{"type": "interface", "id": float64(10)},
+		{"type": "route", "id": float64(11), "route_mask": "255.255.255.0", "vpn_id": float64(10)},
+		{"type": "invalid", "id": float64(12)},
+	} {
+		if _, _, err := scalarParcelData("service_object_tracker", input); err == nil {
+			t.Fatal("invalid object tracker accepted")
+		}
+	}
+	for _, row := range []map[string]any{
+		{"code": float64(66), "ascii": "a", "hex": "ab"},
+		{"ascii": "a"},
+		{"code": float64(66)},
+	} {
+		if _, _, err := scalarParcelData("service_dhcp_server", map[string]any{"options": []any{row}}); err == nil {
+			t.Fatal("invalid DHCP option combination accepted")
+		}
+	}
+	if _, _, err := scalarParcelData("service_dhcp_server", map[string]any{"static_leases": []any{map[string]any{"ip_address": "192.0.2.10"}}}); err == nil {
+		t.Fatal("incomplete static lease accepted")
+	}
+}
+
+func TestTransportCellularFixtures(t *testing.T) {
+	if len(parcelFixtures(t, "transport-cellular")) != 4 {
+		t.Fatal("expected four cellular fixture objects")
+	}
+	for _, input := range []map[string]any{
+		{"profile_id": float64(2), "authentication_enable": "true"},
+		{"profile_id": float64(2), "authentication_enable": false, "profile_username": "discarded"},
+		{"profile_id": float64(2), "authentication_enable": true},
+		{"profile_id": float64(2), "slice_differentiator": float64(10)},
+		{"profile_id": float64(2), "no_overwrite": true},
+	} {
+		if _, _, err := scalarParcelData("transport_cellular_profile", input); err == nil {
+			t.Fatal("invalid cellular combination accepted")
+		}
+	}
+}
+func TestLiveTransportCellularNamesAbsent(t *testing.T) {
+	liveParcelNamesAbsent(t, parcelFixtures(t, "transport-cellular"))
+}
+func TestLiveTransportCellularLifecycle(t *testing.T) {
+	liveParcelLifecycle(t, parcelFixtures(t, "transport-cellular"))
+}
+func TestLiveTransportCellularOracle(t *testing.T) {
+	liveParcelOracle(t, parcelFixtures(t, "transport-cellular"))
+}

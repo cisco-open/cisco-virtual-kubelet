@@ -22,6 +22,8 @@ import (
 var scalarDefinitions []byte
 
 type scalarField struct {
+	Requires             string
+	Values               map[string]string
 	VariableEncoding     string         `json:"variable_encoding"`
 	InputSchema          map[string]any `json:"input_schema"`
 	Encode               string
@@ -34,7 +36,13 @@ type scalarList struct {
 	Path       string
 	Definition scalarDefinition
 }
+type scalarToggle struct {
+	OffDefaults map[string]any `json:"off_defaults"`
+	Fields      []string
+}
 type scalarDefinition struct {
+	Toggles           map[string]scalarToggle
+	OutputSchema      map[string]any    `json:"output_schema"`
 	ComputedDefaults  map[string]string `json:"computed_defaults"`
 	Collection, Path  string
 	IgnoreDescription bool `json:"ignore_description"`
@@ -71,6 +79,13 @@ func scalarParcelData(kind string, input map[string]any) (ParcelMetadata, map[st
 		metadata.Description = description
 	}
 	body, e := applyScalarDefinition(definition, input, true)
+	if e == nil && definition.OutputSchema != nil {
+		encoded, err := json.Marshal(body)
+		var normalized any
+		if err != nil || json.Unmarshal(encoded, &normalized) != nil || !validScalarValue(normalized, definition.OutputSchema) {
+			return metadata, nil, errors.New("parcel intent violates required fields or schema combinations")
+		}
+	}
 	return metadata, body, e
 }
 func applyScalarDefinition(definition scalarDefinition, input map[string]any, metadata bool) (map[string]any, error) {
@@ -101,6 +116,24 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 		allowed["name"] = true
 		allowed["description"] = true
 	}
+	disabled := map[string]bool{}
+	for public, toggle := range definition.Toggles {
+		allowed[public] = true
+		enabled := false
+		if v := input[public]; v != nil {
+			var ok bool
+			enabled, ok = v.(bool)
+			if !ok {
+				return nil, fmt.Errorf("%s must be Boolean", public)
+			}
+		}
+		if !enabled {
+			mergeScalarDefaults(definition.Defaults, toggle.OffDefaults)
+			for _, field := range toggle.Fields {
+				disabled[field] = true
+			}
+		}
+	}
 	for public, field := range definition.Fields {
 		allowed[public] = true
 		var variable any
@@ -109,6 +142,16 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 			variable = input[field.Variable]
 		}
 		value := input[public]
+		if field.Requires != "" && input[field.Requires] == nil {
+			deleteScalarPath(definition.Defaults, field.Path)
+			disabled[public] = true
+		}
+		if disabled[public] {
+			if value != nil || variable != nil {
+				return nil, fmt.Errorf("%s requires its feature to be enabled", public)
+			}
+			continue
+		}
 		if variable != nil {
 			name, ok := variable.(string)
 			if field.VariableEncoding == "verbatim" {
@@ -128,6 +171,8 @@ func applyScalarDefinition(definition scalarDefinition, input map[string]any, me
 				}
 				if field.Encode == "decimal-string" {
 					value = strconv.FormatFloat(value.(float64), 'f', 0, 64)
+				} else if field.Encode == "enum-map" {
+					value = field.Values[value.(string)]
 				} else {
 					return nil, errors.New("unsupported scalar encoding")
 				}
@@ -257,6 +302,25 @@ func setScalarPath(root map[string]any, path string, value any) {
 // The generated value schemas use these scalar/array constraints. Unsupported
 // schema keywords that affect validation are rejected by the generator.
 func validScalarValue(value any, schema map[string]any) bool {
+	if constraint, ok := schema["not"].(map[string]any); ok && validScalarValue(value, constraint) {
+		return false
+	}
+	if branches, ok := schema["allOf"].([]any); ok {
+		for _, branch := range branches {
+			if !validScalarValue(value, branch.(map[string]any)) {
+				return false
+			}
+		}
+	}
+	if condition, ok := schema["if"].(map[string]any); ok {
+		branch := "else"
+		if validScalarValue(value, condition) {
+			branch = "then"
+		}
+		if constraint, ok := schema[branch].(map[string]any); ok && !validScalarValue(value, constraint) {
+			return false
+		}
+	}
 	if constant, exists := schema["const"]; exists && !reflect.DeepEqual(value, constant) {
 		return false
 	}
@@ -293,11 +357,56 @@ func validScalarValue(value any, schema map[string]any) bool {
 			kind = "boolean"
 		case []any:
 			kind = "array"
+		case map[string]any:
+			kind = "object"
 		default:
 			return false
 		}
 	}
 	switch kind {
+	case "object":
+		object, ok := value.(map[string]any)
+		if !ok {
+			return false
+		}
+		if required, ok := schema["required"].([]any); ok {
+			for _, key := range required {
+				if _, exists := object[key.(string)]; !exists {
+					return false
+				}
+			}
+		}
+		if dependencies, ok := schema["dependencies"].(map[string]any); ok {
+			for key, dependency := range dependencies {
+				if _, exists := object[key]; !exists {
+					continue
+				}
+				switch d := dependency.(type) {
+				case map[string]any:
+					if !validScalarValue(value, d) {
+						return false
+					}
+				case []any:
+					for _, key := range d {
+						if _, exists := object[key.(string)]; !exists {
+							return false
+						}
+					}
+				default:
+					return false
+				}
+			}
+		}
+		properties, _ := schema["properties"].(map[string]any)
+		for key, field := range object {
+			if constraint, exists := properties[key]; exists {
+				if !validScalarValue(field, constraint.(map[string]any)) {
+					return false
+				}
+			} else if schema["additionalProperties"] == false {
+				return false
+			}
+		}
 	case "boolean":
 		if _, ok := value.(bool); !ok {
 			return false
@@ -388,6 +497,16 @@ func validScalarValue(value any, schema map[string]any) bool {
 		if max, ok := schema["maxItems"].(float64); ok && float64(len(items)) > max {
 			return false
 		}
+		if schema["uniqueItems"] == true {
+			seen := map[string]bool{}
+			for _, item := range items {
+				encoded, err := json.Marshal(item)
+				if err != nil || seen[string(encoded)] {
+					return false
+				}
+				seen[string(encoded)] = true
+			}
+		}
 		if itemSchema, ok := schema["items"].(map[string]any); ok {
 			for _, item := range items {
 				if !validScalarValue(item, itemSchema) {
@@ -425,4 +544,31 @@ func validHostname(value string) bool {
 		}
 	}
 	return true
+}
+
+func mergeScalarDefaults(target, source map[string]any) {
+	for key, value := range source {
+		if object, ok := value.(map[string]any); ok {
+			child, ok := target[key].(map[string]any)
+			if !ok {
+				child = map[string]any{}
+				target[key] = child
+			}
+			mergeScalarDefaults(child, object)
+		} else {
+			target[key] = value
+		}
+	}
+}
+
+func deleteScalarPath(root map[string]any, path string) {
+	parts := strings.Split(path, ".")
+	for _, part := range parts[:len(parts)-1] {
+		next, ok := root[part].(map[string]any)
+		if !ok {
+			return
+		}
+		root = next
+	}
+	delete(root, parts[len(parts)-1])
 }

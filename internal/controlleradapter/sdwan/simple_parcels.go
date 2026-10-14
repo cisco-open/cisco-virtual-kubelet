@@ -65,6 +65,57 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		out = append(out, Resource{Key: key + "/" + field, Name: name, Section: "feature_profiles", Kind: "parcel", Type: collection + "_" + field, Collection: "/dataservice/v1/feature-profile/sdwan/" + collection, ParentName: p.Name, ParcelPath: path, Body: map[string]any{"name": name, "description": meta.Description, "data": data}})
 		return nil
 	}
+	if (p.IPv4Trackers != nil || p.DHCPServers != nil || p.ObjectTrackers != nil) && collection != "service" {
+		return nil, errors.New("service trackers and DHCP servers require service profile")
+	}
+	for _, family := range []struct {
+		public, kind, path string
+		inputs             []map[string]any
+	}{
+		{"ipv4_trackers", "service_tracker", "tracker", p.IPv4Trackers},
+		{"object_trackers", "service_object_tracker", "objecttracker", p.ObjectTrackers},
+		{"dhcp_servers", "service_dhcp_server", "dhcp-server", p.DHCPServers},
+	} {
+		seen := map[string]bool{}
+		for _, input := range family.inputs {
+			meta, data, e := scalarParcelData(family.kind, input)
+			if e != nil {
+				return nil, e
+			}
+			if meta.Name == nil || *meta.Name == "" || seen[*meta.Name] {
+				return nil, errors.New("service parcels require unique names")
+			}
+			seen[*meta.Name] = true
+			if e = add(family.public+"/"+*meta.Name, family.path, meta, data); e != nil {
+				return nil, e
+			}
+		}
+	}
+	if (p.CellularControllers != nil || p.CellularProfiles != nil) && collection != "transport" {
+		return nil, errors.New("cellular features require transport profile")
+	}
+	for _, family := range []struct {
+		public, kind, path string
+		inputs             []map[string]any
+	}{
+		{"cellular_controllers", "transport_cellular_controller", "cellular-controller", p.CellularControllers},
+		{"cellular_profiles", "transport_cellular_profile", "cellular-profile", p.CellularProfiles},
+	} {
+		seen := map[string]bool{}
+		for _, input := range family.inputs {
+			meta, data, e := scalarParcelData(family.kind, input)
+			if e != nil {
+				return nil, e
+			}
+			if meta.Name == nil || *meta.Name == "" || seen[*meta.Name] {
+				return nil, errors.New("cellular features require unique names")
+			}
+			seen[*meta.Name] = true
+			if e = add(family.public+"/"+*meta.Name, family.path, meta, data); e != nil {
+				return nil, e
+			}
+		}
+	}
 	if p.GPS != nil && collection != "transport" {
 		return nil, errors.New("GPS requires transport profile")
 	}
