@@ -65,6 +65,21 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		if r.Kind == "localized-policy" {
+			for _, ref := range r.ClassicDefinitionRefs {
+				found := -1
+				for j, candidate := range resources {
+					if candidate.Kind == "classic-definition" && candidate.Key == "localized_policies/definitions/"+ref.Type+"/"+ref.Name {
+						found = j
+						break
+					}
+				}
+				if found < 0 {
+					return nil, fmt.Errorf("localized policy definition %s/%s is not declared", ref.Type, ref.Name)
+				}
+				dependencies[i] = append(dependencies[i], found)
+			}
+		}
 		if r.Kind == "classic-definition" {
 			for _, name := range r.ProfileRefs {
 				found := -1

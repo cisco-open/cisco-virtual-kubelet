@@ -23,3 +23,10 @@ sdwan:
               priority: low
               dscp: 10
               layer2_cos: 2
+    feature_policies:
+      - name: CVK-CLASSIC-LOCALIZED
+        description: Managed by CVK
+        ipv4_flow_visibility: true
+        definitions:
+          qos_maps: [CVK-CLASSIC-QOS]
+          rewrite_rules: [CVK-CLASSIC-REWRITE]

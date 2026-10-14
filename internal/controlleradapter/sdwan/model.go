@@ -66,6 +66,7 @@ type ParcelAncestor struct {
 }
 type Resource struct {
 	ParcelRefs                         []ParcelReference
+	ClassicDefinitionRefs              []ClassicDefinitionReference
 	ParcelAncestors                    []ParcelAncestor
 	HierarchySites, SiteGroups         []string
 	HubSpoke                           *hubSpokeInput

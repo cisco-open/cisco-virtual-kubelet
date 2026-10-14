@@ -14,7 +14,8 @@ import (
 )
 
 type LocalizedPolicies struct {
-	Definitions LocalizedPolicyDefinitions `json:"definitions"`
+	Definitions     LocalizedPolicyDefinitions `json:"definitions"`
+	FeaturePolicies []LocalizedFeaturePolicy   `json:"feature_policies,omitempty"`
 }
 type LocalizedPolicyDefinitions struct {
 	QoSMaps                  []ClassicQoSMap      `json:"qos_maps,omitempty"`
@@ -244,6 +245,11 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 		body := map[string]any{"type": "vedgeRoute", "name": route.Name, "description": route.Description, "defaultAction": map[string]any{"type": route.DefaultAction}, "sequences": sequences}
 		out = append(out, Resource{Key: "localized_policies/definitions/route_policies/" + route.Name, Name: route.Name, Section: "localized_policies", Kind: "classic-definition", Type: "route_policy_definition", Collection: "/dataservice/template/policy/definition/vedgeroute/", Body: body})
 	}
+	featurePolicies, err := compileLocalizedFeaturePolicies(input.FeaturePolicies)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, featurePolicies...)
 	return out, nil
 }
 func (c *Client) observeClassicDefinition(ctx context.Context, r Resource) (*Observation, error) {

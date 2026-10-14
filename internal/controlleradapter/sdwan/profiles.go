@@ -158,6 +158,9 @@ func profileBannerValue(v, variable *string) map[string]any {
 	return map[string]any{"optionType": "default", "value": ""}
 }
 func equalModern(r Resource, o map[string]any) (bool, error) {
+	if r.Kind == "localized-policy" {
+		return equalLocalizedPolicy(r, o)
+	}
 	if r.Kind == "classic-definition" {
 		return equalClassicDefinition(r, o)
 	}

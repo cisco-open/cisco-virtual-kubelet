@@ -259,6 +259,9 @@ func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) e
 	return c.Request(ctx, "PUT", strings.TrimSuffix(path, "/")+"/"+url.PathEscape(o.ID), r.Body, nil)
 }
 func (c *Client) DeleteResourceFixture(ctx context.Context, r Resource, id string) error {
+	if r.Kind == "localized-policy" {
+		return c.deleteLocalizedPolicy(ctx, r, id)
+	}
 	if r.Kind == "classic-definition" {
 		return c.deleteClassicDefinition(ctx, r, id)
 	}
