@@ -15,6 +15,7 @@ parity**. The pinned upstream module has 226 resource declarations. 181 resource
 | `examples/configs/sdwan/system-profile.yaml` | System feature profile, system banner parcel, unattached configuration group | Dependency order, create, read, cleanup, Kubernetes reconciliation |
 | `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup |
 | `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup |
+| `examples/configs/sdwan/classic-sig.yaml` | Secure internet gateway feature template with an `other` GRE tunnel | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-aaa.yaml` | cEdge AAA feature template with local authentication order | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-ethernet-interface.yaml` | Cisco Ethernet interface feature template with interface name, IPv4 address and shutdown | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-vpn.yaml` | Cisco VPN feature template with VPN ID, name and OMP distance | Native lifecycle, Kubernetes reconciliation |

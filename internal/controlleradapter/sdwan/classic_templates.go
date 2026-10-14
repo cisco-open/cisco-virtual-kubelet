@@ -31,6 +31,7 @@ type classicField struct {
 	Source                 string
 	Fallback               string
 	JoinComma              bool `json:"join_comma"`
+	Upper                  bool
 	Predicate              *classicPredicate
 	Container              bool
 	ArrayValues            map[string]string `json:"array_values"`
@@ -74,7 +75,8 @@ type classicDefinition struct {
 	Type                string
 	Fields              map[string]classicField
 	Required            []string
-	DeviceTypes         []string `json:"device_types"`
+	DeviceTypes         []string       `json:"device_types"`
+	SIGDefaults         map[string]any `json:"sig_defaults"`
 }
 
 func compileClassicTemplates(collection string, templates []map[string]any, override []string) ([]Resource, error) {
@@ -146,7 +148,15 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 			}
 		}
 		sort.Strings(mapped)
-		data, err := classicData(definition, input, true)
+		dataInput := input
+		if collection == "secure_internet_gateway_templates" {
+			var err error
+			dataInput, err = prepareSIGTemplate(input, definition.SIGDefaults)
+			if err != nil {
+				return nil, err
+			}
+		}
+		data, err := classicData(definition, dataInput, true)
 		if err != nil {
 			return nil, err
 		}
@@ -355,6 +365,13 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			value = strings.Join(parts, ",")
 			field.InputSchema = nil
 		}
+		if field.Upper && value != nil {
+			str, ok := value.(string)
+			if !ok {
+				return nil, fmt.Errorf("invalid %s string", public)
+			}
+			value = strings.ToUpper(str)
+		}
 		leaf := map[string]any{"vipObjectType": field.ObjectType}
 		if variable != nil {
 			v, ok := variable.(string)
@@ -385,7 +402,9 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 				return nil, fmt.Errorf("invalid %s model value", public)
 			}
 			if field.Values != nil {
-				value = field.Values[value.(string)]
+				if mapped, exists := field.Values[value.(string)]; exists {
+					value = mapped
+				}
 			}
 			if field.ArrayValues != nil {
 				raw, ok := value.([]any)
@@ -529,6 +548,12 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 	}
 	for _, tree := range definition.ConditionalTrees {
 		selected := map[string]any{}
+		for public := range tree.Definition.Trees {
+			allowed[public] = true
+			if value := classicInput(input, public); value != nil {
+				setScalarPath(selected, public, value)
+			}
+		}
 		for public, field := range tree.Definition.Fields {
 			if field.Literal == nil && !field.Derived {
 				allowed[public] = true

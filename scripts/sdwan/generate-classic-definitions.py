@@ -60,7 +60,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
     struct_match = re.search(r"type " + (re.escape(struct_name) if struct_name else r"\w+") + r" struct \{", model)
     struct_body = block(model, struct_match.end()-1)
     fields = {tf: (name, typ) for name, typ, tf in re.findall(r'(\w+)\s+types\.(\w+)\s+`tfsdk:"([^"]+)"`', struct_body)}
-    inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps, fallbacks, joins = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}, {}, {}
+    inputs, required, trees, optional, conditions, unavailable, literals, ranges, wrapped, boolean_choices, present, value_maps, fallbacks, joins, uppers, translations = {}, [], {}, "", {}, {}, {}, {}, set(), {}, {}, {}, {}, {}, set(), {}
     predicates = {}
     conditional_trees = []
     for tf, expression in re.findall(r'^' + ' ' * indent + r'(\w+)\s*=\s*(.*)$', source, re.M):
@@ -74,6 +74,16 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         if joined:
             inputs[tf] = joined.group(1)
             joins[tf] = True
+            continue
+        upper = re.fullmatch(r'try\(upper\(' + re.escape(alias) + r'\.([\w.]+)\), null\)', expression)
+        if upper:
+            inputs[tf] = upper.group(1)
+            uppers.add(tf)
+            continue
+        translated = re.fullmatch(r'try\(' + re.escape(alias) + r'\.([\w.]+) == "([^"]+)" \? "([^"]+)" : ' + re.escape(alias) + r'\.\1, null\)', expression)
+        if translated:
+            inputs[tf] = translated.group(1)
+            translations[tf] = {translated.group(2):translated.group(3)}
             continue
         if tf == "exclude_addresses" and alias == "each.value":
             expected = 'try(each.value.exclude_addresses, each.value.exclude_addresses_ranges, null) == null ? null : concat(try(each.value.exclude_addresses, []), [for r in try(each.value.exclude_addresses_ranges, []) : "${r.from}-${r.to}"])'
@@ -221,7 +231,9 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
         leaf = leaves[path]
         if leaf["objectType"] not in ("object", "node-only", "list"):
             raise SystemExit("Unreviewed classic leaf type")
-        datatype = leaf["dataType"]
+        datatype = dict(leaf["dataType"])
+        if tf in ("zscaler_surrogate_idle_time", "zscaler_surrogate_refresh_time") and datatype.get("max:") == 4294967296:
+            datatype["max"] = datatype.pop("max:")
         if datatype["type"] not in ("string", "boolean", "number", "float", "enum", "ipv4", "ipv6", "ipv4-prefix", "ipv6-prefix", "ipv4Range", "mac", "radioButtonList", "passphrase", "restrictedPassphrase", "ike", "ip", "enumList", "datetimelocal", "interfaceList", "xConnect", "tlocExtension", "numberFixedInterval", "stringList") or set(datatype) - {"type", "default", "min", "max", "minLength", "maxLength", "values", "pattern", "regex", "label", "range", "interval"}:
             raise SystemExit(f"Unreviewed classic value constraints: {tf}: {datatype}")
         value_type = {"String": "string", "Bool": "boolean", "Int64": "integer", "Float64": "number"}.get(typ)
@@ -280,6 +292,8 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             mapping[public].update(derived=True, present=present[tf], derived_value=True)
         if tf in value_maps:
             mapping[public].update(values=value_maps[tf], input_schema={"type":"string", "enum":list(value_maps[tf])})
+        if tf in translations:
+            mapping[public]["values"] = translations[tf]
         if tf in boolean_choices:
             mapping[public].update(boolean_choice=boolean_choices[tf], input_default=defaults["snmp_templates"]["communities"]["authorization_read_only"])
         if tf in wrapped:
@@ -293,10 +307,14 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
             mapping[public]["input_schema"] = {"type":"array", "items":{"type":"string"}}
             if datatype["type"] == "stringList" and datatype.get("max"):
                 mapping[public]["input_schema"]["maxItems"] = datatype["max"]
+        if tf in uppers:
+            mapping[public]["upper"] = True
         if tf in literals:
             value = literals[tf]
             if typ == "String":
                 value = str(value)
+            elif typ == "Bool" and value in ("true", "false"):
+                value = value == "true"
             mapping[public].update(literal=value)
         if tf in conditions:
             mapping[public].update(derived=True, when=conditions[tf][0], derived_value=conditions[tf][1])
@@ -322,7 +340,7 @@ def definition(source, alias, indent, model, body, schema_fields, receiver="data
 hcl = (args.module / "sdwan_feature_templates.tf").read_text()
 defaults = yaml.safe_load((args.module / "defaults/defaults.yaml").read_text())["defaults"]["sdwan"]["edge_feature_templates"]
 output = {"license": "MPL-2.0", "module_commit": lock["module"]["commit"], "provider_commit": lock["provider"]["commit"], "templates": {}}
-for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template", "sdwan_cisco_vpn_interface_feature_template", "sdwan_cedge_aaa_feature_template"]:
+for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feature_template", "sdwan_cellular_controller_feature_template", "sdwan_cellular_cedge_profile_feature_template", "sdwan_cedge_multicast_feature_template", "sdwan_cisco_bfd_feature_template", "sdwan_cedge_igmp_feature_template", "sdwan_cisco_ntp_feature_template", "sdwan_cisco_omp_feature_template", "sdwan_cedge_pim_feature_template", "sdwan_cisco_thousandeyes_feature_template", "sdwan_security_app_hosting_feature_template", "sdwan_cisco_dhcp_server_feature_template", "sdwan_cisco_vpn_interface_ipsec_feature_template", "sdwan_cisco_snmp_feature_template", "sdwan_cisco_logging_feature_template", "sdwan_cisco_vpn_interface_gre_feature_template", "sdwan_cisco_sig_credentials_feature_template", "sdwan_cisco_security_feature_template", "sdwan_cisco_ospf_feature_template", "sdwan_vpn_interface_svi_feature_template", "sdwan_vpn_interface_cellular_feature_template", "sdwan_switchport_feature_template", "sdwan_cisco_system_feature_template", "sdwan_cisco_vpn_feature_template", "sdwan_cisco_vpn_interface_feature_template", "sdwan_cedge_aaa_feature_template", "sdwan_cisco_secure_internet_gateway_feature_template"]:
     source = block(hcl, hcl.index("{", hcl.index('resource "' + resource + '"')))
     ospf_policy_source = None
     if resource == "sdwan_cisco_ospf_feature_template":
@@ -443,6 +461,17 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         if source.count(dhcp) != 1:
             raise SystemExit("VPN interface DHCP selector changed")
         source = source.replace(dhcp, 'dhcp = try(each.value.ipv4_address_dhcp, null)')
+    if resource == "sdwan_cisco_secure_internet_gateway_feature_template":
+        # Conditional SIG interface inputs are normalized from the public
+        # provider/tunnel selectors before the shared classic compiler runs.
+        conditional_fields = ("auto_tunnel_mode", "ike_ciphersuite", "ike_ciphersuite_variable", "ike_group", "ike_group_variable", "ike_pre_shared_key", "ike_pre_shared_key_variable", "ike_pre_shared_key_dynamic", "ike_pre_shared_key_local_id", "ike_pre_shared_key_local_id_variable", "ike_pre_shared_key_remote_id", "ike_pre_shared_key_remote_id_variable", "ike_rekey_interval", "ike_rekey_interval_variable", "ike_version", "ipsec_ciphersuite", "ipsec_ciphersuite_variable", "ipsec_perfect_forward_secrecy", "ipsec_perfect_forward_secrecy_variable", "ipsec_rekey_interval", "ipsec_rekey_interval_variable", "ipsec_replay_window", "ipsec_replay_window_variable", "sig_provider", "tunnel_destination", "tunnel_destination_variable", "tunnel_public_ip", "tunnel_public_ip_variable")
+        for field in conditional_fields:
+            pattern = r'(?m)^(    ' + field + r')\s*= ([^\n]+)$'
+            matches = list(re.finditer(pattern, source))
+            if len(matches) != 1:
+                raise SystemExit("SIG conditional field changed: " + field)
+            public = {"tunnel_public_ip":"tunnel_public_source_ip", "tunnel_public_ip_variable":"tunnel_public_source_ip_variable"}.get(field, field)
+            source = re.sub(pattern, lambda match: match.group(1) + ' = try(interface.' + public + ', null)', source)
     public_collection = re.search(r'local.edge_feature_templates\.(\w+)', source).group(1)
     model = (args.provider / "internal/provider" / ("model_" + resource + ".go")).read_text()
     body = model[model.index("toBody(ctx"):model.index("return body")]
@@ -595,6 +624,13 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         generated["unavailable_inputs"]["route_global_imports[].protocol_sub_type"] = "Pinned module derives external subtype"
     if resource == "sdwan_cedge_aaa_feature_template":
         generated["fields"]["authentication_and_authorization_order"]["input_default"] = defaults["aaa_templates"]["authentication_and_authorization_order"]
+    if resource == "sdwan_cisco_secure_internet_gateway_feature_template":
+        generated["sig_defaults"] = defaults["secure_internet_gateway_templates"]["interfaces"]
+        pair_fields = generated["conditional_trees"][0]["definition"]["trees"]["high_availability_interface_pairs"]["definition"]["fields"]
+        for field in ("active_interface", "backup_interface"):
+            if pair_fields[field]["schema"] != {"type":"string", "enum":[""]}:
+                raise SystemExit("SIG dynamic interface dropdown changed")
+            pair_fields[field]["schema"] = {"type":"string", "minLength":1}
     if resource == "sdwan_cisco_logging_feature_template":
         generated["unavailable_inputs"]["tls_profiles[].ciphersuites_variable"] = "Pinned module reads version_ciphersuites_variablevariable instead"
     generated.update(type=template_type, device_types=defaults[public_collection]["device_types"])

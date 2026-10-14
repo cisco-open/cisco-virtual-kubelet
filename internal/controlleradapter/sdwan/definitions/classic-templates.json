@@ -10217,6 +10217,1065 @@
         ]
       }
     },
+    "secure_internet_gateway_templates": {
+      "conditional_trees": [
+        {
+          "definition": {
+            "defaults": {
+              "ha-pairs": {
+                "interface-pair": {
+                  "vipObjectType": "tree",
+                  "vipPrimaryKey": [
+                    "active-interface",
+                    "backup-interface"
+                  ],
+                  "vipType": "ignore",
+                  "vipValue": []
+                }
+              },
+              "zscaler-location-settings": {
+                "surrogate": {
+                  "refresh-time": {
+                    "vipObjectType": "object",
+                    "vipType": "ignore"
+                  }
+                }
+              }
+            },
+            "fields": {
+              "$literal:service_type": {
+                "boolean_string": false,
+                "literal": "sig",
+                "object_type": "object",
+                "omit_null": true,
+                "path": "svc-type",
+                "schema": {
+                  "enum": [
+                    "sig"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "umbrella_primary_data_center": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "umbrella-data-center.data-center-primary",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "umbrella_primary_data_center_variable"
+              },
+              "umbrella_secondary_data_center": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "umbrella-data-center.data-center-secondary",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "umbrella_secondary_data_center_variable"
+              },
+              "zscaler_aup_block_internet_until_accepted": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.aup.block-internet-until-accepted",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_aup_enabled": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.aup.enabled",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_aup_force_ssl_inspection": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.aup.force-ssl-inspection",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_aup_timeout": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.aup.timeout",
+                "schema": {
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "zscaler_authentication_required": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.auth-required",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_caution_enabled": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.caution-enabled",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_firewall_enabled": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.ofw-enabled",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_ips_control_enabled": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.ips-control",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_location_name_variable": {
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.location-name",
+                "schema": {
+                  "type": "string"
+                },
+                "variable": "zscaler_location_name_variable"
+              },
+              "zscaler_primary_data_center": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.datacenters.primary-data-center",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "zscaler_primary_data_center_variable"
+              },
+              "zscaler_secondary_data_center": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.datacenters.secondary-data-center",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "zscaler_secondary_data_center_variable"
+              },
+              "zscaler_surrogate_display_time_unit": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.surrogate.display-time-unit",
+                "schema": {
+                  "enum": [
+                    "MINUTE",
+                    "HOUR",
+                    "DAY"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "upper": true
+              },
+              "zscaler_surrogate_idle_time": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.surrogate.idle-time",
+                "schema": {
+                  "maximum": 4294967296,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "zscaler_surrogate_ip": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.surrogate.ip",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_surrogate_ip_enforce_for_known_browsers": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.surrogate.ip-enforced-for-known-browsers",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "zscaler_surrogate_refresh_time": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "zscaler-location-settings.surrogate.refresh-time",
+                "schema": {
+                  "maximum": 4294967296,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "zscaler_surrogate_refresh_time_unit": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.surrogate.refresh-time-unit",
+                "schema": {
+                  "enum": [
+                    "MINUTE",
+                    "HOUR",
+                    "DAY"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "upper": true
+              },
+              "zscaler_xff_forward": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "zscaler-location-settings.xff-forward-enabled",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "required": [],
+            "trees": {
+              "high_availability_interface_pairs": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {},
+                  "fields": {
+                    "active_interface": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "active-interface",
+                      "schema": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false
+                    },
+                    "active_interface_weight": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "active-interface-weight",
+                      "schema": {
+                        "maximum": 255,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false
+                    },
+                    "backup_interface": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "backup-interface",
+                      "schema": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "set": false,
+                      "values": {
+                        "none": "None"
+                      }
+                    },
+                    "backup_interface_weight": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "backup-interface-weight",
+                      "schema": {
+                        "maximum": 255,
+                        "minimum": 1,
+                        "type": "integer"
+                      },
+                      "set": false
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "active-interface",
+                    "backup-interface",
+                    "active-interface-weight",
+                    "backup-interface-weight"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "ha-pairs.interface-pair",
+                "primary_keys": [
+                  "active-interface",
+                  "backup-interface"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "service",
+          "primary_keys": [
+            "svc-type"
+          ],
+          "triggers": []
+        }
+      ],
+      "defaults": {
+        "interface": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "if-name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "service": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "svc-type"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "tracker": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "tracker-type",
+            "name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "$literal:vpn_id": {
+          "boolean_string": false,
+          "literal": 0,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "vpn-id",
+          "schema": {
+            "maximum": 65527,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "set": false
+        },
+        "tracker_source_ip": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "tracker-src-ip",
+          "schema": {
+            "format": "ipv4-prefix",
+            "type": "string"
+          },
+          "set": false,
+          "variable": "tracker_source_ip_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "sig_defaults": {
+        "ike_ciphersuite": "aes256-cbc-sha1",
+        "ike_group": 14,
+        "ike_rekey_interval": 14400,
+        "ipsec_ciphersuite": "aes256-gcm",
+        "ipsec_perfect_forward_secrecy": "none",
+        "ipsec_rekey_interval": 3600,
+        "ipsec_replay_window": 512
+      },
+      "trees": {
+        "interfaces": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "dead-peer-detection": {
+                "dpd-interval": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                },
+                "dpd-retries": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "description": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "ike": {
+                "authentication-type": {
+                  "pre-shared-key": {
+                    "ike-local-id": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "ike-remote-id": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    },
+                    "pre-shared-secret": {
+                      "vipObjectType": "object",
+                      "vipType": "ignore"
+                    }
+                  }
+                }
+              },
+              "mtu": {
+                "vipObjectType": "object",
+                "vipType": "notIgnore",
+                "vipValue": 1400
+              },
+              "shutdown": {
+                "vipObjectType": "object",
+                "vipType": "notIgnore",
+                "vipValue": "false"
+              },
+              "tcp-mss-adjust": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "track-enable": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "tracker": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "tunnel-public-ip": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "$field:tunnel_source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "tunnel-source-interface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "source": "tunnel_source_interface",
+                "variable": "tunnel_source_interface_variable"
+              },
+              "$literal:application": {
+                "boolean_string": false,
+                "literal": "sig",
+                "object_type": "object",
+                "omit_null": true,
+                "path": "application",
+                "schema": {
+                  "enum": [
+                    "sig"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "$literal:ip_unnumbered": {
+                "boolean_string": true,
+                "literal": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "ip.unnumbered",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "auto_tunnel_mode": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "auto",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "description": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "description",
+                "schema": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "description_variable"
+              },
+              "dpd_interval": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "dead-peer-detection.dpd-interval",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "dpd_interval_variable"
+              },
+              "dpd_retries": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "dead-peer-detection.dpd-retries",
+                "schema": {
+                  "maximum": 255,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "dpd_retries_variable"
+              },
+              "ike_ciphersuite": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ike.ike-ciphersuite",
+                "schema": {
+                  "enum": [
+                    "aes256-cbc-sha1",
+                    "aes256-cbc-sha2",
+                    "aes128-cbc-sha1",
+                    "aes128-cbc-sha2"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ike_ciphersuite_variable"
+              },
+              "ike_group": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ike.ike-group",
+                "schema": {
+                  "enum": [
+                    "2",
+                    "14",
+                    "15",
+                    "16"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ike_group_variable"
+              },
+              "ike_pre_shared_key": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "ike.authentication-type.pre-shared-key.pre-shared-secret",
+                "schema": {
+                  "maxLength": 127,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ike_pre_shared_key_variable"
+              },
+              "ike_pre_shared_key_dynamic": {
+                "boolean_string": true,
+                "object_type": "node-only",
+                "omit_null": true,
+                "path": "ike.authentication-type.pre-shared-key-dynamic",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "ike_pre_shared_key_local_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "ike.authentication-type.pre-shared-key.ike-local-id",
+                "schema": {
+                  "maxLength": 63,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ike_pre_shared_key_local_id_variable"
+              },
+              "ike_pre_shared_key_remote_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "ike.authentication-type.pre-shared-key.ike-remote-id",
+                "schema": {
+                  "maxLength": 63,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ike_pre_shared_key_remote_id_variable"
+              },
+              "ike_rekey_interval": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ike.ike-rekey-interval",
+                "schema": {
+                  "maximum": 1209600,
+                  "minimum": 300,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "ike_rekey_interval_variable"
+              },
+              "ike_version": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ike.ike-version",
+                "schema": {
+                  "maximum": 2,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false
+              },
+              "ipsec_ciphersuite": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ipsec.ipsec-ciphersuite",
+                "schema": {
+                  "enum": [
+                    "aes256-cbc-sha1",
+                    "aes256-cbc-sha384",
+                    "aes256-cbc-sha256",
+                    "aes256-cbc-sha512",
+                    "aes256-gcm",
+                    "null-sha1",
+                    "null-sha384",
+                    "null-sha256",
+                    "null-sha512"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ipsec_ciphersuite_variable"
+              },
+              "ipsec_perfect_forward_secrecy": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ipsec.perfect-forward-secrecy",
+                "schema": {
+                  "enum": [
+                    "group-2",
+                    "group-14",
+                    "group-15",
+                    "group-16",
+                    "none"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ipsec_perfect_forward_secrecy_variable"
+              },
+              "ipsec_rekey_interval": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ipsec.ipsec-rekey-interval",
+                "schema": {
+                  "maximum": 1209600,
+                  "minimum": 300,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "ipsec_rekey_interval_variable"
+              },
+              "ipsec_replay_window": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ipsec.ipsec-replay-window",
+                "schema": {
+                  "maximum": 4096,
+                  "minimum": 64,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "ipsec_replay_window_variable"
+              },
+              "mtu": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "mtu",
+                "schema": {
+                  "maximum": 2000,
+                  "minimum": 576,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "mtu_variable"
+              },
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "if-name",
+                "schema": {
+                  "maxLength": 8,
+                  "maximum": 255,
+                  "minLength": 4,
+                  "minimum": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "name_variable"
+              },
+              "shutdown": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "shutdown",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "sig_provider": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "tunnel-set",
+                "schema": {
+                  "enum": [
+                    "secure-internet-gateway-umbrella",
+                    "secure-internet-gateway-zscaler",
+                    "secure-internet-gateway-other"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "tcp_mss": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tcp-mss-adjust",
+                "schema": {
+                  "maximum": 1460,
+                  "minimum": 500,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "tcp_mss_variable"
+              },
+              "track": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "track-enable",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "tracker": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tracker",
+                "schema": {
+                  "enum": [
+                    ""
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "tracker_variable"
+              },
+              "tunnel_dc_preference": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "tunnel-dc-preference",
+                "schema": {
+                  "enum": [
+                    "primary-dc",
+                    "secondary-dc"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "tunnel_destination": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "tunnel-destination",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "tunnel_destination_variable"
+              },
+              "tunnel_public_source_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tunnel-public-ip",
+                "schema": {
+                  "format": "ipv4",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "tunnel_public_source_ip_variable"
+              },
+              "tunnel_source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "tunnel-route-via",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "tunnel_source_interface_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "if-name",
+              "auto",
+              "shutdown",
+              "description",
+              "ip",
+              "ip",
+              "tunnel-source",
+              "tunnel-source-interface",
+              "tunnel-route-via",
+              "tunnel-destination",
+              "application",
+              "tunnel-set",
+              "tunnel-dc-preference",
+              "tcp-mss-adjust",
+              "mtu",
+              "dead-peer-detection",
+              "dead-peer-detection",
+              "ike",
+              "ike",
+              "ike",
+              "ike",
+              "ike",
+              "ike",
+              "ike",
+              "ike",
+              "ipsec",
+              "ipsec",
+              "ipsec",
+              "ipsec",
+              "tracker",
+              "track-enable",
+              "tunnel-public-ip"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "interface",
+          "primary_keys": [
+            "if-name"
+          ],
+          "primitive": false
+        },
+        "trackers": {
+          "definition": {
+            "always_priority_order": true,
+            "defaults": {
+              "interval": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "multiplier": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "threshold": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "$literal:tracker_type": {
+                "boolean_string": false,
+                "literal": "SIG",
+                "object_type": "object",
+                "omit_null": true,
+                "path": "tracker-type",
+                "schema": {
+                  "enum": [
+                    "SIG"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "endpoint_api_url": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "endpoint-api-url",
+                "schema": {
+                  "maxLength": 512,
+                  "minLength": 0,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "endpoint_api_url_variable"
+              },
+              "interval": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "interval",
+                "schema": {
+                  "maximum": 600,
+                  "minimum": 20,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "interval_variable"
+              },
+              "multiplier": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "multiplier",
+                "schema": {
+                  "maximum": 10,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "multiplier_variable"
+              },
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "name_variable"
+              },
+              "threshold": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "threshold",
+                "schema": {
+                  "maximum": 1000,
+                  "minimum": 100,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "threshold_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "tracker-type",
+              "name",
+              "endpoint-api-url",
+              "threshold",
+              "interval",
+              "multiplier"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "tracker",
+          "primary_keys": [
+            "tracker-type",
+            "name"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_secure_internet_gateway",
+      "unavailable_inputs": {}
+    },
     "security_templates": {
       "defaults": {
         "ipsec": {
