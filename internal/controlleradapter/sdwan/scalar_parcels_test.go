@@ -165,3 +165,13 @@ func TestAAAUpstreamLiteralAndVerbatimVariable(t *testing.T) {
 		t.Fatal("upstream literal lost")
 	}
 }
+
+func TestScalarSchemaContainsInConditional(t *testing.T) {
+	schema := map[string]any{"type": "array", "if": map[string]any{"contains": map[string]any{"required": []any{"cloudSaas"}}}, "then": map[string]any{"contains": map[string]any{"required": []any{"cloudProbe"}}}}
+	if !validScalarValue([]any{}, schema) || !validScalarValue([]any{map[string]any{"cloudSaas": true}, map[string]any{"cloudProbe": true}}, schema) {
+		t.Fatal("valid contains conditional rejected")
+	}
+	if validScalarValue([]any{map[string]any{"cloudSaas": true}}, schema) {
+		t.Fatal("missing conditional requirement accepted")
+	}
+}

@@ -57,17 +57,18 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		}
 
 		sections := map[string][]string{
-			"custom-applications.yaml":     {"application_catalog"},
-			"banner.yaml":                  {"edge_feature_templates"},
-			"system-profile.yaml":          {"feature_profiles", "configuration_groups"},
-			"policy-objects.yaml":          {"policy_objects"},
-			"deployment.yaml":              {"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"},
-			"topology-mesh.yaml":           {"network_hierarchy", "feature_profiles"},
-			"topology-hubspoke.yaml":       {"network_hierarchy", "feature_profiles"},
-			"topology-custom-control.yaml": {"network_hierarchy", "feature_profiles"},
-			"topology-group.yaml":          {"feature_profiles", "topology_groups"},
-			"policy-group.yaml":            {"feature_profiles", "policy_groups"},
-			"application-priority-qos.yaml": {"feature_profiles"},
+			"custom-applications.yaml":          {"application_catalog"},
+			"banner.yaml":                       {"edge_feature_templates"},
+			"system-profile.yaml":               {"feature_profiles", "configuration_groups"},
+			"policy-objects.yaml":               {"policy_objects"},
+			"deployment.yaml":                   {"network_hierarchy", "policy_objects", "edge_feature_templates", "feature_profiles", "configuration_groups"},
+			"topology-mesh.yaml":                {"network_hierarchy", "feature_profiles"},
+			"topology-hubspoke.yaml":            {"network_hierarchy", "feature_profiles"},
+			"topology-custom-control.yaml":      {"network_hierarchy", "feature_profiles"},
+			"topology-group.yaml":               {"feature_profiles", "topology_groups"},
+			"policy-group.yaml":                 {"feature_profiles", "policy_groups"},
+			"application-priority-qos.yaml":     {"feature_profiles"},
+			"application-priority-traffic.yaml": {"feature_profiles"},
 		}
 		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular", "transport-trackers", "routing-ospf", "routing-eigrp", "zscaler-sse", "service-switchport", "service-multicast", "system-device-access", "ipv4-acls", "ipv6-acls", "route-policies", "transport-management-vpn", "transport-wan-vpn", "transport-management-interface", "service-lan-vpn", "service-dual-router-ha", "service-lan-vpn-ospf-association", "transport-wan-vpn-ospf-association", "service-lan-vpn-eigrp-association", "service-lan-vpn-multicast-association", "service-lan-vpn-ospfv3-associations", "service-lan-vpn-svi", "service-lan-vpn-svi-dhcp-association", "service-lan-vpn-ethernet", "service-lan-vpn-ethernet-dhcp-association", "service-lan-vpn-ethernet-tracker-association", "service-lan-vpn-ethernet-tracker-group-association", "service-lan-vpn-gre", "transport-wan-vpn-gre", "transport-wan-vpn-gre-tracker-association", "service-lan-vpn-ipsec", "transport-wan-vpn-ipsec", "transport-wan-vpn-ipsec-tracker-association", "transport-wan-vpn-ethernet", "transport-wan-vpn-ethernet-ipv4-tracker-association", "transport-wan-vpn-ethernet-ipv4-tracker-group-association", "transport-wan-vpn-ethernet-ipv6-tracker-association", "transport-wan-vpn-ethernet-ipv6-tracker-group-association", "transport-wan-vpn-cellular", "transport-wan-vpn-cellular-tracker-association", "transport-wan-vpn-cellular-tracker-group-association", "service-lan-vpn-bgp-association", "transport-wan-vpn-bgp-association", "service-lan-vpn-ethernet-member", "transport-wan-vpn-ethernet-member", "policy-profile", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse"} {
 			sections[name+".yaml"] = []string{"feature_profiles"}

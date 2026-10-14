@@ -594,6 +594,18 @@ func validScalarValue(value any, schema map[string]any) bool {
 		if !ok {
 			return false
 		}
+		if constraint, ok := schema["contains"].(map[string]any); ok {
+			matched := false
+			for _, item := range items {
+				if validScalarValue(item, constraint) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				return false
+			}
+		}
 		if min, ok := schema["minItems"].(float64); ok && float64(len(items)) < min {
 			return false
 		}

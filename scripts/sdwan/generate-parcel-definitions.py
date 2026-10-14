@@ -475,6 +475,9 @@ folder.mkdir(exist_ok=True)
 (folder / "application-priority-qos-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/application_priority_qos.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "application-priority-traffic-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/application_priority_traffic_policy.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
 (folder / "service-gre-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/service_lan_vpn_interface_gre.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")

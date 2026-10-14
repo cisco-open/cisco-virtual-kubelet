@@ -1,0 +1,14 @@
+sdwan:
+  feature_profiles:
+    application_priority_profiles:
+      - name: CVK-TRAFFIC-PROFILE
+        traffic_policies:
+          - name: CVK-TRAFFIC-POLICY
+            default_action: accept
+            vpns: ["10"]
+            direction: service
+            sequences:
+              - sequence_id: 1
+                sequence_name: CVK-TRAFFIC-RULE
+                base_action: accept
+                protocol: ipv4
