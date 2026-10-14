@@ -47,7 +47,12 @@ type Banner struct {
 
 var defaultBannerDevices = []string{"C8000V", "C8300-1N1S-4T2X", "C8300-1N1S-6T", "C8300-2N2S-6T", "C8300-2N2S-4T2X", "C8500-12X4QC", "C8500-12X", "C8500-20X6C", "C8500L-8S4X", "C8200-1N-4T", "C8200L-1N-4T"}
 
+type ParcelReference struct {
+	Name, ParcelPath string
+	BodyPath         []string
+}
 type Resource struct {
+	ParcelRefs                   []ParcelReference
 	ParcelPath                   string
 	Key, Name, Section, Type     string
 	Kind, Collection, ParentName string
@@ -167,6 +172,9 @@ func Compile(data []byte) ([]Resource, error) {
 		}
 		if out[i].ParentName != "" && out[j].ParentName == "" {
 			return false
+		}
+		if (len(out[i].ParcelRefs) == 0) != (len(out[j].ParcelRefs) == 0) {
+			return len(out[i].ParcelRefs) == 0
 		}
 		return out[i].Key < out[j].Key
 	})

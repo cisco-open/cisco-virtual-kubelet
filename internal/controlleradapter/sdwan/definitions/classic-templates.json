@@ -1320,6 +1320,1042 @@
       "type": "cedge_igmp",
       "unavailable_inputs": {}
     },
+    "ipsec_interface_templates": {
+      "defaults": {
+        "clear-dont-fragment": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "dead-peer-detection": {
+          "dpd-interval": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "dpd-retries": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "description": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "ike": {
+          "authentication-type": {
+            "pre-shared-key": {
+              "ike-local-id": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "ike-remote-id": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "pre-shared-secret": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            }
+          },
+          "ike-ciphersuite": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "ike-group": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "ike-mode": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "ike-rekey-interval": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "ike-version": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "ip": {
+          "address": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "ipsec": {
+          "ipsec-ciphersuite": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "ipsec-rekey-interval": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "ipsec-replay-window": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "perfect-forward-secrecy": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          }
+        },
+        "mtu": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "shutdown": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "tcp-mss-adjust": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "tracker": {
+          "vipObjectType": "list",
+          "vipType": "ignore"
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "application": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "application",
+          "schema": {
+            "enum": [
+              "none",
+              "sig"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "application_variable"
+        },
+        "clear_dont_fragment": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "clear-dont-fragment",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "clear_dont_fragment_variable"
+        },
+        "dead_peer_detection_interval": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "dead-peer-detection.dpd-interval",
+          "schema": {
+            "maximum": 3600,
+            "minimum": 10,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "dead_peer_detection_interval_variable"
+        },
+        "dead_peer_detection_retries": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "dead-peer-detection.dpd-retries",
+          "schema": {
+            "maximum": 60,
+            "minimum": 2,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "dead_peer_detection_retries_variable"
+        },
+        "ike.ciphersuite": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.ike-ciphersuite",
+          "schema": {
+            "enum": [
+              "aes256-cbc-sha1",
+              "aes256-cbc-sha2",
+              "aes128-cbc-sha1",
+              "aes128-cbc-sha2"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ike.ciphersuite_variable"
+        },
+        "ike.group": {
+          "boolean_string": false,
+          "decimal_string": true,
+          "input_schema": {
+            "anyOf": [
+              {
+                "enum": [
+                  "2",
+                  "14",
+                  "15",
+                  "16",
+                  "19",
+                  "20",
+                  "21",
+                  "24"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  2,
+                  14,
+                  15,
+                  16,
+                  19,
+                  20,
+                  21,
+                  24
+                ],
+                "type": "integer"
+              }
+            ]
+          },
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.ike-group",
+          "schema": {
+            "enum": [
+              "2",
+              "14",
+              "15",
+              "16",
+              "19",
+              "20",
+              "21",
+              "24"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ike.group_variable"
+        },
+        "ike.mode": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.ike-mode",
+          "schema": {
+            "enum": [
+              "main",
+              "aggressive"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ike.mode_variable"
+        },
+        "ike.pre_shared_key": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.authentication-type.pre-shared-key.pre-shared-secret",
+          "schema": {
+            "maxLength": 127,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ike.pre_shared_key_variable"
+        },
+        "ike.pre_shared_key_local_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.authentication-type.pre-shared-key.ike-local-id",
+          "schema": {
+            "maxLength": 63,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ike.pre_shared_key_local_id_variable"
+        },
+        "ike.pre_shared_key_remote_id": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.authentication-type.pre-shared-key.ike-remote-id",
+          "schema": {
+            "maxLength": 63,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ike.pre_shared_key_remote_id_variable"
+        },
+        "ike.rekey_interval": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.ike-rekey-interval",
+          "schema": {
+            "maximum": 86400,
+            "minimum": 60,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "ike.rekey_interval_variable"
+        },
+        "ike.version": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ike.ike-version",
+          "schema": {
+            "maximum": 2,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false
+        },
+        "interface_description": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "description",
+          "schema": {
+            "maxLength": 240,
+            "minLength": 0,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "interface_description_variable"
+        },
+        "interface_name": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "if-name",
+          "schema": {
+            "maxLength": 8,
+            "maximum": 255,
+            "minLength": 6,
+            "minimum": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "interface_name_variable"
+        },
+        "ip_address": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ip.address",
+          "schema": {
+            "format": "ipv4-prefix",
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ip_address_variable"
+        },
+        "ipsec.ciphersuite": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.ipsec-ciphersuite",
+          "schema": {
+            "enum": [
+              "aes256-cbc-sha1",
+              "aes256-cbc-sha384",
+              "aes256-cbc-sha256",
+              "aes256-cbc-sha512",
+              "aes256-gcm",
+              "null-sha1",
+              "null-sha384",
+              "null-sha256",
+              "null-sha512"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ipsec.ciphersuite_variable"
+        },
+        "ipsec.perfect_forward_secrecy": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.perfect-forward-secrecy",
+          "schema": {
+            "enum": [
+              "group-1",
+              "group-2",
+              "group-5",
+              "group-14",
+              "group-15",
+              "group-16",
+              "group-19",
+              "group-20",
+              "group-21",
+              "group-24",
+              "none"
+            ],
+            "type": "string"
+          },
+          "set": false,
+          "variable": "ipsec.perfect_forward_secrecy_variable"
+        },
+        "ipsec.rekey_interval": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.ipsec-rekey-interval",
+          "schema": {
+            "maximum": 2592000,
+            "minimum": 120,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "ipsec.rekey_interval_variable"
+        },
+        "ipsec.replay_window": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "ipsec.ipsec-replay-window",
+          "schema": {
+            "maximum": 4096,
+            "minimum": 64,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "ipsec.replay_window_variable"
+        },
+        "mtu": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "mtu",
+          "schema": {
+            "maximum": 9216,
+            "minimum": 68,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "mtu_variable"
+        },
+        "shutdown": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "shutdown",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "shutdown_variable"
+        },
+        "tcp_mss": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "tcp-mss-adjust",
+          "schema": {
+            "maximum": 1460,
+            "minimum": 500,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "tcp_mss_variable"
+        },
+        "tracker": {
+          "boolean_string": false,
+          "object_type": "list",
+          "omit_null": false,
+          "path": "tracker",
+          "schema": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "set": true,
+          "variable": "tracker_variable",
+          "wrap_list": true
+        },
+        "tunnel_destination": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "tunnel-destination",
+          "schema": {
+            "type": "string"
+          },
+          "set": false,
+          "variable": "tunnel_destination_variable"
+        },
+        "tunnel_source_interface": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "tunnel-source-interface",
+          "schema": {
+            "maxLength": 32,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "tunnel_source_interface_variable"
+        },
+        "tunnel_source_ip": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": true,
+          "path": "tunnel-source",
+          "schema": {
+            "format": "ipv4",
+            "type": "string"
+          },
+          "set": false,
+          "variable": "tunnel_source_ip_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {},
+      "type": "cisco_vpn_interface_ipsec",
+      "unavailable_inputs": {}
+    },
+    "logging_templates": {
+      "defaults": {
+        "disk": {
+          "enable": {
+            "vipObjectType": "object",
+            "vipType": "ignore"
+          },
+          "file": {
+            "rotate": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            },
+            "size": {
+              "vipObjectType": "object",
+              "vipType": "ignore"
+            }
+          }
+        },
+        "ipv6-server": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "server": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "tls-profile": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "profile"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "disk_logging": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "disk.enable",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "disk_logging_variable"
+        },
+        "log_rotations": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "disk.file.rotate",
+          "schema": {
+            "maximum": 10,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "log_rotations_variable"
+        },
+        "max_size": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "disk.file.size",
+          "schema": {
+            "maximum": 20,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "set": false,
+          "variable": "max_size_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "ipv4_servers": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "priority": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "source-interface": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "tls": {
+                "enable-tls": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                },
+                "tls-properties": {
+                  "custom-profile": {
+                    "vipObjectType": "object",
+                    "vipType": "ignore"
+                  },
+                  "profile": {
+                    "vipObjectType": "object",
+                    "vipType": "ignore"
+                  }
+                }
+              },
+              "vpn": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "$derived:custom_profile": {
+                "boolean_string": true,
+                "derived": true,
+                "derived_value": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tls.tls-properties.custom-profile",
+                "present": "tls_profile",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "enable_tls": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tls.enable-tls",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "enable_tls_variable"
+              },
+              "hostname_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "hostname_ip_variable"
+              },
+              "logging_level": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "priority",
+                "schema": {
+                  "enum": [
+                    "information",
+                    "debugging",
+                    "notice",
+                    "warn",
+                    "error",
+                    "critical",
+                    "alert",
+                    "emergency"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "logging_level_variable"
+              },
+              "source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "source-interface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 0,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_interface_variable"
+              },
+              "tls_profile": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tls.tls-properties.profile",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "tls_profile_variable"
+              },
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "vpn_id_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "name",
+              "vpn",
+              "source-interface",
+              "priority",
+              "tls",
+              "tls",
+              "tls"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "server",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        },
+        "ipv6_servers": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "priority": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "source-interface": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "tls": {
+                "enable-tls": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                },
+                "tls-properties": {
+                  "custom-profile": {
+                    "vipObjectType": "object",
+                    "vipType": "ignore"
+                  },
+                  "profile": {
+                    "vipObjectType": "object",
+                    "vipType": "ignore"
+                  }
+                }
+              },
+              "vpn": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "$derived:custom_profile": {
+                "boolean_string": true,
+                "derived": true,
+                "derived_value": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tls.tls-properties.custom-profile",
+                "present": "tls_profile",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false
+              },
+              "enable_tls": {
+                "boolean_string": true,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tls.enable-tls",
+                "schema": {
+                  "type": "boolean"
+                },
+                "set": false,
+                "variable": "enable_tls_variable"
+              },
+              "hostname_ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "hostname_ip_variable"
+              },
+              "logging_level": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "priority",
+                "schema": {
+                  "enum": [
+                    "information",
+                    "debugging",
+                    "notification",
+                    "warn",
+                    "error",
+                    "critical",
+                    "alert",
+                    "emergency"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "logging_level_variable"
+              },
+              "source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "source-interface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 0,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_interface_variable"
+              },
+              "tls_profile": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tls.tls-properties.profile",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "tls_profile_variable"
+              },
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "vpn",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "vpn_id_variable"
+              }
+            },
+            "optional": "optional",
+            "priority_order": [
+              "name",
+              "vpn",
+              "source-interface",
+              "priority",
+              "tls",
+              "tls",
+              "tls"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "ipv6-server",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        },
+        "tls_profiles": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "auth-type": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "ciphersuite": {
+                "ciphersuite-list": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              },
+              "tls-version": {
+                "version": {
+                  "vipObjectType": "object",
+                  "vipType": "ignore"
+                }
+              }
+            },
+            "fields": {
+              "authentication_type": {
+                "boolean_string": false,
+                "input_schema": {
+                  "enum": [
+                    "server",
+                    "mutual"
+                  ],
+                  "type": "string"
+                },
+                "object_type": "object",
+                "omit_null": false,
+                "path": "auth-type",
+                "schema": {
+                  "enum": [
+                    "Server",
+                    "Mutual"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "values": {
+                  "mutual": "Mutual",
+                  "server": "Server"
+                },
+                "variable": "authentication_type_variable"
+              },
+              "ciphersuites": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "ciphersuite.ciphersuite-list",
+                "schema": {
+                  "items": {
+                    "enum": [
+                      "aes-128-cbc-sha",
+                      "aes-256-cbc-sha",
+                      "dhe-aes-cbc-sha2",
+                      "dhe-aes-gcm-sha2",
+                      "ecdhe-ecdsa-aes-gcm-sha2",
+                      "ecdhe-rsa-aes-cbc-sha2",
+                      "ecdhe-rsa-aes-gcm-sha2",
+                      "rsa-aes-cbc-sha2",
+                      "rsa-aes-gcm-sha2"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "set": true
+              },
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "profile",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "name_variable"
+              },
+              "version": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "tls-version.version",
+                "schema": {
+                  "enum": [
+                    "TLSv1.1",
+                    "TLSv1.2"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "version_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "profile",
+              "tls-version",
+              "auth-type",
+              "ciphersuite"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "tls-profile",
+          "primary_keys": [
+            "profile"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_logging",
+      "unavailable_inputs": {
+        "tls_profiles[].ciphersuites_variable": "Pinned module reads version_ciphersuites_variablevariable instead"
+      }
+    },
     "multicast_templates": {
       "defaults": {
         "multicast": {},
@@ -2631,6 +3667,557 @@
           "instance-id"
         ]
       }
+    },
+    "snmp_templates": {
+      "defaults": {
+        "community": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        },
+        "contact": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "location": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "shutdown": {
+          "vipObjectType": "object",
+          "vipType": "ignore"
+        },
+        "trap": {
+          "target": {
+            "vipObjectType": "tree",
+            "vipPrimaryKey": [
+              "vpn-id",
+              "ip",
+              "port"
+            ],
+            "vipType": "ignore",
+            "vipValue": []
+          }
+        },
+        "view": {
+          "vipObjectType": "tree",
+          "vipPrimaryKey": [
+            "name"
+          ],
+          "vipType": "ignore",
+          "vipValue": []
+        }
+      },
+      "device_types": [
+        "C8000V",
+        "C8300-1N1S-4T2X",
+        "C8300-1N1S-6T",
+        "C8300-2N2S-6T",
+        "C8300-2N2S-4T2X",
+        "C8500-12X4QC",
+        "C8500-12X",
+        "C8500-20X6C",
+        "C8500L-8S4X",
+        "C8200-1N-4T",
+        "C8200L-1N-4T"
+      ],
+      "fields": {
+        "contact": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "contact",
+          "schema": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "contact_variable"
+        },
+        "location": {
+          "boolean_string": false,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "location",
+          "schema": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "set": false,
+          "variable": "location_variable"
+        },
+        "shutdown": {
+          "boolean_string": true,
+          "object_type": "object",
+          "omit_null": false,
+          "path": "shutdown",
+          "schema": {
+            "type": "boolean"
+          },
+          "set": false,
+          "variable": "shutdown_variable"
+        }
+      },
+      "optional": "",
+      "required": [],
+      "trees": {
+        "communities": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "authorization_read_only": {
+                "boolean_choice": "read-only",
+                "boolean_string": false,
+                "input_default": true,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "authorization",
+                "schema": {
+                  "enum": [
+                    "read-only"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "authorization_read_only_variable"
+              },
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "view": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "view",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "view_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "name",
+              "view",
+              "authorization"
+            ],
+            "required": [
+              "name"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "community",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        },
+        "groups": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "security_level": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "security-level",
+                "schema": {
+                  "enum": [
+                    "no-auth-no-priv",
+                    "auth-no-priv",
+                    "auth-priv"
+                  ],
+                  "type": "string"
+                },
+                "set": false
+              },
+              "view": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "view",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "view_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "name",
+              "security-level",
+              "view"
+            ],
+            "required": [
+              "name",
+              "security_level"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "group",
+          "primary_keys": [
+            "name",
+            "security-level"
+          ],
+          "primitive": false
+        },
+        "trap_target_servers": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {},
+            "fields": {
+              "community_name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "community-name",
+                "schema": {
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "community_name_variable"
+              },
+              "ip": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "ip",
+                "schema": {
+                  "format": "ip",
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "ip_variable"
+              },
+              "source_interface": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "source-interface",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "source_interface_variable"
+              },
+              "udp_port": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "port",
+                "schema": {
+                  "maximum": 65535,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "udp_port_variable"
+              },
+              "user": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "user",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "user_variable"
+              },
+              "vpn_id": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "vpn-id",
+                "schema": {
+                  "maximum": 65530,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "set": false,
+                "variable": "vpn_id_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "vpn-id",
+              "ip",
+              "port",
+              "community-name",
+              "user",
+              "source-interface"
+            ],
+            "required": [],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "trap.target",
+          "primary_keys": [
+            "vpn-id",
+            "ip",
+            "port"
+          ],
+          "primitive": false
+        },
+        "users": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "auth": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "auth-password": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "priv": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              },
+              "priv-password": {
+                "vipObjectType": "object",
+                "vipType": "ignore"
+              }
+            },
+            "fields": {
+              "authentication_password": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "auth-password",
+                "schema": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "authentication_password_variable"
+              },
+              "authentication_protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "auth",
+                "schema": {
+                  "enum": [
+                    "md5",
+                    "sha"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "authentication_protocol_variable"
+              },
+              "group": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "group",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "group_variable"
+              },
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false
+              },
+              "privacy_password": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "priv-password",
+                "schema": {
+                  "maxLength": 128,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "privacy_password_variable"
+              },
+              "privacy_protocol": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": false,
+                "path": "priv",
+                "schema": {
+                  "enum": [
+                    "aes-cfb-128",
+                    "aes-256-cfb-128"
+                  ],
+                  "type": "string"
+                },
+                "set": false,
+                "variable": "privacy_protocol_variable"
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "name",
+              "auth",
+              "auth-password",
+              "priv",
+              "priv-password",
+              "group"
+            ],
+            "required": [
+              "name"
+            ],
+            "trees": {},
+            "unavailable_inputs": {}
+          },
+          "path": "user",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        },
+        "views": {
+          "definition": {
+            "always_priority_order": false,
+            "defaults": {
+              "oid": {
+                "vipObjectType": "tree",
+                "vipPrimaryKey": [
+                  "id"
+                ],
+                "vipType": "ignore",
+                "vipValue": []
+              }
+            },
+            "fields": {
+              "name": {
+                "boolean_string": false,
+                "object_type": "object",
+                "omit_null": true,
+                "path": "name",
+                "schema": {
+                  "maxLength": 32,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "set": false
+              }
+            },
+            "optional": "",
+            "priority_order": [
+              "name",
+              "oid"
+            ],
+            "required": [
+              "name"
+            ],
+            "trees": {
+              "oids": {
+                "definition": {
+                  "always_priority_order": false,
+                  "defaults": {
+                    "exclude": {
+                      "vipObjectType": "node-only",
+                      "vipType": "ignore"
+                    }
+                  },
+                  "fields": {
+                    "exclude": {
+                      "boolean_string": true,
+                      "object_type": "node-only",
+                      "omit_null": false,
+                      "path": "exclude",
+                      "schema": {
+                        "type": "boolean"
+                      },
+                      "set": false,
+                      "variable": "exclude_variable"
+                    },
+                    "id": {
+                      "boolean_string": false,
+                      "object_type": "object",
+                      "omit_null": true,
+                      "path": "id",
+                      "schema": {
+                        "type": "string"
+                      },
+                      "set": false,
+                      "variable": "id_variable"
+                    }
+                  },
+                  "optional": "",
+                  "priority_order": [
+                    "id",
+                    "exclude"
+                  ],
+                  "required": [],
+                  "trees": {},
+                  "unavailable_inputs": {}
+                },
+                "path": "oid",
+                "primary_keys": [
+                  "id"
+                ],
+                "primitive": false
+              }
+            },
+            "unavailable_inputs": {}
+          },
+          "path": "view",
+          "primary_keys": [
+            "name"
+          ],
+          "primitive": false
+        }
+      },
+      "type": "cisco_snmp",
+      "unavailable_inputs": {}
     },
     "thousandeyes_templates": {
       "defaults": {

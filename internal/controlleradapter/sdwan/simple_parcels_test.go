@@ -165,8 +165,8 @@ func TestLiveAAAOracle(t *testing.T)      { liveParcelOracle(t, parcelFixtures(t
 
 func TestServiceFeatureFixtures(t *testing.T) {
 	resources := parcelFixtures(t, "service-features")
-	if len(resources) != 6 {
-		t.Fatal("expected service profile and five parcels")
+	if len(resources) != 9 {
+		t.Fatal("expected service profile and eight parcels")
 	}
 }
 func TestLiveServiceNamesAbsent(t *testing.T) {

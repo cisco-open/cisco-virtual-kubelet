@@ -11,6 +11,24 @@ sdwan:
             interval: 60
             multiplier: 3
             threshold: 300
+          - name: CVK-SERVICE-TRACKER-2
+            description: CVK second endpoint tracker
+            tracker_name: cvkprobe2
+            endpoint_ip: 192.0.2.101
+            interval: 60
+            multiplier: 3
+            threshold: 300
+        ipv4_tracker_groups:
+          - name: CVK-SERVICE-TRACKER-GROUP
+            description: CVK endpoint tracker group
+            tracker_boolean: and
+            trackers: [CVK-SERVICE-TRACKER, CVK-SERVICE-TRACKER-2]
+        object_tracker_groups:
+          - name: CVK-SERVICE-OBJECT-GROUP
+            description: CVK object tracker group
+            id: 20
+            tracker_boolean: or
+            trackers: [CVK-SERVICE-IFTRACKER, CVK-SERVICE-ROUTETRACKER]
         dhcp_servers:
           - name: CVK-SERVICE-DHCP
             description: CVK service DHCP server

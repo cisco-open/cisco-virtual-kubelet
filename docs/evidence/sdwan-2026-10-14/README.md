@@ -206,3 +206,28 @@ existing qualified version range.
 
 Full Go regression and focused race suites passed. Parcel metadata regenerated
 byte-for-byte from the pinned upstream revisions.
+
+## Tracker groups and classic IPsec/SNMP/logging
+
+| Fixture | Native lifecycle | Upstream comparison | Live Kubernetes |
+|---|---:|---:|---:|
+| Expanded service graph (nine objects) | 37.95s | 9.11s | 82.03s |
+| Classic IPsec | 3.19s | Passed | 10.73s |
+| Classic SNMP | 3.20s | 1.83s | 8.65s |
+| Classic logging | 3.24s | 1.85s | 9.20s |
+
+Every run completed cleanup. The service graph adds endpoint and object-tracker
+groups with named references. Unit tests verify dependency ordering, rejection of
+missing/duplicate/external names, and zero writes until both dependencies exist.
+Native readback and upstream comparison verify resolved IDs in group payloads.
+
+IPsec uses nested IKE/IPsec settings and a pre-shared-key variable. Numeric DH groups
+follow the [published NaC example](https://netascode.cisco.com/docs/data_models/sdwan/edge_feature_templates/ipsec_interface/)
+and are encoded as provider strings. The fixture is unattached and shut down.
+SNMP covers nested views/OIDs, the NaC read-only authorization default, credential
+variables and a trap target. Logging covers TLS authentication-name translation,
+cipher lists, and IPv4/IPv6 servers. Its broken upstream ciphersuite-variable
+expression is documented and rejected before mutation.
+
+Full Go regression and focused race suites passed. Both generators reproduce their
+metadata byte-for-byte; previously qualified classic mappings remain unchanged.

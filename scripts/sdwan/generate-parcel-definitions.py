@@ -73,8 +73,10 @@ def property_schema(node, name):
         raise SystemExit(f"Ambiguous or missing schema property {name}")
     return candidates[0]
 
-def definition(source, alias, indent, model, body, schema, receiver="data", target="body"):
-    fields = {tf: (name, typ) for name, typ, tf in re.findall(r'(\w+)\s+types\.(\w+)\s+`tfsdk:"([^"]+)"`', model)}
+def definition(source, alias, indent, model, body, schema, receiver="data", target="body", struct_name=None):
+    struct_match = re.search(r"type " + (re.escape(struct_name) if struct_name else r"\w+") + r" struct \{", model)
+    struct_body = block(model, struct_match.end()-1)
+    fields = {tf: (name, typ) for name, typ, tf in re.findall(r'(\w+)\s+types\.(\w+)\s+`tfsdk:"([^"]+)"`', struct_body)}
     prefix = r'path\+' if target == "body" else ''
     setter = r'sjson.Set\(' + target + ', ' + prefix
     baseline, inputs, lists, required, public_defaults, wrappers = {}, {}, {}, [], {}, []
@@ -136,7 +138,7 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
             raise SystemExit(f"Unsupported expression {tf}: {expr}")
         item_alias, public = array.groups() if array else (alias, None)
         item_source = block(source, source.index("{", source.index(expr) + (array.start() if array else 0)))
-        go_name = re.search(r'(\w+)\s+\[\]\w+\s+`tfsdk:"' + tf + '"`', model).group(1)
+        go_name, child_struct = re.search(r'(\w+)\s+\[\](\w+)\s+`tfsdk:"' + tf + '"`', struct_body).groups()
         loop = re.search(r'for _, (\w+) := range ' + receiver + r'\.' + go_name + r' \{', body)
         item_receiver = loop.group(1)
         item_body = block(body, loop.end() - 1)
@@ -146,7 +148,7 @@ def definition(source, alias, indent, model, body, schema, receiver="data", targ
         node = schema
         for part in array_path.split("."):
             node = property_schema(node, part)
-        entry = {"path": array_path, "definition": definition(item_source, item_alias, indent + 2, model, item_body, node["items"], item_receiver, item_target)}
+        entry = {"path": array_path, "definition": definition(item_source, item_alias, indent + 2, model, item_body, node["items"], item_receiver, item_target, child_struct)}
         if array:
             if expr.startswith("[for") and " in " + alias + "." in expr:
                 required.append(public)
@@ -194,6 +196,7 @@ reviewed += [("transport", "gps", "gps", "transport_gps"),
              ("other", "thousandeyes", "thousandeyes", "other_thousandeyes")]
 reviewed += [("service", "tracker", "tracker", "service_tracker"), ("service", "dhcp_server", "dhcp_server", "service_dhcp_server"), ("service", "object_tracker", "tracker", "service_object_tracker")]
 reviewed += [("transport", "cellular_controller", "controller", "transport_cellular_controller"), ("transport", "cellular_profile", "cellular", "transport_cellular_profile")]
+reviewed += [("service", "tracker_group", "tracker", "service_tracker_group"), ("service", "object_tracker_group", "tracker", "service_object_tracker_group")]
 policy_features = ["as_path_list", "class_map", "color_list", "extended_community_list",
                    "mirror", "policer", "security_data_ipv4_prefix_list", "security_fqdn_list",
                    "security_local_domain_list", "security_port_list", "security_protocol_list",
@@ -204,6 +207,12 @@ for family, feature, alias, key in reviewed:
     resource = "sdwan_" + family + "_" + feature + ("" if family == "policy_object" else "_feature")
     start = hcl.index("{", hcl.index('resource "' + resource + '"'))
     source = block(hcl, start)
+    if key in ("service_tracker_group", "service_object_tracker_group"):
+        target = "service_tracker" if key == "service_tracker_group" else "service_object_tracker"
+        reference = 'sdwan_' + target + '_feature.' + target + '_feature["${each.value.profile.name}-${t}"].id'
+        if source.count(reference) != 1:
+            raise SystemExit("Tracker reference expression changed")
+        source = source.replace(reference, 't')
     if key == "transport_cellular_profile":
         toggle_line = r'^  requires_authentication\s*= try\(each.value.cellular.authentication_enable, null\)\n'
         source, count = re.subn(toggle_line, '', source, flags=re.M)

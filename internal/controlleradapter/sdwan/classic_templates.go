@@ -10,12 +10,20 @@ import (
 	"net/netip"
 	"sort"
 	"strconv"
+	"strings"
 )
 
 //go:embed definitions/classic-templates.json
 var classicDefinitions []byte
 
 type classicField struct {
+	Present        string
+	Values         map[string]string
+	BooleanChoice  string         `json:"boolean_choice"`
+	InputDefault   any            `json:"input_default"`
+	InputSchema    map[string]any `json:"input_schema"`
+	DecimalString  bool           `json:"decimal_string"`
+	WrapList       bool           `json:"wrap_list"`
 	Ranges         string
 	Literal        any
 	Derived        bool
@@ -117,7 +125,7 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 
 func classicData(definition classicDefinition, input map[string]any, metadata bool) (map[string]any, error) {
 	for _, field := range definition.Required {
-		if input[field] == nil {
+		if classicInput(input, field) == nil {
 			return nil, fmt.Errorf("%s is required", field)
 		}
 	}
@@ -136,12 +144,15 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 		return nil, err
 	}
 	for public, field := range definition.Fields {
-		value := input[public]
+		value := classicInput(input, public)
+		if value == nil {
+			value = field.InputDefault
+		}
 		if field.Literal != nil {
 			value = field.Literal
 		} else if field.Derived {
 			value = nil
-			if input["$value"] == field.When {
+			if (field.Present != "" && classicInput(input, field.Present) != nil) || (field.Present == "" && input["$value"] == field.When) {
 				value = field.DerivedValue
 			}
 		} else {
@@ -183,7 +194,17 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 		var variable any
 		if field.Variable != "" {
 			allowed[field.Variable] = true
-			variable = input[field.Variable]
+			variable = classicInput(input, field.Variable)
+		}
+		if variable == nil && field.BooleanChoice != "" && value != nil {
+			enabled, ok := value.(bool)
+			if !ok {
+				return nil, fmt.Errorf("%s must be Boolean", public)
+			}
+			value = nil
+			if enabled {
+				value = field.BooleanChoice
+			}
 		}
 		leaf := map[string]any{"vipObjectType": field.ObjectType}
 		if variable != nil {
@@ -194,6 +215,20 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			leaf["vipType"] = "variableName"
 			leaf["vipVariableName"] = v
 		} else if value != nil {
+			if field.InputSchema != nil && !validScalarValue(value, field.InputSchema) {
+				return nil, fmt.Errorf("invalid %s model value", public)
+			}
+			if field.Values != nil {
+				value = field.Values[value.(string)]
+			}
+			if field.DecimalString {
+				if n, ok := value.(float64); ok {
+					value = strconv.FormatFloat(n, 'f', 0, 64)
+				}
+			}
+			if field.WrapList {
+				value = []any{value}
+			}
 			if !validScalarValue(value, field.Schema) {
 				return nil, fmt.Errorf("invalid %s value", public)
 			}
@@ -243,7 +278,7 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 	}
 	for public, tree := range definition.Trees {
 		allowed[public] = true
-		if value := input[public]; value != nil {
+		if value := classicInput(input, public); value != nil {
 			rows, ok := value.([]any)
 			if !ok {
 				return nil, fmt.Errorf("%s must be an array", public)
@@ -283,10 +318,8 @@ func classicData(definition classicDefinition, input map[string]any, metadata bo
 			setScalarPath(data, tree.Path, map[string]any{"vipObjectType": "tree", "vipType": "constant", "vipPrimaryKey": tree.PrimaryKeys, "vipValue": output})
 		}
 	}
-	for field := range input {
-		if !allowed[field] {
-			return nil, fmt.Errorf("unsupported classic field %s", field)
-		}
+	if err := validateClassicFields(input, allowed, ""); err != nil {
+		return nil, err
 	}
 
 	return data, nil
@@ -360,4 +393,43 @@ func normalizeVIP(value any) (any, error) {
 		out[k] = normalized
 	}
 	return out, nil
+}
+
+func classicInput(input map[string]any, path string) any {
+	parts := strings.Split(path, ".")
+	for _, part := range parts[:len(parts)-1] {
+		child, ok := input[part].(map[string]any)
+		if !ok {
+			return nil
+		}
+		input = child
+	}
+	return input[parts[len(parts)-1]]
+}
+func validateClassicFields(input map[string]any, allowed map[string]bool, prefix string) error {
+	for key, value := range input {
+		path := prefix + key
+		if allowed[path] {
+			continue
+		}
+		nested := false
+		for field := range allowed {
+			if strings.HasPrefix(field, path+".") {
+				nested = true
+				break
+			}
+		}
+		if nested {
+			child, ok := value.(map[string]any)
+			if !ok {
+				return fmt.Errorf("%s must be an object", path)
+			}
+			if err := validateClassicFields(child, allowed, path+"."); err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("unsupported classic field %s", path)
+		}
+	}
+	return nil
 }

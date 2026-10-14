@@ -65,7 +65,7 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 		out = append(out, Resource{Key: key + "/" + field, Name: name, Section: "feature_profiles", Kind: "parcel", Type: collection + "_" + field, Collection: "/dataservice/v1/feature-profile/sdwan/" + collection, ParentName: p.Name, ParcelPath: path, Body: map[string]any{"name": name, "description": meta.Description, "data": data}})
 		return nil
 	}
-	if (p.IPv4Trackers != nil || p.DHCPServers != nil || p.ObjectTrackers != nil) && collection != "service" {
+	if (p.IPv4Trackers != nil || p.DHCPServers != nil || p.ObjectTrackers != nil || p.IPv4TrackerGroups != nil || p.ObjectTrackerGroups != nil) && collection != "service" {
 		return nil, errors.New("service trackers and DHCP servers require service profile")
 	}
 	for _, family := range []struct {
@@ -91,6 +91,11 @@ func simpleParcels(p FeatureProfile, collection, key string) ([]Resource, error)
 			}
 		}
 	}
+	trackerGroups, e := compileTrackerGroups(p, collection, key)
+	if e != nil {
+		return nil, e
+	}
+	out = append(out, trackerGroups...)
 	if (p.CellularControllers != nil || p.CellularProfiles != nil) && collection != "transport" {
 		return nil, errors.New("cellular features require transport profile")
 	}

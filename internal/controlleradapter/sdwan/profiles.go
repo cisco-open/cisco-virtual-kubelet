@@ -11,6 +11,8 @@ import (
 )
 
 type FeatureProfile struct {
+	IPv4TrackerGroups     []map[string]any             `json:"ipv4_tracker_groups,omitempty"`
+	ObjectTrackerGroups   []map[string]any             `json:"object_tracker_groups,omitempty"`
 	CellularControllers   []map[string]any             `json:"cellular_controllers,omitempty"`
 	CellularProfiles      []map[string]any             `json:"cellular_profiles,omitempty"`
 	ObjectTrackers        []map[string]any             `json:"object_trackers,omitempty"`

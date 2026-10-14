@@ -13,15 +13,18 @@ import subprocess
 parser = argparse.ArgumentParser()
 parser.add_argument("--terraform", default="terraform")
 parser.add_argument("--execute", action="store_true")
-parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular", "classic-bfd", "classic-igmp", "classic-ntp", "classic-omp", "classic-pim", "classic-applications", "classic-dhcp", "service-features", "transport-cellular"], default="core")
+parser.add_argument("--fixture-set", choices=["core", "system-features", "peripheral-features", "thousandeyes-feature", "policy-profile", "snmp-feature", "aaa-feature", "classic-templates", "classic-cellular", "classic-bfd", "classic-igmp", "classic-ntp", "classic-omp", "classic-pim", "classic-applications", "classic-dhcp", "service-features", "transport-cellular", "classic-ipsec", "classic-snmp", "classic-logging"], default="core")
 args = parser.parse_args()
 if args.fixture_set == "policy-profile" and args.execute:
     raise SystemExit("Policy-profile execution needs a qualified empty-controller or read-only-parent workflow; plan-only is available")
 root = Path(__file__).resolve().parents[2]
 oracle = root / "examples/configs/sdwan/oracle"
 sets = {
+ "classic-logging": {"files": ["classic-logging"], "count": 1, "absent": "ClassicLogging", "oracle": "ClassicLogging"},
+ "classic-snmp": {"files": ["classic-snmp"], "count": 1, "absent": "ClassicSNMP", "oracle": "ClassicSNMP"},
+ "classic-ipsec": {"files": ["classic-ipsec"], "count": 1, "absent": "IPSec", "oracle": "IPSec"},
  "transport-cellular": {"files": ["transport-cellular"], "count": 4, "absent": "TransportCellular", "oracle": "TransportCellular"},
- "service-features": {"files": ["service-features"], "count": 6, "absent": "Service", "oracle": "Service"},
+ "service-features": {"files": ["service-features"], "count": 9, "absent": "Service", "oracle": "Service"},
  "classic-dhcp": {"files": ["classic-dhcp"], "count": 1, "absent": "DHCP", "oracle": "DHCP"},
  "classic-applications": {"files": ["classic-applications"], "count": 2, "absent": "Applications", "oracle": "Applications"},
  "classic-pim": {"files": ["classic-pim"], "count": 1, "absent": "PIM", "oracle": "PIM"},
@@ -48,6 +51,11 @@ for key in ("SDWAN_URL", "SDWAN_USERNAME", "SDWAN_PASSWORD"):
         raise SystemExit(f"{key} is required")
 env.update(CVK_SDWAN_LIVE="1", CVK_SDWAN_ORACLE="1")
 allowed = {
+    "sdwan_cisco_logging_feature_template",
+    "sdwan_cisco_snmp_feature_template",
+    "sdwan_cisco_vpn_interface_ipsec_feature_template",
+    "sdwan_service_tracker_group_feature",
+    "sdwan_service_object_tracker_group_feature",
     "sdwan_transport_cellular_controller_feature",
     "sdwan_transport_cellular_profile_feature",
     "sdwan_service_object_tracker_feature",

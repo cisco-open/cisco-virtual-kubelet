@@ -1,0 +1,28 @@
+sdwan:
+  edge_feature_templates:
+    logging_templates:
+      - name: CVK-CLASSIC-LOGGING
+        description: CVK unattached logging template
+        device_types: [C8000V]
+        disk_logging: true
+        log_rotations: 5
+        max_size: 10
+        tls_profiles:
+          - name: cvktls
+            version: TLSv1.2
+            authentication_type: server
+            ciphersuites: [ecdhe-rsa-aes-gcm-sha2]
+        ipv4_servers:
+          - hostname_ip: 192.0.2.100
+            vpn_id: 10
+            source_interface: GigabitEthernet1
+            logging_level: information
+            enable_tls: true
+            tls_profile: cvktls
+            optional: false
+        ipv6_servers:
+          - hostname_ip: 2001:db8::100
+            vpn_id: 10
+            logging_level: warn
+            enable_tls: false
+            optional: false

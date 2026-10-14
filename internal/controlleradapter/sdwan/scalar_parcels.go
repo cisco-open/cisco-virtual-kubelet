@@ -435,7 +435,7 @@ func validScalarValue(value any, schema map[string]any) bool {
 		}
 		if format, ok := schema["format"].(string); ok {
 			switch format {
-			case "ipv4", "ipv6":
+			case "ip", "ipv4", "ipv6":
 				address, e := netip.ParseAddr(v)
 				if e != nil || (format == "ipv6" && !address.Is6()) || (format == "ipv4" && !address.Is4()) {
 					return false

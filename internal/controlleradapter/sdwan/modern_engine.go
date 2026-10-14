@@ -124,9 +124,15 @@ func (c *Client) observeModern(ctx context.Context, r Resource) (*Observation, e
 	if e = c.Request(ctx, "GET", path+"/"+url.PathEscape(id), nil, &body); e != nil {
 		return nil, e
 	}
+	if e := c.resolveParcelRefs(ctx, r); e != nil {
+		return nil, e
+	}
 	return &Observation{ID: id, Body: body}, nil
 }
 func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
+	if e := c.resolveParcelRefs(ctx, r); e != nil {
+		return "", e
+	}
 	if r.Kind == "hierarchy" {
 		return c.createHierarchy(ctx, r)
 	}
@@ -160,6 +166,9 @@ func (c *Client) createModern(ctx context.Context, r Resource) (string, error) {
 	return id, nil
 }
 func (c *Client) updateModern(ctx context.Context, r Resource, o *Observation) error {
+	if e := c.resolveParcelRefs(ctx, r); e != nil {
+		return e
+	}
 	if r.Kind == "hierarchy" {
 		return c.updateHierarchy(ctx, r, o)
 	}

@@ -252,3 +252,61 @@ func TestLiveDHCPNamesAbsent(t *testing.T) {
 }
 func TestLiveDHCPLifecycle(t *testing.T) { liveParcelLifecycle(t, parcelFixtures(t, "classic-dhcp")) }
 func TestLiveDHCPOracle(t *testing.T)    { liveParcelOracle(t, parcelFixtures(t, "classic-dhcp")) }
+
+func TestClassicIPSecNestedFields(t *testing.T) {
+	if len(parcelFixtures(t, "classic-ipsec")) != 1 {
+		t.Fatal("expected IPsec template")
+	}
+	for _, ike := range []any{"invalid", map[string]any{"unknown": true}, map[string]any{"group": float64(3)}, map[string]any{"group": 14.5}} {
+		input := map[string]any{"name": "test", "description": "test", "ike": ike}
+		if _, err := compileClassicTemplates("ipsec_interface_templates", []map[string]any{input}, nil); err == nil {
+			t.Fatal("invalid nested IKE input accepted")
+		}
+	}
+}
+func TestLiveIPSecNamesAbsent(t *testing.T) {
+	liveParcelNamesAbsent(t, parcelFixtures(t, "classic-ipsec"))
+}
+func TestLiveIPSecLifecycle(t *testing.T) { liveParcelLifecycle(t, parcelFixtures(t, "classic-ipsec")) }
+func TestLiveIPSecOracle(t *testing.T)    { liveParcelOracle(t, parcelFixtures(t, "classic-ipsec")) }
+
+func TestClassicSNMPDefaultAuthorization(t *testing.T) {
+	resources := parcelFixtures(t, "classic-snmp")
+	if len(resources) != 1 {
+		t.Fatal("expected SNMP template")
+	}
+	data := resources[0].Body["templateDefinition"].(map[string]any)
+	encoded, _ := json.Marshal(data)
+	if !strings.Contains(string(encoded), "read-only") {
+		t.Fatal("NaC community default lost")
+	}
+}
+func TestLiveClassicSNMPNamesAbsent(t *testing.T) {
+	liveParcelNamesAbsent(t, parcelFixtures(t, "classic-snmp"))
+}
+func TestLiveClassicSNMPLifecycle(t *testing.T) {
+	liveParcelLifecycle(t, parcelFixtures(t, "classic-snmp"))
+}
+func TestLiveClassicSNMPOracle(t *testing.T) { liveParcelOracle(t, parcelFixtures(t, "classic-snmp")) }
+
+func TestClassicLoggingTLSFields(t *testing.T) {
+	resources := parcelFixtures(t, "classic-logging")
+	if len(resources) != 1 {
+		t.Fatal("expected logging template")
+	}
+	for _, field := range []string{"ciphersuites_variable", "version_ciphersuites_variablevariable"} {
+		input := map[string]any{"name": "test", "description": "test", "tls_profiles": []any{map[string]any{"name": "tls", field: "test"}}}
+		if _, err := compileClassicTemplates("logging_templates", []map[string]any{input}, nil); err == nil {
+			t.Fatal("broken upstream cipher variable accepted")
+		}
+	}
+}
+func TestLiveClassicLoggingNamesAbsent(t *testing.T) {
+	liveParcelNamesAbsent(t, parcelFixtures(t, "classic-logging"))
+}
+func TestLiveClassicLoggingLifecycle(t *testing.T) {
+	liveParcelLifecycle(t, parcelFixtures(t, "classic-logging"))
+}
+func TestLiveClassicLoggingOracle(t *testing.T) {
+	liveParcelOracle(t, parcelFixtures(t, "classic-logging"))
+}

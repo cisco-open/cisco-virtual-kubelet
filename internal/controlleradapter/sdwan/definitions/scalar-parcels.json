@@ -7214,6 +7214,260 @@
       ],
       "wrappers": []
     },
+    "service_object_tracker_group": {
+      "computed_defaults": {},
+      "defaults": {
+        "criteria": {
+          "optionType": "default",
+          "value": "or"
+        }
+      },
+      "fields": {
+        "id": {
+          "path": "objectId",
+          "schema": {
+            "maximum": 1000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "type": "Int64",
+          "variable": "id_variable"
+        },
+        "tracker_boolean": {
+          "path": "criteria",
+          "schema": {
+            "enum": [
+              "and",
+              "or"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "tracker_boolean_variable"
+        }
+      },
+      "lists": {
+        "trackers": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "trackerRef.refId",
+                "schema": {
+                  "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "trackerRefs",
+          "primitive": true
+        }
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "criteria": {
+            "description": "tracker ref list criteria boolean and or",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "enum": [
+                      "and",
+                      "or"
+                    ],
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "enum": [
+                      "and",
+                      "or"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "enum": [
+                      "or"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "objectId": {
+            "description": "Object ID",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "maximum": 1000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maximum": 1000,
+                    "minimum": 1,
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "trackerRefs": {
+            "description": "Group Tracks ID Refs",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "trackerRef": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "refId": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "optionType": {
+                          "enum": [
+                            "global"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "refId"
+                  ]
+                }
+              },
+              "required": [
+                "trackerRef"
+              ],
+              "type": "object"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "objectId",
+          "trackerRefs",
+          "criteria"
+        ],
+        "type": "object"
+      },
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
     "service_tracker": {
       "computed_defaults": {},
       "defaults": {
@@ -8130,6 +8384,192 @@
             "type": "object"
           }
         },
+        "type": "object"
+      },
+      "public_defaults": {},
+      "required": [],
+      "wrappers": []
+    },
+    "service_tracker_group": {
+      "computed_defaults": {},
+      "defaults": {
+        "combineBoolean": {
+          "optionType": "default",
+          "value": "or"
+        }
+      },
+      "fields": {
+        "tracker_boolean": {
+          "path": "combineBoolean",
+          "schema": {
+            "enum": [
+              "and",
+              "or"
+            ],
+            "type": "string"
+          },
+          "type": "String",
+          "variable": "tracker_boolean_variable"
+        }
+      },
+      "lists": {
+        "trackers": {
+          "definition": {
+            "computed_defaults": {},
+            "defaults": {},
+            "fields": {
+              "$value": {
+                "path": "trackerRef.refId",
+                "schema": {
+                  "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                  "type": "string"
+                },
+                "type": "String"
+              }
+            },
+            "lists": {},
+            "public_defaults": {},
+            "required": [],
+            "wrappers": []
+          },
+          "omit_empty": true,
+          "path": "trackerRefs",
+          "primitive": true
+        }
+      },
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "combineBoolean": {
+            "description": "tracker ref list combine boolean and or",
+            "oneOf": [
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "default": {
+                    "enum": [
+                      "and",
+                      "or"
+                    ],
+                    "type": "string"
+                  },
+                  "description": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "optionType": {
+                    "enum": [
+                      "variable"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "maxLength": 128,
+                    "minLength": 1,
+                    "pattern": "^\\{\\{[.\\/\\[\\]a-zA-Z0-9_-]+\\}\\}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "global"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "enum": [
+                      "and",
+                      "or"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "optionType": {
+                    "enum": [
+                      "default"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "enum": [
+                      "or"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "optionType",
+                  "value"
+                ]
+              }
+            ],
+            "type": "object"
+          },
+          "trackerRefs": {
+            "description": "tracker parcel ref list",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "trackerRef": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "refId": {
+                      "additionalProperties": false,
+                      "properties": {
+                        "optionType": {
+                          "enum": [
+                            "global"
+                          ],
+                          "type": "string"
+                        },
+                        "value": {
+                          "pattern": "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "optionType",
+                        "value"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "refId"
+                  ]
+                }
+              },
+              "required": [
+                "trackerRef"
+              ],
+              "type": "object"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array",
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "trackerRefs",
+          "combineBoolean"
+        ],
         "type": "object"
       },
       "public_defaults": {},

@@ -65,7 +65,7 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 		for _, name := range []string{"system-features", "peripheral-features", "thousandeyes-feature", "snmp-feature", "aaa-feature", "service-features", "transport-cellular"} {
 			sections[name+".yaml"] = []string{"feature_profiles"}
 		}
-		for _, name := range []string{"templates", "cellular", "bfd", "igmp", "ntp", "omp", "pim", "applications", "dhcp"} {
+		for _, name := range []string{"templates", "cellular", "bfd", "igmp", "ntp", "omp", "pim", "applications", "dhcp", "ipsec", "snmp", "logging"} {
 			sections["classic-"+name+".yaml"] = []string{"edge_feature_templates"}
 		}
 		managed, ok := sections[fixture]

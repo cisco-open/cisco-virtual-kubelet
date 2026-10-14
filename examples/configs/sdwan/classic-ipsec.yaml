@@ -1,0 +1,25 @@
+sdwan:
+  edge_feature_templates:
+    ipsec_interface_templates:
+      - name: CVK-CLASSIC-IPSEC
+        description: CVK unattached IPsec template
+        device_types: [C8000V]
+        interface_name: ipsec101
+        interface_description: CVK fixture tunnel
+        ip_address: 192.0.2.1/30
+        shutdown: true
+        tunnel_source_interface_variable: fixture_ipsec_source
+        tunnel_destination: 198.51.100.1
+        mtu: 1400
+        tcp_mss: 1360
+        ike:
+          version: 2
+          ciphersuite: aes256-cbc-sha2
+          group: 14
+          rekey_interval: 14400
+          pre_shared_key_variable: fixture_ipsec_psk
+        ipsec:
+          ciphersuite: aes256-gcm
+          rekey_interval: 28800
+          perfect_forward_secrecy: group-14
+          replay_window: 512

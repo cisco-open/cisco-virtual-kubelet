@@ -5,7 +5,7 @@ and `NetworkControllerConfig` intent APIs. It calls SD-WAN Manager directly;
 Terraform is used only by the external differential-test oracle.
 
 This implementation is a **fixture-qualified increment, not full NetAsCode
-parity**. The pinned upstream module has 226 resource declarations. 78 resource declarations (72 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
+parity**. The pinned upstream module has 226 resource declarations. 83 resource declarations (77 distinct resource types) have fixture-level live differential coverage on Manager 20.18.2.2:
 
 | Fixture | Qualified resources | Qualification |
 |---|---|---|
@@ -28,8 +28,11 @@ parity**. The pinned upstream module has 226 resource declarations. 78 resource 
 | `examples/configs/sdwan/classic-pim.yaml` | PIM interfaces and rendezvous-point addresses | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-applications.yaml` | Classic ThousandEyes and security application hosting | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-dhcp.yaml` | DHCP address ranges, static leases and option rows | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
-| `examples/configs/sdwan/service-features.yaml` | Service DHCP, endpoint tracker and interface/route/SIG object trackers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/service-features.yaml` | Service DHCP, endpoint/object trackers and both tracker-group types | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 | `examples/configs/sdwan/transport-cellular.yaml` | Transport cellular controller and profiles with/without authentication | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-ipsec.yaml` | Classic IPsec nested IKE/IPsec settings and key variable | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-snmp.yaml` | Classic SNMP nested OIDs, communities and users | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-logging.yaml` | Classic logging TLS profile and IPv4/IPv6 servers | Native lifecycle, upstream equivalence, Kubernetes reconciliation |
 
 The baseline is NetAsCode module v1.5.0 at
 `5fbf037ea57368c7e6e77694c81330b6f7b16666` and provider v0.11.5 at
@@ -51,7 +54,8 @@ The public model remains the upstream `sdwan` document. The format is
   `multicast_templates`, `cellular_controller_templates` and
   `cellular_profile_templates`, `bfd_templates`, `igmp_templates`, `ntp_templates`,
   `omp_templates`, `pim_templates`, `thousandeyes_templates`,
-  `secure_app_hosting_templates` and `dhcp_server_templates`, including per-family device defaults and overrides.
+  `secure_app_hosting_templates`, `dhcp_server_templates`, `ipsec_interface_templates`,
+  `snmp_templates` and `logging_templates`, including per-family device defaults and overrides.
   Generate their metadata with `scripts/sdwan/generate-classic-definitions.py
   MODULE_CHECKOUT PROVIDER_CHECKOUT`.
 - `feature_profiles.system_profiles`: profile name/description, banner, basic,
@@ -65,7 +69,8 @@ The public model remains the upstream `sdwan` document. The format is
   `other_profiles.thousandeyes`, including the NaC GPS enable default and the
   ThousandEyes virtual-application wrapper. These fixtures are unattached.
 - `feature_profiles.service_profiles.dhcp_servers`, `ipv4_trackers` and
-  `object_trackers`, with native name-based parcel management and full generated
+  `object_trackers`, `ipv4_tracker_groups` and `object_tracker_groups`, with native
+  name-based parcel management and full generated
   API-data schema checks for these resources.
 - `feature_profiles.transport_profiles.cellular_controllers` and
   `cellular_profiles`, including authentication switches, credential variables and
@@ -80,7 +85,7 @@ The public model remains the upstream `sdwan` document. The format is
 - `network_hierarchy` groups/regions through levels 0–2 and unassigned sites with
   the 20.18 location/GPS model. Global collectors remain unsupported.
 
-`deployment.yaml` combines the qualified fixtures under one config and five
+`deployment.yaml` combines the baseline fixtures under one config and five
 managed sections. Use `deployment-config.yaml` with its resolved output instead
 of installing individual configs that would compete for the same section Lease.
 The combined fixture includes hierarchy prerequisites for region lists. For
@@ -234,3 +239,14 @@ variable fields wrap the public variable name as required by their module mappin
 The pinned provider does not serialize `pim_templates[].rp_addresses[].optional`.
 CVK rejects this field before mutation; the qualified fixture omits it. Other PIM
 row types preserve their optional flag and provider-defined priority order.
+
+### Tracker references and classic logging compatibility
+
+Tracker groups require two distinct tracker names declared in the same service
+profile. CVK creates trackers before groups, resolves controller IDs before every
+write and comparison, and rejects missing dependencies without sending a mutation.
+
+The pinned module reads `version_ciphersuites_variablevariable` for classic logging
+TLS ciphersuite variables. CVK rejects that typo and `ciphersuites_variable`; literal
+`ciphersuites` is fixture-qualified. Classic IPsec supports nested `ike`/`ipsec`
+fields and the numeric DH-group form shown in the NaC example.
