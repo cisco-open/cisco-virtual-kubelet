@@ -1523,8 +1523,8 @@
       "type": "sdwan_route_policy_definition",
       "name": "route_policy_definition",
       "source": "sdwan_localized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true
     },
     {
       "type": "sdwan_localized_policy",

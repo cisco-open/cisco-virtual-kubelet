@@ -17,10 +17,29 @@ type LocalizedPolicies struct {
 	Definitions LocalizedPolicyDefinitions `json:"definitions"`
 }
 type LocalizedPolicyDefinitions struct {
-	IPv4AccessControlLists   []ClassicACL `json:"ipv4_access_control_lists,omitempty"`
-	IPv6AccessControlLists   []ClassicACL `json:"ipv6_access_control_lists,omitempty"`
-	IPv4DeviceAccessPolicies []ClassicACL `json:"ipv4_device_access_policies,omitempty"`
-	IPv6DeviceAccessPolicies []ClassicACL `json:"ipv6_device_access_policies,omitempty"`
+	IPv4AccessControlLists   []ClassicACL         `json:"ipv4_access_control_lists,omitempty"`
+	IPv6AccessControlLists   []ClassicACL         `json:"ipv6_access_control_lists,omitempty"`
+	IPv4DeviceAccessPolicies []ClassicACL         `json:"ipv4_device_access_policies,omitempty"`
+	IPv6DeviceAccessPolicies []ClassicACL         `json:"ipv6_device_access_policies,omitempty"`
+	RoutePolicies            []ClassicRoutePolicy `json:"route_policies,omitempty"`
+}
+type ClassicRoutePolicy struct {
+	Name          string                 `json:"name"`
+	Description   string                 `json:"description"`
+	DefaultAction string                 `json:"default_action"`
+	Sequences     []ClassicRouteSequence `json:"sequences"`
+}
+type ClassicRouteSequence struct {
+	ID            int    `json:"id"`
+	IPType        string `json:"ip_type,omitempty"`
+	Name          string `json:"name,omitempty"`
+	BaseAction    string `json:"base_action"`
+	MatchCriteria struct {
+		OMPTag *int `json:"omp_tag,omitempty"`
+	} `json:"match_criterias"`
+	Actions struct {
+		Metric *int `json:"metric,omitempty"`
+	} `json:"actions"`
 }
 type ClassicACL struct {
 	Name          string               `json:"name"`
@@ -109,6 +128,47 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 			out = append(out, Resource{Key: "localized_policies/definitions/" + spec.keyPart + "/" + acl.Name, Name: acl.Name, Section: "localized_policies", Kind: "classic-definition", Type: spec.modelType, Collection: "/dataservice/template/policy/definition/" + spec.path, Body: body})
 		}
 	}
+	for _, route := range input.Definitions.RoutePolicies {
+		if route.Name == "" || route.Description == "" || len(route.Name) > 128 || (route.DefaultAction != "accept" && route.DefaultAction != "reject") {
+			return nil, errors.New("invalid localized route policy")
+		}
+		sequences := []any{}
+		seen := map[int]bool{}
+		for _, sequence := range route.Sequences {
+			if sequence.ID < 1 || sequence.ID > 65535 || seen[sequence.ID] || (sequence.BaseAction != "accept" && sequence.BaseAction != "reject") {
+				return nil, errors.New("invalid localized route sequence")
+			}
+			seen[sequence.ID] = true
+			ipType := sequence.IPType
+			if ipType == "" {
+				ipType = "ipv4"
+			}
+			if ipType != "ipv4" && ipType != "ipv6" {
+				return nil, errors.New("invalid localized route ip_type")
+			}
+			name := sequence.Name
+			if name == "" {
+				name = "route"
+			}
+			matches := []any{}
+			if sequence.MatchCriteria.OMPTag != nil {
+				if *sequence.MatchCriteria.OMPTag < 0 || *sequence.MatchCriteria.OMPTag > 4294967295 {
+					return nil, errors.New("invalid OMP tag")
+				}
+				matches = append(matches, map[string]any{"field": "ompTag", "value": fmt.Sprint(*sequence.MatchCriteria.OMPTag)})
+			}
+			actions := []any{}
+			if sequence.Actions.Metric != nil {
+				if *sequence.Actions.Metric < 0 {
+					return nil, errors.New("invalid route metric")
+				}
+				actions = append(actions, map[string]any{"type": "set", "parameter": []any{map[string]any{"field": "metric", "value": fmt.Sprint(*sequence.Actions.Metric)}}})
+			}
+			sequences = append(sequences, map[string]any{"sequenceId": sequence.ID, "sequenceIpType": ipType, "sequenceName": name, "sequenceType": "vedgeRoute", "baseAction": sequence.BaseAction, "match": map[string]any{"entries": matches}, "actions": actions})
+		}
+		body := map[string]any{"type": "vedgeRoute", "name": route.Name, "description": route.Description, "defaultAction": map[string]any{"type": route.DefaultAction}, "sequences": sequences}
+		out = append(out, Resource{Key: "localized_policies/definitions/route_policies/" + route.Name, Name: route.Name, Section: "localized_policies", Kind: "classic-definition", Type: "route_policy_definition", Collection: "/dataservice/template/policy/definition/vedgeroute/", Body: body})
+	}
 	return out, nil
 }
 func (c *Client) observeClassicDefinition(ctx context.Context, r Resource) (*Observation, error) {
@@ -192,7 +252,7 @@ func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 				}
 			}
 			sequence := map[string]any{"sequenceId": entry["sequenceId"], "sequenceName": entry["sequenceName"], "sequenceType": sequenceType, "baseAction": entry["baseAction"], "match": entry["match"], "actions": entry["actions"]}
-			if r.Type == "ipv6_acl_policy_definition" || r.Type == "ipv6_device_acl_policy_definition" {
+			if r.Type == "ipv6_acl_policy_definition" || r.Type == "ipv6_device_acl_policy_definition" || r.Type == "route_policy_definition" {
 				sequence["sequenceIpType"] = entry["sequenceIpType"]
 			}
 			normalized = append(normalized, sequence)
