@@ -708,8 +708,13 @@
       "type": "sdwan_service_ipv4_acl_feature",
       "name": "service_ipv4_acl_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "ipv4-acls",
+        "ipv4-acl-references"
+      ]
     },
     {
       "type": "sdwan_service_lan_vpn_feature",
@@ -1136,8 +1141,13 @@
       "type": "sdwan_transport_ipv4_acl_feature",
       "name": "transport_ipv4_acl_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "ipv4-acls",
+        "ipv4-acl-references"
+      ]
     },
     {
       "type": "sdwan_transport_route_policy_feature",

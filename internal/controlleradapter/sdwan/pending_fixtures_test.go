@@ -11,7 +11,7 @@ import (
 )
 
 func TestPendingNativeFixtures(t *testing.T) {
-	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2, "system-device-access": 3, "system-device-access-references": 6, "topology-mesh": 4, "topology-hubspoke": 6} {
+	for fixture, count := range map[string]int{"policy-prefixes": 8, "transport-trackers": 7, "policy-security": 12, "policy-dependencies": 6, "ca-certificate": 2, "cisco-sse": 2, "classic-sig-credentials": 1, "classic-security": 1, "classic-ospf": 1, "routing-ospf": 6, "classic-svi": 1, "classic-cellular-interface": 1, "classic-switchport": 1, "routing-eigrp": 2, "zscaler-sse": 2, "service-switchport": 2, "custom-applications": 1, "service-multicast": 2, "system-device-access": 3, "system-device-access-references": 6, "topology-mesh": 4, "topology-hubspoke": 6, "ipv4-acls": 4, "ipv4-acl-references": 6} {
 		t.Run(fixture, func(t *testing.T) {
 			rs := parcelFixtures(t, fixture)
 			if len(rs) != count {
@@ -167,17 +167,53 @@ func TestTopologyHubSpokeSiteModes(t *testing.T) {
 	}
 }
 
+func TestIPv4ACLReferencesAndValidation(t *testing.T) {
+	resources := parcelFixtures(t, "ipv4-acl-references")
+	count := 0
+	for _, r := range resources {
+		if r.Type != "service_ipv4_acl" {
+			continue
+		}
+		if len(r.ParcelRefs) != 3 {
+			t.Fatal("expected prefix, mirror and policer references")
+		}
+		for _, ref := range r.ParcelRefs {
+			if ref.ParentName != "CVK-ACL-OBJECTS" || ref.Collection != "/dataservice/v1/feature-profile/sdwan/policy-object" {
+				t.Fatal("wrong ACL reference parent", ref)
+			}
+		}
+		count++
+	}
+	if count != 1 {
+		t.Fatal("missing service IPv4 ACL")
+	}
+	bad := map[string]any{"name": "bad", "default_action": "drop", "sequences": []any{map[string]any{"id": float64(10), "base_action": "accept", "match_entries": map[string]any{"source_data_prefix": "192.0.2.0/24", "source_data_prefix_list": "named"}}}}
+	if _, _, _, err := ipv4ACLData(bad, "service"); err == nil {
+		t.Fatal("conflicting ACL prefixes accepted")
+	}
+	transport := map[string]any{"name": "chain", "default_action": "drop", "sequences": []any{map[string]any{"id": float64(10), "base_action": "accept", "actions": map[string]any{"service_chain_name": "sc1", "service_chain_vpn": float64(10)}}}}
+	_, body, _, err := ipv4ACLData(transport, "transport")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sequence := body["data"].(map[string]any)["sequences"].([]any)[0].(map[string]any)
+	chain := sequence["actions"].([]any)[0].(map[string]any)["accept"].(map[string]any)["setServiceChain"].(map[string]any)
+	if chain["serviceChainNumber"].(map[string]any)["value"] != "SC1" {
+		t.Fatal("transport service chain case mapping changed")
+	}
+}
+
 // These opt-in entry points exercise native Manager APIs only. They are not
 // executed by the normal local suite and do not imply live qualification.
 func TestLivePendingNamesAbsent(t *testing.T) {
-	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh", "topology-hubspoke"} {
+	for _, fixture := range []string{"transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh", "topology-hubspoke", "ipv4-acls"} {
 		t.Run(fixture, func(t *testing.T) { liveParcelNamesAbsent(t, parcelFixtures(t, fixture)) })
 	}
 }
 func TestLivePendingLifecycle(t *testing.T) {
 	fixture := os.Getenv("CVK_SDWAN_PENDING_FIXTURE")
 	switch fixture {
-	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh", "topology-hubspoke":
+	case "transport-trackers", "policy-prefixes", "policy-dependencies", "policy-security", "ca-certificate", "cisco-sse", "classic-sig-credentials", "classic-security", "classic-ospf", "routing-ospf", "classic-svi", "classic-cellular-interface", "classic-switchport", "routing-eigrp", "zscaler-sse", "service-switchport", "custom-applications", "service-multicast", "system-device-access", "topology-mesh", "topology-hubspoke", "ipv4-acls":
 		liveParcelLifecycle(t, parcelFixtures(t, fixture))
 	default:
 		t.Skip("select a pending fixture with CVK_SDWAN_PENDING_FIXTURE")

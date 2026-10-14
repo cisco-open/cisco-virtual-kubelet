@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 107 resource declarations
+Native fixture coverage now includes 109 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -392,3 +392,15 @@ reverse cleanup passed in 15.20s. Real Kubernetes reconciliation passed in
 Manager received hierarchy UUIDs for all three target arrays. Local tests
 verify group expansion, legacy name mode, and rejection of unknown groups.
 No policy was activated or attached to a device.
+
+## Service and transport IPv4 ACLs
+
+`ipv4-acls.yaml` creates isolated service and transport profiles and IPv4 ACL
+parcels with accept/drop sequences, match criteria, counters, logging, DSCP,
+and port lists. Native create/read/update/read and cleanup passed in 11.62s;
+real Kubernetes reconciliation passed in 22.92s with idempotence and cleanup.
+The pinned provider request schemas validate emitted payloads.
+`ipv4-acl-references.yaml` locally validates policy-object prefix, mirror,
+and policer references and dependency ordering. That branch remains without
+live qualification because the lab already owns the singleton policy-object
+profile. No ACL was attached to a router.
