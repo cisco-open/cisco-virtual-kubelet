@@ -925,8 +925,13 @@
       "type": "sdwan_service_ipv6_acl_feature",
       "name": "service_ipv6_acl_feature",
       "source": "sdwan_features_service.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "ipv6-acls",
+        "ipv6-acl-references"
+      ]
     },
     {
       "type": "sdwan_sse_zscaler_feature",
@@ -1336,8 +1341,13 @@
       "type": "sdwan_transport_ipv6_acl_feature",
       "name": "transport_ipv6_acl_feature",
       "source": "sdwan_features_transport.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "local_tested": true,
+      "fixtures": [
+        "ipv6-acls",
+        "ipv6-acl-references"
+      ]
     },
     {
       "type": "sdwan_tag",

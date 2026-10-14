@@ -22,6 +22,7 @@ type FeatureProfile struct {
 	MeshPolicies          []map[string]any             `json:"mesh_policies,omitempty"`
 	HubSpokePolicies      []map[string]any             `json:"hub_spoke_policies,omitempty"`
 	IPv4ACLs              []map[string]any             `json:"ipv4_acls,omitempty"`
+	IPv6ACLs              []map[string]any             `json:"ipv6_acls,omitempty"`
 	IPv6Trackers          []map[string]any             `json:"ipv6_trackers,omitempty"`
 	IPv6TrackerGroups     []map[string]any             `json:"ipv6_tracker_groups,omitempty"`
 	CACertificate         map[string]any               `json:"ca_certificate,omitempty"`

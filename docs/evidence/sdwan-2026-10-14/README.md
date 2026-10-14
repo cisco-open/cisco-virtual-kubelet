@@ -25,7 +25,7 @@ or deployment dependency.
 | Focused race tests | Passed for adapter foundation, SD-WAN, cisco-vk command and default resolver; final adapter checks include the journal-settlement change |
 | Helm | Lint and template rendering passed |
 
-Native fixture coverage now includes 109 resource declarations
+Native fixture coverage now includes 111 resource declarations
 and the checked fixture attributes. The full 226-resource module surface is not qualified.
 All observed fixture cleanup calls succeeded.
 The real-API-server tests exercise reconcilers directly; they do not claim a
@@ -404,3 +404,15 @@ The pinned provider request schemas validate emitted payloads.
 and policer references and dependency ordering. That branch remains without
 live qualification because the lab already owns the singleton policy-object
 profile. No ACL was attached to a router.
+
+## Service and transport IPv6 ACLs
+
+`ipv6-acls.yaml` creates isolated service and transport profiles and IPv6 ACL
+parcels with next-header and prefix matches, ports, accept/drop actions,
+counters, logging, and traffic class. Native create/read/update/read and
+cleanup passed in 11.45s; real Kubernetes reconciliation passed in 22.93s
+with idempotence and cleanup. The pinned provider request schemas validate
+the emitted payloads. `ipv6-acl-references.yaml` locally validates IPv6
+prefix, mirror, and policer dependencies. Those reference branches remain
+without live qualification because the current lab owns its singleton
+policy-object profile. No ACL was attached to a router.
