@@ -47,9 +47,10 @@ var classicDefinitionTypes = map[string]classicDefinitionSpec{
 	"ipv6_access_control_lists":   {"aclv6/", "aclv6"},
 	"ipv4_device_access_policies": {"deviceaccesspolicy/", "deviceAccessPolicy"},
 	"ipv6_device_access_policies": {"deviceaccesspolicyv6/", "deviceAccessPolicyv6"},
-	"centralized_policies/definitions/control_policy/mesh_topology":  {"mesh/", "mesh"},
-	"centralized_policies/definitions/control_policy/vpn_membership": {"vpnmembershipgroup/", "vpnMembershipGroup"},
-	"centralized_policies/definitions/data_policy/cflowd":            {"cflowd/", "cflowd"},
+	"centralized_policies/definitions/control_policy/mesh_topology":          {"mesh/", "mesh"},
+	"centralized_policies/definitions/control_policy/hub_and_spoke_topology": {"hubandspoke/", "hubAndSpoke"},
+	"centralized_policies/definitions/control_policy/vpn_membership":         {"vpnmembershipgroup/", "vpnMembershipGroup"},
+	"centralized_policies/definitions/data_policy/cflowd":                    {"cflowd/", "cflowd"},
 }
 
 func compileLocalizedFeaturePolicies(items []LocalizedFeaturePolicy) ([]Resource, error) {

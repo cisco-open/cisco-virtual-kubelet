@@ -50,8 +50,11 @@
       "type": "sdwan_hub_and_spoke_topology_policy_definition",
       "name": "hub_and_spoke_topology_policy_definition",
       "source": "sdwan_centralized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-centralized-membership-mesh"
+      ]
     },
     {
       "type": "sdwan_mesh_topology_policy_definition",

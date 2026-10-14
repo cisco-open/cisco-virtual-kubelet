@@ -19,8 +19,9 @@ type CentralizedPolicies struct {
 	FeaturePolicies []CentralizedFeaturePolicy `json:"feature_policies,omitempty"`
 	Definitions     struct {
 		ControlPolicy struct {
-			VPNMembership []CentralizedVPNMembership `json:"vpn_membership,omitempty"`
-			MeshTopology  []CentralizedMeshTopology  `json:"mesh_topology,omitempty"`
+			VPNMembership       []CentralizedVPNMembership `json:"vpn_membership,omitempty"`
+			MeshTopology        []CentralizedMeshTopology  `json:"mesh_topology,omitempty"`
+			HubAndSpokeTopology []CentralizedHubAndSpoke   `json:"hub_and_spoke_topology,omitempty"`
 		} `json:"control_policy"`
 		DataPolicy struct {
 			Cflowd []CentralizedCflowd `json:"cflowd,omitempty"`
@@ -33,6 +34,9 @@ type CentralizedFeaturePolicy struct {
 	MeshTopology []struct {
 		PolicyDefinition string `json:"policy_definition"`
 	} `json:"mesh_topology,omitempty"`
+	HubAndSpokeTopology []struct {
+		PolicyDefinition string `json:"policy_definition"`
+	} `json:"hub_and_spoke_topology,omitempty"`
 	VPNMembership []struct {
 		PolicyDefinition string `json:"policy_definition"`
 	} `json:"vpn_membership,omitempty"`
@@ -76,6 +80,25 @@ type CentralizedMeshTopology struct {
 		Name      string   `json:"name"`
 		SiteLists []string `json:"site_lists"`
 	} `json:"mesh_groups"`
+}
+type CentralizedHubAndSpoke struct {
+	Name             string `json:"name"`
+	Description      string `json:"description"`
+	VPNList          string `json:"vpn_list"`
+	HubAndSpokeSites []struct {
+		Name            string `json:"name"`
+		EqualPreference *bool  `json:"equal_preference,omitempty"`
+		AdvertiseTLOC   *bool  `json:"advertise_tloc,omitempty"`
+		TLOCList        string `json:"tloc_list,omitempty"`
+		Spokes          []struct {
+			SiteList string `json:"site_list"`
+			Hubs     []struct {
+				SiteList        string   `json:"site_list"`
+				IPv4PrefixLists []string `json:"ipv4_prefix_lists,omitempty"`
+				IPv6PrefixLists []string `json:"ipv6_prefix_lists,omitempty"`
+			} `json:"hubs"`
+		} `json:"spokes"`
+	} `json:"hub_and_spoke_sites"`
 }
 
 func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) {
@@ -130,6 +153,68 @@ func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) 
 			regions = append(regions, map[string]any{"name": group.Name, "siteLists": sites})
 		}
 		out = append(out, Resource{Key: "centralized_policies/definitions/control_policy/mesh_topology/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "mesh_topology_policy_definition", Collection: "/dataservice/template/policy/definition/mesh/", PolicyListRefs: refs, Body: map[string]any{"type": "mesh", "name": p.Name, "description": p.Description, "definition": map[string]any{"vpnList": "", "regions": regions}}})
+	}
+	for _, p := range input.Definitions.ControlPolicy.HubAndSpokeTopology {
+		if p.Name == "" || p.Description == "" || p.VPNList == "" || seen["hubAndSpoke/"+p.Name] {
+			return nil, errors.New("invalid or duplicate hub-and-spoke definition")
+		}
+		seen["hubAndSpoke/"+p.Name] = true
+		refs := []PolicyListReference{{Section: "vpn_lists", Name: p.VPNList, Path: []string{"definition", "vpnList"}}}
+		topologies := []any{}
+		for ti, topology := range p.HubAndSpokeSites {
+			if topology.Name == "" || len(topology.Spokes) == 0 {
+				return nil, errors.New("hub-and-spoke topology requires name and spokes")
+			}
+			row := map[string]any{"name": topology.Name, "spokes": []any{}}
+			if topology.EqualPreference != nil {
+				row["equalPreference"] = *topology.EqualPreference
+			}
+			if topology.AdvertiseTLOC != nil {
+				row["advertiseTloc"] = *topology.AdvertiseTLOC
+			}
+			if topology.TLOCList != "" {
+				row["tlocList"] = ""
+				refs = append(refs, PolicyListReference{Section: "tloc_lists", Name: topology.TLOCList, Path: []string{"definition", "subDefinitions", strconv.Itoa(ti), "tlocList"}})
+			}
+			spokes := []any{}
+			for si, spoke := range topology.Spokes {
+				if spoke.SiteList == "" || len(spoke.Hubs) == 0 {
+					return nil, errors.New("spoke requires site list and hubs")
+				}
+				hubs := []any{}
+				for hi, hub := range spoke.Hubs {
+					if hub.SiteList == "" {
+						return nil, errors.New("hub requires site list")
+					}
+					entry := map[string]any{"siteList": ""}
+					base := []string{"definition", "subDefinitions", strconv.Itoa(ti), "spokes", strconv.Itoa(si), "hubs", strconv.Itoa(hi)}
+					refs = append(refs, PolicyListReference{Section: "site_lists", Name: hub.SiteList, Path: append(append([]string{}, base...), "siteList")})
+					for _, family := range []struct {
+						names          []string
+						section, field string
+					}{{hub.IPv4PrefixLists, "ipv4_prefix_lists", "prefixLists"}, {hub.IPv6PrefixLists, "ipv6_prefix_lists", "ipv6PrefixLists"}} {
+						if len(family.names) == 0 {
+							continue
+						}
+						values := []any{}
+						for pi, name := range family.names {
+							if name == "" {
+								return nil, errors.New("empty hub prefix-list reference")
+							}
+							values = append(values, "")
+							refs = append(refs, PolicyListReference{Section: family.section, Name: name, Path: append(append([]string{}, base...), family.field, strconv.Itoa(pi))})
+						}
+						entry[family.field] = values
+					}
+					hubs = append(hubs, entry)
+				}
+				spokes = append(spokes, map[string]any{"siteList": "", "hubs": hubs})
+				refs = append(refs, PolicyListReference{Section: "site_lists", Name: spoke.SiteList, Path: []string{"definition", "subDefinitions", strconv.Itoa(ti), "spokes", strconv.Itoa(si), "siteList"}})
+			}
+			row["spokes"] = spokes
+			topologies = append(topologies, row)
+		}
+		out = append(out, Resource{Key: "centralized_policies/definitions/control_policy/hub_and_spoke_topology/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "hub_and_spoke_topology_policy_definition", Collection: "/dataservice/template/policy/definition/hubandspoke/", PolicyListRefs: refs, Body: map[string]any{"type": "hubAndSpoke", "name": p.Name, "description": p.Description, "definition": map[string]any{"vpnList": "", "subDefinitions": topologies}}})
 	}
 	for _, p := range input.Definitions.DataPolicy.Cflowd {
 		if p.Name == "" || p.Description == "" || seen["cflowd/"+p.Name] {
@@ -201,6 +286,13 @@ func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) 
 			}
 			refs = append(refs, ClassicDefinitionReference{Type: "centralized_policies/definitions/control_policy/mesh_topology", Name: item.PolicyDefinition})
 			assembly = append(assembly, map[string]any{"definitionId": "", "type": "mesh", "entries": []any{}})
+		}
+		for _, item := range p.HubAndSpokeTopology {
+			if item.PolicyDefinition == "" {
+				return nil, errors.New("empty hub-and-spoke policy definition reference")
+			}
+			refs = append(refs, ClassicDefinitionReference{Type: "centralized_policies/definitions/control_policy/hub_and_spoke_topology", Name: item.PolicyDefinition})
+			assembly = append(assembly, map[string]any{"definitionId": "", "type": "hubAndSpoke", "entries": []any{}})
 		}
 		for _, item := range p.VPNMembership {
 			if item.PolicyDefinition == "" {
