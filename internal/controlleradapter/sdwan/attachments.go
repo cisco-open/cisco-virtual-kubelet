@@ -128,6 +128,13 @@ func (c *Client) attachmentInput(ctx context.Context, templateID, deviceID strin
 	if len(result.Data) != 1 || result.Data[0]["csv-deviceId"] != deviceID {
 		return nil, nil, ErrResponse
 	}
+	qosMappings := map[string]string{}
+	for _, column := range result.Header.Columns {
+		if column.Editable && strings.Contains(column.Property, "/qos-adaptive/") {
+			qosMappings = c.attachmentQoSMappings(ctx, templateID)
+			break
+		}
+	}
 	properties := map[string][]string{}
 	add := func(name, property string) {
 		for _, existing := range properties[name] {
@@ -142,9 +149,18 @@ func (c *Client) attachmentInput(ctx context.Context, templateID, deviceID strin
 			continue
 		}
 		add(column.Property, column.Property)
-		matches := attachmentVariableTitle.FindAllStringSubmatch(column.Title, -1)
-		if len(matches) > 0 {
-			add(matches[len(matches)-1][1], column.Property)
+		matchedQoS := false
+		for suffix, name := range qosMappings {
+			if strings.HasSuffix(column.Property, suffix) {
+				add(name, column.Property)
+				matchedQoS = true
+			}
+		}
+		if !matchedQoS {
+			matches := attachmentVariableTitle.FindAllStringSubmatch(column.Title, -1)
+			if len(matches) > 0 {
+				add(matches[len(matches)-1][1], column.Property)
+			}
 		}
 		switch column.Property {
 		case "//system/host-name":
