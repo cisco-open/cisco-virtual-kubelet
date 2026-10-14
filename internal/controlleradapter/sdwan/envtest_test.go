@@ -1,0 +1,132 @@
+//go:build envtest
+
+// Copyright 2026 Cisco Systems Inc.
+// SPDX-License-Identifier: Apache-2.0
+package sdwan
+
+import (
+	"context"
+	"encoding/json"
+	"github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	"os"
+	"testing"
+
+	configv1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	cvkv1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/yaml"
+)
+
+func TestEnvtestSDWANReconciliation(t *testing.T) {
+	api := &fixtureAPI{}
+	a, cfg := testAdapter(t, api)
+	env := &envtest.Environment{CRDDirectoryPaths: []string{"../../../config/crd"}, ErrorIfCRDPathMissing: true}
+	rest, e := env.Start()
+	if e != nil {
+		t.Fatal(e)
+	}
+	t.Cleanup(func() {
+		if e := env.Stop(); e != nil {
+			t.Error(e)
+		}
+	})
+	k, e := client.New(rest, client.Options{Scheme: testScheme()})
+	if e != nil {
+		t.Fatal(e)
+	}
+	ctx := context.Background()
+	if e = k.Create(ctx, &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "lab"}}); e != nil {
+		t.Fatal(e)
+	}
+	nc := a.opts.Controller.DeepCopy()
+	nc.UID = ""
+	nc.ResourceVersion = ""
+	nc.Generation = 0
+	if os.Getenv("CVK_SDWAN_ENVTEST_LIVE") == "1" {
+		a.remote = liveClient(t)
+		a.remote.Guard = a.guard
+		nc.Spec.Endpoint = a.remote.Endpoint
+		nc.Spec.TLS = &cvkv1.NetworkControllerTLSConfig{InsecureSkipVerify: true}
+		fixture := os.Getenv("CVK_SDWAN_ENVTEST_FIXTURE")
+		if fixture == "" {
+			fixture = "banner.yaml"
+		}
+		if fixture != "banner.yaml" && fixture != "system-profile.yaml" {
+			t.Fatal("unsupported fixture")
+		}
+		if fixture == "system-profile.yaml" {
+			cfg.Spec.ManagedSections = []string{"feature_profiles", "configuration_groups"}
+		}
+		b, e := os.ReadFile("../../../examples/configs/sdwan/" + fixture)
+		if e != nil {
+			t.Fatal(e)
+		}
+		cfg.Spec.Source.Inline.Raw, e = yaml.YAMLToJSON(b)
+		if e != nil {
+			t.Fatal(e)
+		}
+		rs, e := Compile(cfg.Spec.Source.Inline.Raw)
+		if e != nil {
+			t.Fatal(e)
+		}
+		savedGuard := a.remote.Guard
+		a.remote.Guard = nil
+		existing, e := a.remote.Observe(ctx, rs[0])
+		a.remote.Guard = savedGuard
+		if e != nil || existing != nil {
+			t.Fatal("live fixture name must be absent", e)
+		}
+
+		t.Cleanup(func() {
+			a.remote.Guard = nil
+			for i := len(rs) - 1; i >= 0; i-- {
+				r := rs[i]
+				lock := &controlleradapter.SectionLease{ControllerUID: string(nc.UID), Scope: "global", Section: r.Section}
+				lease := &coordinationv1.Lease{}
+				if e := k.Get(ctx, client.ObjectKey{Namespace: "lab", Name: lock.Name()}, lease); e != nil {
+					continue
+				}
+				journal := controlleradapter.SectionJournal{}
+				if json.Unmarshal([]byte(lease.Annotations["cisco.vk/controller-section-journal"]), &journal) != nil {
+					t.Error("invalid fixture journal")
+					continue
+				}
+				receipt := journal[resourceKey(r)]
+				if receipt.ID == "" {
+					continue
+				}
+				if e := a.remote.DeleteResourceFixture(ctx, r, receipt.ID); e != nil {
+					t.Error("fixture cleanup", e)
+				}
+			}
+		})
+	}
+	if e = k.Create(ctx, nc); e != nil {
+		t.Fatal(e)
+	}
+	a.opts.Controller = nc.DeepCopy()
+	a.kube = k
+	cfg.UID = ""
+	cfg.ResourceVersion = ""
+	cfg.Generation = 0
+	if e = k.Create(ctx, cfg); e != nil {
+		t.Fatal(e)
+	}
+	for i := 0; i < 5; i++ {
+		cfg = reconcileFixture(t, a, cfg)
+	}
+	if cfg.Status.Phase != configv1.NetworkControllerConfigPhaseInSync {
+		t.Fatalf("reconciliation: %s %v", cfg.Status.Phase, cfg.Status.Conditions)
+	}
+	if cfg.Status.LastAppliedTime == nil {
+		t.Fatal("missing verified apply time")
+	}
+	if os.Getenv("CVK_SDWAN_ENVTEST_LIVE") != "1" && api.posts != 1 {
+		t.Fatal("duplicate creation")
+	}
+	t.Log("real Kubernetes status/Lease persistence and idempotent reconciliation passed")
+}

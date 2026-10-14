@@ -1,0 +1,1604 @@
+{
+  "module": {
+    "version": "1.5.0",
+    "commit": "5fbf037ea57368c7e6e77694c81330b6f7b16666",
+    "repository": "https://github.com/netascode/terraform-sdwan-nac-sdwan"
+  },
+  "provider": {
+    "version": "0.11.5",
+    "commit": "d3194b612c3f24421ec1727b6fa6e9c0bc98b07f",
+    "repository": "https://github.com/CiscoDevNet/terraform-provider-sdwan"
+  },
+  "resources": [
+    {
+      "type": "sdwan_custom_application",
+      "name": "custom_application",
+      "source": "sdwan_application_catalog.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_activate_centralized_policy",
+      "name": "activate_centralized_policy",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_centralized_policy",
+      "name": "centralized_policy",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_custom_control_topology_policy_definition",
+      "name": "custom_control_topology_policy_definition",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_hub_and_spoke_topology_policy_definition",
+      "name": "hub_and_spoke_topology_policy_definition",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_mesh_topology_policy_definition",
+      "name": "mesh_topology_policy_definition",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_vpn_membership_policy_definition",
+      "name": "vpn_membership_policy_definition",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_traffic_data_policy_definition",
+      "name": "traffic_data_policy_definition",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cflowd_policy_definition",
+      "name": "cflowd_policy_definition",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_application_aware_routing_policy_definition",
+      "name": "application_aware_routing_policy_definition",
+      "source": "sdwan_centralized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_application_list_policy_object",
+      "name": "application_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_as_path_list_policy_object",
+      "name": "as_path_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_class_map_policy_object",
+      "name": "class_map_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_color_list_policy_object",
+      "name": "color_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_standard_community_list_policy_object",
+      "name": "standard_community_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_data_ipv4_prefix_list_policy_object",
+      "name": "data_ipv4_prefix_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_expanded_community_list_policy_object",
+      "name": "expanded_community_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_extended_community_list_policy_object",
+      "name": "extended_community_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policer_policy_object",
+      "name": "policer_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_ipv4_prefix_list_policy_object",
+      "name": "ipv4_prefix_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_mirror_policy_object",
+      "name": "mirror_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_site_list_policy_object",
+      "name": "site_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_sla_class_policy_object",
+      "name": "sla_class_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_tloc_list_policy_object",
+      "name": "tloc_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_vpn_list_policy_object",
+      "name": "vpn_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_app_probe_class_policy_object",
+      "name": "app_probe_class_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_data_ipv6_prefix_list_policy_object",
+      "name": "data_ipv6_prefix_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_ipv6_prefix_list_policy_object",
+      "name": "ipv6_prefix_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_preferred_color_group_policy_object",
+      "name": "preferred_color_group_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_region_list_policy_object",
+      "name": "region_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_zone_list_policy_object",
+      "name": "zone_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_data_fqdn_prefix_list_policy_object",
+      "name": "fqdn_prefix_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_local_application_list_policy_object",
+      "name": "local_application_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_port_list_policy_object",
+      "name": "port_list_policy_object",
+      "source": "sdwan_classic_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_configuration_group",
+      "name": "configuration_group",
+      "source": "sdwan_configuration_groups.tf",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "system-profile.yaml",
+      "limits": "Unattached resources only; attributes outside compiled subset rejected"
+    },
+    {
+      "type": "sdwan_feature_device_template",
+      "name": "feature_device_template",
+      "source": "sdwan_device_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_attach_feature_device_template",
+      "name": "attach_feature_device_template",
+      "source": "sdwan_device_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_embedded_security_feature_profile",
+      "name": "embedded_security_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_application_priority_feature_profile",
+      "name": "application_priority_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cli_feature_profile",
+      "name": "cli_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_other_feature_profile",
+      "name": "other_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_feature_profile",
+      "name": "service_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_feature_profile",
+      "name": "system_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "system-profile.yaml",
+      "limits": "Unattached resources only; attributes outside compiled subset rejected"
+    },
+    {
+      "type": "sdwan_sse_feature_profile",
+      "name": "sse_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_topology_feature_profile",
+      "name": "topology_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_feature_profile",
+      "name": "transport_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_feature_profile",
+      "name": "policy_object_feature_profile",
+      "source": "sdwan_feature_profiles.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cedge_aaa_feature_template",
+      "name": "cedge_aaa_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cedge_global_feature_template",
+      "name": "cedge_global_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cedge_igmp_feature_template",
+      "name": "cedge_igmp_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_banner_feature_template",
+      "name": "cisco_banner_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "banner.yaml",
+      "limits": "Unattached resources only; attributes outside compiled subset rejected"
+    },
+    {
+      "type": "sdwan_cisco_bfd_feature_template",
+      "name": "cisco_bfd_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_bgp_feature_template",
+      "name": "cisco_bgp_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_dhcp_server_feature_template",
+      "name": "cisco_dhcp_server_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_logging_feature_template",
+      "name": "cisco_logging_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cedge_multicast_feature_template",
+      "name": "cedge_multicast_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_ntp_feature_template",
+      "name": "cisco_ntp_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_omp_feature_template",
+      "name": "cisco_omp_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_ospf_feature_template",
+      "name": "cisco_ospf_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cedge_pim_feature_template",
+      "name": "cedge_pim_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_secure_internet_gateway_feature_template",
+      "name": "cisco_secure_internet_gateway_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_security_feature_template",
+      "name": "cisco_security_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_sig_credentials_feature_template",
+      "name": "cisco_sig_credentials_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_snmp_feature_template",
+      "name": "cisco_snmp_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_system_feature_template",
+      "name": "cisco_system_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_thousandeyes_feature_template",
+      "name": "cisco_thousandeyes_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_vpn_feature_template",
+      "name": "cisco_vpn_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_vpn_interface_feature_template",
+      "name": "cisco_vpn_interface_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_vpn_interface_ipsec_feature_template",
+      "name": "cisco_vpn_interface_ipsec_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cli_template_feature_template",
+      "name": "cli_template_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_switchport_feature_template",
+      "name": "switchport_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_vpn_interface_svi_feature_template",
+      "name": "vpn_interface_svi_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_security_app_hosting_feature_template",
+      "name": "security_app_hosting_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cellular_controller_feature_template",
+      "name": "cellular_controller_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cellular_cedge_profile_feature_template",
+      "name": "cellular_cedge_profile_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cisco_vpn_interface_gre_feature_template",
+      "name": "cisco_vpn_interface_gre_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_vpn_interface_cellular_feature_template",
+      "name": "vpn_interface_cellular_feature_template",
+      "source": "sdwan_feature_templates.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_application_priority_policy_settings_policy",
+      "name": "application_priority_policy_settings_policy",
+      "source": "sdwan_features_application_priority.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_application_priority_qos_policy",
+      "name": "application_priority_qos_policy",
+      "source": "sdwan_features_application_priority.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_application_priority_traffic_policy_policy",
+      "name": "application_priority_traffic_policy",
+      "source": "sdwan_features_application_priority.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cli_config_feature",
+      "name": "cli_config_feature",
+      "source": "sdwan_features_cli.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_embedded_security_ngfw_policy",
+      "name": "embedded_security_ngfw_policy",
+      "source": "sdwan_features_embedded_security.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_embedded_security_policy",
+      "name": "embedded_security_policy",
+      "source": "sdwan_features_embedded_security.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_other_thousandeyes_feature",
+      "name": "other_thousandeyes_feature",
+      "source": "sdwan_features_other.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_other_trustsec_feature",
+      "name": "other_trustsec_feature",
+      "source": "sdwan_features_other.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_other_ucse_feature",
+      "name": "other_ucse_feature",
+      "source": "sdwan_features_other.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_routing_bgp_feature",
+      "name": "service_routing_bgp_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_dhcp_server_feature",
+      "name": "service_dhcp_server_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_dual_router_ha_feature",
+      "name": "service_dual_router_ha_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_routing_eigrp_feature",
+      "name": "service_routing_eigrp_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_ipv4_acl_feature",
+      "name": "service_ipv4_acl_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_feature",
+      "name": "service_lan_vpn_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_feature_associate_routing_bgp_feature",
+      "name": "service_lan_vpn_feature_associate_routing_bgp_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_feature_associate_routing_eigrp_feature",
+      "name": "service_lan_vpn_feature_associate_routing_eigrp_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_feature_associate_multicast_feature",
+      "name": "service_lan_vpn_feature_associate_multicast_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_feature_associate_routing_ospf_feature",
+      "name": "service_lan_vpn_feature_associate_routing_ospf_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_feature_associate_routing_ospfv3_ipv4_feature",
+      "name": "service_lan_vpn_feature_associate_routing_ospfv3_ipv4_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_feature_associate_routing_ospfv3_ipv6_feature",
+      "name": "service_lan_vpn_feature_associate_routing_ospfv3_ipv6_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_ethernet_feature",
+      "name": "service_lan_vpn_interface_ethernet_member_link_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_ethernet_feature",
+      "name": "service_lan_vpn_interface_ethernet_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_ethernet_feature_associate_dhcp_server_feature",
+      "name": "service_lan_vpn_interface_ethernet_feature_associate_dhcp_server_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_ethernet_feature_associate_tracker_feature",
+      "name": "service_lan_vpn_interface_ethernet_feature_associate_tracker_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_ethernet_feature_associate_tracker_group_feature",
+      "name": "service_lan_vpn_interface_ethernet_feature_associate_tracker_group_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_gre_feature",
+      "name": "service_lan_vpn_interface_gre_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_ipsec_feature",
+      "name": "service_lan_vpn_interface_ipsec_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_svi_feature",
+      "name": "service_lan_vpn_interface_svi_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature",
+      "name": "service_lan_vpn_interface_svi_feature_associate_dhcp_server_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_multicast_feature",
+      "name": "service_multicast_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_tracker_group_feature",
+      "name": "service_tracker_group_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_tracker_feature",
+      "name": "service_tracker_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_object_tracker_group_feature",
+      "name": "service_object_tracker_group_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_object_tracker_feature",
+      "name": "service_object_tracker_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_routing_ospf_feature",
+      "name": "service_routing_ospf_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_routing_ospfv3_ipv4_feature",
+      "name": "service_routing_ospfv3_ipv4_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_routing_ospfv3_ipv6_feature",
+      "name": "service_routing_ospfv3_ipv6_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_route_policy_feature",
+      "name": "service_route_policy_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_switchport_feature",
+      "name": "service_switchport_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_service_ipv6_acl_feature",
+      "name": "service_ipv6_acl_feature",
+      "source": "sdwan_features_service.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_sse_zscaler_feature",
+      "name": "sse_zscaler_feature",
+      "source": "sdwan_features_sse.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_sse_cisco_feature",
+      "name": "sse_cisco_feature",
+      "source": "sdwan_features_sse.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_aaa_feature",
+      "name": "system_aaa_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_banner_feature",
+      "name": "system_banner_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixture": "system-profile.yaml",
+      "limits": "Unattached resources only; attributes outside compiled subset rejected"
+    },
+    {
+      "type": "sdwan_system_basic_feature",
+      "name": "system_basic_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_bfd_feature",
+      "name": "system_bfd_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_ca_certificate_feature",
+      "name": "system_ca_certificate_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_flexible_port_speed_feature",
+      "name": "system_flexible_port_speed_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_global_feature",
+      "name": "system_global_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_ipv4_device_access_feature",
+      "name": "system_ipv4_device_access_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_ipv6_device_access_feature",
+      "name": "system_ipv6_device_access_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_logging_feature",
+      "name": "system_logging_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_mrf_feature",
+      "name": "system_mrf_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_ntp_feature",
+      "name": "system_ntp_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_omp_feature",
+      "name": "system_omp_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_performance_monitoring_feature",
+      "name": "system_performance_monitoring_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_security_feature",
+      "name": "system_security_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_system_snmp_feature",
+      "name": "system_snmp_feature",
+      "source": "sdwan_features_system.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_topology_custom_control_feature",
+      "name": "topology_custom_control_feature",
+      "source": "sdwan_features_topology.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_topology_hub_spoke_feature",
+      "name": "topology_hub_spoke_feature",
+      "source": "sdwan_features_topology.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_topology_mesh_feature",
+      "name": "topology_mesh_feature",
+      "source": "sdwan_features_topology.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_routing_bgp_feature",
+      "name": "transport_routing_bgp_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_cellular_controller_feature",
+      "name": "transport_cellular_controller_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_cellular_profile_feature",
+      "name": "transport_cellular_profile_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_gps_feature",
+      "name": "transport_gps_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_ipv4_acl_feature",
+      "name": "transport_ipv4_acl_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_route_policy_feature",
+      "name": "transport_route_policy_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_tracker_group_feature",
+      "name": "transport_tracker_group_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_tracker_feature",
+      "name": "transport_tracker_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_ipv6_tracker_group_feature",
+      "name": "transport_ipv6_tracker_group_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_ipv6_tracker_feature",
+      "name": "transport_ipv6_tracker_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_management_vpn_feature",
+      "name": "transport_management_vpn_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_management_vpn_interface_ethernet_feature",
+      "name": "transport_management_vpn_interface_ethernet_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_routing_ospf_feature",
+      "name": "transport_routing_ospf_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_feature",
+      "name": "transport_wan_vpn_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_feature_associate_routing_bgp_feature",
+      "name": "transport_wan_vpn_feature_associate_routing_bgp_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_feature_associate_routing_ospf_feature",
+      "name": "transport_wan_vpn_feature_associate_routing_ospf_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_cellular_feature",
+      "name": "transport_wan_vpn_interface_cellular_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_feature",
+      "name": "transport_wan_vpn_interface_cellular_feature_associate_tracker_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature",
+      "name": "transport_wan_vpn_interface_cellular_feature_associate_tracker_group_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ethernet_feature",
+      "name": "transport_wan_vpn_interface_ethernet_member_link_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ethernet_feature",
+      "name": "transport_wan_vpn_interface_ethernet_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ethernet_feature_associate_tracker_feature",
+      "name": "transport_wan_vpn_interface_ethernet_feature_associate_tracker_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ethernet_feature_associate_tracker_group_feature",
+      "name": "transport_wan_vpn_interface_ethernet_feature_associate_tracker_group_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_feature",
+      "name": "transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_group_feature",
+      "name": "transport_wan_vpn_interface_ethernet_feature_associate_ipv6_tracker_group_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_gre_feature",
+      "name": "transport_wan_vpn_interface_gre_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_gre_feature_associate_tracker_feature",
+      "name": "transport_wan_vpn_interface_gre_feature_associate_tracker_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ipsec_feature",
+      "name": "transport_wan_vpn_interface_ipsec_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_wan_vpn_interface_ipsec_feature_associate_tracker_feature",
+      "name": "transport_wan_vpn_interface_ipsec_feature_associate_tracker_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_transport_ipv6_acl_feature",
+      "name": "transport_ipv6_acl_feature",
+      "source": "sdwan_features_transport.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_tag",
+      "name": "tag",
+      "source": "sdwan_inventory.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_qos_map_policy_definition",
+      "name": "qos_map_policy_definition",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_rewrite_rule_policy_definition",
+      "name": "rewrite_rule_policy_definition",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_ipv4_acl_policy_definition",
+      "name": "ipv4_acl_policy_definition",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_ipv6_acl_policy_definition",
+      "name": "ipv6_acl_policy_definition",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_ipv4_device_acl_policy_definition",
+      "name": "ipv4_device_acl_policy_definition",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_ipv6_device_acl_policy_definition",
+      "name": "ipv6_device_acl_policy_definition",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_route_policy_definition",
+      "name": "route_policy_definition",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_localized_policy",
+      "name": "localized_policy",
+      "source": "sdwan_localized_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_node",
+      "name": "network_hierarchy_group_l0",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_node",
+      "name": "network_hierarchy_region_l0",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_node",
+      "name": "network_hierarchy_group_l1",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_node",
+      "name": "network_hierarchy_region_l1",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_node",
+      "name": "network_hierarchy_group_l2",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_node",
+      "name": "network_hierarchy_region_l2",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_node",
+      "name": "network_hierarchy_site",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_cflowd",
+      "name": "network_hierarchy_cflowd",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_network_hierarchy_security_logging",
+      "name": "network_hierarchy_security_logging",
+      "source": "sdwan_network_hierarchy.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_group",
+      "name": "policy_group",
+      "source": "sdwan_policy_groups.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_app_probe_class",
+      "name": "policy_object_app_probe_class",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_application_list",
+      "name": "policy_object_application_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_as_path_list",
+      "name": "policy_object_as_path_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_class_map",
+      "name": "policy_object_class_map",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_color_list",
+      "name": "policy_object_color_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_data_ipv4_prefix_list",
+      "name": "policy_object_data_ipv4_prefix_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_data_ipv6_prefix_list",
+      "name": "policy_object_data_ipv6_prefix_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_expanded_community_list",
+      "name": "policy_object_expanded_community_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_extended_community_list",
+      "name": "policy_object_extended_community_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_ipv4_prefix_list",
+      "name": "policy_object_ipv4_prefix_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_ipv6_prefix_list",
+      "name": "policy_object_ipv6_prefix_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_mirror",
+      "name": "policy_object_mirror",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_policer",
+      "name": "policy_object_policer",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_preferred_color_group",
+      "name": "policy_object_preferred_color_group",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_data_ipv4_prefix_list",
+      "name": "policy_object_security_data_ipv4_prefix_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_fqdn_list",
+      "name": "policy_object_security_fqdn_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_geolocation_list",
+      "name": "policy_object_security_geolocation_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_ips_signature",
+      "name": "policy_object_security_ips_signature",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_local_application_list",
+      "name": "policy_object_security_local_application_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_local_domain_list",
+      "name": "policy_object_security_local_domain_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_port_list",
+      "name": "policy_object_security_port_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_protocol_list",
+      "name": "policy_object_security_protocol_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_url_allow_list",
+      "name": "policy_object_security_url_allow_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_url_block_list",
+      "name": "policy_object_security_url_block_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_security_zone",
+      "name": "policy_object_security_zone",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_unified_url_filtering",
+      "name": "policy_object_unified_url_filtering",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_sla_class_list",
+      "name": "policy_object_sla_class_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_standard_community_list",
+      "name": "policy_object_standard_community_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_tloc_list",
+      "name": "policy_object_tloc_list",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_unified_advanced_inspection_profile",
+      "name": "policy_object_unified_advanced_inspection_profile",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_unified_advanced_malware_protection",
+      "name": "policy_object_unified_advanced_malware_protection",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_policy_object_unified_intrusion_prevention",
+      "name": "policy_object_unified_intrusion_prevention",
+      "source": "sdwan_policy_objects.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_zone_based_firewall_policy_definition",
+      "name": "zone_based_firewall_policy_definition",
+      "source": "sdwan_security_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_security_policy",
+      "name": "security_policy",
+      "source": "sdwan_security_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_intrusion_prevention_policy_definition",
+      "name": "intrusion_prevention_policy_definition",
+      "source": "sdwan_security_policies.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_cloud_provider_settings",
+      "name": "cloud_provider_settings",
+      "source": "sdwan_settings.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_activate_topology_group",
+      "name": "activate_topology_group",
+      "source": "sdwan_topology_groups.tf",
+      "implementation": "pending",
+      "live_tested": false
+    },
+    {
+      "type": "sdwan_topology_group",
+      "name": "topology_group",
+      "source": "sdwan_topology_groups.tf",
+      "implementation": "pending",
+      "live_tested": false
+    }
+  ]
+}

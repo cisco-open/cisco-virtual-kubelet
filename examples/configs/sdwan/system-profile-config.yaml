@@ -1,0 +1,23 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: system-profile-fixture
+  namespace: sdwan-lab
+spec:
+  controllerRef:
+    name: sdwan-lab
+  scope: global
+  managedSections: [feature_profiles, configuration_groups]
+  modelSource:
+    format: netascode-sdwan
+    modelVersion: 1.5.0
+    resolved: true
+    sourceRevision: fixture-system-profile-v1
+  source:
+    configMapRef:
+      name: sdwan-system-profile-fixture
+      key: model.yaml
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 30s

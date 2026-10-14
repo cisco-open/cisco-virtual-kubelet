@@ -32,6 +32,9 @@ const (
 	// in their Descriptor.
 	DefaultWorkerClusterRole = "cisco-virtual-kubelet-controller-worker"
 
+	// SDWANWorkerClusterRole adds section ownership leases for native SD-WAN deployment.
+	SDWANWorkerClusterRole = "cisco-virtual-kubelet-sdwan-worker"
+
 	// DefaultCredentialPath is the read-only mount point offered to controller
 	// adapters for controller authentication material. The foundation passes a
 	// path, never Secret bytes; each adapter defines and validates its own key
