@@ -156,9 +156,20 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 				return nil, err
 			}
 		}
+		var vpnDNS map[string]any
+		if collection == "vpn_templates" {
+			var err error
+			dataInput, vpnDNS, err = prepareVPNDNS(input)
+			if err != nil {
+				return nil, err
+			}
+		}
 		data, err := classicData(definition, dataInput, true)
 		if err != nil {
 			return nil, err
+		}
+		for key, tree := range vpnDNS {
+			data[key] = tree
 		}
 		if wrapper := definition.Wrapper; wrapper != nil {
 			wrapped := map[string]any{}

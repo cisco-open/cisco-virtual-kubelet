@@ -579,7 +579,8 @@
       "live_tested": true,
       "local_tested": true,
       "fixtures": [
-        "classic-vpn"
+        "classic-vpn",
+        "classic-vpn-dns"
       ]
     },
     {

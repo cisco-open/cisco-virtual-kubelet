@@ -659,8 +659,8 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         field = generated["trees"]["ipv4_static_routes"]["definition"]["fields"]["next_hop_dia"]
         field["boolean_zero"] = True
         field["input_schema"] = {"type":"boolean"}
-        for name in ("ipv4_dns_hosts", "ipv6_dns_hosts", "ipv4_primary_dns_server", "ipv4_primary_dns_server_variable", "ipv4_secondary_dns_server", "ipv4_secondary_dns_server_variable", "ipv6_primary_dns_server", "ipv6_primary_dns_server_variable", "ipv6_secondary_dns_server", "ipv6_secondary_dns_server_variable"):
-            generated["unavailable_inputs"][name] = "Nested DNS flattening is not yet mapped"
+        for name in ("ipv6_primary_dns_server_variable", "ipv6_secondary_dns_server_variable"):
+            generated["unavailable_inputs"][name] = "Pinned provider omits IPv6 DNS server address variables"
         generated["unavailable_inputs"]["omp_advertise_ipv4_routes[].protocol_sub_type"] = "Pinned module derives external subtype for OSPF"
         generated["unavailable_inputs"]["route_global_exports[].protocol_sub_type"] = "Pinned module derives external subtype"
         generated["unavailable_inputs"]["route_global_imports[].protocol_sub_type"] = "Pinned module derives external subtype"

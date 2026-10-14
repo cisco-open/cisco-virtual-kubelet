@@ -29,8 +29,9 @@ func TestClassicVPNFixture(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if _, e = Compile([]byte(strings.Replace(string(raw), "vpn_id: 10", "ipv4_primary_dns_server: 192.0.2.1", 1))); e == nil {
-		t.Fatal("unmapped DNS branch accepted")
+	dns, e := Compile([]byte(strings.Replace(string(raw), "vpn_id: 10", "vpn_id: 10\n        ipv4_primary_dns_server: 192.0.2.1", 1)))
+	if e != nil || dns[0].Body["templateDefinition"].(map[string]any)["dns"].(map[string]any)["vipType"] != "constant" {
+		t.Fatal("VPN DNS branch did not compile", e)
 	}
 }
 func TestLiveClassicVPNLifecycle(t *testing.T) { liveParcelLifecycle(t, classicVPNFixture(t)) }
