@@ -80,8 +80,11 @@
       "type": "sdwan_traffic_data_policy_definition",
       "name": "traffic_data_policy_definition",
       "source": "sdwan_centralized_policies.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "fixture-qualified",
+      "live_tested": true,
+      "fixtures": [
+        "classic-centralized-traffic-data"
+      ]
     },
     {
       "type": "sdwan_cflowd_policy_definition",

@@ -418,7 +418,7 @@ func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 				}
 			}
 			sequence := map[string]any{"sequenceId": entry["sequenceId"], "sequenceName": entry["sequenceName"], "sequenceType": sequenceType, "baseAction": entry["baseAction"], "match": entry["match"], "actions": entry["actions"]}
-			if r.Type == "ipv6_acl_policy_definition" || r.Type == "ipv6_device_acl_policy_definition" || r.Type == "route_policy_definition" {
+			if r.Type == "ipv6_acl_policy_definition" || r.Type == "ipv6_device_acl_policy_definition" || r.Type == "route_policy_definition" || r.Type == "traffic_data_policy_definition" {
 				sequence["sequenceIpType"] = entry["sequenceIpType"]
 			}
 			normalized = append(normalized, sequence)

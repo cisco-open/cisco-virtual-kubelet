@@ -24,9 +24,25 @@ type CentralizedPolicies struct {
 			HubAndSpokeTopology []CentralizedHubAndSpoke   `json:"hub_and_spoke_topology,omitempty"`
 		} `json:"control_policy"`
 		DataPolicy struct {
-			Cflowd []CentralizedCflowd `json:"cflowd,omitempty"`
+			Cflowd      []CentralizedCflowd      `json:"cflowd,omitempty"`
+			TrafficData []CentralizedTrafficData `json:"traffic_data,omitempty"`
 		} `json:"data_policy"`
 	} `json:"definitions"`
+}
+type CentralizedTrafficData struct {
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	DefaultActionType string `json:"default_action_type,omitempty"`
+	Sequences         []struct {
+		ID            int    `json:"id"`
+		Name          string `json:"name"`
+		Type          string `json:"type,omitempty"`
+		IPType        string `json:"ip_type,omitempty"`
+		BaseAction    string `json:"base_action,omitempty"`
+		MatchCriteria struct {
+			SourceDataPrefix string `json:"source_data_prefix,omitempty"`
+		} `json:"match_criterias"`
+	} `json:"sequences"`
 }
 type CentralizedFeaturePolicy struct {
 	Name         string `json:"name"`
@@ -272,6 +288,60 @@ func compileCentralizedPolicies(input *CentralizedPolicies) ([]Resource, error) 
 		}
 		definition["collectors"] = collectors
 		out = append(out, Resource{Key: "centralized_policies/definitions/data_policy/cflowd/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "cflowd_policy_definition", Collection: "/dataservice/template/policy/definition/cflowd/", Body: map[string]any{"type": "cflowd", "name": p.Name, "description": p.Description, "definition": definition}})
+	}
+	for _, p := range input.Definitions.DataPolicy.TrafficData {
+		if p.Name == "" || p.Description == "" || seen["data/"+p.Name] {
+			return nil, errors.New("invalid or duplicate traffic data definition")
+		}
+		seen["data/"+p.Name] = true
+		defaultAction := p.DefaultActionType
+		if defaultAction == "" {
+			defaultAction = "drop"
+		}
+		if defaultAction != "accept" && defaultAction != "drop" {
+			return nil, errors.New("invalid traffic data default action")
+		}
+		sequences := []any{}
+		ids := map[int]bool{}
+		for _, s := range p.Sequences {
+			if s.ID < 1 || s.ID > 65535 || ids[s.ID] || s.Name == "" {
+				return nil, errors.New("invalid traffic data sequence")
+			}
+			ids[s.ID] = true
+			typ := s.Type
+			if typ == "" {
+				typ = "custom"
+			}
+			apiTypes := map[string]string{"custom": "data", "application_firewall": "applicationFirewall", "qos": "qos", "service_chaining": "serviceChaining", "traffic_engineering": "trafficEngineering"}
+			mapped := apiTypes[typ]
+			if mapped == "" {
+				return nil, errors.New("invalid traffic data sequence type")
+			}
+			ipType := s.IPType
+			if ipType == "" {
+				ipType = "ipv4"
+			}
+			if ipType != "ipv4" && ipType != "ipv6" && ipType != "all" {
+				return nil, errors.New("invalid traffic data IP type")
+			}
+			base := s.BaseAction
+			if base == "" {
+				base = "accept"
+			}
+			if base != "accept" && base != "drop" {
+				return nil, errors.New("invalid traffic data base action")
+			}
+			matches := []any{}
+			if s.MatchCriteria.SourceDataPrefix != "" {
+				prefix, e := netip.ParsePrefix(s.MatchCriteria.SourceDataPrefix)
+				if e != nil || (ipType == "ipv4" && !prefix.Addr().Is4()) || (ipType == "ipv6" && !prefix.Addr().Is6()) {
+					return nil, errors.New("invalid traffic source prefix")
+				}
+				matches = append(matches, map[string]any{"field": "sourceIp", "value": s.MatchCriteria.SourceDataPrefix})
+			}
+			sequences = append(sequences, map[string]any{"sequenceId": s.ID, "sequenceName": s.Name, "sequenceType": mapped, "sequenceIpType": ipType, "baseAction": base, "match": map[string]any{"entries": matches}, "actions": []any{}})
+		}
+		out = append(out, Resource{Key: "centralized_policies/definitions/data_policy/traffic_data/" + p.Name, Name: p.Name, Section: "centralized_policies", Kind: "classic-definition", Type: "traffic_data_policy_definition", Collection: "/dataservice/template/policy/definition/data/", Body: map[string]any{"type": "data", "name": p.Name, "description": p.Description, "defaultAction": map[string]any{"type": defaultAction}, "sequences": sequences}})
 	}
 	for _, p := range input.FeaturePolicies {
 		if p.Name == "" || p.Description == "" || seen["feature/"+p.Name] {
