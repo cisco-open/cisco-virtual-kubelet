@@ -5,6 +5,8 @@ sdwan:
         policies:
           - name: CVK-NGFW-POLICY
             default_action: drop
+            source_zone: self
+            destination_zones: [untrusted]
             sequences:
               - sequence_id: 1
                 sequence_name: CVK-NGFW-RULE

@@ -119,6 +119,11 @@ func simpleParcels(p FeatureProfile, collection, key, managerVersion string) ([]
 		return nil, err
 	}
 	out = append(out, ngfw...)
+	embedded, err := compileEmbeddedSecurityPolicy(p, collection, key)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, embedded...)
 	hubSpoke, err := compileHubSpokePolicies(p, collection, key)
 	if err != nil {
 		return nil, err

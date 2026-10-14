@@ -481,6 +481,9 @@ folder.mkdir(exist_ok=True)
 (folder / "embedded-security-ngfw-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/embedded_security_ngfw.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
+(folder / "embedded-security-policy-schema.json").write_text(json.dumps(json.loads(
+    (args.provider / "gen/models/profile_parcels/embedded_security.json").read_text()
+)["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")
 (folder / "service-gre-schema.json").write_text(json.dumps(json.loads(
     (args.provider / "gen/models/profile_parcels/service_lan_vpn_interface_gre.json").read_text()
 )["request"]["properties"]["data"], indent=2, sort_keys=True) + "\n")

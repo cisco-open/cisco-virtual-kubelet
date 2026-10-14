@@ -25,7 +25,7 @@ func compileNGFWPolicies(p FeatureProfile, family, key string) ([]Resource, erro
 		}
 		for field := range input {
 			switch field {
-			case "name", "default_action", "sequences":
+			case "name", "default_action", "sequences", "source_zone", "destination_zones":
 			default:
 				return nil, fmt.Errorf("unsupported NGFW policy field %s", field)
 			}

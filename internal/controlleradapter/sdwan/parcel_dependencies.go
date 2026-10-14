@@ -55,7 +55,7 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	indices := map[string]int{}
 	for i, r := range resources {
-		if r.Kind == "parcel" || r.Kind == "association" {
+		if r.Kind == "parcel" || r.Kind == "association" || r.Kind == "policy-parcel" {
 			key := identity(r)
 			if _, exists := indices[key]; exists {
 				return nil, errors.New("duplicate parcel identity")
