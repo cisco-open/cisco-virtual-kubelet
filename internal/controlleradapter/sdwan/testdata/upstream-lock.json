@@ -2100,8 +2100,12 @@
       "type": "sdwan_activate_topology_group",
       "name": "activate_topology_group",
       "source": "sdwan_topology_groups.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "implemented-unqualified",
+      "live_tested": false,
+      "local_tested": true,
+      "fixtures": [
+        "topology-group-activation"
+      ]
     },
     {
       "type": "sdwan_topology_group",

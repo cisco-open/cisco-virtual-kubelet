@@ -23,6 +23,7 @@ type TopologyGroup struct {
 	Name            string `json:"name"`
 	Description     string `json:"description,omitempty"`
 	TopologyProfile string `json:"topology_profile"`
+	Activate        bool   `json:"activate,omitempty"`
 }
 
 type PolicyGroup struct {
@@ -73,12 +74,22 @@ func compileTopologyGroups(groups []TopologyGroup, profiles []Resource) ([]Resou
 	}
 	seen := map[string]bool{}
 	out := make([]Resource, 0, len(groups))
+	activeName := ""
 	for _, g := range groups {
 		if g.Name == "" || len(g.Name) > 128 || seen[g.Name] || !known[g.TopologyProfile] {
 			return nil, errors.New("invalid topology group or undeclared topology profile")
 		}
 		seen[g.Name] = true
+		if g.Activate {
+			if activeName != "" {
+				return nil, errors.New("only one topology group can be active")
+			}
+			activeName = g.Name
+		}
 		out = append(out, Resource{Key: "topology_groups/" + g.Name, Name: g.Name, Section: "topology_groups", Kind: "group", Type: "topology_group", Collection: "/dataservice/v1/topology-group", ProfileRefs: map[string]string{"topology": g.TopologyProfile}, Body: map[string]any{"name": g.Name, "description": g.Description, "solution": "sdwan", "profiles": []any{}}})
+	}
+	if activeName != "" {
+		out = append(out, Resource{Key: "topology_groups/activation/active", Name: activeName, Section: "topology_groups", Kind: "activation", Type: "topology-group", Body: map[string]any{"activated": true}})
 	}
 	return out, nil
 }

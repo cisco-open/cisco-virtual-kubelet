@@ -9,6 +9,30 @@ import (
 )
 
 const centralizedPolicyCollection = "/dataservice/template/policy/vsmart/"
+const topologyGroupCollection = "/dataservice/v1/topology-group"
+
+func (c *Client) topologyGroupID(ctx context.Context, name string) (string, error) {
+	var list []struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := c.Request(ctx, "GET", topologyGroupCollection, nil, &list); err != nil {
+		return "", err
+	}
+	if list == nil {
+		return "", ErrResponse
+	}
+	id := ""
+	for _, item := range list {
+		if item.Name == name {
+			if id != "" || !validID.MatchString(item.ID) {
+				return "", errors.New("topology group identity conflict")
+			}
+			id = item.ID
+		}
+	}
+	return id, nil
+}
 
 func (c *Client) centralizedPolicyID(ctx context.Context, name string) (string, error) {
 	var list struct {
@@ -37,6 +61,24 @@ func (c *Client) centralizedPolicyID(ctx context.Context, name string) (string, 
 }
 
 func (c *Client) observeActivation(ctx context.Context, r Resource) (*Observation, error) {
+	if r.Type == "topology-group" {
+		id, err := c.topologyGroupID(ctx, r.Name)
+		if err != nil || id == "" {
+			return nil, err
+		}
+		var body map[string]any
+		if err := c.Request(ctx, "GET", topologyGroupCollection+"/"+url.PathEscape(id), nil, &body); err != nil {
+			return nil, err
+		}
+		active, ok := body["activeStatus"].(bool)
+		if !ok {
+			return nil, ErrResponse
+		}
+		if !active {
+			return nil, nil
+		}
+		return &Observation{ID: id, Body: map[string]any{"activated": true}}, nil
+	}
 	if r.Type != "centralized-policy" {
 		return nil, errors.New("unsupported activation type")
 	}
@@ -59,6 +101,25 @@ func (c *Client) observeActivation(ctx context.Context, r Resource) (*Observatio
 }
 
 func (c *Client) createActivation(ctx context.Context, r Resource) (string, error) {
+	if r.Type == "topology-group" {
+		id, err := c.topologyGroupID(ctx, r.Name)
+		if err != nil {
+			return "", err
+		}
+		if id == "" {
+			return "", ErrDependencyPending
+		}
+		var result struct {
+			TaskID string `json:"parentTaskId"`
+		}
+		if err := c.Request(ctx, "POST", topologyGroupCollection+"/"+url.PathEscape(id)+"/device/deploy", map[string]any{}, &result); err != nil {
+			return "", err
+		}
+		if err := c.waitCustomApplicationTask(ctx, result.TaskID); err != nil {
+			return "", err
+		}
+		return id, nil
+	}
 	if r.Type != "centralized-policy" {
 		return "", errors.New("unsupported activation type")
 	}
