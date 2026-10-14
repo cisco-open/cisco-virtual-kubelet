@@ -305,8 +305,12 @@
       "type": "sdwan_attach_feature_device_template",
       "name": "attach_feature_device_template",
       "source": "sdwan_device_templates.tf",
-      "implementation": "pending",
-      "live_tested": false
+      "implementation": "implemented-unqualified",
+      "live_tested": false,
+      "local_tested": true,
+      "fixtures": [
+        "classic-device-attachment"
+      ]
     },
     {
       "type": "sdwan_embedded_security_feature_profile",

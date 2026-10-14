@@ -15,6 +15,7 @@ parity**. The pinned upstream module has 226 resource declarations. 181 resource
 | `examples/configs/sdwan/system-profile.yaml` | System feature profile, system banner parcel, unattached configuration group | Dependency order, create, read, cleanup, Kubernetes reconciliation |
 | `examples/configs/sdwan/policy-objects.yaml` | All 24 classic policy-object collections | Create, read, update, cleanup |
 | `examples/configs/sdwan/network-hierarchy.yaml` | Groups and regions at levels 0–2, and an unassigned site | Dependency order, create, read, cleanup |
+| `examples/configs/sdwan/classic-device-attachment.yaml` | Site router to classic device template with device variables | Local model and API lifecycle; live router attachment pending scoped lab target |
 | `examples/configs/sdwan/topology-group-activation.yaml` | Topology group activation | Local model and API task lifecycle; live activation pending scoped lab target |
 | `examples/configs/sdwan/classic-centralized-activation.yaml` | Centralized feature policy activation | Local model and API task lifecycle; live activation pending scoped lab target |
 | `examples/configs/sdwan/classic-bgp.yaml` | Cisco BGP feature template with AS number and IPv4 network | Native lifecycle, Kubernetes reconciliation |

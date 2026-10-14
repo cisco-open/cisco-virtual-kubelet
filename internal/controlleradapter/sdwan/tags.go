@@ -15,8 +15,10 @@ type SDWANSite struct {
 	Routers []SDWANRouter `json:"routers,omitempty"`
 }
 type SDWANRouter struct {
-	ChassisID string   `json:"chassis_id"`
-	Tags      []string `json:"tags,omitempty"`
+	ChassisID       string            `json:"chassis_id"`
+	Tags            []string          `json:"tags,omitempty"`
+	DeviceTemplate  string            `json:"device_template,omitempty"`
+	DeviceVariables map[string]string `json:"device_variables,omitempty"`
 }
 
 const tagPath = "/dataservice/v1/tags"

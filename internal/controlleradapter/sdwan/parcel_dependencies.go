@@ -65,6 +65,19 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		if r.Kind == "device-attachment" {
+			found := -1
+			for j, candidate := range resources {
+				if candidate.Kind == "device-template" && candidate.Name == r.Name {
+					found = j
+					break
+				}
+			}
+			if found < 0 {
+				return nil, errors.New("attachment device template is not declared")
+			}
+			dependencies[i] = append(dependencies[i], found)
+		}
 		if r.Kind == "activation" {
 			parentKind := "centralized-policy"
 			if r.Type == "topology-group" {

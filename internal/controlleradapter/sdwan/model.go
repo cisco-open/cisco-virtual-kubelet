@@ -79,6 +79,7 @@ type Resource struct {
 	CustomControlSites                 map[string][]string
 	TagDevices                         []string
 	DeviceTemplateRefs                 []DeviceTemplateReference
+	AttachDevices                      []DeviceAttachmentTarget
 	ParcelPath                         string
 	ParentParcelPath, ParentParcelName string
 	Key, Name, Section, Type           string
@@ -184,6 +185,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, deviceTemplates...)
+	attachments, err := compileDeviceAttachments(doc.SDWAN.Sites, doc.SDWAN.EdgeDeviceTemplates)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, attachments...)
 	if doc.SDWAN.NetworkHierarchy != nil {
 		collectors, err := compileHierarchyCollectors(doc.SDWAN.NetworkHierarchy.Collectors)
 		if err != nil {
