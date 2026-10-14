@@ -580,7 +580,8 @@
       "local_tested": true,
       "fixtures": [
         "classic-vpn",
-        "classic-vpn-dns"
+        "classic-vpn-dns",
+        "classic-vpn-routes"
       ]
     },
     {

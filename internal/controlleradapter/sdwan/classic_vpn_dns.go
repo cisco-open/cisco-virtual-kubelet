@@ -153,3 +153,47 @@ func prepareVPNDNS(input map[string]any) (map[string]any, map[string]any, error)
 	}
 	return prepared, trees, nil
 }
+
+func applyVPNRouteSubtypes(data, input map[string]any) error {
+	for _, mapping := range []struct {
+		input, path string
+		ospfOnly    bool
+	}{
+		{"omp_advertise_ipv4_routes", "omp.advertise", true},
+		{"route_global_exports", "route-export", false},
+		{"route_global_imports", "route-import", false},
+	} {
+		raw := input[mapping.input]
+		if raw == nil {
+			continue
+		}
+		items, ok := raw.([]any)
+		if !ok {
+			return fmt.Errorf("%s must be an array", mapping.input)
+		}
+		tree, ok := classicInput(data, mapping.path).(map[string]any)
+		if !ok {
+			return ErrResponse
+		}
+		rows, ok := tree["vipValue"].([]any)
+		if !ok || len(rows) != len(items) {
+			return ErrResponse
+		}
+		for i, item := range items {
+			object, ok := item.(map[string]any)
+			if !ok {
+				return ErrResponse
+			}
+			protocol := object["protocol"]
+			if mapping.ospfOnly && protocol != "ospf" || !mapping.ospfOnly && protocol == nil {
+				continue
+			}
+			row, ok := rows[i].(map[string]any)
+			if !ok {
+				return ErrResponse
+			}
+			row["protocol-sub-type"] = map[string]any{"vipObjectType": "list", "vipType": "constant", "vipValue": []string{"external"}}
+		}
+	}
+	return nil
+}

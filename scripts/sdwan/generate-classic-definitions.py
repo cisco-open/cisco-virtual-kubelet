@@ -661,9 +661,6 @@ for resource in ["sdwan_cedge_global_feature_template", "sdwan_cli_template_feat
         field["input_schema"] = {"type":"boolean"}
         for name in ("ipv6_primary_dns_server_variable", "ipv6_secondary_dns_server_variable"):
             generated["unavailable_inputs"][name] = "Pinned provider omits IPv6 DNS server address variables"
-        generated["unavailable_inputs"]["omp_advertise_ipv4_routes[].protocol_sub_type"] = "Pinned module derives external subtype for OSPF"
-        generated["unavailable_inputs"]["route_global_exports[].protocol_sub_type"] = "Pinned module derives external subtype"
-        generated["unavailable_inputs"]["route_global_imports[].protocol_sub_type"] = "Pinned module derives external subtype"
     if resource == "sdwan_cedge_aaa_feature_template":
         generated["fields"]["authentication_and_authorization_order"]["input_default"] = defaults["aaa_templates"]["authentication_and_authorization_order"]
     if resource == "sdwan_cisco_bgp_feature_template":

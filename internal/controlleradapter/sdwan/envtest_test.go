@@ -92,6 +92,7 @@ func TestEnvtestSDWANReconciliation(t *testing.T) {
 			"classic-device-template-peripherals.yaml": {"edge_feature_templates", "edge_device_templates"},
 			"classic-vpn.yaml":                         {"edge_feature_templates"},
 			"classic-vpn-dns.yaml":                     {"edge_feature_templates"},
+			"classic-vpn-routes.yaml":                  {"edge_feature_templates"},
 			"classic-ethernet-interface.yaml":          {"edge_feature_templates"},
 			"classic-aaa.yaml":                         {"edge_feature_templates"},
 			"classic-sig.yaml":                         {"edge_feature_templates"},

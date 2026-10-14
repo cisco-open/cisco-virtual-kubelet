@@ -171,6 +171,11 @@ func compileClassicTemplates(collection string, templates []map[string]any, over
 		for key, tree := range vpnDNS {
 			data[key] = tree
 		}
+		if collection == "vpn_templates" {
+			if err := applyVPNRouteSubtypes(data, input); err != nil {
+				return nil, err
+			}
+		}
 		if wrapper := definition.Wrapper; wrapper != nil {
 			wrapped := map[string]any{}
 			setScalarPath(wrapped, wrapper.Path, map[string]any{"vipObjectType": "tree", "vipType": "constant", "vipPrimaryKey": wrapper.PrimaryKeys, "vipValue": []any{data}})

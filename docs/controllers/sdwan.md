@@ -29,6 +29,7 @@ parity**. The pinned upstream module has 226 resource declarations. 181 resource
 | `examples/configs/sdwan/classic-ethernet-interface.yaml` | Cisco Ethernet interface feature template with interface name, IPv4 address and shutdown | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-vpn.yaml` | Cisco VPN feature template with VPN ID, name and OMP distance | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-vpn-dns.yaml` | Cisco VPN feature template with IPv4/IPv6 DNS servers and flattened host entries | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-vpn-routes.yaml` | Cisco VPN OMP and route-leak rows with derived external subtypes | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-device-template.yaml` | Unattached classic device template with resolved system and banner feature templates | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-system.yaml` | Cisco system template with variable hostname, system IP and site ID | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/network-hierarchy-collectors.yaml` | Global cflowd and security-logging collector settings | Native create, read, update, cleanup, Kubernetes reconciliation |

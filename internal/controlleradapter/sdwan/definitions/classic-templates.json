@@ -20030,10 +20030,7 @@
       "type": "cisco_vpn",
       "unavailable_inputs": {
         "ipv6_primary_dns_server_variable": "Pinned provider omits IPv6 DNS server address variables",
-        "ipv6_secondary_dns_server_variable": "Pinned provider omits IPv6 DNS server address variables",
-        "omp_advertise_ipv4_routes[].protocol_sub_type": "Pinned module derives external subtype for OSPF",
-        "route_global_exports[].protocol_sub_type": "Pinned module derives external subtype",
-        "route_global_imports[].protocol_sub_type": "Pinned module derives external subtype"
+        "ipv6_secondary_dns_server_variable": "Pinned provider omits IPv6 DNS server address variables"
       }
     }
   }
