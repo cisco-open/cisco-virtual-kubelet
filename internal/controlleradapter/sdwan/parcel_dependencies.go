@@ -65,6 +65,23 @@ func orderParcelDependencies(resources []Resource) ([]Resource, error) {
 	}
 	dependencies := make([][]int, len(resources))
 	for i, r := range resources {
+		for _, ref := range r.PolicyListRefs {
+			spec, ok := policyLists[ref.Section]
+			if !ok {
+				return nil, fmt.Errorf("unsupported policy list reference %s", ref.Section)
+			}
+			found := -1
+			for j, candidate := range resources {
+				if candidate.Kind == "policy-list" && candidate.Type == spec.kind && candidate.Name == ref.Name {
+					found = j
+					break
+				}
+			}
+			if found < 0 {
+				return nil, fmt.Errorf("policy list %s/%s is not declared", ref.Section, ref.Name)
+			}
+			dependencies[i] = append(dependencies[i], found)
+		}
 		if r.Kind == "localized-policy" {
 			for _, ref := range r.ClassicDefinitionRefs {
 				found := -1

@@ -37,6 +37,7 @@ type SDWAN struct {
 	TopologyGroups       []TopologyGroup            `json:"topology_groups,omitempty"`
 	PolicyGroups         []PolicyGroup              `json:"policy_groups,omitempty"`
 	LocalizedPolicies    *LocalizedPolicies         `json:"localized_policies,omitempty"`
+	CentralizedPolicies  *CentralizedPolicies       `json:"centralized_policies,omitempty"`
 	FeatureProfiles      map[string]json.RawMessage `json:"feature_profiles,omitempty"`
 	EdgeFeatureTemplates map[string]json.RawMessage `json:"edge_feature_templates"`
 }
@@ -67,6 +68,7 @@ type ParcelAncestor struct {
 type Resource struct {
 	ParcelRefs                         []ParcelReference
 	ClassicDefinitionRefs              []ClassicDefinitionReference
+	PolicyListRefs                     []PolicyListReference
 	ParcelAncestors                    []ParcelAncestor
 	HierarchySites, SiteGroups         []string
 	HubSpoke                           *hubSpokeInput
@@ -202,6 +204,11 @@ func Compile(data []byte) ([]Resource, error) {
 		return nil, err
 	}
 	out = append(out, localized...)
+	centralized, err := compileCentralizedPolicies(doc.SDWAN.CentralizedPolicies)
+	if err != nil {
+		return nil, err
+	}
+	out = append(out, centralized...)
 	policyProfile := ""
 	for _, r := range out {
 		if r.Kind == "profile" && r.Type == "policy-object" {

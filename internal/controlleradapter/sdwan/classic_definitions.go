@@ -253,6 +253,12 @@ func compileLocalizedPolicies(input *LocalizedPolicies) ([]Resource, error) {
 	return out, nil
 }
 func (c *Client) observeClassicDefinition(ctx context.Context, r Resource) (*Observation, error) {
+	if e := c.resolveClassicPolicyLists(ctx, r); e != nil {
+		if errors.Is(e, ErrDependencyPending) {
+			return nil, nil
+		}
+		return nil, e
+	}
 	if e := c.resolveClassicClassMaps(ctx, r); e != nil {
 		if errors.Is(e, ErrDependencyPending) {
 			return nil, nil
@@ -291,6 +297,9 @@ func (c *Client) observeClassicDefinition(ctx context.Context, r Resource) (*Obs
 	return &Observation{ID: id, Body: body}, nil
 }
 func (c *Client) createClassicDefinition(ctx context.Context, r Resource) (string, error) {
+	if e := c.resolveClassicPolicyLists(ctx, r); e != nil {
+		return "", e
+	}
 	if e := c.resolveClassicClassMaps(ctx, r); e != nil {
 		return "", e
 	}
@@ -305,6 +314,9 @@ func (c *Client) createClassicDefinition(ctx context.Context, r Resource) (strin
 	return id, nil
 }
 func (c *Client) updateClassicDefinition(ctx context.Context, r Resource, o *Observation) error {
+	if e := c.resolveClassicPolicyLists(ctx, r); e != nil {
+		return e
+	}
 	if e := c.resolveClassicClassMaps(ctx, r); e != nil {
 		return e
 	}
@@ -360,21 +372,18 @@ func equalClassicDefinition(r Resource, o map[string]any) (bool, error) {
 	if description, _ := o["description"].(string); description != r.Body["description"] {
 		return false, nil
 	}
-	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" {
+	if r.Type == "qos_map_policy_definition" || r.Type == "rewrite_rule_policy_definition" || r.Type == "vpn_membership_policy_definition" || r.Type == "mesh_topology_policy_definition" {
 		actual, ok := o["definition"].(map[string]any)
 		if !ok {
 			return false, ErrResponse
 		}
-		key := "qosSchedulers"
-		if r.Type == "rewrite_rule_policy_definition" {
-			key = "rules"
+		want := r.Body["definition"].(map[string]any)
+		for key, expected := range want {
+			if !reflect.DeepEqual(actual[key], expected) {
+				return false, nil
+			}
 		}
-		rows, ok := actual[key]
-		if !ok {
-			return false, ErrResponse
-		}
-		want := r.Body["definition"].(map[string]any)[key]
-		return reflect.DeepEqual(rows, want), nil
+		return true, nil
 	}
 	actual := map[string]any{"type": r.Body["type"], "name": o["name"], "description": o["description"], "defaultAction": o["defaultAction"], "sequences": o["sequences"]}
 	if actual["sequences"] == nil {

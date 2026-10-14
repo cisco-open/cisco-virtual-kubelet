@@ -1,0 +1,24 @@
+sdwan:
+  policy_objects:
+    site_lists:
+      - name: CVK-CENTRAL-SITES
+        site_ids: [101]
+    vpn_lists:
+      - name: CVK-CENTRAL-VPNS
+        vpn_ids: [10]
+  centralized_policies:
+    definitions:
+      control_policy:
+        vpn_membership:
+          - name: CVK-CENTRAL-MEMBERSHIP
+            description: Managed by CVK
+            groups:
+              - site_list: CVK-CENTRAL-SITES
+                vpn_lists: [CVK-CENTRAL-VPNS]
+        mesh_topology:
+          - name: CVK-CENTRAL-MESH
+            description: Managed by CVK
+            vpn_list: CVK-CENTRAL-VPNS
+            mesh_groups:
+              - name: CVK-MESH-GROUP
+                site_lists: [CVK-CENTRAL-SITES]

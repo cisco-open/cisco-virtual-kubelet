@@ -60,6 +60,7 @@ parity**. The pinned upstream module has 226 resource declarations. 162 resource
 | `examples/configs/sdwan/embedded-security-policy.yaml` | Embedded-security assembly referencing NGFW policy with a self-to-untrusted zone pair | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-ipv4-acl-definition.yaml` and `classic-ipv6-acl-definition.yaml` | Localized classic IPv4/IPv6 ACL definitions with direct prefix rules | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-ipv4-device-acl-definition.yaml` and `classic-ipv6-device-acl-definition.yaml` | Localized device ACL definitions with source prefix and supported destination port | Native lifecycle, Kubernetes reconciliation |
+| `examples/configs/sdwan/classic-centralized-membership-mesh.yaml` | Centralized VPN membership and mesh definitions with resolved site and VPN policy lists | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-qos-rewrite-definitions.yaml` | Localized QoS map and rewrite-rule definitions plus feature-policy assembly, with resolved class-map and definition references | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/classic-route-policy-definition.yaml` | Localized route policy definition with OMP-tag match and metric action | Native lifecycle, Kubernetes reconciliation |
 | `examples/configs/sdwan/ipv4-acls.yaml` | Service and transport IPv4 ACL parcels | Native lifecycle, Kubernetes reconciliation; policy-object references local only |
