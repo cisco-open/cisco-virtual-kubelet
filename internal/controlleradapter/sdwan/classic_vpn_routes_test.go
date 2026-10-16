@@ -42,8 +42,12 @@ func TestClassicVPNDerivedRouteSubtypes(t *testing.T) {
 
 func TestLiveClassicVPNRouteSubtypesLifecycle(t *testing.T) {
 	raw, err := os.ReadFile("../../../examples/configs/sdwan/classic-vpn-routes.yaml")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	resources, err := Compile(raw)
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	liveParcelLifecycle(t, resources)
 }
