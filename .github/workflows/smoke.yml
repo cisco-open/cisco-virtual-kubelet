@@ -48,7 +48,9 @@ on:
 jobs:
   build-and-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # Race/envtest gates and both image builds can consume 35 minutes on a
+    # cold runner. Reserve time for device-startup checks and diagnostics.
+    timeout-minutes: 50
     env:
       KIND_NODE_IMAGE: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
     permissions:
@@ -584,6 +586,7 @@ jobs:
           kubectl -n cisco-vk-nxos-smoke get nxosconfig nxos-smoke
 
       - name: Verify IOS-XE and NX-OS pods reach device-call boundary
+        timeout-minutes: 8
         # The only expected blocker past this point is an unreachable device,
         # which CI does not provide. A transport-level connection refusal or
         # timeout proves the binary reached the device call.
