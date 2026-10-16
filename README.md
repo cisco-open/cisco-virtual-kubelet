@@ -1,6 +1,6 @@
 # Cisco Virtual Kubelet Provider
 
-[![Go Version](https://img.shields.io/badge/Go-1.26.7%2B-blue.svg)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26.9%2B-blue.svg)](https://go.dev/)
 [![Project code license](https://img.shields.io/badge/Project%20code-Apache%202.0-blue.svg)](LICENSE)
 
 A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on **Cisco Catalyst** series switches and other **IOS-XE devices** — with Beta support for Cisco Nexus (NX-OS) switches — that offer [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
@@ -311,7 +311,7 @@ For local development and testing, the VK provider can be run directly against a
 
 ### Prerequisites
 
-- [Go](https://go.dev/doc/devel/release) 1.26.7+ on the 1.26 line, or 1.27.0+
+- [Go](https://go.dev/doc/devel/release) 1.26.9+ on the 1.26 line, or 1.27.2+
   on the 1.27 line
 
 ### Build and run locally
