@@ -33,21 +33,54 @@ import (
 // Product-specific semantic validation remains adapter-owned, but it must run
 // only after this function confirms every authorized Secret input is mounted.
 func ValidateConfigContract(controller *ciskov1.NetworkController, config *configv1alpha1.NetworkControllerConfig, intentSecretRoot string) error {
+	projections, err := configMetadataContract(controller, config)
+	if err != nil {
+		return err
+	}
+	for _, projection := range projections {
+		if intentSecretRoot == "" || !filepath.IsAbs(intentSecretRoot) || filepath.Clean(intentSecretRoot) != intentSecretRoot {
+			return fmt.Errorf("intent Secret root must be a clean absolute path")
+		}
+		info, err := os.Stat(filepath.Join(intentSecretRoot, projection.path))
+		if err != nil {
+			return fmt.Errorf("intent Secret source alias %q is not projected for NetworkControllerConfig %s/%s: %w", projection.source, config.Namespace, config.Name, err)
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("intent Secret source alias %q projection for NetworkControllerConfig %s/%s is not a regular file", projection.source, config.Namespace, config.Name)
+		}
+	}
+	return nil
+}
+
+// ValidateConfigMetadataContract checks the complete descriptor, config and
+// authorized Secret bindings without reading worker-local projected files.
+// This is for manager metadata decisions and observation of already acknowledged
+// work. It never authorizes new controller mutation: dispatch must still use the full
+// ValidateConfigContract gate and adapter-specific projected-value validation.
+func ValidateConfigMetadataContract(controller *ciskov1.NetworkController, config *configv1alpha1.NetworkControllerConfig) error {
+	_, err := configMetadataContract(controller, config)
+	return err
+}
+
+type configContractProjection struct{ source, path string }
+
+// Keep both public gates on the same metadata checks and safe path derivation.
+func configMetadataContract(controller *ciskov1.NetworkController, config *configv1alpha1.NetworkControllerConfig) ([]configContractProjection, error) {
 	if err := ciskov1.ValidateNetworkController(controller); err != nil {
-		return fmt.Errorf("controller contract: %w", err)
+		return nil, fmt.Errorf("controller contract: %w", err)
 	}
 	// Scaling the worker Deployment to zero is asynchronous. Keep the common
 	// pre-request gate authoritative during that termination window so a queued
 	// reconcile cannot issue one last controller API call after pause was
 	// requested.
 	if controller.Spec.Paused {
-		return fmt.Errorf("controller contract: NetworkController %s/%s is paused", controller.Namespace, controller.Name)
+		return nil, fmt.Errorf("controller contract: NetworkController %s/%s is paused", controller.Namespace, controller.Name)
 	}
 	if err := configv1alpha1.ValidateNetworkControllerConfig(config); err != nil {
-		return fmt.Errorf("controller config contract: %w", err)
+		return nil, fmt.Errorf("controller config contract: %w", err)
 	}
 	if controller.Namespace != config.Namespace || controller.Name != config.Spec.ControllerRef.Name {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"controller config %s/%s references %q but worker owns %s/%s",
 			config.Namespace,
 			config.Name,
@@ -59,13 +92,13 @@ func ValidateConfigContract(controller *ciskov1.NetworkController, config *confi
 
 	descriptor, registered := DescriptorFor(string(controller.Spec.Type))
 	if !registered {
-		return unknownTypeError(string(controller.Spec.Type))
+		return nil, unknownTypeError(string(controller.Spec.Type))
 	}
 	if got, want := string(config.Spec.ModelSource.Format), descriptor.NetAsCode.Format; got != want {
-		return fmt.Errorf("Network as Code format %q is incompatible with controller type %q (want %q)", got, descriptor.Type, want)
+		return nil, fmt.Errorf("Network as Code format %q is incompatible with controller type %q (want %q)", got, descriptor.Type, want)
 	}
 	if !containsString(descriptor.NetAsCode.ModelVersions, config.Spec.ModelSource.ModelVersion) {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"Network as Code model version %q is not qualified for controller type %q (qualified: %s)",
 			config.Spec.ModelSource.ModelVersion,
 			descriptor.Type,
@@ -74,20 +107,21 @@ func ValidateConfigContract(controller *ciskov1.NetworkController, config *confi
 	}
 	for _, section := range config.Spec.ManagedSections {
 		if !containsString(descriptor.NetAsCode.Sections, section) {
-			return fmt.Errorf("Network as Code section %q is not supported by controller type %q", section, descriptor.Type)
+			return nil, fmt.Errorf("Network as Code section %q is not supported by controller type %q", section, descriptor.Type)
 		}
 	}
+	projections := make([]configContractProjection, 0, len(config.Spec.SecretRefs))
 	authorizedSources := make(map[string]ciskov1.NetworkControllerIntentSecretSource, len(controller.Spec.IntentSecretSources))
 	for _, source := range controller.Spec.IntentSecretSources {
 		authorizedSources[source.Alias] = source
 	}
 	for _, ref := range config.Spec.SecretRefs {
+		if ref.Use != "" && ref.Use != "Value" && (ref.Use != "PrivateComparisonKey" || !containsString(descriptor.Capabilities, "private-input-comparison")) {
+			return nil, fmt.Errorf("intent Secret use is not supported by the registered adapter")
+		}
 		authorizedSource, authorized := authorizedSources[ref.Source]
 		if !authorized {
-			return fmt.Errorf("intent Secret source alias %q is not authorized by NetworkController %s/%s", ref.Source, controller.Namespace, controller.Name)
-		}
-		if intentSecretRoot == "" || !filepath.IsAbs(intentSecretRoot) || filepath.Clean(intentSecretRoot) != intentSecretRoot {
-			return fmt.Errorf("intent Secret root must be a clean absolute path")
+			return nil, fmt.Errorf("intent Secret source alias %q is not authorized by NetworkController %s/%s", ref.Source, controller.Namespace, controller.Name)
 		}
 		relativePath, err := IntentSecretRelativePath(IntentSecretPathInput{
 			ConfigName:  config.Name,
@@ -98,17 +132,11 @@ func ValidateConfigContract(controller *ciskov1.NetworkController, config *confi
 			SecretKey:   authorizedSource.Key,
 		})
 		if err != nil {
-			return fmt.Errorf("intent Secret source alias %q has no safe projected path: %w", ref.Source, err)
+			return nil, fmt.Errorf("intent Secret source alias %q has no safe projected path: %w", ref.Source, err)
 		}
-		info, err := os.Stat(filepath.Join(intentSecretRoot, relativePath))
-		if err != nil {
-			return fmt.Errorf("intent Secret source alias %q is not projected for NetworkControllerConfig %s/%s: %w", ref.Source, config.Namespace, config.Name, err)
-		}
-		if !info.Mode().IsRegular() {
-			return fmt.Errorf("intent Secret source alias %q projection for NetworkControllerConfig %s/%s is not a regular file", ref.Source, config.Namespace, config.Name)
-		}
+		projections = append(projections, configContractProjection{source: ref.Source, path: relativePath})
 	}
-	return nil
+	return projections, nil
 }
 
 func containsString(values []string, target string) bool {

@@ -1,0 +1,57 @@
+# Merge into the existing network_settings owner; do not create a competing owner.
+# Requires the existing empty CVK-Lab area and unallocated example address ranges.
+# The same reservation name and type under IPv4 and IPv6 form one dual-stack pool.
+# A /64 IPv6 reservation enables SLAAC, following the pinned NetAsCode module.
+# This allocates controller design data; it does not provision a device.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-ipam-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [network_settings]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-ipam-dualstack-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: CVK-Lab
+              parent_name: Global
+              ip_pools_reservations: [access]
+        network_settings:
+          ip_pools:
+            - name: cvk-global-v4
+              type: Generic
+              ip_address_space: IPv4
+              ip_pool_cidr: 192.0.2.0/24
+              dhcp_servers: []
+              dns_servers: [192.0.2.53]
+              ip_pools_reservations:
+                - name: access
+                  type: LAN
+                  subnet: 192.0.2.128
+                  prefix_length: 25
+                  gateway: 192.0.2.129
+            - name: cvk-global-v6
+              type: Generic
+              ip_address_space: IPv6
+              ip_pool_cidr: "2001:db8:1234::/48"
+              dhcp_servers: []
+              dns_servers: ["2001:db8:1234::53"]
+              ip_pools_reservations:
+                - name: access
+                  type: LAN
+                  subnet: "2001:db8:1234:1::"
+                  prefix_length: 64
+                  gateway: "2001:db8:1234:1::1"

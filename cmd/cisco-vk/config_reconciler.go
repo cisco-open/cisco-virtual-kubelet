@@ -61,6 +61,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/transport"
+	configurationcontract "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe"
@@ -71,6 +72,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/otelproviders"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
+	"github.com/cisco/virtual-kubelet-cisco/internal/provider/configurationreservation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/deviceoperation"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/diagnostic/adminserver"
@@ -412,6 +414,32 @@ func startIOSXEConfigReconciler(ctx context.Context, cfg *rest.Config, deviceNam
 		// Preserve direct standalone callers; managed startup validates and
 		// passes the downward-API Pod UID explicitly.
 		runtimeID = os.Getenv(envWorkerPodUID)
+	}
+
+	// Recover existing controller reservations independently of gNOI availability.
+	// New grants require the manager installation binding and strict native
+	// inventory. Missing or invalid setup must not prevent claimed recovery.
+	if opts.configurationReservationRecoveryEnabled(deviceName, runtimeID) {
+		direct, err := client.New(cfg, client.Options{Scheme: mgr.GetScheme()})
+		if err != nil {
+			return fmt.Errorf("build configuration reservation recovery client: %w", err)
+		}
+		recovery := &configurationreservation.Reconciler{
+			Reader: direct, Client: direct,
+			Namespace: opts.DeviceNamespace, DeviceName: deviceName,
+			DeviceUID: opts.DeviceUID, PodUID: runtimeID,
+			Leaser: &engine.FamilyLeaser{
+				Client: direct, Namespace: leaseNamespace,
+				DeviceKey: devicecoordination.DeviceKey(opts.DeviceNamespace, deviceName),
+				TTL:       26 * time.Hour, RequireExisting: true,
+			},
+		}
+		if err := configureConfigurationReservationPreparation(recovery, cfg, opts, os.Getenv(configurationcontract.RuntimeAdmissionEnvironment)); err != nil {
+			log.G(ctx).WithError(err).Warn("configuration reservation preparation disabled; recovery remains active")
+		}
+		if err := recovery.SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("configuration reservation recovery SetupWithManager: %w", err)
+		}
 	}
 
 	// Wave 6A — bridge the notify channel into a controller-runtime

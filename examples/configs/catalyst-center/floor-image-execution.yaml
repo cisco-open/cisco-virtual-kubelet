@@ -1,0 +1,52 @@
+# Local fixture-qualified; lab qualification remains pending.
+# Replace the schematic PDF with your own base64-encoded PDF/PNG/JPEG.
+# Global/Lab/Building must already exist. Add planned_access_points to the
+# floor to execute placement after image completion (see planned-ap-apply.yaml).
+# image_path resolves only through this ConfigMap's explicit asset index.
+# Removing image_path retains the remote image. Completion receipts cannot
+# detect out-of-band image replacement. Report-mode images remain unsupported.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-floor-assets
+  namespace: cvk-live
+data:
+  cvk-floor-image-assets.json: '{"maps/floor.pdf":"floor-pdf"}'
+  model.yaml: |
+    catalyst_center:
+      sites:
+        floors:
+          - name: Floor
+            parent_name: Global/Lab/Building
+            floor_number: 1
+            rf_model: Free Space
+            width: 10
+            length: 15
+            height: 3
+            units_of_measure: meters
+            image_path: maps/floor.pdf
+binaryData:
+  floor-pdf: JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCAzMDAgMjAwXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCA+PiA+PgplbmRvYmoKNCAwIG9iago8PCAvTGVuZ3RoIDQ2ID4+CnN0cmVhbQowLjUgdyAyMCAyMCAyNjAgMTYwIHJlIFMgMTUwIDIwIG0gMTUwIDE4MCBsIFMKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMDkgMDAwMDAgbiAKMDAwMDAwMDA1OCAwMDAwMCBuIAowMDAwMDAwMTE1IDAwMDAwIG4gCjAwMDAwMDAyMTkgMDAwMDAgbiAKdHJhaWxlcgo8PCAvU2l6ZSA1IC9Sb290IDEgMCBSID4+CnN0YXJ0eHJlZgozMTQKJSVFT0YK
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-floor-image
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [sites]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-floor-image-example-v1
+  source:
+    configMapRef:
+      name: catc-floor-assets
+      key: model.yaml

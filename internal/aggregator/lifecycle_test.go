@@ -184,6 +184,14 @@ func TestAggregatorLifecycle(t *testing.T) {
 	if _, err := r.Reconcile(rootCtx, req); err != nil {
 		t.Fatalf("Reconcile #3: %v", err)
 	}
+	select {
+	case <-w1.done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("old worker did not complete retirement")
+	}
+	if _, err := r.Reconcile(rootCtx, req); err != nil {
+		t.Fatal("reconcile after observed retirement", err)
+	}
 	r.mu.Lock()
 	w3 := r.managed[req.String()]
 	r.mu.Unlock()
@@ -208,11 +216,17 @@ func TestAggregatorLifecycle(t *testing.T) {
 		t.Errorf("after delete, managed map should not contain %q", req.String())
 	}
 
-	// Allow the worker goroutines to observe the cancellation. We
-	// don't assert on stub.closed because Close() is called by the
-	// inner ConfigReconciler.Run goroutine on its own schedule;
-	// asserting on synchronous teardown would race with that.
-	time.Sleep(50 * time.Millisecond)
+	select {
+	case <-w3.done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("deleted worker did not finish transport cleanup")
+	}
+	if _, err := r.Reconcile(rootCtx, req); err != nil {
+		t.Fatal("observe deleted worker retirement", err)
+	}
+	if !r.retiredWorkersDrained(req.String()) {
+		t.Fatal("completed retirement was retained")
+	}
 }
 
 // TestAggregatorSkipsUnregisteredDriver pins the contract that an

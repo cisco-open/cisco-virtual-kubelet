@@ -1,0 +1,37 @@
+# Initial SNMPv3 NoAuthNoPriv discovery using the existing typed lifecycle.
+# Replace the target and SNMP user with approved lab values. No secretRefs or
+# credential versions are needed; metadata does not imply credential delivery.
+# Requires manager enrollment for deletionPolicy: Delete. Do not add a finalizer.
+# Isolated lifecycle and live read-only cancellation are qualified; native job
+# creation/device discovery and installed actors are not yet qualified.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-noauth-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Delete
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-noauth-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-NoAuth-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              snmp_version: v3
+              snmp_mode: NoAuthNoPriv
+              snmp_user_name: lab-snmp-user

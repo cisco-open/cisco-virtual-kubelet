@@ -1,0 +1,35 @@
+# Native power requests require at least one rule. An explicit description must
+# be nonblank; omit it to retain an existing description. Blank description and
+# empty-rule clearing are rejected by the qualified appliance and CVK preflight.
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-power-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-power-example-v1
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          power_profiles:
+            - name: CVK_POWER
+              description: CVK power profile example
+              rules:
+                - interface_type: ETHERNET
+                  interface_id: GIGABITETHERNET0
+                  parameter_type: SPEED
+                  parameter_value: 100MBPS

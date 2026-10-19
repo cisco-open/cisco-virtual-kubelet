@@ -199,6 +199,9 @@ func (r *CiscoDeviceReconciler) resolveManagedMaintenance(
 	device *ciskov1.CiscoDevice,
 	node *corev1.Node,
 ) managedMaintenanceDecision {
+	if err := r.retainConfigurationSettlement(ctx, device); err != nil {
+		return blockedMaintenanceDecision(device, fmt.Errorf("retain configuration settlement: %w", err))
+	}
 	decision := managedMaintenanceDecision{
 		status: metav1.ConditionTrue, reason: "Idle", message: "no managed maintenance session is active",
 	}
@@ -530,7 +533,7 @@ func (r *CiscoDeviceReconciler) retainOrSettleMaintenance(
 	ctx context.Context,
 	device *ciskov1.CiscoDevice,
 	node *corev1.Node,
-	_ *coordv1.Lease,
+	lease *coordv1.Lease,
 ) managedMaintenanceDecision {
 	current := device.Status.MaintenanceSession
 	if current == nil || current.Phase == ciskov1.DeviceMaintenanceSessionSettled {
@@ -542,6 +545,9 @@ func (r *CiscoDeviceReconciler) retainOrSettleMaintenance(
 		current.Operation.Namespace != device.Namespace {
 		decision.err = fmt.Errorf("maintenance session does not bind the current device and Node incarnation")
 		return decision
+	}
+	if current.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolConfigurationV1 {
+		return r.settleConfigurationMaintenance(ctx, device, node, lease, decision)
 	}
 	var leaf opsv1alpha1.IOSXESoftwareUpgrade
 	key := types.NamespacedName{Namespace: current.Operation.Namespace, Name: current.Operation.Name}
@@ -630,6 +636,9 @@ func (r *CiscoDeviceReconciler) validateMaintenanceRequest(
 		return nil, fmt.Errorf("maintenance request operation identity is incomplete or cross-namespace")
 	}
 
+	if annotations[managedprotocol.AnnotationMaintenanceRequestVersion] == managedprotocol.ConfigurationProtocolVersion {
+		return r.validateConfigurationMaintenanceRequest(ctx, device, node, lease, holder, token, requestedAt, revision, operation)
+	}
 	var leaf opsv1alpha1.IOSXESoftwareUpgrade
 	if err := r.reader().Get(ctx, types.NamespacedName{Namespace: operation.Namespace, Name: operation.Name}, &leaf); err != nil {
 		return nil, fmt.Errorf("read requested software-upgrade leaf: %w", err)

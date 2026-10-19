@@ -20,6 +20,7 @@ package controlleradapter
 import (
 	"errors"
 	"fmt"
+	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	"reflect"
 	"strings"
 	"sync"
@@ -392,4 +393,82 @@ func assertRegisterPanics(t *testing.T, reg Registration, want string) {
 		}
 	}()
 	Register(reg)
+}
+
+func TestConfigurationLifecycleRegistrationIsOptionalAndCopied(t *testing.T) {
+	defer resetRegistry(t)()
+	reg := validRegistration("lifecycle-test")
+	Register(reg)
+	if ConfigurationLifecycleFor("lifecycle-test") != nil {
+		t.Fatal("existing adapter acquired lifecycle behavior")
+	}
+	reg = validRegistration("lifecycle-enabled")
+	reg.ConfigurationLifecycle = &ConfigurationLifecycle{Finalizer: "config.cisco.vk/test", Eligible: func(*ciskov1.NetworkController, *configv1alpha1.NetworkControllerConfig) bool { return true }, Completed: func(*ciskov1.NetworkController, *configv1alpha1.NetworkControllerConfig) bool { return false }}
+	Register(reg)
+	reg.ConfigurationLifecycle.Finalizer = "changed"
+	policy := ConfigurationLifecycleFor("lifecycle-enabled")
+	if policy == nil || policy.Finalizer != "config.cisco.vk/test" {
+		t.Fatal("registered policy aliased caller")
+	}
+	policy.Finalizer = "changed"
+	if ConfigurationLifecycleFor("lifecycle-enabled").Finalizer != "config.cisco.vk/test" {
+		t.Fatal("returned policy aliases registry")
+	}
+	for _, mode := range []string{"finalizer", "eligible", "completed"} {
+		candidate := validRegistration("invalid-lifecycle")
+		copy := *ConfigurationLifecycleFor("lifecycle-enabled")
+		candidate.ConfigurationLifecycle = &copy
+		switch mode {
+		case "finalizer":
+			copy.Finalizer = "bad"
+		case "eligible":
+			copy.Eligible = nil
+		case "completed":
+			copy.Completed = nil
+		}
+		if err := validateRegistration(candidate); err == nil {
+			t.Fatal("invalid lifecycle registered", mode)
+		}
+	}
+}
+
+func TestMultipleConfigurationLifecyclesAreIndependentAndCopied(t *testing.T) {
+	defer resetRegistry(t)()
+	reg := validRegistration("multi-lifecycle")
+	policy := ConfigurationLifecycle{Finalizer: "config.cisco.vk/legacy", Eligible: func(*ciskov1.NetworkController, *configv1alpha1.NetworkControllerConfig) bool { return true }, Completed: func(*ciskov1.NetworkController, *configv1alpha1.NetworkControllerConfig) bool { return false }}
+	reg.ConfigurationLifecycle = &policy
+	extra := policy
+	extra.Finalizer = "config.cisco.vk/additional"
+	reg.ConfigurationLifecycles = []ConfigurationLifecycle{extra}
+	Register(reg)
+	reg.ConfigurationLifecycles[0].Finalizer = "changed"
+	got := ConfigurationLifecyclesFor("multi-lifecycle")
+	if len(got) != 2 || got[0].Finalizer != policy.Finalizer || got[1].Finalizer != extra.Finalizer {
+		t.Fatal("independent policies lost or aliased", got)
+	}
+	got[0].Finalizer = "changed"
+	got[1].Eligible = nil
+	stored := ConfigurationLifecyclesFor("multi-lifecycle")
+	if stored[0].Finalizer != policy.Finalizer || stored[1].Eligible == nil || ConfigurationLifecycleFor("multi-lifecycle").Finalizer != policy.Finalizer {
+		t.Fatal("registry or legacy accessor changed")
+	}
+	for _, mode := range []string{"duplicate", "invalid-extra", "missing-callback"} {
+		candidate := validRegistration("invalid-multiple")
+		candidate.ConfigurationLifecycle = &policy
+		candidate.ConfigurationLifecycles = []ConfigurationLifecycle{extra}
+		switch mode {
+		case "duplicate":
+			candidate.ConfigurationLifecycles[0].Finalizer = policy.Finalizer
+		case "invalid-extra":
+			candidate.ConfigurationLifecycles[0].Finalizer = "bad"
+		case "missing-callback":
+			candidate.ConfigurationLifecycles[0].Completed = nil
+		}
+		if err := validateRegistration(candidate); err == nil {
+			t.Fatal("invalid additional lifecycle accepted", mode)
+		}
+	}
+	if ConfigurationLifecyclesFor("unknown") != nil {
+		t.Fatal("unknown adapter gained lifecycle")
+	}
 }

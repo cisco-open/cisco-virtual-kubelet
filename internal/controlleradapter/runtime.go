@@ -15,9 +15,11 @@
 package controlleradapter
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"path/filepath"
 	"sort"
 
@@ -27,6 +29,11 @@ import (
 )
 
 const (
+	// Worker Pod identity is populated by the manager through the downward API.
+	// It is observational metadata, not an authorization token.
+	EnvWorkerPodName = "CISCO_VK_CONTROLLER_POD_NAME"
+	EnvWorkerPodUID  = "CISCO_VK_CONTROLLER_POD_UID"
+
 	// DefaultWorkerClusterRole is the install-time-audited base role shipped by
 	// the Helm chart. Adapters that need only the shared APIs should select it
 	// in their Descriptor.
@@ -72,6 +79,11 @@ const (
 // the manager-owned signal and age limit adapters use to invalidate cached
 // authentication and TLS sessions after projected-volume rotation.
 type Options struct {
+	// WorkerPodName and WorkerPodUID identify this process for protocols that
+	// bind an operation to a specific connector incarnation. Optional for adapters
+	// that do not use such protocols; consumers must verify them against live state.
+	WorkerPodName    string
+	WorkerPodUID     string
 	Controller       *ciskov1.NetworkController
 	CredentialPath   string
 	CAPath           string
@@ -104,6 +116,21 @@ func (o Options) cloned() (Options, error) {
 // lifecycle, cancellation, leader election, metrics, and health for the worker.
 type Adapter interface {
 	SetupWithManager(ctrl.Manager) error
+}
+
+// ConfigurationReservationAdapter optionally participates in the shared physical
+// configuration protocol. Other adapters keep their existing factory/setup path.
+// Configure is called once before SetupWithManager and supplies live checks,
+// never a serialized dispatch permit or product API credentials.
+type ConfigurationReservationAdapter interface {
+	ConfigureConfigurationReservations(string, func(context.Context, *ops.ControllerConfigurationReservation) error) error
+}
+
+// ConfigurationGroupReservationAdapter explicitly opts into group installation.
+// It does not change the existing single-device adapter contract, and the two
+// setup paths must remain mutually exclusive within a worker process.
+type ConfigurationGroupReservationAdapter interface {
+	ConfigureConfigurationGroupReservations(string, func(context.Context, *ops.ControllerConfigurationReservation) error) error
 }
 
 // Factory constructs one adapter for one NetworkController worker. Factories

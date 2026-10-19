@@ -1,0 +1,36 @@
+# Metadata and integration status only; credentials are never compared.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-ise-metadata
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [system_settings]
+  scope: global
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-system-example-v1
+  source:
+    inline:
+      catalyst_center:
+        system_settings:
+          authentication_and_policy_servers:
+            ise:
+              ip_address: 192.0.2.44
+              fqdn: ise.example.test
+              username: admin
+              pxgrid_enabled: true
+              use_catc_cert_for_pxgrid: true
+              protocols:
+                radius:
+                  authentication_port: 1812
+                  accounting_port: 1813
+              retries: 1
+              timeout: 5

@@ -1,0 +1,50 @@
+# Follow-on intent for wireless-ssid-multipsk-credentials-apply.yaml.
+# Deliberately uses the SAME config and SSID names: update the existing object.
+# Priority 4 is removed; priority 0 and the main passphrase retain version 1.
+# Keep their atomic Secret values unchanged. The deleted key need not be projected.
+# Reintroducing priority 4 requires a counter above its retained history version.
+# The SSID remains disabled and has no device/profile association.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-ssid-multipsk-credentials
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections:
+  - wireless
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-ssid-multipsk-example-v1
+  secretRefs:
+  - section: wireless
+    path: /ssids/0/passphrase
+    source: ssid-passphrase
+  - section: wireless
+    path: /ssids/0/multi_psk_settings/0/passphrase_wo
+    source: multi-0
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          ssids:
+          - name: CVK_MULTI_PSK_SSID
+            auth_type: WPA2_PERSONAL
+            wlan_type: Enterprise
+            ssid_radio_type: 5GHz
+            enabled: false
+            auth_key_psk: true
+            rsn_cipher_suite_ccmp128: true
+            passphrase_version: 1
+            multi_psk_settings:
+            - priority: 0
+              passphrase_type: ASCII
+              passphrase_wo_version: 1

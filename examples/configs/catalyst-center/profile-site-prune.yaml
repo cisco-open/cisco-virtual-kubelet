@@ -1,0 +1,32 @@
+# Update the EXISTING owner config; creating another config does not adopt rows.
+# First apply the selected associations using Retain, and verify their
+# ActionApplications receipts. Remove dependent tags and assigned devices before
+# using this source to prune those associations. Profile definitions are retained.
+# Report, imported matches, missing acknowledgements and CR deletion do not gain
+# destructive authority from this example.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-network-profiles
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [network_profiles]
+  scope: global
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-profile-prune-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_profiles:
+          # Only previously applied associations are eligible for removal.
+          # Unowned profile definitions and associations remain unchanged.
+          switching: []
+          wireless: []

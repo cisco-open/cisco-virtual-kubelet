@@ -1,0 +1,28 @@
+# The site hierarchy and fabric site Global/Lab must already exist.
+# anchor_site is a NetAsCode path, never a Catalyst Center UUID.
+# Report-only qualification: Apply is gated on multi-device admission.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-anchored-vn-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-anchored-vn-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          l3_virtual_networks:
+            - name: Corp
+              anchor_site: Global/Lab

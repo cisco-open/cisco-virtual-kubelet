@@ -1,0 +1,63 @@
+# Rule-definition examples. Adjust hostname predicates for your inventory.
+# This manifest was parsed, not applied; positive membership evaluation is unqualified.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-dynamic-tag-operators
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [inventory]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-dynamic-tag-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          tags:
+            - name: CVK-Example-OR
+              system_tag: false
+              dynamic_rules:
+                - member_type: networkdevice
+                  operation: OR
+                  items:
+                    - {operation: EQ, name: hostname, value: cvk-example-a}
+                    - {operation: EQ, name: hostname, value: cvk-example-b}
+            - name: CVK-Example-LIKE
+              system_tag: false
+              dynamic_rules:
+                - member_type: networkdevice
+                  operation: AND
+                  items:
+                    - {operation: LIKE, name: hostname, value: 'cvk-example-%'}
+                    - {operation: EQ, name: family, value: Switches and Hubs}
+            - name: CVK-Example-ILIKE
+              system_tag: false
+              dynamic_rules:
+                - member_type: networkdevice
+                  operation: AND
+                  items:
+                    - {operation: ILIKE, name: hostname, value: 'CVK-EXAMPLE-%'}
+                    - {operation: EQ, name: family, value: Switches and Hubs}
+            - name: CVK-Example-IN
+              system_tag: false
+              dynamic_rules:
+                - member_type: networkdevice
+                  operation: IN
+                  name: hostname
+                  values: [cvk-example-a, cvk-example-b]
+            - name: CVK-Example-Unary
+              system_tag: false
+              dynamic_rules:
+                - member_type: networkdevice
+                  operation: AND
+                  items:
+                    - {operation: EQ, name: hostname, value: cvk-example-a}

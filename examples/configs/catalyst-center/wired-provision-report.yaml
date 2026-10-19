@@ -1,0 +1,30 @@
+# Read-only provisioning inspection; replace the example device selectors.
+# REPROVISION is reported as explicit action intent, not proof of execution.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wired-provision-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wired-provision-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          devices:
+            - name: edge
+              serial_number: FOC12345678
+              device_ip: 192.0.2.100
+              site: Global/Lab/Building
+              state: PROVISION

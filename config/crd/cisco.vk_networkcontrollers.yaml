@@ -574,6 +574,1807 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              configuration:
+                description: |-
+                  Configuration holds durable configuration ownership and the outstanding
+                  controller mutation. Adapters which only observe inventory leave it nil.
+                properties:
+                  actionApplications:
+                    description: |-
+                      ActionApplications retain verified imperative executions after releasing
+                      the operation slot. They prevent an unchanged intent from being replayed.
+                    items:
+                      description: |-
+                        NetworkControllerConfigurationActionApplication records one verified action
+                        using the same immutable source/target binding as its write-ahead operation.
+                      properties:
+                        effectReceipts:
+                          description: |-
+                            EffectReceipts are bounded adapter-defined proofs for related objects
+                            changed by this same native operation. They never represent extra native
+                            operations. Adapters must bind the complete set in the producer/result
+                            contract and refuse settlement if that set is missing or altered.
+                            Only public identities and keyed comparison evidence belong here, never
+                            native payloads or credential values. Legacy receipts leave this nil.
+                          items:
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          maxItems: 256
+                          type: array
+                          x-kubernetes-list-type: set
+                        operation:
+                          description: |-
+                            NetworkControllerConfigurationOperation is a write-ahead record. Submitting
+                            is durable BEFORE the HTTP call; seeing it after a restart is not permission
+                            to retry. Accepted is not success: authoritative read-back must verify it.
+                          properties:
+                            action:
+                              enum:
+                              - Create
+                              - Update
+                              - Delete
+                              type: string
+                            cancellationRequestedAt:
+                              description: |-
+                                CancellationRequestedAt fences a Prepared group against submission before
+                                member cleanup. It never proves lease release or manager settlement.
+                              format: date-time
+                              type: string
+                            configGeneration:
+                              format: int64
+                              minimum: 1
+                              type: integer
+                            configName:
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            configUID:
+                              maxLength: 128
+                              minLength: 1
+                              type: string
+                            controllerGeneration:
+                              description: |-
+                                ControllerGeneration binds connection and credential policy, not just
+                                the immutable endpoint. Changed policy cannot resume submission.
+                              format: int64
+                              minimum: 1
+                              type: integer
+                            createdResourceID:
+                              description: |-
+                                CreatedResourceID is the nonsecret UUID returned by a synchronous create.
+                                It is response evidence, not a task ID or physical reservation identity.
+                              maxLength: 128
+                              type: string
+                            credentialVersions:
+                              description: |-
+                                CredentialVersions binds explicit model write-only version counters to
+                                the authorized source references submitted by this operation. These are
+                                not secret values or hashes and do not themselves prove application.
+                              items:
+                                description: |-
+                                  NetworkControllerConfigurationCredentialVersion identifies a requested
+                                  write-only credential rotation without persisting credential material.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is an optional non-secret semantic identity within the resource.
+                                      It binds list credentials to stable model keys rather than array indices.
+                                    maxLength: 128
+                                    type: string
+                                  path:
+                                    description: Path is relative to the operation's
+                                      managed section.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    pattern: ^/.*
+                                    type: string
+                                  secretKey:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  secretName:
+                                    description: |-
+                                      SecretName and SecretKey pin the administrator's alias mapping. The
+                                      referenced Secret is in the NetworkController's namespace.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  sourceAlias:
+                                    maxLength: 63
+                                    minLength: 1
+                                    type: string
+                                  version:
+                                    description: |-
+                                      Version is the explicit positive NetAsCode write-only version counter.
+                                      It is never inferred from credential bytes or filesystem metadata.
+                                    format: int64
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - path
+                                - secretKey
+                                - secretName
+                                - sourceAlias
+                                - version
+                                type: object
+                              maxItems: 128
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - path
+                              x-kubernetes-list-type: map
+                            dependencyVersions:
+                              description: |-
+                                DependencyVersions retains nonsecret native version bindings. Admission
+                                is validated independently for supported physical operation kinds.
+                              properties:
+                                entries:
+                                  items:
+                                    description: |-
+                                      NetworkControllerConfigurationDependencyVersion identifies one committed
+                                      native object and version. Display names and template values are excluded.
+                                    properties:
+                                      id:
+                                        maxLength: 128
+                                        minLength: 1
+                                        pattern: ^[A-Za-z0-9_-]+$
+                                        type: string
+                                      version:
+                                        format: int64
+                                        minimum: 1
+                                        type: integer
+                                      versionID:
+                                        maxLength: 128
+                                        minLength: 1
+                                        pattern: ^[A-Za-z0-9_-]+$
+                                        type: string
+                                    required:
+                                    - id
+                                    - version
+                                    - versionID
+                                    type: object
+                                  maxItems: 1001
+                                  minItems: 2
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                kind:
+                                  enum:
+                                  - template-graph-v1
+                                  type: string
+                              required:
+                              - entries
+                              - kind
+                              type: object
+                            id:
+                              maxLength: 32
+                              pattern: ^[a-f0-9]{32}$
+                              type: string
+                            parentID:
+                              description: ParentID pins the resolved parent of a
+                                hierarchical resource.
+                              maxLength: 128
+                              type: string
+                            phase:
+                              enum:
+                              - Prepared
+                              - Submitting
+                              - Accepted
+                              - Verifying
+                              - Verified
+                              - Unknown
+                              - Cancelling
+                              type: string
+                            physicalGroup:
+                              description: |-
+                                PhysicalGroup binds fabric-wide physical scope separately from TargetID,
+                                which remains the native logical resource ID. Existing v1 physical paths
+                                must reject this field; the group protocol is not yet runtime-enabled.
+                              properties:
+                                digest:
+                                  description: Digest binds the operation's immutable
+                                    fields and complete target set.
+                                  pattern: ^[a-f0-9]{64}$
+                                  type: string
+                                targets:
+                                  items:
+                                    properties:
+                                      device:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          uid:
+                                            maxLength: 128
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - name
+                                        - uid
+                                        type: object
+                                      inventoryID:
+                                        maxLength: 128
+                                        minLength: 1
+                                        type: string
+                                      node:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          uid:
+                                            maxLength: 128
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - name
+                                        - uid
+                                        type: object
+                                      physicalIdentity:
+                                        maxLength: 128
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - device
+                                    - inventoryID
+                                    - node
+                                    - physicalIdentity
+                                    type: object
+                                  maxItems: 1000
+                                  minItems: 1
+                                  type: array
+                                  x-kubernetes-list-map-keys:
+                                  - physicalIdentity
+                                  x-kubernetes-list-type: map
+                                version:
+                                  enum:
+                                  - controller-configuration-group-identity-v1
+                                  type: string
+                              required:
+                              - digest
+                              - targets
+                              - version
+                              type: object
+                            preparedAt:
+                              description: |-
+                                PreparedAt is the persisted start of this exact operation's preparation.
+                                Adapters may use it for dependency settling when no mutation receipt exists.
+                                It never grants submission authority or proves native convergence.
+                              format: date-time
+                              type: string
+                            resource:
+                              description: Resource is a non-secret adapter identity,
+                                never configuration content.
+                              maxLength: 512
+                              minLength: 1
+                              type: string
+                            section:
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z][a-z0-9_]*$
+                              type: string
+                            sourceUID:
+                              description: |-
+                                SourceUID and SourceVersion bind a ConfigMap snapshot; both are empty
+                                for inline intent, which is bound by ConfigGeneration.
+                              maxLength: 128
+                              type: string
+                            sourceVersion:
+                              maxLength: 128
+                              type: string
+                            ssidCredentialHistory:
+                              description: |-
+                                SSIDCredentialHistory retains per-priority version high-water marks,
+                                including retired priorities. It never contains credential values.
+                              items:
+                                description: |-
+                                  NetworkControllerConfigurationSSIDCredentialHistory is non-secret retained
+                                  history for one Multi-PSK priority on an owned native SSID.
+                                properties:
+                                  priority:
+                                    format: int64
+                                    maximum: 4
+                                    minimum: 0
+                                    type: integer
+                                  version:
+                                    format: int64
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - priority
+                                - version
+                                type: object
+                              maxItems: 5
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - priority
+                              x-kubernetes-list-type: map
+                            submittedAt:
+                              description: |-
+                                SubmittedAt is persisted with the single submission permit. Recovery
+                                uses it to reject controller receipts predating this operation.
+                              format: date-time
+                              type: string
+                            targetID:
+                              description: |-
+                                TargetID pins an existing resource across task completion and restart.
+                                Empty denotes creation, whose returned identity must be observed.
+                              maxLength: 128
+                              type: string
+                            targetSerial:
+                              description: |-
+                                TargetSerial binds a physical device independently of the controller's
+                                inventory UUID. Device executors must corroborate it during recovery.
+                                Empty is reserved for resources that do not target a physical device.
+                              maxLength: 128
+                              type: string
+                            taskID:
+                              description: |-
+                                TaskID is the controller's receipt. Task failure alone does not prove
+                                absence of side effects and therefore cannot release the journal.
+                              maxLength: 512
+                              type: string
+                          required:
+                          - action
+                          - configGeneration
+                          - configName
+                          - configUID
+                          - controllerGeneration
+                          - id
+                          - phase
+                          - resource
+                          - section
+                          type: object
+                          x-kubernetes-validations:
+                          - message: group physical scope cannot also declare a single
+                              target serial
+                            rule: '!has(self.physicalGroup) || !has(self.targetSerial)
+                              || size(self.targetSerial) == 0'
+                          - message: group cancellation must precede submission
+                            rule: '!has(self.cancellationRequestedAt) || (has(self.physicalGroup)
+                              && self.phase == ''Cancelling'' && !has(self.submittedAt)
+                              && (!has(self.taskID) || size(self.taskID) == 0))'
+                          - message: cancelling requires a durable cancellation time
+                            rule: self.phase != 'Cancelling' || has(self.cancellationRequestedAt)
+                          - message: group cancellation cannot be reversed
+                            rule: '!has(oldSelf.cancellationRequestedAt) || (has(self.cancellationRequestedAt)
+                              && self.cancellationRequestedAt == oldSelf.cancellationRequestedAt
+                              && self.phase == ''Cancelling'')'
+                        resource:
+                          description: Resource is the stable action key, excluding
+                            transient baseline evidence.
+                          maxLength: 512
+                          minLength: 1
+                          type: string
+                        section:
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        verifiedAt:
+                          description: |-
+                            VerifiedAt records the first independently verified receipt persistence.
+                            Optional for legacy receipts; absence cannot establish dependency pacing.
+                          format: date-time
+                          type: string
+                      required:
+                      - operation
+                      - resource
+                      - section
+                      type: object
+                    maxItems: 256
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - section
+                    - resource
+                    x-kubernetes-list-type: map
+                  credentialApplications:
+                    description: |-
+                      CredentialApplications records successful write-only version application
+                      to an observed resource identity. It is not credential read-back or an
+                      authentication test. Receipts survive operation-slot release.
+                    items:
+                      properties:
+                        configUID:
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                        operationID:
+                          pattern: ^[a-f0-9]{32}$
+                          type: string
+                        resource:
+                          maxLength: 512
+                          minLength: 1
+                          type: string
+                        section:
+                          maxLength: 63
+                          minLength: 1
+                          type: string
+                        ssidCredentialHistory:
+                          description: |-
+                            SSIDCredentialHistory retains per-priority version high-water marks,
+                            including retired priorities. It never contains credential values.
+                          items:
+                            description: |-
+                              NetworkControllerConfigurationSSIDCredentialHistory is non-secret retained
+                              history for one Multi-PSK priority on an owned native SSID.
+                            properties:
+                              priority:
+                                format: int64
+                                maximum: 4
+                                minimum: 0
+                                type: integer
+                              version:
+                                format: int64
+                                minimum: 1
+                                type: integer
+                            required:
+                            - priority
+                            - version
+                            type: object
+                          maxItems: 5
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - priority
+                          x-kubernetes-list-type: map
+                        targetID:
+                          description: TargetID is the UUID independently observed
+                            by the resource executor.
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                        versions:
+                          items:
+                            description: |-
+                              NetworkControllerConfigurationCredentialVersion identifies a requested
+                              write-only credential rotation without persisting credential material.
+                            properties:
+                              key:
+                                description: |-
+                                  Key is an optional non-secret semantic identity within the resource.
+                                  It binds list credentials to stable model keys rather than array indices.
+                                maxLength: 128
+                                type: string
+                              path:
+                                description: Path is relative to the operation's managed
+                                  section.
+                                maxLength: 1024
+                                minLength: 1
+                                pattern: ^/.*
+                                type: string
+                              secretKey:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              secretName:
+                                description: |-
+                                  SecretName and SecretKey pin the administrator's alias mapping. The
+                                  referenced Secret is in the NetworkController's namespace.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              sourceAlias:
+                                maxLength: 63
+                                minLength: 1
+                                type: string
+                              version:
+                                description: |-
+                                  Version is the explicit positive NetAsCode write-only version counter.
+                                  It is never inferred from credential bytes or filesystem metadata.
+                                format: int64
+                                minimum: 1
+                                type: integer
+                            required:
+                            - path
+                            - secretKey
+                            - secretName
+                            - sourceAlias
+                            - version
+                            type: object
+                          maxItems: 128
+                          minItems: 1
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - path
+                          x-kubernetes-list-type: map
+                      required:
+                      - configUID
+                      - operationID
+                      - resource
+                      - section
+                      - targetID
+                      - versions
+                      type: object
+                    maxItems: 256
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - section
+                    - resource
+                    x-kubernetes-list-type: map
+                  groupCancellations:
+                    description: |-
+                      GroupCancellations retain cleanup evidence after a cancelled operation
+                      releases its journal slot. They are not successful application receipts.
+                      Entries may only be retired after their member reservations are retired.
+                    items:
+                      description: |-
+                        NetworkControllerConfigurationGroupCancellation preserves the exact cancelled
+                        operation and reservation incarnations. It cannot represent submitted work.
+                      properties:
+                        members:
+                          description: Members binds the Kubernetes UID of each retained
+                            member reservation.
+                          items:
+                            properties:
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              uid:
+                                maxLength: 128
+                                minLength: 1
+                                type: string
+                            required:
+                            - name
+                            - uid
+                            type: object
+                          maxItems: 1000
+                          minItems: 1
+                          type: array
+                          x-kubernetes-list-map-keys:
+                          - name
+                          x-kubernetes-list-type: map
+                        operation:
+                          description: |-
+                            NetworkControllerConfigurationOperation is a write-ahead record. Submitting
+                            is durable BEFORE the HTTP call; seeing it after a restart is not permission
+                            to retry. Accepted is not success: authoritative read-back must verify it.
+                          properties:
+                            action:
+                              enum:
+                              - Create
+                              - Update
+                              - Delete
+                              type: string
+                            cancellationRequestedAt:
+                              description: |-
+                                CancellationRequestedAt fences a Prepared group against submission before
+                                member cleanup. It never proves lease release or manager settlement.
+                              format: date-time
+                              type: string
+                            configGeneration:
+                              format: int64
+                              minimum: 1
+                              type: integer
+                            configName:
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            configUID:
+                              maxLength: 128
+                              minLength: 1
+                              type: string
+                            controllerGeneration:
+                              description: |-
+                                ControllerGeneration binds connection and credential policy, not just
+                                the immutable endpoint. Changed policy cannot resume submission.
+                              format: int64
+                              minimum: 1
+                              type: integer
+                            createdResourceID:
+                              description: |-
+                                CreatedResourceID is the nonsecret UUID returned by a synchronous create.
+                                It is response evidence, not a task ID or physical reservation identity.
+                              maxLength: 128
+                              type: string
+                            credentialVersions:
+                              description: |-
+                                CredentialVersions binds explicit model write-only version counters to
+                                the authorized source references submitted by this operation. These are
+                                not secret values or hashes and do not themselves prove application.
+                              items:
+                                description: |-
+                                  NetworkControllerConfigurationCredentialVersion identifies a requested
+                                  write-only credential rotation without persisting credential material.
+                                properties:
+                                  key:
+                                    description: |-
+                                      Key is an optional non-secret semantic identity within the resource.
+                                      It binds list credentials to stable model keys rather than array indices.
+                                    maxLength: 128
+                                    type: string
+                                  path:
+                                    description: Path is relative to the operation's
+                                      managed section.
+                                    maxLength: 1024
+                                    minLength: 1
+                                    pattern: ^/.*
+                                    type: string
+                                  secretKey:
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  secretName:
+                                    description: |-
+                                      SecretName and SecretKey pin the administrator's alias mapping. The
+                                      referenced Secret is in the NetworkController's namespace.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  sourceAlias:
+                                    maxLength: 63
+                                    minLength: 1
+                                    type: string
+                                  version:
+                                    description: |-
+                                      Version is the explicit positive NetAsCode write-only version counter.
+                                      It is never inferred from credential bytes or filesystem metadata.
+                                    format: int64
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - path
+                                - secretKey
+                                - secretName
+                                - sourceAlias
+                                - version
+                                type: object
+                              maxItems: 128
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - path
+                              x-kubernetes-list-type: map
+                            dependencyVersions:
+                              description: |-
+                                DependencyVersions retains nonsecret native version bindings. Admission
+                                is validated independently for supported physical operation kinds.
+                              properties:
+                                entries:
+                                  items:
+                                    description: |-
+                                      NetworkControllerConfigurationDependencyVersion identifies one committed
+                                      native object and version. Display names and template values are excluded.
+                                    properties:
+                                      id:
+                                        maxLength: 128
+                                        minLength: 1
+                                        pattern: ^[A-Za-z0-9_-]+$
+                                        type: string
+                                      version:
+                                        format: int64
+                                        minimum: 1
+                                        type: integer
+                                      versionID:
+                                        maxLength: 128
+                                        minLength: 1
+                                        pattern: ^[A-Za-z0-9_-]+$
+                                        type: string
+                                    required:
+                                    - id
+                                    - version
+                                    - versionID
+                                    type: object
+                                  maxItems: 1001
+                                  minItems: 2
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                kind:
+                                  enum:
+                                  - template-graph-v1
+                                  type: string
+                              required:
+                              - entries
+                              - kind
+                              type: object
+                            id:
+                              maxLength: 32
+                              pattern: ^[a-f0-9]{32}$
+                              type: string
+                            parentID:
+                              description: ParentID pins the resolved parent of a
+                                hierarchical resource.
+                              maxLength: 128
+                              type: string
+                            phase:
+                              enum:
+                              - Prepared
+                              - Submitting
+                              - Accepted
+                              - Verifying
+                              - Verified
+                              - Unknown
+                              - Cancelling
+                              type: string
+                            physicalGroup:
+                              description: |-
+                                PhysicalGroup binds fabric-wide physical scope separately from TargetID,
+                                which remains the native logical resource ID. Existing v1 physical paths
+                                must reject this field; the group protocol is not yet runtime-enabled.
+                              properties:
+                                digest:
+                                  description: Digest binds the operation's immutable
+                                    fields and complete target set.
+                                  pattern: ^[a-f0-9]{64}$
+                                  type: string
+                                targets:
+                                  items:
+                                    properties:
+                                      device:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          uid:
+                                            maxLength: 128
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - name
+                                        - uid
+                                        type: object
+                                      inventoryID:
+                                        maxLength: 128
+                                        minLength: 1
+                                        type: string
+                                      node:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          uid:
+                                            maxLength: 128
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - name
+                                        - uid
+                                        type: object
+                                      physicalIdentity:
+                                        maxLength: 128
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - device
+                                    - inventoryID
+                                    - node
+                                    - physicalIdentity
+                                    type: object
+                                  maxItems: 1000
+                                  minItems: 1
+                                  type: array
+                                  x-kubernetes-list-map-keys:
+                                  - physicalIdentity
+                                  x-kubernetes-list-type: map
+                                version:
+                                  enum:
+                                  - controller-configuration-group-identity-v1
+                                  type: string
+                              required:
+                              - digest
+                              - targets
+                              - version
+                              type: object
+                            preparedAt:
+                              description: |-
+                                PreparedAt is the persisted start of this exact operation's preparation.
+                                Adapters may use it for dependency settling when no mutation receipt exists.
+                                It never grants submission authority or proves native convergence.
+                              format: date-time
+                              type: string
+                            resource:
+                              description: Resource is a non-secret adapter identity,
+                                never configuration content.
+                              maxLength: 512
+                              minLength: 1
+                              type: string
+                            section:
+                              maxLength: 63
+                              minLength: 1
+                              pattern: ^[a-z][a-z0-9_]*$
+                              type: string
+                            sourceUID:
+                              description: |-
+                                SourceUID and SourceVersion bind a ConfigMap snapshot; both are empty
+                                for inline intent, which is bound by ConfigGeneration.
+                              maxLength: 128
+                              type: string
+                            sourceVersion:
+                              maxLength: 128
+                              type: string
+                            ssidCredentialHistory:
+                              description: |-
+                                SSIDCredentialHistory retains per-priority version high-water marks,
+                                including retired priorities. It never contains credential values.
+                              items:
+                                description: |-
+                                  NetworkControllerConfigurationSSIDCredentialHistory is non-secret retained
+                                  history for one Multi-PSK priority on an owned native SSID.
+                                properties:
+                                  priority:
+                                    format: int64
+                                    maximum: 4
+                                    minimum: 0
+                                    type: integer
+                                  version:
+                                    format: int64
+                                    minimum: 1
+                                    type: integer
+                                required:
+                                - priority
+                                - version
+                                type: object
+                              maxItems: 5
+                              type: array
+                              x-kubernetes-list-map-keys:
+                              - priority
+                              x-kubernetes-list-type: map
+                            submittedAt:
+                              description: |-
+                                SubmittedAt is persisted with the single submission permit. Recovery
+                                uses it to reject controller receipts predating this operation.
+                              format: date-time
+                              type: string
+                            targetID:
+                              description: |-
+                                TargetID pins an existing resource across task completion and restart.
+                                Empty denotes creation, whose returned identity must be observed.
+                              maxLength: 128
+                              type: string
+                            targetSerial:
+                              description: |-
+                                TargetSerial binds a physical device independently of the controller's
+                                inventory UUID. Device executors must corroborate it during recovery.
+                                Empty is reserved for resources that do not target a physical device.
+                              maxLength: 128
+                              type: string
+                            taskID:
+                              description: |-
+                                TaskID is the controller's receipt. Task failure alone does not prove
+                                absence of side effects and therefore cannot release the journal.
+                              maxLength: 512
+                              type: string
+                          required:
+                          - action
+                          - configGeneration
+                          - configName
+                          - configUID
+                          - controllerGeneration
+                          - id
+                          - phase
+                          - resource
+                          - section
+                          type: object
+                          x-kubernetes-validations:
+                          - message: group physical scope cannot also declare a single
+                              target serial
+                            rule: '!has(self.physicalGroup) || !has(self.targetSerial)
+                              || size(self.targetSerial) == 0'
+                          - message: group cancellation must precede submission
+                            rule: '!has(self.cancellationRequestedAt) || (has(self.physicalGroup)
+                              && self.phase == ''Cancelling'' && !has(self.submittedAt)
+                              && (!has(self.taskID) || size(self.taskID) == 0))'
+                          - message: cancelling requires a durable cancellation time
+                            rule: self.phase != 'Cancelling' || has(self.cancellationRequestedAt)
+                          - message: group cancellation cannot be reversed
+                            rule: '!has(oldSelf.cancellationRequestedAt) || (has(self.cancellationRequestedAt)
+                              && self.cancellationRequestedAt == oldSelf.cancellationRequestedAt
+                              && self.phase == ''Cancelling'')'
+                        operationID:
+                          maxLength: 32
+                          pattern: ^[a-f0-9]{32}$
+                          type: string
+                        settledAt:
+                          format: date-time
+                          type: string
+                      required:
+                      - members
+                      - operation
+                      - operationID
+                      - settledAt
+                      type: object
+                      x-kubernetes-validations:
+                      - message: group cancellation receipt requires its exact cancelled
+                          operation
+                        rule: self.operationID == self.operation.id && self.operation.phase
+                          == 'Cancelling' && has(self.operation.physicalGroup) &&
+                          has(self.operation.cancellationRequestedAt) && self.settledAt
+                          >= self.operation.cancellationRequestedAt
+                      - message: retained group cancellation evidence is immutable
+                        rule: self == oldSelf
+                    maxItems: 32
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - operationID
+                    x-kubernetes-list-type: map
+                  metadataHandoff:
+                    description: |-
+                      MetadataHandoff retains manager/worker cleanup custody independently of
+                      successful effects. An outstanding handoff holds new preparations.
+                    properties:
+                      bindingDigest:
+                        maxLength: 64
+                        pattern: ^[a-f0-9]{64}$
+                        type: string
+                      cancelledAt:
+                        description: |-
+                          CancelledAt records the manager's atomic cancellation of the exact original
+                          Prepared journal before any worker claim. It is not a native outcome or a
+                          pre-HTTP refusal proof. Ready original custody is settled separately.
+                        format: date-time
+                        type: string
+                      fences:
+                        description: |-
+                          Fences records the original canonical Lease incarnations, published once by
+                          the manager as acquisition progresses. Existing entries cannot change or
+                          disappear; partial cohorts grant no dispatch.
+                        items:
+                          description: |-
+                            NetworkControllerMetadataFenceReference retains one canonical bootstrap Lease
+                            incarnation in MetadataHandoff.LeaseNamespace. UID prevents replacement adoption.
+                          properties:
+                            name:
+                              maxLength: 46
+                              pattern: ^cvk-bootstrap-[a-f0-9]{32}$
+                              type: string
+                            physicalIdentity:
+                              maxLength: 128
+                              minLength: 1
+                              type: string
+                            uid:
+                              maxLength: 128
+                              minLength: 1
+                              type: string
+                          required:
+                          - name
+                          - physicalIdentity
+                          - uid
+                          type: object
+                        maxItems: 256
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - physicalIdentity
+                        x-kubernetes-list-type: map
+                      leaseNamespace:
+                        maxLength: 63
+                        minLength: 1
+                        type: string
+                      operation:
+                        description: |-
+                          NetworkControllerConfigurationOperation is a write-ahead record. Submitting
+                          is durable BEFORE the HTTP call; seeing it after a restart is not permission
+                          to retry. Accepted is not success: authoritative read-back must verify it.
+                        properties:
+                          action:
+                            enum:
+                            - Create
+                            - Update
+                            - Delete
+                            type: string
+                          cancellationRequestedAt:
+                            description: |-
+                              CancellationRequestedAt fences a Prepared group against submission before
+                              member cleanup. It never proves lease release or manager settlement.
+                            format: date-time
+                            type: string
+                          configGeneration:
+                            format: int64
+                            minimum: 1
+                            type: integer
+                          configName:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          configUID:
+                            maxLength: 128
+                            minLength: 1
+                            type: string
+                          controllerGeneration:
+                            description: |-
+                              ControllerGeneration binds connection and credential policy, not just
+                              the immutable endpoint. Changed policy cannot resume submission.
+                            format: int64
+                            minimum: 1
+                            type: integer
+                          createdResourceID:
+                            description: |-
+                              CreatedResourceID is the nonsecret UUID returned by a synchronous create.
+                              It is response evidence, not a task ID or physical reservation identity.
+                            maxLength: 128
+                            type: string
+                          credentialVersions:
+                            description: |-
+                              CredentialVersions binds explicit model write-only version counters to
+                              the authorized source references submitted by this operation. These are
+                              not secret values or hashes and do not themselves prove application.
+                            items:
+                              description: |-
+                                NetworkControllerConfigurationCredentialVersion identifies a requested
+                                write-only credential rotation without persisting credential material.
+                              properties:
+                                key:
+                                  description: |-
+                                    Key is an optional non-secret semantic identity within the resource.
+                                    It binds list credentials to stable model keys rather than array indices.
+                                  maxLength: 128
+                                  type: string
+                                path:
+                                  description: Path is relative to the operation's
+                                    managed section.
+                                  maxLength: 1024
+                                  minLength: 1
+                                  pattern: ^/.*
+                                  type: string
+                                secretKey:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                secretName:
+                                  description: |-
+                                    SecretName and SecretKey pin the administrator's alias mapping. The
+                                    referenced Secret is in the NetworkController's namespace.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                sourceAlias:
+                                  maxLength: 63
+                                  minLength: 1
+                                  type: string
+                                version:
+                                  description: |-
+                                    Version is the explicit positive NetAsCode write-only version counter.
+                                    It is never inferred from credential bytes or filesystem metadata.
+                                  format: int64
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - path
+                              - secretKey
+                              - secretName
+                              - sourceAlias
+                              - version
+                              type: object
+                            maxItems: 128
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - path
+                            x-kubernetes-list-type: map
+                          dependencyVersions:
+                            description: |-
+                              DependencyVersions retains nonsecret native version bindings. Admission
+                              is validated independently for supported physical operation kinds.
+                            properties:
+                              entries:
+                                items:
+                                  description: |-
+                                    NetworkControllerConfigurationDependencyVersion identifies one committed
+                                    native object and version. Display names and template values are excluded.
+                                  properties:
+                                    id:
+                                      maxLength: 128
+                                      minLength: 1
+                                      pattern: ^[A-Za-z0-9_-]+$
+                                      type: string
+                                    version:
+                                      format: int64
+                                      minimum: 1
+                                      type: integer
+                                    versionID:
+                                      maxLength: 128
+                                      minLength: 1
+                                      pattern: ^[A-Za-z0-9_-]+$
+                                      type: string
+                                  required:
+                                  - id
+                                  - version
+                                  - versionID
+                                  type: object
+                                maxItems: 1001
+                                minItems: 2
+                                type: array
+                                x-kubernetes-list-type: atomic
+                              kind:
+                                enum:
+                                - template-graph-v1
+                                type: string
+                            required:
+                            - entries
+                            - kind
+                            type: object
+                          id:
+                            maxLength: 32
+                            pattern: ^[a-f0-9]{32}$
+                            type: string
+                          parentID:
+                            description: ParentID pins the resolved parent of a hierarchical
+                              resource.
+                            maxLength: 128
+                            type: string
+                          phase:
+                            enum:
+                            - Prepared
+                            - Submitting
+                            - Accepted
+                            - Verifying
+                            - Verified
+                            - Unknown
+                            - Cancelling
+                            type: string
+                          physicalGroup:
+                            description: |-
+                              PhysicalGroup binds fabric-wide physical scope separately from TargetID,
+                              which remains the native logical resource ID. Existing v1 physical paths
+                              must reject this field; the group protocol is not yet runtime-enabled.
+                            properties:
+                              digest:
+                                description: Digest binds the operation's immutable
+                                  fields and complete target set.
+                                pattern: ^[a-f0-9]{64}$
+                                type: string
+                              targets:
+                                items:
+                                  properties:
+                                    device:
+                                      properties:
+                                        name:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        uid:
+                                          maxLength: 128
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - name
+                                      - uid
+                                      type: object
+                                    inventoryID:
+                                      maxLength: 128
+                                      minLength: 1
+                                      type: string
+                                    node:
+                                      properties:
+                                        name:
+                                          maxLength: 253
+                                          minLength: 1
+                                          type: string
+                                        uid:
+                                          maxLength: 128
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - name
+                                      - uid
+                                      type: object
+                                    physicalIdentity:
+                                      maxLength: 128
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - device
+                                  - inventoryID
+                                  - node
+                                  - physicalIdentity
+                                  type: object
+                                maxItems: 1000
+                                minItems: 1
+                                type: array
+                                x-kubernetes-list-map-keys:
+                                - physicalIdentity
+                                x-kubernetes-list-type: map
+                              version:
+                                enum:
+                                - controller-configuration-group-identity-v1
+                                type: string
+                            required:
+                            - digest
+                            - targets
+                            - version
+                            type: object
+                          preparedAt:
+                            description: |-
+                              PreparedAt is the persisted start of this exact operation's preparation.
+                              Adapters may use it for dependency settling when no mutation receipt exists.
+                              It never grants submission authority or proves native convergence.
+                            format: date-time
+                            type: string
+                          resource:
+                            description: Resource is a non-secret adapter identity,
+                              never configuration content.
+                            maxLength: 512
+                            minLength: 1
+                            type: string
+                          section:
+                            maxLength: 63
+                            minLength: 1
+                            pattern: ^[a-z][a-z0-9_]*$
+                            type: string
+                          sourceUID:
+                            description: |-
+                              SourceUID and SourceVersion bind a ConfigMap snapshot; both are empty
+                              for inline intent, which is bound by ConfigGeneration.
+                            maxLength: 128
+                            type: string
+                          sourceVersion:
+                            maxLength: 128
+                            type: string
+                          ssidCredentialHistory:
+                            description: |-
+                              SSIDCredentialHistory retains per-priority version high-water marks,
+                              including retired priorities. It never contains credential values.
+                            items:
+                              description: |-
+                                NetworkControllerConfigurationSSIDCredentialHistory is non-secret retained
+                                history for one Multi-PSK priority on an owned native SSID.
+                              properties:
+                                priority:
+                                  format: int64
+                                  maximum: 4
+                                  minimum: 0
+                                  type: integer
+                                version:
+                                  format: int64
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - priority
+                              - version
+                              type: object
+                            maxItems: 5
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - priority
+                            x-kubernetes-list-type: map
+                          submittedAt:
+                            description: |-
+                              SubmittedAt is persisted with the single submission permit. Recovery
+                              uses it to reject controller receipts predating this operation.
+                            format: date-time
+                            type: string
+                          targetID:
+                            description: |-
+                              TargetID pins an existing resource across task completion and restart.
+                              Empty denotes creation, whose returned identity must be observed.
+                            maxLength: 128
+                            type: string
+                          targetSerial:
+                            description: |-
+                              TargetSerial binds a physical device independently of the controller's
+                              inventory UUID. Device executors must corroborate it during recovery.
+                              Empty is reserved for resources that do not target a physical device.
+                            maxLength: 128
+                            type: string
+                          taskID:
+                            description: |-
+                              TaskID is the controller's receipt. Task failure alone does not prove
+                              absence of side effects and therefore cannot release the journal.
+                            maxLength: 512
+                            type: string
+                        required:
+                        - action
+                        - configGeneration
+                        - configName
+                        - configUID
+                        - controllerGeneration
+                        - id
+                        - phase
+                        - resource
+                        - section
+                        type: object
+                        x-kubernetes-validations:
+                        - message: group physical scope cannot also declare a single
+                            target serial
+                          rule: '!has(self.physicalGroup) || !has(self.targetSerial)
+                            || size(self.targetSerial) == 0'
+                        - message: group cancellation must precede submission
+                          rule: '!has(self.cancellationRequestedAt) || (has(self.physicalGroup)
+                            && self.phase == ''Cancelling'' && !has(self.submittedAt)
+                            && (!has(self.taskID) || size(self.taskID) == 0))'
+                        - message: cancelling requires a durable cancellation time
+                          rule: self.phase != 'Cancelling' || has(self.cancellationRequestedAt)
+                        - message: group cancellation cannot be reversed
+                          rule: '!has(oldSelf.cancellationRequestedAt) || (has(self.cancellationRequestedAt)
+                            && self.cancellationRequestedAt == oldSelf.cancellationRequestedAt
+                            && self.phase == ''Cancelling'')'
+                      physicalIdentities:
+                        items:
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                        maxItems: 256
+                        minItems: 1
+                        type: array
+                        x-kubernetes-list-type: set
+                      protocol:
+                        enum:
+                        - controller-metadata-handoff-v1
+                        type: string
+                      readyAt:
+                        description: |-
+                          ReadyAt acknowledges the manager completed original-cohort acquisition
+                          and source/actor/consumer checks with all fences held. It is not a worker
+                          claim; the current runtime and original journal CAS are still required.
+                        format: date-time
+                        type: string
+                      refusedAt:
+                        description: |-
+                          RefusedAt is written only while consuming the original one-use pre-HTTP
+                          guard proof, atomically with clearing that exact journal operation.
+                        format: date-time
+                        type: string
+                      refusedSubmissionAt:
+                        description: |-
+                          RefusedSubmissionAt preserves the original Submitting boundary; it never
+                          denotes a successful API invocation or a native task acknowledgement.
+                        format: date-time
+                        type: string
+                      releasedAt:
+                        description: |-
+                          ReleasedAt is reserved for manager acknowledgement after exact fence release.
+                          No writer or runtime activation is enabled by declaring this optional field.
+                        format: date-time
+                        type: string
+                      settlementDigest:
+                        description: |-
+                          SettlementDigest is the manager's durable terminal-outcome commitment,
+                          published before any original fence is marked or deleted.
+                        maxLength: 64
+                        pattern: ^[a-f0-9]{64}$
+                        type: string
+                      workerPod:
+                        properties:
+                          name:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          uid:
+                            maxLength: 128
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        - uid
+                        type: object
+                      workerUsername:
+                        description: WorkerUsername is sealed from the verified worker
+                          ServiceAccount identity.
+                        maxLength: 320
+                        pattern: ^system:serviceaccount:[a-z0-9-]+:[a-z0-9.-]+$
+                        type: string
+                    required:
+                    - bindingDigest
+                    - leaseNamespace
+                    - operation
+                    - physicalIdentities
+                    - protocol
+                    - workerPod
+                    - workerUsername
+                    type: object
+                    x-kubernetes-validations:
+                    - message: metadata handoff requires an unsubmitted metadata Delete
+                        preparation
+                      rule: self.operation.phase == 'Prepared' && self.operation.action
+                        == 'Delete' && !has(self.operation.submittedAt) && (!has(self.operation.targetSerial)
+                        || size(self.operation.targetSerial) == 0) && !has(self.operation.physicalGroup)
+                        && (!has(self.operation.taskID) || size(self.operation.taskID)
+                        == 0) && (!has(self.operation.createdResourceID) || size(self.operation.createdResourceID)
+                        == 0)
+                    - message: certified refusal requires its original submission
+                        time
+                      rule: has(self.refusedAt) == has(self.refusedSubmissionAt) &&
+                        (!has(self.refusedAt) || self.refusedAt >= self.refusedSubmissionAt)
+                    - message: prepared cancellation requires original ready custody
+                        and no submission refusal
+                      rule: '!has(self.cancelledAt) || (has(self.readyAt) && self.cancelledAt
+                        >= self.readyAt && !has(self.refusedAt))'
+                    - message: prepared cancellation is immutable
+                      rule: '!has(oldSelf.cancelledAt) || (has(self.cancelledAt) &&
+                        self.cancelledAt == oldSelf.cancelledAt)'
+                    - message: metadata handoff binding is immutable
+                      rule: self.protocol == oldSelf.protocol && self.bindingDigest
+                        == oldSelf.bindingDigest && self.leaseNamespace == oldSelf.leaseNamespace
+                        && self.workerPod == oldSelf.workerPod && self.workerUsername
+                        == oldSelf.workerUsername && self.physicalIdentities == oldSelf.physicalIdentities
+                        && self.operation == oldSelf.operation
+                    - message: certified refusal evidence is immutable
+                      rule: '!has(oldSelf.refusedAt) || (has(self.refusedAt) && self.refusedAt
+                        == oldSelf.refusedAt && self.refusedSubmissionAt == oldSelf.refusedSubmissionAt)'
+                    - message: manager release acknowledgement is immutable
+                      rule: '!has(oldSelf.releasedAt) || (has(self.releasedAt) &&
+                        self.releasedAt == oldSelf.releasedAt)'
+                    - message: metadata fences must belong to the sealed physical
+                        cohort
+                      rule: '!has(self.fences) || (self.fences.size() <= self.physicalIdentities.size()
+                        && self.fences.all(f, f.physicalIdentity in self.physicalIdentities))'
+                    - message: original metadata fence incarnations are immutable
+                      rule: '!has(oldSelf.fences) || (has(self.fences) && oldSelf.fences.all(original,
+                        self.fences.exists(f, f == original)))'
+                    - message: metadata readiness requires the complete original fence
+                        cohort
+                      rule: '!has(self.readyAt) || (has(self.fences) && self.fences.size()
+                        == self.physicalIdentities.size())'
+                    - message: manager metadata readiness is immutable
+                      rule: '!has(oldSelf.readyAt) || (has(self.readyAt) && self.readyAt
+                        == oldSelf.readyAt)'
+                    - message: metadata settlement requires original ready custody
+                      rule: '!has(self.settlementDigest) || has(self.readyAt)'
+                    - message: original metadata settlement intent is immutable
+                      rule: '!has(oldSelf.settlementDigest) || (has(self.settlementDigest)
+                        && self.settlementDigest == oldSelf.settlementDigest)'
+                  operation:
+                    description: |-
+                      Operation serializes configuration writes for this controller identity.
+                      No payload, authentication material or digest of secrets belongs here.
+                    properties:
+                      action:
+                        enum:
+                        - Create
+                        - Update
+                        - Delete
+                        type: string
+                      cancellationRequestedAt:
+                        description: |-
+                          CancellationRequestedAt fences a Prepared group against submission before
+                          member cleanup. It never proves lease release or manager settlement.
+                        format: date-time
+                        type: string
+                      configGeneration:
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      configName:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      configUID:
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                      controllerGeneration:
+                        description: |-
+                          ControllerGeneration binds connection and credential policy, not just
+                          the immutable endpoint. Changed policy cannot resume submission.
+                        format: int64
+                        minimum: 1
+                        type: integer
+                      createdResourceID:
+                        description: |-
+                          CreatedResourceID is the nonsecret UUID returned by a synchronous create.
+                          It is response evidence, not a task ID or physical reservation identity.
+                        maxLength: 128
+                        type: string
+                      credentialVersions:
+                        description: |-
+                          CredentialVersions binds explicit model write-only version counters to
+                          the authorized source references submitted by this operation. These are
+                          not secret values or hashes and do not themselves prove application.
+                        items:
+                          description: |-
+                            NetworkControllerConfigurationCredentialVersion identifies a requested
+                            write-only credential rotation without persisting credential material.
+                          properties:
+                            key:
+                              description: |-
+                                Key is an optional non-secret semantic identity within the resource.
+                                It binds list credentials to stable model keys rather than array indices.
+                              maxLength: 128
+                              type: string
+                            path:
+                              description: Path is relative to the operation's managed
+                                section.
+                              maxLength: 1024
+                              minLength: 1
+                              pattern: ^/.*
+                              type: string
+                            secretKey:
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            secretName:
+                              description: |-
+                                SecretName and SecretKey pin the administrator's alias mapping. The
+                                referenced Secret is in the NetworkController's namespace.
+                              maxLength: 253
+                              minLength: 1
+                              type: string
+                            sourceAlias:
+                              maxLength: 63
+                              minLength: 1
+                              type: string
+                            version:
+                              description: |-
+                                Version is the explicit positive NetAsCode write-only version counter.
+                                It is never inferred from credential bytes or filesystem metadata.
+                              format: int64
+                              minimum: 1
+                              type: integer
+                          required:
+                          - path
+                          - secretKey
+                          - secretName
+                          - sourceAlias
+                          - version
+                          type: object
+                        maxItems: 128
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - path
+                        x-kubernetes-list-type: map
+                      dependencyVersions:
+                        description: |-
+                          DependencyVersions retains nonsecret native version bindings. Admission
+                          is validated independently for supported physical operation kinds.
+                        properties:
+                          entries:
+                            items:
+                              description: |-
+                                NetworkControllerConfigurationDependencyVersion identifies one committed
+                                native object and version. Display names and template values are excluded.
+                              properties:
+                                id:
+                                  maxLength: 128
+                                  minLength: 1
+                                  pattern: ^[A-Za-z0-9_-]+$
+                                  type: string
+                                version:
+                                  format: int64
+                                  minimum: 1
+                                  type: integer
+                                versionID:
+                                  maxLength: 128
+                                  minLength: 1
+                                  pattern: ^[A-Za-z0-9_-]+$
+                                  type: string
+                              required:
+                              - id
+                              - version
+                              - versionID
+                              type: object
+                            maxItems: 1001
+                            minItems: 2
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          kind:
+                            enum:
+                            - template-graph-v1
+                            type: string
+                        required:
+                        - entries
+                        - kind
+                        type: object
+                      id:
+                        maxLength: 32
+                        pattern: ^[a-f0-9]{32}$
+                        type: string
+                      parentID:
+                        description: ParentID pins the resolved parent of a hierarchical
+                          resource.
+                        maxLength: 128
+                        type: string
+                      phase:
+                        enum:
+                        - Prepared
+                        - Submitting
+                        - Accepted
+                        - Verifying
+                        - Verified
+                        - Unknown
+                        - Cancelling
+                        type: string
+                      physicalGroup:
+                        description: |-
+                          PhysicalGroup binds fabric-wide physical scope separately from TargetID,
+                          which remains the native logical resource ID. Existing v1 physical paths
+                          must reject this field; the group protocol is not yet runtime-enabled.
+                        properties:
+                          digest:
+                            description: Digest binds the operation's immutable fields
+                              and complete target set.
+                            pattern: ^[a-f0-9]{64}$
+                            type: string
+                          targets:
+                            items:
+                              properties:
+                                device:
+                                  properties:
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    uid:
+                                      maxLength: 128
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - uid
+                                  type: object
+                                inventoryID:
+                                  maxLength: 128
+                                  minLength: 1
+                                  type: string
+                                node:
+                                  properties:
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    uid:
+                                      maxLength: 128
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - name
+                                  - uid
+                                  type: object
+                                physicalIdentity:
+                                  maxLength: 128
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - device
+                              - inventoryID
+                              - node
+                              - physicalIdentity
+                              type: object
+                            maxItems: 1000
+                            minItems: 1
+                            type: array
+                            x-kubernetes-list-map-keys:
+                            - physicalIdentity
+                            x-kubernetes-list-type: map
+                          version:
+                            enum:
+                            - controller-configuration-group-identity-v1
+                            type: string
+                        required:
+                        - digest
+                        - targets
+                        - version
+                        type: object
+                      preparedAt:
+                        description: |-
+                          PreparedAt is the persisted start of this exact operation's preparation.
+                          Adapters may use it for dependency settling when no mutation receipt exists.
+                          It never grants submission authority or proves native convergence.
+                        format: date-time
+                        type: string
+                      resource:
+                        description: Resource is a non-secret adapter identity, never
+                          configuration content.
+                        maxLength: 512
+                        minLength: 1
+                        type: string
+                      section:
+                        maxLength: 63
+                        minLength: 1
+                        pattern: ^[a-z][a-z0-9_]*$
+                        type: string
+                      sourceUID:
+                        description: |-
+                          SourceUID and SourceVersion bind a ConfigMap snapshot; both are empty
+                          for inline intent, which is bound by ConfigGeneration.
+                        maxLength: 128
+                        type: string
+                      sourceVersion:
+                        maxLength: 128
+                        type: string
+                      ssidCredentialHistory:
+                        description: |-
+                          SSIDCredentialHistory retains per-priority version high-water marks,
+                          including retired priorities. It never contains credential values.
+                        items:
+                          description: |-
+                            NetworkControllerConfigurationSSIDCredentialHistory is non-secret retained
+                            history for one Multi-PSK priority on an owned native SSID.
+                          properties:
+                            priority:
+                              format: int64
+                              maximum: 4
+                              minimum: 0
+                              type: integer
+                            version:
+                              format: int64
+                              minimum: 1
+                              type: integer
+                          required:
+                          - priority
+                          - version
+                          type: object
+                        maxItems: 5
+                        type: array
+                        x-kubernetes-list-map-keys:
+                        - priority
+                        x-kubernetes-list-type: map
+                      submittedAt:
+                        description: |-
+                          SubmittedAt is persisted with the single submission permit. Recovery
+                          uses it to reject controller receipts predating this operation.
+                        format: date-time
+                        type: string
+                      targetID:
+                        description: |-
+                          TargetID pins an existing resource across task completion and restart.
+                          Empty denotes creation, whose returned identity must be observed.
+                        maxLength: 128
+                        type: string
+                      targetSerial:
+                        description: |-
+                          TargetSerial binds a physical device independently of the controller's
+                          inventory UUID. Device executors must corroborate it during recovery.
+                          Empty is reserved for resources that do not target a physical device.
+                        maxLength: 128
+                        type: string
+                      taskID:
+                        description: |-
+                          TaskID is the controller's receipt. Task failure alone does not prove
+                          absence of side effects and therefore cannot release the journal.
+                        maxLength: 512
+                        type: string
+                    required:
+                    - action
+                    - configGeneration
+                    - configName
+                    - configUID
+                    - controllerGeneration
+                    - id
+                    - phase
+                    - resource
+                    - section
+                    type: object
+                    x-kubernetes-validations:
+                    - message: group physical scope cannot also declare a single target
+                        serial
+                      rule: '!has(self.physicalGroup) || !has(self.targetSerial) ||
+                        size(self.targetSerial) == 0'
+                    - message: group cancellation must precede submission
+                      rule: '!has(self.cancellationRequestedAt) || (has(self.physicalGroup)
+                        && self.phase == ''Cancelling'' && !has(self.submittedAt)
+                        && (!has(self.taskID) || size(self.taskID) == 0))'
+                    - message: cancelling requires a durable cancellation time
+                      rule: self.phase != 'Cancelling' || has(self.cancellationRequestedAt)
+                    - message: group cancellation cannot be reversed
+                      rule: '!has(oldSelf.cancellationRequestedAt) || (has(self.cancellationRequestedAt)
+                        && self.cancellationRequestedAt == oldSelf.cancellationRequestedAt
+                        && self.phase == ''Cancelling'')'
+                  owners:
+                    description: |-
+                      Owners records exclusive ownership of global model sections. Narrower
+                      scopes require a separate adapter contract and are not represented here.
+                    items:
+                      properties:
+                        configName:
+                          description: ConfigName is in the NetworkController's namespace.
+                          maxLength: 253
+                          minLength: 1
+                          type: string
+                        configUID:
+                          description: ConfigUID prevents a recreated config from
+                            inheriting ownership.
+                          maxLength: 128
+                          minLength: 1
+                          type: string
+                        section:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z][a-z0-9_]*$
+                          type: string
+                      required:
+                      - configName
+                      - configUID
+                      - section
+                      type: object
+                    maxItems: 64
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - section
+                    x-kubernetes-list-type: map
+                type: object
+                x-kubernetes-validations:
+                - message: unreleased metadata custody cannot be discarded
+                  rule: '!has(oldSelf.metadataHandoff) || has(self.metadataHandoff)
+                    || has(oldSelf.metadataHandoff.releasedAt)'
               controllerVersion:
                 description: ControllerVersion is the discovered product version.
                 maxLength: 128
@@ -677,6 +2478,11 @@ spec:
         required:
         - spec
         type: object
+        x-kubernetes-validations:
+        - message: status replacement cannot discard unreleased metadata custody
+          rule: '!(has(oldSelf.status) && has(oldSelf.status.configuration) && has(oldSelf.status.configuration.metadataHandoff))
+            || has(oldSelf.status.configuration.metadataHandoff.releasedAt) || (has(self.status)
+            && has(self.status.configuration) && has(self.status.configuration.metadataHandoff))'
     served: true
     storage: true
     subresources:

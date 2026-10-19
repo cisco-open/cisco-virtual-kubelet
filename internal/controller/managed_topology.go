@@ -297,6 +297,11 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 		return r.failManagedTopology(ctx, device, result,
 			ciskov1.CiscoDeviceConditionTopologyConflict, "TopologyStatusFailed", err.Error())
 	}
+	if maintenanceDecision.err == nil && !maintenanceDecision.guard && r.ManageConfigurationReservations {
+		if err := r.settleUnacknowledgedConfigurationCancellations(ctx, device); err != nil {
+			return result, err
+		}
+	}
 	if maintenanceDecision.err != nil {
 		recoveryAllowed, recoveryErr := r.managedCancellationWorkerRecoveryReady(ctx, device, node)
 		if recoveryErr != nil || !recoveryAllowed {

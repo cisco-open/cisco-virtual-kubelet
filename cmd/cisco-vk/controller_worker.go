@@ -37,6 +37,9 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	controlleradapter "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter"
+	contract "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
+	"k8s.io/client-go/kubernetes"
 )
 
 var (
@@ -177,6 +180,8 @@ func runControllerWorker(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("add projected material rotation watcher: %w", err)
 	}
 	adapter, err := controlleradapter.NewAdapter(bootstrap.Type, controlleradapter.Options{
+		WorkerPodName:    os.Getenv(controlleradapter.EnvWorkerPodName),
+		WorkerPodUID:     os.Getenv(controlleradapter.EnvWorkerPodUID),
 		Controller:       &controller,
 		CredentialPath:   controlleradapter.DefaultCredentialPath,
 		CAPath:           caPath,
@@ -185,6 +190,35 @@ func runControllerWorker(cmd *cobra.Command, _ []string) error {
 	})
 	if err != nil {
 		return err
+	}
+	binding, err := contract.ParseRuntimeAdmissionBinding(os.Getenv(contract.RuntimeAdmissionEnvironment))
+	if err != nil {
+		return fmt.Errorf("controller configuration installation binding: %w", err)
+	}
+	metadataProtocol := os.Getenv(managedprotocol.EnvControllerMetadataProtocol)
+	if metadataProtocol != "" && binding == nil {
+		return fmt.Errorf("metadata worker requires its shared admission binding")
+	}
+	if binding != nil {
+		participant, ok := adapter.(controlleradapter.ConfigurationReservationAdapter)
+		if !ok {
+			return fmt.Errorf("controller adapter does not implement configuration reservations")
+		}
+		api, err := kubernetes.NewForConfig(restConfig)
+		if err != nil {
+			return err
+		}
+		leaseNamespace := binding.LeaseNamespace
+		if leaseNamespace == "" {
+			leaseNamespace = bootstrap.ControllerRef.Namespace
+		}
+		if err := configureControllerReservationProtocol(participant, binding.Protocol, leaseNamespace, configurationReservationWorkerAuthorizer(api, mgr.GetAPIReader(), *binding, leaseNamespace)); err != nil {
+			return err
+		}
+		metadataRuntime := controllerMetadataRuntime{api: api, reader: mgr.GetAPIReader(), binding: *binding, podName: os.Getenv(controlleradapter.EnvWorkerPodName), podUID: os.Getenv(controlleradapter.EnvWorkerPodUID)}
+		if err := configureControllerMetadataProtocol(adapter, metadataProtocol, binding, metadataRuntime.worker); err != nil {
+			return err
+		}
 	}
 	if err := adapter.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("set up controller adapter %q: %w", bootstrap.Type, err)

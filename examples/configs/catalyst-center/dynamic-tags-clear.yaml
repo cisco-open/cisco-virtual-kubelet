@@ -1,0 +1,30 @@
+# Apply as an update to the existing dynamic-tags-apply.yaml config object.
+# An explicit empty list clears the rule definition; omission preserves it.
+# This keeps the tag itself. Removal of previously matched members is unqualified.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-dynamic-tags-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [inventory]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-dynamic-tag-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          tags:
+            - name: CVK-Example-Dynamic-Tag
+              description: Dynamic rule definition explicitly cleared
+              system_tag: false
+              dynamic_rules: []

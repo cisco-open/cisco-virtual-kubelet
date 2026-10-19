@@ -1,0 +1,22 @@
+# Offline input for controller-export-discovery, not a Kubernetes manifest.
+# Fields/defaults must already be resolved. Credential names refer to existing
+# native definitions; this export does not create credentials or sites.
+# Keep discovery names globally unique across independently selected site states.
+catalyst_center:
+  sites:
+    areas:
+      - name: Lab
+        parent_name: Global
+  inventory:
+    discovery:
+      - name: CVK_LAB_LOCAL_DISCOVERY
+        create_per_site: true
+        type: SINGLE
+        ip_address_list: 192.0.2.101
+        protocol_order: SSH
+        global_credential_list: [lab-cli]
+      - name: CVK_GLOBAL_DISCOVERY
+        type: SINGLE
+        ip_address_list: 192.0.2.100
+        protocol_order: SSH
+        global_credential_list: [lab-cli]

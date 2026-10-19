@@ -1,0 +1,9 @@
+# Kept separate from the merged model, matching module merge.tf's user_defaults.
+defaults:
+  catalyst_center:
+    sites:
+      floors:
+        width: 30
+        length: 30
+        height: 3
+        units_of_measure: meters

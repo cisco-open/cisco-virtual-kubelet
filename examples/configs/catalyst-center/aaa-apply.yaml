@@ -1,0 +1,71 @@
+# Requires matching manager/worker builds and credential-receipt CRDs.
+# Empty-area apply, secret rotation and secondary-server transitions lab-qualified;
+# installed workers and real authentication service behavior remain unqualified.
+# First apply compatible registrations from aaa-prerequisites-apply.yaml through
+# the existing system_settings owner. This file does not create a site.
+# This config owns network_settings; do not run another owner of that section.
+# Administrator prerequisite on NetworkController catc:
+#   intentSecretSources:
+#     - alias: network-aaa
+#       name: lab-aaa-credentials
+#       key: network
+#     - alias: client-aaa
+#       name: lab-aaa-credentials
+#       key: client
+# Each Secret key must contain {"version":1,"value":"<actual secret>"}.
+# Create the Secret separately; never store actual credentials in the model.
+# Both groups are required by the replacement API. Existing unowned settings
+# are refused; inheritance/reset and deletion are not supported. Network and
+# telemetry profiles, IP pools and versioned device credentials can share this
+# model. This config does not enable external login.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-aaa
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-aaa-apply-example-v1
+  secretRefs:
+    - section: network_settings
+      path: /aaa_servers/0/network_aaa/shared_secret
+      source: network-aaa
+    - section: network_settings
+      path: /aaa_servers/0/client_and_endpoint_aaa/shared_secret
+      source: client-aaa
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: AAA-Lab
+              parent_name: Global
+              network_settings:
+                aaa_servers: lab-aaa
+                network: lab-network
+        network_settings:
+          network:
+            - name: lab-network
+              ntp_servers: [192.0.2.1]
+          aaa_servers:
+            - name: lab-aaa
+              network_aaa:
+                server_type: AAA
+                protocol: TACACS
+                primary_ip: 192.0.2.10
+                shared_secret_version: 1
+              client_and_endpoint_aaa:
+                server_type: AAA
+                protocol: RADIUS
+                primary_ip: 192.0.2.20
+                shared_secret_version: 1

@@ -1,0 +1,39 @@
+# CVK_SSID must already exist as a Global SSID. No site/tag assignment.
+# To add a site assignment, add sites: [Global/Lab] to the profile below.
+# The site must already exist; existing assignments are retained.
+# Global definition only; no fabric or device association is requested.
+# The lab-qualified flow uses a disabled OPEN SSID, creates this logical profile,
+# updates wlan_profile_name on the same UUID, then verifies no-op convergence.
+# Native policyProfileName is observed/preserved; it is not a profile input in
+# the pinned NaC model. Configure policy_profile_name in the SSID model instead.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-profile-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_profiles]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-profile-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_profiles:
+          wireless:
+            - name: CVK_WIRELESS_PROFILE
+              ssid_details:
+                - name: CVK_SSID
+                  interface_name: management
+                  enable_fabric: false
+                  enable_flex_connect: false
+                  wlan_profile_name: CVK_WLAN

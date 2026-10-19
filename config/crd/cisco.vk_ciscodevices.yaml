@@ -1442,6 +1442,7 @@ spec:
                     enum:
                     - rollout-v1
                     - pdb-drain-v1
+                    - controller-configuration-v1
                     type: string
                   purpose:
                     description: |-
@@ -1451,6 +1452,7 @@ spec:
                     enum:
                     - WorkloadDrain
                     - SoftwareMutation
+                    - ConfigurationMutation
                     type: string
                   requestedAt:
                     description: RequestedAt is the request timestamp preserved across
@@ -1484,8 +1486,10 @@ spec:
                 - message: maintenance protocolVersion and purpose combination is
                     invalid
                   rule: '!has(self.protocolVersion) || (self.protocolVersion == ''rollout-v1''
-                    ? self.purpose == ''SoftwareMutation'' : self.protocolVersion
-                    == ''pdb-drain-v1'' && self.purpose in [''WorkloadDrain'', ''SoftwareMutation''])'
+                    ? self.purpose == ''SoftwareMutation'' : (self.protocolVersion
+                    == ''pdb-drain-v1'' && self.purpose in [''WorkloadDrain'', ''SoftwareMutation''])
+                    || (self.protocolVersion == ''controller-configuration-v1'' &&
+                    self.purpose == ''ConfigurationMutation''))'
                 - message: a recovering session requires an explicit protocolVersion
                     and purpose
                   rule: self.phase != 'Recovering' || has(self.protocolVersion)
@@ -1500,6 +1504,13 @@ spec:
                   rule: '!has(self.protocolVersion) || self.protocolVersion != ''pdb-drain-v1''
                     || self.purpose != ''SoftwareMutation'' || self.lease.holder ==
                     ''software-upgrade/'' + self.operation.uid'
+                - message: ConfigurationMutation requires its exact reservation UID-bound
+                    Lease holder
+                  rule: '!has(self.purpose) || self.purpose != ''ConfigurationMutation''
+                    || self.lease.holder == ''controller-configuration/'' + self.operation.uid'
+                - message: controller configuration requires a canonical UUIDv4 sessionToken
+                  rule: '!has(self.protocolVersion) || self.protocolVersion != ''controller-configuration-v1''
+                    || self.sessionToken.matches(''^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'')'
                 - message: active maintenance session and UID-bound operation identity
                     are immutable
                   rule: oldSelf.phase == 'Settled' || (self.sessionToken == oldSelf.sessionToken

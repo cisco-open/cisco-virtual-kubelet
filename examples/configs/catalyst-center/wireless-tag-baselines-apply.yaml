@@ -1,0 +1,47 @@
+# Approve the comparison alias in the controller's intentSecretSources and mount
+# an independent 32-byte hex comparison key through the existing worker projection.
+# No key material belongs in this manifest or the NetAsCode model.
+# Use the existing config owner for an already-owned section; a new UID cannot
+# adopt its receipts.
+# Matching imported tags and legacy acknowledgements do not acquire Create proof.
+# Tag deletion and membership removal are not enabled by these baselines.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-tag-baselines
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [network_profiles]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: network_profiles
+      path: /network_profiles
+      source: comparison
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-tag-baseline-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_profiles:
+          wireless:
+            - name: CVK-Lab-Wireless
+              ssid_details:
+                - name: CVK-Lab-Disabled
+                  wlan_profile_name: CVK-Lab-WLAN
+              sites: [Global/CVK-Lab]
+              site_tags:
+                - name: CVK-Lab-Site
+                  sites: [Global/CVK-Lab]
+                  ap_profile_name: default-ap-profile
+              policy_tags:
+                - name: CVK-Lab-Policy
+                  sites: [Global/CVK-Lab]

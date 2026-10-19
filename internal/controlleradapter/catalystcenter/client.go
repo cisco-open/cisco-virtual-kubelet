@@ -55,6 +55,9 @@ type client struct {
 	token   string
 	builtAt time.Time
 	sem     chan struct{}
+	// Optional internal transport decoration is reapplied on every session
+	// rebuild, preserving request observers across token/session renewal.
+	wrapTransport func(http.RoundTripper) http.RoundTripper
 }
 
 func newClient(cfg clientConfig) *client {
@@ -124,6 +127,9 @@ func (c *client) buildRESTLocked() (*transport.RESTClient, error) {
 		// redirect policy. Never forward it, or replay a POST, on redirects.
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
+	if c.wrapTransport != nil {
+		httpClient.Transport = c.wrapTransport(httpClient.Transport)
+	}
 	return transport.NewRESTClient(c.cfg.Endpoint, transport.RESTClientOptions{HTTPClient: httpClient, RateLimiter: c.cfg.Limiter, Headers: map[string]string{"Accept": "application/json", "Content-Type": "application/json"}})
 }
 
@@ -191,6 +197,10 @@ func basicAuthEncode(value string) string {
 }
 
 func (c *client) Get(ctx context.Context, path string, query url.Values) ([]byte, error) {
+	return c.get(ctx, path, query, 0)
+}
+
+func (c *client) get(ctx context.Context, path string, query url.Values, requiredStatus int) ([]byte, error) {
 	release, err := c.acquire(ctx)
 	if err != nil {
 		return nil, err
@@ -200,7 +210,7 @@ func (c *client) Get(ctx context.Context, path string, query url.Values) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	body, err := rest.Do(ctx, transport.RESTRequest{Method: http.MethodGet, Path: path, Query: query, Headers: map[string]string{"X-Auth-Token": token}})
+	body, err := rest.DoRaw(ctx, transport.RESTRequest{Method: http.MethodGet, Path: path, Query: query, Headers: map[string]string{"X-Auth-Token": token}})
 	var restErr *transport.RESTError
 	if errors.As(err, &restErr) && restErr.StatusCode == http.StatusUnauthorized {
 		c.invalidateSession(rest)
@@ -208,9 +218,15 @@ func (c *client) Get(ctx context.Context, path string, query url.Values) ([]byte
 		if err != nil {
 			return nil, err
 		}
-		body, err = rest.Do(ctx, transport.RESTRequest{Method: http.MethodGet, Path: path, Query: query, Headers: map[string]string{"X-Auth-Token": token}})
+		body, err = rest.DoRaw(ctx, transport.RESTRequest{Method: http.MethodGet, Path: path, Query: query, Headers: map[string]string{"X-Auth-Token": token}})
 	}
-	return body, sanitizeError(err)
+	if err != nil {
+		return nil, sanitizeError(err)
+	}
+	if body == nil || (requiredStatus != 0 && body.StatusCode != requiredStatus) {
+		return nil, errInvalidResponse
+	}
+	return body.Body, nil
 }
 
 func (c *client) Post(ctx context.Context, path string, body []byte) ([]byte, error) {
@@ -218,6 +234,19 @@ func (c *client) Post(ctx context.Context, path string, body []byte) ([]byte, er
 }
 
 func (c *client) mutate(ctx context.Context, method, path string, body []byte) ([]byte, error) {
+	return c.mutateQuery(ctx, method, path, nil, body)
+}
+
+func (c *client) mutateQuery(ctx context.Context, method, path string, query url.Values, body []byte) ([]byte, error) {
+	return c.mutateQueryStatus(ctx, method, path, query, body, 0)
+}
+func (c *client) mutateQueryStatus(ctx context.Context, method, path string, query url.Values, body []byte, requiredStatus int) ([]byte, error) {
+	return c.mutateContentType(ctx, method, path, query, body, requiredStatus, "application/json")
+}
+
+// Reuse the same session, limiter and no-replay mutation policy for binary
+// multipart APIs; callers cannot replace authentication or target origin.
+func (c *client) mutateContentType(ctx context.Context, method, path string, query url.Values, body []byte, requiredStatus int, contentType string) ([]byte, error) {
 	release, err := c.acquire(ctx)
 	if err != nil {
 		return nil, err
@@ -227,9 +256,15 @@ func (c *client) mutate(ctx context.Context, method, path string, body []byte) (
 	if err != nil {
 		return nil, err
 	}
-	resp, err := rest.Do(ctx, transport.RESTRequest{Method: method, Path: path, Body: body, Headers: map[string]string{"X-Auth-Token": token}})
+	resp, err := rest.DoRaw(ctx, transport.RESTRequest{Method: method, Path: path, Query: query, Body: body, Headers: map[string]string{"X-Auth-Token": token, "Content-Type": contentType}})
 	// Mutating requests are never replayed, including authentication errors.
-	return resp, sanitizeError(err)
+	if err != nil {
+		return nil, sanitizeError(err)
+	}
+	if resp == nil || (requiredStatus != 0 && resp.StatusCode != requiredStatus) {
+		return nil, errInvalidResponse
+	}
+	return resp.Body, nil
 }
 
 func (c *client) Probe(ctx context.Context) error {
@@ -254,6 +289,10 @@ type apiEnvelope struct {
 }
 
 type Device struct {
+	APEthernetMAC   string `json:"apEthernetMacAddress,omitempty"`
+	Family          string `json:"family,omitempty"`
+	Role            string `json:"role"`
+	RoleSource      string `json:"roleSource"`
 	ID              string `json:"id"`
 	Hostname        string `json:"hostname"`
 	ManagementIP    string `json:"managementIpAddress"`
@@ -274,7 +313,18 @@ func listInventory[T any](ctx context.Context, c *client, path string, identity 
 }
 
 func listInventoryQuery[T any](ctx context.Context, c *client, path string, filters url.Values, identity func(T) string) ([]T, error) {
-	const pageSize = 500
+	return listInventoryQueryWithGet(ctx, c.Get, path, filters, identity)
+}
+
+func listInventoryQueryWithGet[T any](ctx context.Context, get func(context.Context, string, url.Values) ([]byte, error), path string, filters url.Values, identity func(T) string) ([]T, error) {
+	return listInventoryPagesWithGet(ctx, get, path, filters, identity, 500)
+}
+
+// Endpoint-specific bounds reuse the same completeness and duplicate checks.
+func listInventoryPagesWithGet[T any](ctx context.Context, get func(context.Context, string, url.Values) ([]byte, error), path string, filters url.Values, identity func(T) string, pageSize int) ([]T, error) {
+	if pageSize < 1 || pageSize > 500 {
+		return nil, errInvalidResponse
+	}
 	const maxPages = 100
 	query := make(url.Values, len(filters)+2)
 	for key, values := range filters {
@@ -286,7 +336,7 @@ func listInventoryQuery[T any](ctx context.Context, c *client, path string, filt
 	for pageNumber := 0; pageNumber < maxPages; pageNumber++ {
 		offset := 1 + pageNumber*pageSize
 		query.Set("offset", strconv.Itoa(offset))
-		body, err := c.Get(ctx, path, query)
+		body, err := get(ctx, path, query)
 		if err != nil {
 			return nil, err
 		}

@@ -1,0 +1,13 @@
+# Offline coverage fixture only. No controller is contacted or configured.
+# Validate and resolve production intent using the pinned upstream toolchain.
+catalyst_center:
+  sites:
+    areas:
+      - name: CVK-Lab
+        parent_name: Global
+  inventory:
+    devices: []
+  authentication_templates: []
+  feature_templates:
+    wireless:
+      cleanair: []

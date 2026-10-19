@@ -99,6 +99,25 @@ metadata:
   labels:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
 rules:
+  # Shared physical-configuration handoff: evidence reads and exact-Pod-bound
+  # claim/completion status only. No reservation creation or Lease writes.
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    verbs: ["get"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["controllerconfigurationreservations"]
+    verbs: ["get", "list"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["controllerconfigurationreservations/status"]
+    verbs: ["get", "update"]
+  # Independent post-task LAN verification uses existing read-only device workers.
+  # Status and metadata updates remain manager/device-worker responsibilities.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["deviceoperations"]
+    verbs: ["get", "create"]
   # Endpoint metadata and adapter-owned connection status.
   - apiGroups: ["cisco.vk"]
     resources: ["networkcontrollers"]

@@ -1,0 +1,32 @@
+# Follow-on revision of the existing pure-IPAM network_settings owner.
+# Use the same config name/namespace that created the allocation receipts.
+# This removes receipt-owned reservations first, then unreferenced global pools.
+# A released reservation also disappears from child sites. The controller refuses
+# release while assigned addresses are in use. Existing imports are never adopted.
+# Retain keeps omitted resources; Delete explicitly requests owned source pruning.
+# network_settings: {} has the same empty-pool meaning in the pinned module;
+# with Delete it also requests owned cleanup. Null pools remain invalid.
+# Mixed setting/credential/fabric pruning and CR-deletion cleanup remain unsupported.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-ipam-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [network_settings]
+  scope: global
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-ipam-prune-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_settings:
+          ip_pools: []

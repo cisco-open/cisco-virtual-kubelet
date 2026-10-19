@@ -1,0 +1,33 @@
+# Apply after tags-owned-deletion-apply.yaml is fully finalized and absent.
+# A new config UID receives a fresh native tag UUID. The successor may select
+# inventory, templates or both; its tag-only source must match that section set.
+# Native absence, sealed audit history and normal journal checks still apply.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-owned-tags-next
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory, templates]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Delete
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-owned-tags-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          tags:
+            - name: CVK-Managed-Demo
+              description: Owned tag lifecycle demonstration
+              system_tag: false
+        templates:
+          tags: []

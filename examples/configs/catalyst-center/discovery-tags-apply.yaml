@@ -1,0 +1,39 @@
+# Use the existing inventory owner; keep its config UID across revisions.
+# Tag/discovery execution shares the same journal and discovery ownership receipts.
+# Retain preserves omitted resources; mixed-resource pruning is not yet supported.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-discovery-tags
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections:
+  - inventory
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-tags-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          tags:
+          - name: CVK-Discovery-Demo
+            description: Inventory takes precedence
+            system_tag: false
+          discovery:
+          - name: CVK-Lab-101
+            type: SINGLE
+            ip_address_list: 198.51.100.101
+            protocol_order: SSH
+            global_credential_list:
+            - CVK-Lab-CLI
+            - CVK-Lab-SNMP-Read

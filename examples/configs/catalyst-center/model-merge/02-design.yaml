@@ -1,0 +1,20 @@
+# Matching shared primitive fields let utils merge this into the same floor.
+catalyst_center:
+  sites:
+    floors:
+      - name: Floor
+        parent_name: Global/CVK-Merged-Design/Building
+        planned_access_points:
+          - name: CVK-Merged-AP
+            ap_type: AP9130I
+            position_x: 4.5
+            position_y: 6
+            position_z: 4
+            mac_address: 02:00:00:00:00:02
+            radios:
+              - band: 5
+                channel: 36
+                tx_power: 12
+                antenna_name: Internal-9130-5GHz
+                antenna_azimuth: 90
+                antenna_elevation: -10

@@ -113,6 +113,7 @@ func TestValidateNetworkControllerConfigSpecRejectsUnsafeIntentShapes(t *testing
 		mutate  func(*NetworkControllerConfigSpec)
 		wantErr string
 	}{
+		{name: "unknown secret use", mutate: func(spec *NetworkControllerConfigSpec) { spec.SecretRefs[0].Use = "Unknown" }, wantErr: "Unsupported value"},
 		{
 			name: "both sources",
 			mutate: func(spec *NetworkControllerConfigSpec) {

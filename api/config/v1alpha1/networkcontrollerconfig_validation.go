@@ -142,6 +142,9 @@ func ValidateNetworkControllerConfigSpec(spec *NetworkControllerConfigSpec) fiel
 	}
 	for i, ref := range spec.SecretRefs {
 		refPath := secretRefsPath.Index(i)
+		if ref.Use != "" && ref.Use != "Value" && ref.Use != "PrivateComparisonKey" {
+			errs = append(errs, field.NotSupported(refPath.Child("use"), ref.Use, []string{"Value", "PrivateComparisonKey"}))
+		}
 		if _, managed := sectionSet[ref.Section]; !managed {
 			errs = append(errs, field.Invalid(refPath.Child("section"), ref.Section, "must name a managed section"))
 		}

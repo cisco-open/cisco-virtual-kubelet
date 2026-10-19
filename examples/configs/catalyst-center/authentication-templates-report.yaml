@@ -1,0 +1,40 @@
+# Read-only comparison of global built-in profiles. Does not change authentication.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-authentication-templates-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [authentication_templates]
+  scope: global
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-authentication-report-example-v1
+  source:
+    inline:
+      catalyst_center:
+        authentication_templates:
+          - name: Closed Authentication
+            authentication_order: dot1x
+            dot1x_to_mab_fallback_timeout: 10
+            wake_on_lan: false
+            number_of_hosts: Single
+          - name: Low Impact
+            authentication_order: dot1x
+            dot1x_to_mab_fallback_timeout: 10
+            wake_on_lan: false
+            number_of_hosts: Unlimited
+            pre_auth_acl:
+              enabled: true
+              implicit_action: DENY
+              access_contracts:
+                - action: PERMIT
+                  protocol: UDP
+                  port: domain

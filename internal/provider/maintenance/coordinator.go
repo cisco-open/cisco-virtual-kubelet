@@ -36,12 +36,13 @@ import (
 
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard"
 )
 
 const (
-	TaintKey            = "cisco.vk/device-maintenance"
-	TaintValue          = "gnoi"
+	TaintKey            = managedprotocol.MaintenanceTaintKey
+	TaintValue          = managedprotocol.MaintenanceTaintValue
 	routineHolderPrefix = "device-write/"
 	writeLeaseTTL       = 31 * time.Minute
 	apiTimeout          = 10 * time.Second

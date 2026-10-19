@@ -16,6 +16,12 @@ package main
 
 import (
 	"context"
+	"errors"
+	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +42,21 @@ func TestManagedTopologyStatePresentDetectsEveryRetainedIdentity(t *testing.T) {
 		want    bool
 	}{
 		{name: "fresh default-off installation"},
+		{name: "retained configuration observer", objects: []runtime.Object{&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "retained-observer", Labels: map[string]string{"configuration.cisco.vk/controller-uid": "controller-uid"}, Annotations: map[string]string{"configuration.cisco.vk/controller-namespace": "lab"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: managedprotocol.NetworkManagementGlobalReadClusterRole},
+		}}, want: true},
+		{name: "orphan held reservation", objects: []runtime.Object{&ops.ControllerConfigurationReservation{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "other-namespace", Name: "retained"},
+			Status:     ops.ControllerConfigurationReservationStatus{Grant: &ops.ConfigurationReservationGrant{Phase: "Held"}},
+		}}, want: true},
+		{name: "orphan settled reservation", objects: []runtime.Object{&ops.ControllerConfigurationReservation{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "other-namespace", Name: "retained"},
+			Status:     ops.ControllerConfigurationReservationStatus{Grant: &ops.ConfigurationReservationGrant{Phase: "Released"}},
+		}}, want: true},
+		{name: "incomplete reservation evidence", objects: []runtime.Object{&ops.ControllerConfigurationReservation{
+			ObjectMeta: metav1.ObjectMeta{Namespace: "other-namespace", Name: "retained"},
+		}}, want: true},
 		{
 			name: "managed Node identity",
 			objects: []runtime.Object{&ciskov1.CiscoDevice{
@@ -101,6 +122,9 @@ func TestManagedTopologyStatePresentDetectsEveryRetainedIdentity(t *testing.T) {
 			if err := ciskov1.AddToScheme(scheme); err != nil {
 				t.Fatal(err)
 			}
+			if err := ops.AddToScheme(scheme); err != nil {
+				t.Fatal(err)
+			}
 			reader := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tc.objects...).Build()
 			got, err := managedTopologyStatePresent(context.Background(), reader)
 			if err != nil {
@@ -116,5 +140,45 @@ func TestManagedTopologyStatePresentDetectsEveryRetainedIdentity(t *testing.T) {
 func TestManagedTopologyStatePresentRejectsNilReader(t *testing.T) {
 	if _, err := managedTopologyStatePresent(context.Background(), nil); err == nil {
 		t.Fatal("nil API reader was accepted")
+	}
+}
+
+// Fault only the additive reservation discovery; earlier topology reads remain
+// successful and empty, matching an installation with no other retained state.
+type reservationListFailureReader struct {
+	client.Reader
+	failure error
+}
+
+func (r reservationListFailureReader) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if _, ok := list.(*ops.ControllerConfigurationReservationList); ok {
+		return r.failure
+	}
+	return r.Reader.List(ctx, list, opts...)
+}
+func TestManagedTopologyReservationDiscoveryErrors(t *testing.T) {
+	scheme := runtime.NewScheme()
+	_ = clientgoscheme.AddToScheme(scheme)
+	_ = ciskov1.AddToScheme(scheme)
+	_ = ops.AddToScheme(scheme)
+	base := fake.NewClientBuilder().WithScheme(scheme).Build()
+	resource := schema.GroupResource{Group: ops.GroupVersion.Group, Resource: "controllerconfigurationreservations"}
+	for _, tc := range []struct {
+		name    string
+		failure error
+		wantErr bool
+	}{
+		{"CRD not installed", &apimeta.NoKindMatchError{GroupKind: schema.GroupKind{Group: resource.Group, Kind: "ControllerConfigurationReservation"}}, false},
+		{"API endpoint absent", apierrors.NewNotFound(resource, ""), false},
+		{"forbidden is not absence", apierrors.NewForbidden(resource, "", errors.New("forbidden")), true},
+		{"unavailable is not absence", apierrors.NewServiceUnavailable("unavailable"), true},
+		{"cancelled is not absence", context.Canceled, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			present, err := managedTopologyStatePresent(context.Background(), reservationListFailureReader{Reader: base, failure: tc.failure})
+			if present || (err != nil) != tc.wantErr {
+				t.Fatalf("present=%v err=%v", present, err)
+			}
+		})
 	}
 }

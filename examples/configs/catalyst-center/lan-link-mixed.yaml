@@ -1,0 +1,45 @@
+# Update the SAME config which owns the verified ADD on interfaces 1/0/1-2.
+# Every declaration is checked before execution. DELETE is prepared first, then
+# ADD only after the original DELETE members settle/retire. Actual reclaimed
+# pool capacity is not assumed during whole-model preflight.
+# The repeated name maps to NetAsCode's name#_#action keys; ports must be disjoint.
+# Do not declare opposite actions on the same port or duplicate name/action keys.
+# Existing DeviceOperation workers verify each native result independently.
+# Fixture-qualified lifecycle; installed actors and hardware output are pending.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-lan-links
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [lan_automation]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-lan-link-mixed-example-v1
+  source:
+    inline:
+      catalyst_center:
+        lan_automation:
+          links:
+            - name: access-link
+              action: DELETE_LINK
+              primary_device_management_ip_address: 198.51.100.10
+              primary_device_interface_name: TenGigabitEthernet1/0/1
+              secondary_device_management_ip_address: 198.51.100.11
+              secondary_device_interface_name: TenGigabitEthernet1/0/2
+              # ip_pool_name: LAN-ACCESS  # Optional for DELETE_LINK
+            - name: access-link
+              action: ADD_LINK
+              primary_device_management_ip_address: 198.51.100.10
+              primary_device_interface_name: TenGigabitEthernet1/0/3
+              secondary_device_management_ip_address: 198.51.100.11
+              secondary_device_interface_name: TenGigabitEthernet1/0/4
+              ip_pool_name: LAN-ACCESS

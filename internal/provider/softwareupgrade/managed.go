@@ -35,6 +35,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
+	"github.com/cisco/virtual-kubelet-cisco/internal/workloaddrain"
 )
 
 const managedAdmissionPoll = 15 * time.Second
@@ -1038,25 +1039,7 @@ func (r *Reconciler) ensureNoFailedCampaignPeer(
 }
 
 func (r *Reconciler) boundActiveWorkloads(ctx context.Context) ([]corev1.Pod, error) {
-	var pods corev1.PodList
-	if err := r.apiReader().List(ctx, &pods, client.MatchingFields{"spec.nodeName": r.NodeName}); err != nil {
-		return nil, err
-	}
-	active := make([]corev1.Pod, 0, len(pods.Items))
-	for i := range pods.Items {
-		pod := &pods.Items[i]
-		if pod.Spec.NodeName != r.NodeName {
-			continue
-		}
-		// Terminating Pods remain active until the device inventory proves that
-		// teardown finished. Retained terminal Pods do not block on their own.
-		if pod.DeletionTimestamp == nil &&
-			(pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed) {
-			continue
-		}
-		active = append(active, *pod.DeepCopy())
-	}
-	return active, nil
+	return workloaddrain.BoundActiveWorkloads(ctx, r.apiReader(), r.NodeName)
 }
 
 func nonNilPodCount(pods []*corev1.Pod) int {

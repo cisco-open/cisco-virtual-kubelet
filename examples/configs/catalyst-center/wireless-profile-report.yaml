@@ -1,0 +1,32 @@
+# CVK_SSID must already exist as a Global SSID. No site/tag assignment.
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-profile-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_profiles]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-profile-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_profiles:
+          wireless:
+            - name: CVK_WIRELESS_PROFILE
+              ssid_details:
+                - name: CVK_SSID
+                  interface_name: management
+                  enable_fabric: false
+                  enable_flex_connect: false

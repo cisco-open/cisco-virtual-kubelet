@@ -1,0 +1,37 @@
+# Alternative desired state for the existing network-settings-apply.yaml owner.
+# CVK-Lab must already exist and have a fully observable effective telemetry
+# profile. Missing companion state refuses submission rather than guessing it.
+# Only wired collection is selected; null/omitted fields remain unmanaged.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-network-settings-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 5m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-telemetry-partial-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: CVK-Lab
+              parent_name: Global
+              network_settings:
+                telemetry: lab-partial
+        network_settings:
+          telemetry:
+            - name: lab-partial
+              wired_data_collection: true
+              wireless_telemetry: null

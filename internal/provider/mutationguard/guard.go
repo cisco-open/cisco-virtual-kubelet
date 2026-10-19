@@ -28,8 +28,10 @@ import (
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
 	"github.com/cisco/virtual-kubelet-cisco/internal/controllerhandoff"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
+	"k8s.io/apimachinery/pkg/api/meta"
 )
 
 // LegacyIOSXEQuarantineTTL is the released IOS XE compatibility horizon. It
@@ -144,7 +146,7 @@ func ensureCanonicalQuarantine(
 	}, nil
 }
 
-// FindCanonicalRisk lists both mutation CRDs in one namespace and returns a
+// FindCanonicalRisk lists mutation evidence in one namespace and returns a
 // deterministic holder. Deleting objects remain visible until their finalizer
 // is resolved and therefore continue to participate in this barrier.
 func FindCanonicalRisk(
@@ -200,6 +202,27 @@ func FindCanonicalRisk(
 			HolderIdentity: ActionHolderIdentity(act),
 			LeaseTTL:       leaseTTL,
 		})
+	}
+
+	var reservations opsv1alpha1.ControllerConfigurationReservationList
+	if err := reader.List(ctx, &reservations, client.InNamespace(namespace)); err != nil {
+		// Clusters without this additive CRD cannot contain reservations. Do
+		// not treat RBAC denial, transport errors or discovery outages as absence.
+		if !meta.IsNoMatchError(err) {
+			return nil, fmt.Errorf("list controller configuration risks: %w", err)
+		}
+	} else {
+		for i := range reservations.Items {
+			r := &reservations.Items[i]
+			if r.Spec.Device.Name != deviceName || !controllerconfiguration.RequiresQuarantine(r, now) {
+				continue
+			}
+			holder, err := controllerconfiguration.Holder(namespace, r)
+			if err != nil {
+				return nil, fmt.Errorf("configuration risk identity unavailable: %w", err)
+			}
+			risks = append(risks, Risk{Kind: "ControllerConfigurationReservation", Namespace: r.Namespace, Name: r.Name, HolderIdentity: holder, LeaseTTL: LegacyIOSXEQuarantineTTL})
+		}
 	}
 
 	if len(risks) == 0 {

@@ -27,10 +27,13 @@ import (
 	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	utilvalidation "k8s.io/apimachinery/pkg/util/validation"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +46,7 @@ import (
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/aggregator"
 	"github.com/cisco/virtual-kubelet-cisco/internal/controller"
+	contract "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout"
@@ -57,23 +61,25 @@ var (
 )
 
 var (
-	metricsAddr                     string
-	enableLeaderElect               bool
-	probeAddr                       string
-	vkImage                         string
-	vkImagePullPolicy               string
-	controllerWorkerImage           string
-	controllerWorkerImagePullPolicy string
-	vkServiceAccount                string
-	enableAggregator                bool
-	controllerInfoLogRateLimit      int
-	enableManagedTopology           bool
-	topologyPolicyNamespace         string
-	topologyPolicyName              string
-	appHostingServiceAccount        string
-	appHostingAccessMode            string
-	networkManagementServiceAccount string
-	networkManagementAccessMode     string
+	metricsAddr                      string
+	enableLeaderElect                bool
+	probeAddr                        string
+	vkImage                          string
+	vkImagePullPolicy                string
+	controllerWorkerImage            string
+	controllerWorkerImagePullPolicy  string
+	vkServiceAccount                 string
+	enableAggregator                 bool
+	controllerInfoLogRateLimit       int
+	enableManagedTopology            bool
+	enableControllerMetadataHandoff  bool
+	configurationReservationProtocol string
+	topologyPolicyNamespace          string
+	topologyPolicyName               string
+	appHostingServiceAccount         string
+	appHostingAccessMode             string
+	networkManagementServiceAccount  string
+	networkManagementAccessMode      string
 )
 
 var managerCmd = &cobra.Command{
@@ -113,6 +119,9 @@ func init() {
 			"per-pod isolation for one /metrics + one log stream + "+
 			"lower per-fleet overhead. The cisco-vk pod-spawning "+
 			"flow continues to operate alongside this for non-IOSXE devices.")
+	managerCmd.Flags().StringVar(&configurationReservationProtocol, "configuration-reservation-protocol", contract.Protocol,
+		"Explicit physical configuration installation protocol; group mode requires managed topology and readWrite network workers.")
+	managerCmd.Flags().BoolVar(&enableControllerMetadataHandoff, managedprotocol.ControllerMetadataManagerFlag, false, "Enable guarded controller metadata handoff after live manager/worker/consumer checks; requires managed topology, leader election and an explicit shared Lease namespace.")
 	managerCmd.Flags().BoolVar(&enableManagedTopology, "enable-managed-topology", false,
 		"Enable manager-owned Node identity/topology and topology-aware rollout safety. Requires installed native admission policies.")
 	managerCmd.Flags().StringVar(&topologyPolicyNamespace, "topology-policy-namespace", "",
@@ -158,6 +167,12 @@ func runManager(cmd *cobra.Command, args []string) error {
 		appHostingServiceAccount, appHostingAccessMode,
 		networkManagementServiceAccount, networkManagementAccessMode,
 	); err != nil {
+		return err
+	}
+	if err := validateConfigurationReservationProtocol(configurationReservationProtocol, enableManagedTopology, networkManagementAccessMode); err != nil {
+		return err
+	}
+	if err := validateControllerMetadataOptions(enableControllerMetadataHandoff, enableManagedTopology, enableLeaderElect, enableAggregator, os.Getenv("CONFIG_LEASE_NAMESPACE")); err != nil {
 		return err
 	}
 	controllerDebug, err := controllerDebugLogging()
@@ -261,6 +276,7 @@ func runManager(cmd *cobra.Command, args []string) error {
 	}
 	retirementMode := false
 	workerServiceAccountPolicyEpoch := ""
+	var configurationBinding *contract.RuntimeAdmissionBinding
 	if !enableManagedTopology {
 		retirementMode, err = managedTopologyStatePresent(signalCtx, mgr.GetAPIReader())
 		if err != nil {
@@ -313,6 +329,12 @@ func runManager(cmd *cobra.Command, args []string) error {
 		// Specs. Metadata-only updates therefore do not rotate worker identities.
 		workerServiceAccountPolicyEpoch = admissionVerification.WorkerServiceAccountPolicyEpoch
 		if enableManagedTopology {
+			configurationBinding = &contract.RuntimeAdmissionBinding{Protocol: configurationReservationProtocol, ManagerUsername: admissionVerification.ManagerUsername, AdmissionPrefix: policyInput.AdmissionPrefix, PolicyNamespace: policyKey.Namespace, PolicyName: policyKey.Name, LedgerName: policyInput.Config.LedgerName, AppHostingServiceAccount: appHostingServiceAccount, NetworkManagementServiceAccount: networkManagementServiceAccount, LeaseNamespace: policyInput.Config.ConfigLeaseNamespace}
+			if err := configurationBinding.Validate(); err != nil {
+				return err
+			}
+		}
+		if enableManagedTopology {
 			if _, err := topologyrollout.BootstrapAdminPolicy(
 				signalCtx,
 				mgr.GetClient(),
@@ -343,24 +365,81 @@ func runManager(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	manageReservations := false
+	if controllerFoundationAvailable {
+		if enableManagedTopology || retirementMode {
+			missing, discoveryErr := missingCRDs(cfg, configurationReservationCRDs)
+			if discoveryErr != nil {
+				return fmt.Errorf("discover configuration reservation recovery: %w", discoveryErr)
+			}
+			manageReservations = len(missing) == 0
+		}
+	}
+
+	if configurationReservationProtocol == contract.GroupReservationProtocol && !manageReservations {
+		return fmt.Errorf("group configuration protocol requires installed controller and reservation CRDs")
+	}
+	if enableManagedTopology && manageReservations {
+		if err := verifyConfigurationProtocolRetainedState(signalCtx, mgr.GetAPIReader(), configurationReservationProtocol); err != nil {
+			return err
+		}
+	}
+
+	if enableControllerMetadataHandoff && (!controllerFoundationAvailable || !manageReservations || configurationBinding == nil || configurationBinding.LeaseNamespace == "") {
+		return fmt.Errorf("controller metadata handoff requires the installed controller/reservation APIs and explicit shared Lease namespace")
+	}
+	var authorizeReservation func(context.Context, *opsv1alpha1.ControllerConfigurationReservation) error
+	if controllerFoundationAvailable && enableManagedTopology && manageReservations {
+		authorizeReservation = configurationReservationManagerAuthorizer(cfg, mgr.GetAPIReader(), types.NamespacedName{Namespace: topologyPolicyNamespace, Name: topologyPolicyName}, appHostingServiceAccount, networkManagementServiceAccount, os.Getenv("CONFIG_LEASE_NAMESPACE"))
+	}
+
+	// Bootstrap serialization is cluster-wide by serial. Empty config lease
+	// namespace resolves to this manager's release namespace, never a tenant.
+	bootstrapFenceNamespace := os.Getenv("CONFIG_LEASE_NAMESPACE")
+	if bootstrapFenceNamespace == "" {
+		bootstrapFenceNamespace = os.Getenv("POD_NAMESPACE")
+	}
+
+	var metadataHandoff contract.MetadataHandoffRuntimeCheck
+	var metadataSettlement contract.MetadataSettlementRuntimeCheck
+	metadataProtocol := ""
+	if controllerFoundationAvailable && enableManagedTopology && manageReservations && configurationBinding != nil {
+		api, err := kubernetes.NewForConfig(cfg)
+		if err != nil {
+			return err
+		}
+		metadataRuntime := controllerMetadataRuntime{api: api, reader: mgr.GetAPIReader(), binding: *configurationBinding, podName: os.Getenv("POD_NAME"), podUID: os.Getenv("POD_UID")}
+
+		// Terminal custody may settle without authorizing any new handoff.
+		metadataSettlement = metadataRuntime.settlement
+		if enableControllerMetadataHandoff {
+			metadataHandoff = metadataRuntime.handoff
+			metadataProtocol = ciskov1.NetworkControllerMetadataHandoffProtocol
+		}
+	}
+
 	if err = (&controller.CiscoDeviceReconciler{
-		Client:                          mgr.GetClient(),
-		APIReader:                       mgr.GetAPIReader(),
-		Scheme:                          mgr.GetScheme(),
-		Image:                           vkImage,
-		ServiceAccount:                  vkServiceAccount,
-		AppHostingServiceAccount:        appHostingServiceAccount,
-		NetworkManagementServiceAccount: networkManagementServiceAccount,
-		AppHostingAccessMode:            appHostingAccessMode,
-		NetworkManagementAccessMode:     networkManagementAccessMode,
-		WorkerServiceAccountPolicyEpoch: workerServiceAccountPolicyEpoch,
-		AggregatorEnabled:               enableAggregator,
-		ManagedTopology:                 enableManagedTopology,
-		TopologyPolicyNamespace:         topologyPolicyNamespace,
-		TopologyPolicyName:              topologyPolicyName,
-		LeaseNamespace:                  os.Getenv("CONFIG_LEASE_NAMESPACE"),
-		Recorder:                        mgr.GetEventRecorderFor("ciscodevice-controller"),
-		ImagePullPolicy:                 corev1.PullPolicy(vkImagePullPolicy),
+		Client:                            mgr.GetClient(),
+		APIReader:                         mgr.GetAPIReader(),
+		Scheme:                            mgr.GetScheme(),
+		Image:                             vkImage,
+		ServiceAccount:                    vkServiceAccount,
+		AppHostingServiceAccount:          appHostingServiceAccount,
+		NetworkManagementServiceAccount:   networkManagementServiceAccount,
+		AppHostingAccessMode:              appHostingAccessMode,
+		NetworkManagementAccessMode:       networkManagementAccessMode,
+		WorkerServiceAccountPolicyEpoch:   workerServiceAccountPolicyEpoch,
+		ConfigurationAdmissionBinding:     configurationBinding,
+		ManageConfigurationReservations:   manageReservations,
+		AuthorizeConfigurationReservation: authorizeReservation,
+		AggregatorEnabled:                 enableAggregator,
+		ManagedTopology:                   enableManagedTopology,
+		TopologyPolicyNamespace:           topologyPolicyNamespace,
+		TopologyPolicyName:                topologyPolicyName,
+		LeaseNamespace:                    os.Getenv("CONFIG_LEASE_NAMESPACE"),
+		BootstrapFenceNamespace:           bootstrapFenceNamespace,
+		Recorder:                          mgr.GetEventRecorderFor("ciscodevice-controller"),
+		ImagePullPolicy:                   corev1.PullPolicy(vkImagePullPolicy),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CiscoDevice")
 		os.Exit(1)
@@ -382,10 +461,17 @@ func runManager(cmd *cobra.Command, args []string) error {
 
 	if controllerFoundationAvailable {
 		if err = (&controller.NetworkControllerReconciler{
-			Client:          mgr.GetClient(),
-			Image:           controllerWorkerImage,
-			ImagePullPolicy: corev1.PullPolicy(controllerWorkerImagePullPolicy),
-			Recorder:        mgr.GetEventRecorderFor("networkcontroller-controller"),
+			Client:                            mgr.GetClient(),
+			APIReader:                         mgr.GetAPIReader(),
+			ManageConfigurationReservations:   manageReservations,
+			AuthorizeConfigurationReservation: authorizeReservation,
+			ConfigurationAdmissionBinding:     configurationBinding,
+			MetadataHandoffProtocol:           metadataProtocol,
+			AuthorizeMetadataHandoff:          metadataHandoff,
+			AuthorizeMetadataSettlement:       metadataSettlement,
+			Image:                             controllerWorkerImage,
+			ImagePullPolicy:                   corev1.PullPolicy(controllerWorkerImagePullPolicy),
+			Recorder:                          mgr.GetEventRecorderFor("networkcontroller-controller"),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NetworkController")
 			os.Exit(1)
@@ -407,10 +493,12 @@ func runManager(cmd *cobra.Command, args []string) error {
 		// platform registry. New platforms become aggregator-
 		// addressable by registering — no edit here.
 		if err = (&aggregator.AggregatedReconciler{
-			Client:         mgr.GetClient(),
-			Scheme:         mgr.GetScheme(),
-			Recorder:       mgr.GetEventRecorderFor("config-aggregator"),
-			LeaseNamespace: os.Getenv("CONFIG_LEASE_NAMESPACE"),
+			Client:                  mgr.GetClient(),
+			APIReader:               mgr.GetAPIReader(),
+			BootstrapFenceNamespace: bootstrapFenceNamespace,
+			Scheme:                  mgr.GetScheme(),
+			Recorder:                mgr.GetEventRecorderFor("config-aggregator"),
+			LeaseNamespace:          os.Getenv("CONFIG_LEASE_NAMESPACE"),
 		}).SetupWithManager(signalCtx, mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "ConfigAggregator")
 			os.Exit(1)
@@ -546,6 +634,11 @@ func managedTopologyStatePresent(ctx context.Context, reader client.Reader) (boo
 			return true, nil
 		}
 		annotations := binding.Annotations
+		// Read-only connector grants are still lifecycle-owned by managed
+		// configuration; keep their cleanup active after a default-off restart.
+		if binding.RoleRef.APIGroup == rbacv1.GroupName && binding.RoleRef.Kind == "ClusterRole" && binding.RoleRef.Name == managedprotocol.NetworkManagementGlobalReadClusterRole && binding.Labels["configuration.cisco.vk/controller-uid"] != "" && annotations["configuration.cisco.vk/controller-namespace"] != "" {
+			return true, nil
+		}
 		managed := annotations[managedprotocol.AnnotationManaged] == "true" &&
 			binding.RoleRef.Name == managedprotocol.ManagedWorkerClusterRole
 		legacy := annotations[managedprotocol.AnnotationWorkerMode] == managedprotocol.WorkerModeLegacy &&
@@ -574,5 +667,18 @@ func managedTopologyStatePresent(ctx context.Context, reader client.Reader) (boo
 			return true, nil
 		}
 	}
-	return false, nil
+	// Reservations are manager-created evidence, protected by native admission.
+	// They can outlive their device/Node or an interrupted controller teardown.
+	// Even a settled row must retain retirement processing until its finalizer
+	// and API object have actually been removed. Inspect all namespaces.
+	var reservations opsv1alpha1.ControllerConfigurationReservationList
+	if err := reader.List(ctx, &reservations, client.Limit(1)); err != nil {
+		// Compatibility with clusters that have never installed this additive
+		// CRD. Authorization and transport failures are not evidence of absence.
+		if apimeta.IsNoMatchError(err) || apierrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("list controller configuration reservations: %w", err)
+	}
+	return len(reservations.Items) != 0, nil
 }

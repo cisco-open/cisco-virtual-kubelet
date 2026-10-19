@@ -140,7 +140,11 @@ type CommonConfigReconciler struct {
 	DeviceUID               string
 	WorkerPodName           string
 	WorkerPodUID            string
-	Platform                CommonConfigPlatform
+	// AcquireMutation optionally gates the existing engine write transaction.
+	// Nil preserves current callers, including report-only reconciliation.
+	AcquireMutation func(context.Context) (context.Context, func(error), error)
+
+	Platform CommonConfigPlatform
 
 	// SubscribeNotify is the polling-loop fast path for transports that
 	// support device-side change streams. Nil means polling-only.
@@ -618,6 +622,7 @@ func (r *CommonConfigReconciler) reconcileOne(
 	}
 	eng := &engine.Engine{
 		Platform:           r.Platform.Name,
+		AcquireMutation:    r.AcquireMutation,
 		Policy:             r.Platform.ReconcilePolicy,
 		Transport:          t,
 		Lookup:             lookup,
@@ -1008,6 +1013,7 @@ func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr cli
 	}
 	eng := &engine.Engine{
 		Platform:           r.Platform.Name,
+		AcquireMutation:    r.AcquireMutation,
 		Policy:             r.Platform.ReconcilePolicy,
 		Transport:          t,
 		Lookup:             lookup,
@@ -1024,6 +1030,9 @@ func (r *CommonConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr cli
 			}
 		}
 		return fmt.Errorf("relinquish reconcile failed: phase=%s", out.Phase)
+	}
+	if out.Phase != engine.PhaseInSync {
+		return errors.Join(fmt.Errorf("relinquish did not complete: phase=%s", out.Phase), out.Err)
 	}
 	if len(leaseBlocked) > 0 {
 		return fmt.Errorf("relinquish: %d/%d managed families relinquished; "+

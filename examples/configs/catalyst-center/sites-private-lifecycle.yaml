@@ -1,0 +1,52 @@
+# Configure the existing NetworkController's intentSecretSources alias
+# site-state-key with an operator-managed random 64-hex-character key.
+# The normal worker projection supplies it; no key belongs in this model.
+# Keep this config UID and comparison key throughout the lifecycle.
+# To prune both owned areas, update this ConfigMap's model to sites: {areas: []}.
+# Reintroducing these paths recreates them parent-first with retained history.
+# Native consumers, imported/replaced identities and retained image/AP/policy
+# effects block pruning. Deleting this CR retains sites and ownership history.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-sites-private-lifecycle
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      sites:
+        areas:
+          - name: CVK-Lab-Lifecycle
+            parent_name: Global
+          - name: LifecycleChild
+            parent_name: Global/CVK-Lab-Lifecycle
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-sites-private-lifecycle
+  namespace: cvk-live
+  annotations:
+    cisco.vk/catalyst-center-bulk-sites: "false"
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [sites]
+  scope: global
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: sites
+      path: /sites
+      source: site-state-key
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-site-lifecycle-example-v1
+  source:
+    configMapRef:
+      name: catc-sites-private-lifecycle
+      key: model.yaml

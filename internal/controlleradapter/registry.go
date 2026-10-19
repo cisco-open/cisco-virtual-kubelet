@@ -66,9 +66,13 @@ type Descriptor struct {
 // product. AddToScheme is optional when an adapter needs no product-specific
 // API types beyond the shared NetworkController and NetworkControllerConfig.
 type Registration struct {
-	Descriptor  Descriptor
-	AddToScheme func(*runtime.Scheme) error
-	Factory     Factory
+	Descriptor             Descriptor
+	AddToScheme            func(*runtime.Scheme) error
+	Factory                Factory
+	ConfigurationLifecycle *ConfigurationLifecycle
+	// Additional independent families; the legacy single policy remains valid.
+	ConfigurationLifecycles    []ConfigurationLifecycle
+	ConfigurationMetadataScope *ConfigurationMetadataScope
 }
 
 var (
@@ -212,6 +216,20 @@ func NewAdapter(typeName string, opts Options) (Adapter, error) {
 
 func validateRegistration(reg Registration) error {
 	d := reg.Descriptor
+	if scope := reg.ConfigurationMetadataScope; scope != nil && (scope.Selected == nil || scope.PhysicalIdentities == nil) {
+		return fmt.Errorf("incomplete configuration metadata scope callbacks")
+	}
+	policies := append([]ConfigurationLifecycle(nil), reg.ConfigurationLifecycles...)
+	if reg.ConfigurationLifecycle != nil {
+		policies = append(policies, *reg.ConfigurationLifecycle)
+	}
+	seenFinalizers := map[string]bool{}
+	for _, policy := range policies {
+		if len(utilvalidation.IsQualifiedName(policy.Finalizer)) != 0 || !strings.Contains(policy.Finalizer, "/") || policy.Eligible == nil || policy.Completed == nil || seenFinalizers[policy.Finalizer] {
+			return fmt.Errorf("invalid or duplicate configuration lifecycle policy")
+		}
+		seenFinalizers[policy.Finalizer] = true
+	}
 	if d.Type == "" {
 		return fmt.Errorf("empty controller type")
 	}
@@ -359,7 +377,16 @@ func unknownTypeError(typeName string) error {
 
 func cloneRegistration(in Registration) Registration {
 	out := in
+	if in.ConfigurationMetadataScope != nil {
+		copy := *in.ConfigurationMetadataScope
+		out.ConfigurationMetadataScope = &copy
+	}
 	out.Descriptor = cloneDescriptor(in.Descriptor)
+	out.ConfigurationLifecycles = append([]ConfigurationLifecycle(nil), in.ConfigurationLifecycles...)
+	if in.ConfigurationLifecycle != nil {
+		copy := *in.ConfigurationLifecycle
+		out.ConfigurationLifecycle = &copy
+	}
 	return out
 }
 

@@ -1,0 +1,25 @@
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-fabric-l3-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-fabric-l3-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          l3_virtual_networks:
+            - name: CVK_LAB

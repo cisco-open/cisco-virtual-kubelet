@@ -218,7 +218,7 @@ rules:
   # mutation gates are disabled, so a prior operation still fences device
   # writes and scheduling. This namespaced safety check grants list only.
   - apiGroups: ["ops.cisco.vk"]
-    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions", "controllerconfigurationreservations"]
     verbs: ["list"]
   {{- if or (not $strictRBAC) .Values.gnoi.enableSoftwareUpgrade }}
   # IOSXESoftwareUpgrade CRD — multi-phase gNOI OS upgrade reconciler.

@@ -4,7 +4,6 @@ package catalystcenter
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"time"
 )
@@ -20,16 +19,11 @@ func (c *client) CheckStandardReloadProfile(ctx context.Context, deviceID string
 	if !validAPIID(deviceID) {
 		return errors.New("invalid device ID")
 	}
-	raw, err := c.Get(ctx, "/dna/intent/api/v1/dnac-release", nil)
+	version, err := c.installedRelease(ctx)
 	if err != nil {
 		return err
 	}
-	var release struct {
-		Response struct {
-			InstalledVersion string `json:"installedVersion"`
-		} `json:"response"`
-	}
-	if json.Unmarshal(raw, &release) != nil || release.Response.InstalledVersion != "3.2.3-75346.100" {
+	if version != "3.2.3-75346.100" {
 		return errors.New("standard reload profile requires qualified Catalyst Center build")
 	}
 	return nil

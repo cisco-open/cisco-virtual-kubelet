@@ -1,0 +1,36 @@
+# Requires the existing physical-configuration runtime and a managed CiscoDevice
+# with matching serial and Node identity. The device must already be assigned
+# and provisioned at this site. This does not provision or replace the device.
+# Local fixture qualification only; appliance and real actor qualification pending.
+# REPLACE is not supported. For owned unmark, update this same object using
+# rma-unmark-apply.yaml after the mark and its reservation have settled.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-rma-mark
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-rma-mark-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          devices:
+            - name: edge
+              serial_number: FOC12345678
+              device_ip: 192.0.2.100
+              site: Global/Lab/Building
+              state: PROVISION
+              rma:
+                action: MARK_FOR_REPLACEMENT

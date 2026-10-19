@@ -1,0 +1,43 @@
+# Complete peer list for an unused global definition; no device association.
+# Removing a peer from this list updates this definition. Retain protects the
+# definition itself when the config is deleted; it does not retain omitted peers.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-anchor-multi-peer
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-anchor-multi-peer-example-v1
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          anchor_groups:
+            - name: CVK_ANCHOR_MULTI
+              mobility_anchors:
+                - device_name: external-wlc
+                  ip_address: 192.0.2.200
+                  anchor_priority: PRIMARY
+                  managed_anchor_wlc: false
+                  peer_device_type: IOS-XE
+                  mac_address: "02:00:00:00:00:01"
+                  mobility_group_name: CVKLAB
+                - device_name: external-wlc-two
+                  ip_address: 192.0.2.201
+                  anchor_priority: SECONDARY
+                  managed_anchor_wlc: false
+                  peer_device_type: IOS-XE
+                  mac_address: "02:00:00:00:00:02"
+                  mobility_group_name: CVKLAB

@@ -1,0 +1,38 @@
+# Reporting only. Requires matching manager/worker builds of this branch.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-telemetry-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 5m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-telemetry-report-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          global:
+            network_settings:
+              telemetry: lab-telemetry
+        network_settings:
+          telemetry:
+            - name: lab-telemetry
+              wired_data_collection: true
+              wireless_telemetry: true
+              catalyst_center_as_snmp_server: true
+              snmp_servers: []
+              catalyst_center_as_syslog_server: true
+              syslog_servers: []
+              catalyst_center_as_network_collector: true
+              enable_netflow_collector_on_devices: true

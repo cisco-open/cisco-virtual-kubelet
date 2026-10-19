@@ -1,0 +1,82 @@
+# Opt-in keyed AP observations and latest-applied native-state protection. Retain only.
+# Start with a new AP; existing/unkeyed APs are not silently adopted.
+# Floor edits remain fenced unless the explicit verified floor/AP handoff is enabled.
+# Radio/type replacement and Delete remain unsupported in this strict mode.
+# Configure NetworkController.spec.intentSecretSources with alias site-state-key
+# and an operator-managed Secret key containing a random 64-hex-character key.
+# The existing worker projection supplies it; never put the key in this model.
+# Site creator/latest and AP observed/latest receipts use original-task recovery.
+# AP coordinates are feet, while floor dimensions below are meters.
+# Out-of-band drift, key migration, adoption and pruning remain gated.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-planned-ap-private-state
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      sites:
+        areas:
+          - name: CVK-Lab-Keyed-AP
+            parent_name: Global
+        buildings:
+          - name: LabBuilding
+            parent_name: Global/CVK-Lab-Keyed-AP
+            country: United States
+            latitude: 37.33812
+            longitude: -121.88612
+        floors:
+          - name: LabFloor
+            parent_name: Global/CVK-Lab-Keyed-AP/LabBuilding
+            floor_number: 1
+            rf_model: Free Space
+            width: 12
+            length: 15
+            height: 3
+            units_of_measure: meters
+            planned_access_points:
+              - name: CVK-Keyed-Planned-AP
+                ap_type: AP9130I
+                position_x: 4.5
+                position_y: 6
+                position_z: 4
+                mac_address: "02:00:00:00:00:01"
+                radios:
+                  - band: 5
+                    channel: 36
+                    tx_power: 12
+                    antenna_name: Internal-9130-5GHz
+                    antenna_azimuth: 90
+                    antenna_elevation: -10
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-planned-ap-private-state-apply
+  namespace: cvk-live
+  annotations:
+    cisco.vk/catalyst-center-bulk-sites: "false"
+    cisco.vk/catalyst-center-private-planned-aps: "true"
+spec:
+  controllerRef:
+    name: catc
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: sites
+      path: /sites
+      source: site-state-key
+  managedSections: [sites]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-keyed-planned-ap-example-v1
+  source:
+    configMapRef:
+      name: catc-planned-ap-private-state
+      key: model.yaml

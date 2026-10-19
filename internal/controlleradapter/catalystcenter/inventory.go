@@ -6,20 +6,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	configapi "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
 	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"time"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter"
 	"golang.org/x/time/rate"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const inventoryInterval = 5 * time.Minute
@@ -27,14 +32,19 @@ const inventoryInterval = 5 * time.Minute
 var errStaleController = errors.New("Catalyst Center worker no longer matches the active controller")
 
 type adapter struct {
-	key          types.NamespacedName
-	uid          types.UID
-	generation   int64
-	client       *client
-	interval     time.Duration
-	rotation     <-chan struct{}
-	statusWriter ctrlclient.Client
-	statusReader ctrlclient.Reader
+	metadataAdmission      *metadataAdmission
+	configurationAdmission *configurationAdmission
+	workerPodName          string
+	workerPodUID           string
+	intentSecretPath       string
+	key                    types.NamespacedName
+	uid                    types.UID
+	generation             int64
+	client                 *client
+	interval               time.Duration
+	rotation               <-chan struct{}
+	statusWriter           ctrlclient.Client
+	statusReader           ctrlclient.Reader
 }
 
 func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, error) {
@@ -68,7 +78,7 @@ func newAdapter(opts controlleradapter.Options) (controlleradapter.Adapter, erro
 		return nil, fmt.Errorf("catalyst-center: invalid connection settings")
 	}
 	c := newClient(clientConfig{Endpoint: nc.Spec.Endpoint, CredentialPath: opts.CredentialPath, CAPath: opts.CAPath, InsecureSkipVerify: nc.Spec.TLS != nil && nc.Spec.TLS.InsecureSkipVerify, RequestTimeout: timeout, MaxSessionLifetime: opts.MaterialRotation.MaxSessionLifetime, MaxConcurrent: concurrency, Limiter: rate.NewLimiter(rate.Limit(rps), burst)})
-	return &adapter{key: types.NamespacedName{Namespace: nc.Namespace, Name: nc.Name}, uid: nc.UID, generation: nc.Generation, client: c, interval: interval, rotation: opts.MaterialRotation.Changes}, nil
+	return &adapter{workerPodName: opts.WorkerPodName, workerPodUID: opts.WorkerPodUID, intentSecretPath: opts.IntentSecretPath, key: types.NamespacedName{Namespace: nc.Namespace, Name: nc.Name}, uid: nc.UID, generation: nc.Generation, client: c, interval: interval, rotation: opts.MaterialRotation.Changes}, nil
 }
 
 func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
@@ -78,6 +88,12 @@ func (a *adapter) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 	if err := mgr.Add(&inventoryRunnable{a}); err != nil {
+		return err
+	}
+	if err := ctrl.NewControllerManagedBy(mgr).Named("catalyst-center-config").
+		For(&configapi.NetworkControllerConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(a.configsForSource)).
+		Watches(&ciskov1.NetworkController{}, handler.EnqueueRequestsFromMapFunc(a.configsForTerminalRecovery)).Complete(&configReconciler{a: a}); err != nil {
 		return err
 	}
 	// Parent grants are read live rather than watched. Cap observation backoff

@@ -1,0 +1,19 @@
+NetAsCode Catalyst Center Terraform module 0.5.0 defaults.
+Source: https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter
+Revision: a435555fe828f03cf3311d52fe1ab6572a247916
+Original file: defaults/defaults.yaml
+SHA-256: 8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f
+The unmodified defaults and accompanying Apache-2.0 LICENSE are retained here.
+This is source provenance, not a schema-validation or execution-parity claim.
+
+Pinned cc_discovery.tf retained unmodified from the same revision.
+SHA-256: 114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c
+
+Pinned cc_sites.tf retained unmodified from the same revision.
+SHA-256: 8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9
+
+Pinned merge.tf retained unmodified from the same revision.
+SHA-256: f233687b5d6cd244adcb08369a78b7082d3fcb389a7163601c0104975fb5a91f
+
+Pinned versions.tf retained unmodified from the same revision.
+SHA-256: 997aa975cf1dbd46f954e6d6e1e318176654e071e069dfaaa0e472caecaf9494

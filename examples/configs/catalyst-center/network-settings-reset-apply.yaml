@@ -1,0 +1,37 @@
+# Alternative desired state for the existing network-settings-apply.yaml owner.
+# Reuse its name: do not introduce a competing network_settings section owner.
+# CVK-Lab must already exist and be empty. Explicit [] resets NTP/DHCP settings;
+# omitted/null fields retain other settings. This does not prune/delete groups.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-network-settings-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 5m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-network-reset-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: CVK-Lab
+              parent_name: Global
+              network_settings:
+                network: lab-reset
+        network_settings:
+          network:
+            - name: lab-reset
+              ntp_servers: []
+              dhcp_servers: []

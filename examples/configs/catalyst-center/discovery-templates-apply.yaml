@@ -1,0 +1,43 @@
+# Mixed discovery creates retain canonical task/ID receipts for later replacement.
+# Legacy/imported jobs are not adopted; mixed-resource source pruning is unsupported.
+# Extend the existing inventory owner. This starts a discovery job against the
+# declared address; use credentials already registered in Catalyst Center.
+# Existing jobs with changed intent are rejected, not automatically rerun.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-discovery-templates
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [templates, inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-example-v1
+  source:
+    inline:
+      catalyst_center:
+        templates:
+          tags:
+            - name: CVK-Discovery-Demo
+              description: Template fallback
+              system_tag: false
+        inventory:
+          tags:
+            - name: CVK-Discovery-Demo
+              description: Inventory takes precedence
+              system_tag: false
+          discovery:
+            - name: CVK-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]

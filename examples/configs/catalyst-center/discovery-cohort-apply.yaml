@@ -1,0 +1,39 @@
+# Follow-on revision of the same inventory owner; keep the original config UID.
+# Independent job creates and owned removals can progress while a retained job
+# is active. InSync still waits for every unchanged desired job to complete.
+# Removing one entry with Delete stops/removes only that job's owned native ID.
+# Registered credential names must already exist on the selected controller.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-cohort-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]
+            - name: CVK-Lab-103
+              type: SINGLE
+              ip_address_list: 198.51.100.103
+              protocol_order: SSH
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]

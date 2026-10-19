@@ -1,0 +1,12 @@
+# Sparse offline override layer in the module's defaults envelope.
+defaults:
+  catalyst_center:
+    network_settings:
+      network:
+        # This does not activate NTP: the original profile selects no NTP resource.
+        ntp_servers: [192.0.2.10]
+        # DNS is selected by domain_name, so its optional server fallback applies.
+        dns_servers: [192.0.2.53]
+      telemetry:
+        # Explicit false survives default resolution; no truthy coalescing.
+        catalyst_center_as_syslog_server: false

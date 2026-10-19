@@ -1,0 +1,37 @@
+# A later revision of the SAME config UID that completed owned feature pruning.
+# Replace CA/FRA with names from that config's original desired manifest.
+# Reapply desired entries after verified deletion; no recreation-specific public
+# flag is needed. Retain restores declared definitions without pruning omissions.
+# Existing same-name native objects are not adopted after a tombstone.
+# Original lifecycle records are retained; a new creator gets its own task/UUID.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-features
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [feature_templates]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-feature-recreate-example-v1
+  source:
+    inline:
+      catalyst_center:
+        feature_templates:
+          wireless:
+            cleanair:
+              - name: CA
+                radio_band: 2.4GHz
+                enable: false
+            rrm_fra:
+              - name: FRA
+                radio_band: 2.4GHz_5GHz
+                fra_status: false

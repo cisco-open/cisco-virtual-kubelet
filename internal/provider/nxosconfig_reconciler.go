@@ -72,6 +72,10 @@ type NXOSConfigReconciler struct {
 	WorkerPodName           string
 	WorkerPodUID            string
 
+	// AcquireMutation optionally gates the existing engine write transaction.
+	// Nil preserves current callers, including report-only reconciliation.
+	AcquireMutation func(context.Context) (context.Context, func(error), error)
+
 	SubscribeNotify <-chan struct{}
 	SubscribeEvents <-chan event.GenericEvent
 
@@ -117,6 +121,7 @@ func (r *NXOSConfigReconciler) common() *CommonConfigReconciler {
 	r.commonOnce.Do(func() {
 		r.commonReconciler = &CommonConfigReconciler{
 			Client:                  r.Client,
+			AcquireMutation:         r.AcquireMutation,
 			DeviceName:              r.DeviceName,
 			DeviceNamespace:         r.DeviceNamespace,
 			Transport:               r.Transport,

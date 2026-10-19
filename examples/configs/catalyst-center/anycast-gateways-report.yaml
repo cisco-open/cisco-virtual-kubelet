@@ -1,0 +1,50 @@
+# Local fixture-qualified; lab qualification remains pending.
+# Hierarchy sites and the IPAM reservation "access" at Global/Lab must exist.
+# Create/unchanged convergence only; attribute updates and deletion are pending.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-anycast-gateways-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-anycast-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          l3_virtual_networks:
+            - name: Corp
+          fabric_sites:
+            - name: Global/Lab
+              authentication_template:
+                name: Closed Authentication
+              pub_sub_enabled: false
+              l3_virtual_networks: [Corp]
+              anycast_gateways:
+                - ip_pool_name: access
+                  l3_virtual_network: Corp
+                  traffic_type: DATA
+                  auto_generate_vlan_name: true
+                  critical_pool: false
+                  layer2_flooding: false
+                  wireless_pool: false
+                  ip_directed_broadcast: false
+                  intra_subnet_routing_enabled: false
+                  multiple_ip_to_mac_addresses: false
+              fabric_zones:
+                - name: Global/Lab/Building
+                  authentication_template:
+                    name: No Authentication
+                  l3_virtual_networks: [Corp]
+                  anycast_gateways: [access]

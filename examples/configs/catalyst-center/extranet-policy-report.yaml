@@ -1,0 +1,30 @@
+# Referenced VNs and fabric sites/zones must already exist.
+# fabric_sites uses NetAsCode hierarchy paths, never native UUIDs.
+# Read-only reporting; Apply is gated pending multi-device admission.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-extranet-policy-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-extranet-policy-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          extranet_policies:
+            - name: SharedServices
+              provider_virtual_network: Services
+              subscriber_virtual_networks: [Corp, Guest]
+              fabric_sites: [Global/Lab]

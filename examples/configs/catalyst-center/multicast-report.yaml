@@ -1,0 +1,37 @@
+# Report-only example. Apply is gated pending multi-device mutation coordination.
+# Global/Lab must already be a fabric site with Corp attached, and its access
+# IP reservation must exist. Physical inventory must identify all fabric members.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-multicast-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-multicast-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          fabric_sites:
+            - name: Global/Lab
+              authentication_template:
+                name: No Authentication
+              pub_sub_enabled: false
+              multicast:
+                replication_mode: NATIVE_MULTICAST
+                virtual_networks:
+                  - name: Corp
+                    ip_pool_name: access
+                    ipv4_ssm_ranges: [232.0.0.0/8]
+                    multicast_rps: []

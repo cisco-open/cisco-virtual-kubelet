@@ -1,0 +1,34 @@
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-anchor-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-anchor-example-v1
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          anchor_groups:
+            - name: CVK_ANCHOR
+              mobility_anchors:
+                - device_name: external-wlc
+                  ip_address: 192.0.2.200
+                  anchor_priority: PRIMARY
+                  managed_anchor_wlc: false
+                  peer_device_type: IOS-XE
+                  mac_address: "02:00:00:00:00:01"
+                  mobility_group_name: CVKLAB

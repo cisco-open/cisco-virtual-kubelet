@@ -1,0 +1,31 @@
+# Read-only assignment/role comparison. Replace site and identity with lab values.
+# Device apply remains gated pending mutation-lease and provisioning integration.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-device-roles-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [inventory]
+  scope: global
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-inventory-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          devices:
+            - name: cat9k-lab-101
+              device_ip: 198.51.100.101
+              state: ASSIGN
+              site: Global/Lab
+              device_role: ACCESS
+              role_source: MANUAL

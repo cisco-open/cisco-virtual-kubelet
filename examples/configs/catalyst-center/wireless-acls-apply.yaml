@@ -1,0 +1,37 @@
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-acls-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-acls-example-v1
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          security_settings:
+            pre_auth_acls:
+              - name: CVK_ACL
+                ipv6_enabled: false
+                include_auto_generated_rules: true
+                rules:
+                  - source_address: 192.0.2.1
+                    source_prefix: 32
+                    destination_address: 198.51.100.1
+                    destination_prefix: 32
+                    source_ports: 1-65535
+                    destination_ports: "443"
+                    protocol: TCP

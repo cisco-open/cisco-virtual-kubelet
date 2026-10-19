@@ -1,0 +1,9 @@
+NetAsCode utils provider v2.0.0
+Revision: a383caa57652edc7952f3bd596f9a75719480643
+Source: https://github.com/netascode/terraform-provider-utils
+Original merge.go and merge_test.go retained unmodified as reference material.
+License: MPL-2.0, retained in LICENSE.
+CVK uses string-keyed maps and preserves the indexed list-matching semantics.
+The source module allows utils >= 2.0.0; this is an explicit compatible implementation baseline, not a claim about every later provider version.
+
+Original yaml.go and resolve_yaml_tags.go retained unmodified as source-resolution references; CVK uses its existing YAML library and explicit caller bindings rather than importing a second runtime parser or reading the environment in the adapter.

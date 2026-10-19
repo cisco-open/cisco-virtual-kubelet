@@ -39,7 +39,10 @@ import (
 
 var managedTopologyCRDs = []schema.GroupVersionResource{
 	opsv1alpha1.GroupVersion.WithResource("iosxesoftwarerollouts"),
+	opsv1alpha1.GroupVersion.WithResource("controllerconfigurationreservations"),
 }
+
+var configurationReservationCRDs = []schema.GroupVersionResource{opsv1alpha1.GroupVersion.WithResource("controllerconfigurationreservations")}
 
 var managedAdmissionPolicySuffixes = []string{
 	"managed-node",
@@ -54,6 +57,7 @@ var managedAdmissionPolicySuffixes = []string{
 	"topology-policy",
 	"topology-ledger",
 	"managed-maintenance-lease",
+	"configuration-reservation",
 	"shared-pod-status",
 	"shared-pod-binding",
 	"shared-pod-delete",
@@ -88,6 +92,14 @@ type admissionContractExpectation struct {
 }
 
 var managedAdmissionExpectations = map[string]admissionContractExpectation{
+	"configuration-reservation": {
+		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"controllerconfigurationreservations", "controllerconfigurationreservations/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		variables:         []string{"journal", "manager", "podBound", "deviceWorker", "controllerWorker", "oldClaim", "oldGrant", "claim", "grant", "oldCompletion", "completion", "sameClaim", "sameCompletion", "sameGrantIdentity", "oldSettled", "settled", "sameSettlement", "oldCancelled", "cancelled", "sameCancellation", "group", "oldGroupCancelled", "groupCancelled", "sameGroupCancellation", "sameGrant", "safeRemoval"},
+		validations:       4,
+		requiredFragments: []string{"authentication.kubernetes.io/pod-uid", "configuration-reservation-evidence", "managerSettledAt", "operationDigest", "variables.safeRemoval", "variables.sameSettlement"},
+		digest:            "sha256:ac27a74a5223cc43f361f2c1682a313808741f2d937309000aad4b77a8795819",
+	},
 	"managed-node": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
@@ -177,9 +189,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"managed-maintenance-request"},
 		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "managerRebind", "boundWorker", "holderChanged"},
-		validations:     8, coreTyped: true,
-		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "maintenance-purpose", "software-drain", "worker-username", "app-worker-username", "network-worker-username", "holderIdentity", "device-uid"},
-		digest:            "sha256:0d4abc14a64c22d25a9e43f8a08ec0107de9b754f36a50fb6f59dfc53180db7d",
+		validations:     9, coreTyped: true,
+		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "maintenance-purpose", "software-drain", "controller-configuration-v1", "ConfigurationMutation", "authentication.kubernetes.io/pod-uid", "worker-username", "app-worker-username", "network-worker-username", "holderIdentity", "device-uid"},
+		digest:            "sha256:7386bf7baf10bdb6bcfd2a17f7d4751903a9f6e42b3403ad10a7c86a03805626",
 	},
 	"shared-pod-status": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},
@@ -297,6 +309,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 }
 
 type managedAdmissionContractVerification struct {
+	ManagerUsername                 string
 	WorkerServiceAccountPolicyEpoch string
 }
 
@@ -424,9 +437,22 @@ func verifyManagedAdmissionContract(
 		AppHostingServiceAccount:        appHostingServiceAccount,
 		NetworkManagementServiceAccount: networkManagementServiceAccount,
 	}
+	return verifyManagedAdmissionBindings(ctx, clientset, contractBindings)
+}
+
+// Workers use the same typed policy/binding verification with installation
+// identities supplied by their manager-owned template, not their own username
+// substituted for the manager actor in CEL.
+func verifyManagedAdmissionBindings(ctx context.Context, clientset kubernetes.Interface, contractBindings admissionContractBindings) (managedAdmissionContractVerification, error) {
+	var verification managedAdmissionContractVerification
+	if clientset == nil {
+		return verification, fmt.Errorf("admission client is nil")
+	}
 	if err := contractBindings.validate(); err != nil {
 		return verification, err
 	}
+	prefix := contractBindings.AdmissionPrefix
+	verification.ManagerUsername = contractBindings.ManagerUsername
 	policies := clientset.AdmissionregistrationV1().ValidatingAdmissionPolicies()
 	policyBindings := clientset.AdmissionregistrationV1().ValidatingAdmissionPolicyBindings()
 	workerAccountGenerations := make([]workerServiceAccountAdmissionGeneration, 0,
@@ -471,10 +497,11 @@ func verifyManagedAdmissionContract(
 			})
 		}
 	}
-	verification.WorkerServiceAccountPolicyEpoch, err = deriveWorkerServiceAccountPolicyEpoch(workerAccountGenerations)
+	epoch, err := deriveWorkerServiceAccountPolicyEpoch(workerAccountGenerations)
 	if err != nil {
 		return verification, err
 	}
+	verification.WorkerServiceAccountPolicyEpoch = epoch
 	return verification, nil
 }
 

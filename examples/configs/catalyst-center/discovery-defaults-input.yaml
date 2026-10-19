@@ -1,0 +1,8 @@
+# Export this model with discovery-defaults.yaml before placing it in a ConfigMap.
+catalyst_center:
+  inventory:
+    discovery:
+      - name: cvk-example-discovery
+        ip_address_list: 192.0.2.101
+        global_credential_list:
+          - lab-cli

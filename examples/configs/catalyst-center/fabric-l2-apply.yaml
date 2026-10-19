@@ -1,0 +1,42 @@
+# Local fixture-qualified; lab qualification remains pending.
+# Hierarchy sites Global/Lab and Global/Lab/Building must already exist.
+# Apply supports creation and unchanged sites. Authentication/pub-sub changes,
+# zone authentication updates, L2 updates/deletion and live qualification remain pending.
+# VLAN ID is deliberately omitted: the zone inherits the parent allocation.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-fabric-l2-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-fabric-l2-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          fabric_sites:
+            - name: Global/Lab
+              authentication_template:
+                name: Closed Authentication
+              pub_sub_enabled: false
+              l2_virtual_networks:
+                - name: clients
+                  vlan_name: Clients
+                  traffic_type: DATA
+                  fabric_enabled_wireless: false
+              fabric_zones:
+                - name: Global/Lab/Building
+                  authentication_template:
+                    name: No Authentication
+                  l2_virtual_networks: [clients]

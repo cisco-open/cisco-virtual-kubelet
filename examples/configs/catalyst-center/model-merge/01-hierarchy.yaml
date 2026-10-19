@@ -1,0 +1,16 @@
+# Independent hierarchy input. Site defaults resolve after source merging.
+catalyst_center:
+  sites:
+    areas:
+      - name: CVK-Merged-Design
+        parent_name: Global
+    buildings:
+      - name: Building
+        parent_name: Global/CVK-Merged-Design
+        country: United States
+        latitude: 37.33812
+        longitude: -121.88612
+    floors:
+      - name: Floor
+        parent_name: Global/CVK-Merged-Design/Building
+        floor_number: 1

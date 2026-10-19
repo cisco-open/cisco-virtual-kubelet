@@ -1,0 +1,38 @@
+# Controller metadata only. No template deployment or device configuration.
+# Retain policies preserve the tag when this manifest is removed.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-dynamic-tags-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [inventory]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-dynamic-tag-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          tags:
+            - name: CVK-Example-Dynamic-Tag
+              description: Select a named switch in inventory
+              system_tag: false
+              dynamic_rules:
+                - member_type: networkdevice
+                  operation: AND
+                  items:
+                    - operation: EQ
+                      name: hostname
+                      value: cvk-example-switch
+                    - operation: EQ
+                      name: family
+                      value: Switches and Hubs

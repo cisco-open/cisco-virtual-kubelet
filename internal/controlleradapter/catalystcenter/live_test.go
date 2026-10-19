@@ -7,8 +7,10 @@ package catalystcenter
 import (
 	"context"
 	"encoding/json"
+	"golang.org/x/time/rate"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -46,7 +48,17 @@ func liveClient(t *testing.T) *client {
 			t.Fatal(err)
 		}
 	}
-	c := newClient(clientConfig{Endpoint: endpoint, CredentialPath: dir, InsecureSkipVerify: true, RequestTimeout: 20 * time.Second, MaxSessionLifetime: 15 * time.Minute})
+	// Match the production adapter's shared transport limiter. Long native
+	// qualification can opt into lower appliance-specific request pacing.
+	rps, burst := 5, 10
+	if raw := os.Getenv("CATC_LIVE_REQUESTS_PER_SECOND"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 1 {
+			t.Fatal("CATC_LIVE_REQUESTS_PER_SECOND must be a positive integer")
+		}
+		rps, burst = value, 1
+	}
+	c := newClient(clientConfig{Endpoint: endpoint, CredentialPath: dir, InsecureSkipVerify: true, RequestTimeout: 20 * time.Second, MaxSessionLifetime: 15 * time.Minute, Limiter: rate.NewLimiter(rate.Limit(rps), burst)})
 	t.Cleanup(c.Invalidate)
 	return c
 }

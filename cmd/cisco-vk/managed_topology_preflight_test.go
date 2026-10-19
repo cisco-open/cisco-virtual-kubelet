@@ -5,9 +5,12 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	fakekube "k8s.io/client-go/kubernetes/fake"
 	"os"
 	"path/filepath"
 	"strings"
@@ -91,6 +94,7 @@ func TestRenderedManagedAdmissionContract(t *testing.T) {
 			t.Errorf("required ValidatingAdmissionPolicy %q is absent", prefix+"-"+suffix)
 		}
 	}
+	testRuntimeAdmissionVerification(t, manifestPath, bindings)
 }
 
 // assertStrictYAMLDocuments catches duplicate mapping keys before the typed
@@ -634,4 +638,91 @@ func validManagedAdmissionPolicy(expected admissionContractExpectation) *admissi
 		policy.Spec.Validations = append(policy.Spec.Validations, admissionv1.Validation{Expression: expression})
 	}
 	return policy
+}
+
+// Exercise the same typed GET path used by manager and worker verification,
+// using the rendered chart with simulated API-server observation metadata.
+func testRuntimeAdmissionVerification(t *testing.T, path string, bindings admissionContractBindings) {
+	t.Helper()
+	raw, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer raw.Close()
+	decoder := yaml.NewYAMLOrJSONDecoder(raw, 4096)
+	objects := []k8sruntime.Object{}
+	for {
+		var doc map[string]any
+		err := decoder.Decode(&doc)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := json.Marshal(doc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		switch doc["kind"] {
+		case "ValidatingAdmissionPolicy":
+			var p admissionv1.ValidatingAdmissionPolicy
+			if err := json.Unmarshal(encoded, &p); err != nil {
+				t.Fatal(err)
+			}
+			p.UID = types.UID(p.Name)
+			p.Generation = 1
+			p.Status.ObservedGeneration = 1
+			p.Status.TypeChecking = &admissionv1.TypeChecking{}
+			objects = append(objects, &p)
+		case "ValidatingAdmissionPolicyBinding":
+			var b admissionv1.ValidatingAdmissionPolicyBinding
+			if err := json.Unmarshal(encoded, &b); err != nil {
+				t.Fatal(err)
+			}
+			b.UID = types.UID(b.Name)
+			b.Generation = 1
+			objects = append(objects, &b)
+		}
+	}
+	for _, scenario := range []string{"current", "missing binding", "modified CEL", "unobserved policy", "wrong manager"} {
+		t.Run("runtime-"+scenario, func(t *testing.T) {
+			clones := make([]k8sruntime.Object, len(objects))
+			for i, obj := range objects {
+				clones[i] = obj.DeepCopyObject()
+			}
+			api := fakekube.NewSimpleClientset(clones...)
+			ctx := context.Background()
+			name := bindings.AdmissionPrefix + "-configuration-reservation"
+			expected := bindings
+			switch scenario {
+			case "missing binding":
+				if err := api.AdmissionregistrationV1().ValidatingAdmissionPolicyBindings().Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
+					t.Fatal(err)
+				}
+			case "modified CEL", "unobserved policy":
+				p, err := api.AdmissionregistrationV1().ValidatingAdmissionPolicies().Get(ctx, name, metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if scenario == "modified CEL" {
+					p.Spec.Validations[0].Expression = "true"
+				} else {
+					p.Status.ObservedGeneration = 0
+				}
+				if _, err = api.AdmissionregistrationV1().ValidatingAdmissionPolicies().Update(ctx, p, metav1.UpdateOptions{}); err != nil {
+					t.Fatal(err)
+				}
+			case "wrong manager":
+				expected.ManagerUsername = "system:serviceaccount:wrong:manager"
+			}
+			result, err := verifyManagedAdmissionBindings(ctx, api, expected)
+			if (err == nil) != (scenario == "current") {
+				t.Fatalf("scenario=%s err=%v", scenario, err)
+			}
+			if err == nil && (result.ManagerUsername != bindings.ManagerUsername || result.WorkerServiceAccountPolicyEpoch == "") {
+				t.Fatal("missing verified installation identity")
+			}
+		})
+	}
 }

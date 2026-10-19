@@ -1,0 +1,91 @@
+[
+  {
+    "apiVersion": "admissionregistration.k8s.io/v1",
+    "kind": "ValidatingAdmissionPolicy",
+    "metadata": {
+      "name": "cvk-cisco-virtual-kubelet-bootstrap-fence",
+      "annotations": {
+        "ops.cisco.vk/bootstrap-fence-protocol": "cvk-bootstrap-fence.v1"
+      }
+    },
+    "spec": {
+      "failurePolicy": "Fail",
+      "matchConstraints": {
+        "matchPolicy": "Equivalent",
+        "resourceRules": [
+          {
+            "apiGroups": [
+              "coordination.k8s.io"
+            ],
+            "apiVersions": [
+              "v1"
+            ],
+            "operations": [
+              "CREATE",
+              "UPDATE",
+              "DELETE"
+            ],
+            "resources": [
+              "leases"
+            ],
+            "scope": "Namespaced"
+          }
+        ]
+      },
+      "matchConditions": [
+        {
+          "name": "bootstrap-evidence",
+          "expression": "request.name.startsWith('cvk-bootstrap-') || (object != null &&\n ((has(object.metadata.name) && object.metadata.name.startsWith('cvk-bootstrap-')) ||\n  (has(object.metadata.annotations) && 'ops.cisco.vk/bootstrap-binding' in object.metadata.annotations) ||\n  (has(object.metadata.labels) && 'ops.cisco.vk/bootstrap-fence' in object.metadata.labels) ||\n  (has(object.metadata.finalizers) && 'ops.cisco.vk/bootstrap-fence-evidence' in object.metadata.finalizers))) ||\n(oldObject != null &&\n ((has(oldObject.metadata.name) && oldObject.metadata.name.startsWith('cvk-bootstrap-')) ||\n  (has(oldObject.metadata.annotations) && 'ops.cisco.vk/bootstrap-binding' in oldObject.metadata.annotations) ||\n  (has(oldObject.metadata.labels) && 'ops.cisco.vk/bootstrap-fence' in oldObject.metadata.labels) ||\n  (has(oldObject.metadata.finalizers) && 'ops.cisco.vk/bootstrap-fence-evidence' in oldObject.metadata.finalizers)))"
+        }
+      ],
+      "variables": [
+        {
+          "name": "manager",
+          "expression": "request.userInfo.username == \"system:serviceaccount:manager-system:cisco-virtual-kubelet-controller\""
+        },
+        {
+          "name": "sharedNamespace",
+          "expression": "\"bootstrap-leases\""
+        },
+        {
+          "name": "metadata",
+          "expression": "object != null && has(object.metadata.labels) && 'ops.cisco.vk/metadata-fence' in object.metadata.labels && object.metadata.labels['ops.cisco.vk/metadata-fence'] == 'cvk-metadata-fence.v1'"
+        },
+        {
+          "name": "oldMetadata",
+          "expression": "oldObject != null && has(oldObject.metadata.labels) && 'ops.cisco.vk/metadata-fence' in oldObject.metadata.labels && oldObject.metadata.labels['ops.cisco.vk/metadata-fence'] == 'cvk-metadata-fence.v1'"
+        },
+        {
+          "name": "oldReleased",
+          "expression": "oldObject != null && has(oldObject.metadata.annotations) && 'ops.cisco.vk/metadata-fence-release' in oldObject.metadata.annotations && oldObject.metadata.annotations['ops.cisco.vk/metadata-fence-release'].matches('^[a-f0-9]{64}$')"
+        },
+        {
+          "name": "released",
+          "expression": "object != null && has(object.metadata.annotations) && 'ops.cisco.vk/metadata-fence-release' in object.metadata.annotations && object.metadata.annotations['ops.cisco.vk/metadata-fence-release'].matches('^[a-f0-9]{64}$')"
+        }
+      ],
+      "validations": [
+        {
+          "expression": "variables.manager && request.namespace == variables.sharedNamespace && ((request.operation == 'CREATE' && object != null &&\n  object.metadata.name.matches('^cvk-bootstrap-[a-f0-9]{32}$') &&\n  (!has(object.metadata.generateName) || object.metadata.generateName == '') &&\n  (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences.size() == 0) &&\n  has(object.metadata.finalizers) && object.metadata.finalizers == ['ops.cisco.vk/bootstrap-fence-evidence'] &&\n  has(object.metadata.labels) && object.metadata.labels['ops.cisco.vk/bootstrap-fence'] == 'true' &&\n  (!('ops.cisco.vk/metadata-fence' in object.metadata.labels) || variables.metadata) &&\n  has(object.metadata.annotations) &&\n  !('ops.cisco.vk/metadata-fence-release' in object.metadata.annotations) &&\n  'ops.cisco.vk/bootstrap-binding' in object.metadata.annotations &&\n  object.metadata.annotations['ops.cisco.vk/bootstrap-binding'].size() > 0 &&\n  object.metadata.annotations['ops.cisco.vk/bootstrap-binding'].size() <= 8192 &&\n  'topology.cisco.vk/retain-lease' in object.metadata.annotations &&\n  object.metadata.annotations['topology.cisco.vk/retain-lease'] == 'true' &&\n  has(object.spec.holderIdentity) && object.spec.holderIdentity.matches('^controller-bootstrap/[a-f0-9]{64}$') &&\n  !has(object.spec.leaseDurationSeconds) && !has(object.spec.acquireTime) &&\n  !has(object.spec.renewTime) && !has(object.spec.leaseTransitions) &&\n  !has(object.spec.strategy) && !has(object.spec.preferredHolder)) ||\n (request.operation == 'UPDATE' && variables.oldMetadata && variables.metadata &&\n  object.spec == oldObject.spec && object.metadata.labels == oldObject.metadata.labels &&\n  (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences.size() == 0) &&\n  has(object.metadata.annotations) && has(oldObject.metadata.annotations) &&\n  oldObject.metadata.annotations.all(k,v, k in object.metadata.annotations && object.metadata.annotations[k] == v) &&\n  object.metadata.annotations.all(k,v, k == 'ops.cisco.vk/metadata-fence-release' ||\n    (k in oldObject.metadata.annotations && oldObject.metadata.annotations[k] == v)) &&\n  (variables.oldReleased ?\n    (variables.released && object.metadata.annotations == oldObject.metadata.annotations &&\n     (!has(object.metadata.finalizers) || object.metadata.finalizers.size() == 0)) :\n    (variables.released &&\n     has(oldObject.metadata.finalizers) && oldObject.metadata.finalizers == ['ops.cisco.vk/bootstrap-fence-evidence'] &&\n     (!has(object.metadata.finalizers) || object.metadata.finalizers.size() == 0)))) ||\n (request.operation == 'DELETE' && variables.oldMetadata && variables.oldReleased &&\n  (!has(oldObject.metadata.finalizers) || oldObject.metadata.finalizers.size() == 0)))",
+          "message": "only the manager may create retained fences or release marked metadata evidence; unmarked v1, identity changes, expiry and unacknowledged deletion remain forbidden"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "admissionregistration.k8s.io/v1",
+    "kind": "ValidatingAdmissionPolicyBinding",
+    "metadata": {
+      "name": "cvk-cisco-virtual-kubelet-bootstrap-fence",
+      "annotations": {
+        "ops.cisco.vk/bootstrap-fence-protocol": "cvk-bootstrap-fence.v1"
+      }
+    },
+    "spec": {
+      "policyName": "cvk-cisco-virtual-kubelet-bootstrap-fence",
+      "validationActions": [
+        "Deny"
+      ]
+    }
+  }
+]

@@ -127,7 +127,6 @@ rules:
   - iosxedevicegroupconfigs
   - iosxeinterfacegroupconfigs
   - iosxetemplates
-  - networkcontrollerconfigs
   verbs:
   - get
   - list
@@ -149,6 +148,15 @@ rules:
   - update
   - watch
 - apiGroups:
+  - config.cisco.vk
+  resources:
+  - networkcontrollerconfigs
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
   - coordination.k8s.io
   resources:
   - leases
@@ -166,6 +174,13 @@ rules:
   - catalystcenterswimhandoffs
   verbs:
   - get
+- apiGroups:
+  - ops.cisco.vk
+  resources:
+  - controllerconfigurationreservations
+  verbs:
+  - get
+  - list
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:

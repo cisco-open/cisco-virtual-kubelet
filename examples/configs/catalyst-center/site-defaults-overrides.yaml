@@ -1,0 +1,8 @@
+# Explicit model leaves take precedence. Every override is validated even when
+# unused or shadowed. Null overrides and unrelated settings are refused.
+defaults:
+  catalyst_center:
+    sites:
+      floors:
+        height: 4
+        units_of_measure: meters

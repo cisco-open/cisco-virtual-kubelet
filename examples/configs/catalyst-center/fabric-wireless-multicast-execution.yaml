@@ -1,0 +1,38 @@
+# Public enable/disable lifecycle validated with fixtures; lab qualification pending.
+# Requires group-reservation runtime, managed topology and readWrite workers.
+# Every fabric member must resolve to a managed CiscoDevice and Kubernetes Node.
+# The existing fabric/site settings below must already match. A fabric WLC and
+# mapped SSID must exist; embedded WLC discovery is not yet supported.
+# Replace site/controller references before applying. Set mode: report for drift.
+# false explicitly disables wireless multicast; omission makes no declaration.
+# Wired multicast changes require separate orchestration and are not accepted in
+# this execution model. Deleting this config retains the setting.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-fabric-wireless-multicast
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-fabric-wireless-multicast-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          fabric_sites:
+            - name: Global/Lab
+              pub_sub_enabled: false
+              authentication_template:
+                name: No Authentication
+              multicast:
+                wireless_multicast_enabled: true

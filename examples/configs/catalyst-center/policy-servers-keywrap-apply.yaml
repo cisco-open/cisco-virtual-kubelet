@@ -1,0 +1,62 @@
+# Requires matching manager/worker builds and the credential-receipt CRD.
+# Administrator prerequisite on NetworkController catc:
+#   intentSecretSources:
+#     - alias: lab-radius
+#       name: lab-radius-credentials
+#       key: shared-secret
+#     - alias: lab-radius-encryption
+#       name: lab-radius-credentials
+#       key: encryption-key
+#     - alias: lab-radius-message
+#       name: lab-radius-credentials
+#       key: message-key
+# Create that Secret separately. Its selected key contains a JSON object with
+# exactly "version" (1 here) and "value" (the credential). Keep both in ONE key
+# so kubelet projection lag cannot associate old bytes with a newer version.
+# Do not put the credential in the model or Git. Bare secret strings are rejected.
+# This isolated lab registration does not provide a RADIUS service or enable login.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-policy-servers-keywrap
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [system_settings]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-system-example-v1
+  secretRefs:
+    - section: system_settings
+      path: /authentication_and_policy_servers/aaa/0/shared_secret
+      source: lab-radius
+    - section: system_settings
+      path: /authentication_and_policy_servers/aaa/0/protocols/radius/enable_key_wrap/encryption_key
+      source: lab-radius-encryption
+    - section: system_settings
+      path: /authentication_and_policy_servers/aaa/0/protocols/radius/enable_key_wrap/message_key
+      source: lab-radius-message
+  source:
+    inline:
+      catalyst_center:
+        system_settings:
+          authentication_and_policy_servers:
+            aaa:
+              - ip_address: 192.0.2.43
+                protocols:
+                  radius:
+                    authentication_port: 1812
+                    accounting_port: 1813
+                    enable_key_wrap:
+                      encryption_key_version: 1
+                      message_key_version: 1
+                retries: 1
+                timeout: 5
+                shared_secret_version: 1

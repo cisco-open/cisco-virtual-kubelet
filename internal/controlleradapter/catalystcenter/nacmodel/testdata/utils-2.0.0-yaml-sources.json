@@ -1,0 +1,674 @@
+[
+  {
+    "name": "anchors",
+    "inputs": [
+      "catalyst_center: {sites: {base: &a {x: 1}, copy: *a}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "base": {
+            "x": 1
+          },
+          "copy": {
+            "x": 1
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "merge-before-explicit",
+    "inputs": [
+      "catalyst_center: {sites: {base: &a {x: 1, y: 2}, value: {<<: *a, x: 3}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "base": {
+            "x": 1,
+            "y": 2
+          },
+          "value": {
+            "x": 3,
+            "y": 2
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "merge-after-explicit",
+    "inputs": [
+      "catalyst_center: {sites: {base: &a {x: 1, y: 2}, value: {x: 3, <<: *a}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "base": {
+            "x": 1,
+            "y": 2
+          },
+          "value": {
+            "x": 3,
+            "y": 2
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "merge-only",
+    "inputs": [
+      "catalyst_center: {sites: {base: &a {x: 1}, value: {<<: *a}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "base": {
+            "x": 1
+          },
+          "value": {
+            "x": 1
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "merge-list",
+    "inputs": [
+      "catalyst_center: {sites: {a: &a {x: 1}, b: &b {x: 2, y: 3}, value: {<<: [*a, *b], z: 4}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "a": {
+            "x": 1
+          },
+          "b": {
+            "x": 2,
+            "y": 3
+          },
+          "value": {
+            "x": 1,
+            "y": 3,
+            "z": 4
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "str-octal",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!str 010}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "8"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "str-hex",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!str 0x10}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "16"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "str-quoted",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!str \"010\"}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "010"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "custom-octal",
+    "inputs": [
+      "catalyst_center: {sites: {value: !custom 010}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "!custom 010"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "custom-quoted",
+    "inputs": [
+      "catalyst_center: {sites: {value: !custom \"010\"}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "!custom 010"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "timestamp",
+    "inputs": [
+      "catalyst_center: {sites: {value: 2026-10-19}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "2026-10-19"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "binary",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!binary SGVsbG8=}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "SGVsbG8="
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "env-tag",
+    "inputs": [
+      "catalyst_center: {sites: {value: !env CVK_ORACLE_VALUE}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "true"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "env-string",
+    "inputs": [
+      "catalyst_center: {sites: {value: \"!env CVK_ORACLE_VALUE\"}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "true"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "numeric-keys",
+    "inputs": [
+      "catalyst_center: {sites: {42: x, true: y}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "42": "x",
+          "true": "y"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "quoted-merge-key",
+    "inputs": [
+      "catalyst_center: {sites: {value: {\"<<\": {x: 1}, z: 2}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": {
+            "<<": {
+              "x": 1
+            },
+            "z": 2
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "recursive-alias",
+    "inputs": [
+      "catalyst_center: {sites: {value: &a {self: *a}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_VALUE": "true"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "name": "str-bool",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!str true}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "true"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "str-null",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!str null}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "<nil>"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "float-string",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!float \"1.5\"}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": 1.5
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "int-string",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!int \"010\"}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": 8
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "null-string",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!null ignored}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": null
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "custom-null",
+    "inputs": [
+      "catalyst_center: {sites: {value: !custom null}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "!custom null"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "custom-bool",
+    "inputs": [
+      "catalyst_center: {sites: {value: !custom true}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "!custom true"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "custom-map",
+    "inputs": [
+      "catalyst_center: {sites: {value: !custom {a: b}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "name": "nonspecific-tag",
+    "inputs": [
+      "catalyst_center: {sites: {value: ! 010}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "! 010"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "alias-redefinition",
+    "inputs": [
+      "catalyst_center: {sites: {a: &x {v: 1}, b: &x {v: 2}, copy: *x}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "a": {
+            "v": 1
+          },
+          "b": {
+            "v": 2
+          },
+          "copy": {
+            "v": 2
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "merge-empty",
+    "inputs": [
+      "catalyst_center: {sites: {value: {<<: []}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": {}
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "merge-nonmap-list",
+    "inputs": [
+      "catalyst_center: {sites: {base: &a {x: 1}, value: {<<: [*a, ignored], z: 2}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "base": {
+            "x": 1
+          },
+          "value": {
+            "x": 1,
+            "z": 2
+          }
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "env-missing",
+    "inputs": [
+      "catalyst_center: {sites: {value: !env CVK_ORACLE_MISSING}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "name": "env-literal-return",
+    "inputs": [
+      "catalyst_center: {sites: {value: !env CVK_ORACLE_NESTED}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "!env CVK_ORACLE_MISSING"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "alias-primitive",
+    "inputs": [
+      "catalyst_center: {sites: {width: &size 30, length: *size}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "length": 30,
+          "width": 30
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "binary-quoted",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!binary \"SGVsbG8=\"}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "value": "SGVsbG8="
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "timestamp-explicit",
+    "inputs": [
+      "catalyst_center: {sites: {value: !!timestamp 2026-10-19T12:00:00Z}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "name": "merge-scalar",
+    "inputs": [
+      "catalyst_center: {sites: {value: {<<: wrong}}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {},
+    "error": true
+  },
+  {
+    "name": "null-key",
+    "inputs": [
+      "catalyst_center: {sites: {null: value}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "<nil>": "value"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "float-key",
+    "inputs": [
+      "catalyst_center: {sites: {1.0: value}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "1": "value"
+        }
+      }
+    },
+    "error": false
+  },
+  {
+    "name": "custom-key",
+    "inputs": [
+      "catalyst_center: {sites: {!custom key: value}}"
+    ],
+    "env": {
+      "CVK_ORACLE_NESTED": "!env CVK_ORACLE_MISSING"
+    },
+    "expected": {
+      "catalyst_center": {
+        "sites": {
+          "key": "value"
+        }
+      }
+    },
+    "error": false
+  }
+]
