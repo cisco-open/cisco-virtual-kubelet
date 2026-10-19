@@ -1,0 +1,76 @@
+=== RUN   TestSiteDesignNoDispatchScope
+=== RUN   TestSiteDesignNoDispatchScope/image/valid
+=== RUN   TestSiteDesignNoDispatchScope/image/delete
+=== RUN   TestSiteDesignNoDispatchScope/image/physical
+=== RUN   TestSiteDesignNoDispatchScope/image/task
+=== RUN   TestSiteDesignNoDispatchScope/image/created-id
+=== RUN   TestSiteDesignNoDispatchScope/image/prepared
+=== RUN   TestSiteDesignNoDispatchScope/image/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/image/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/image/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/legacy-image
+--- PASS: TestSiteDesignNoDispatchScope (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/legacy-image (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.369s

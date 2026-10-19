@@ -1,0 +1,5 @@
+=== RUN   TestLiveCatalystCenterManagementAddressGuardRefusal
+    management_address_live_test.go:58: PASS: 3 native plans refused before API mutation; one-use replay refusal and unchanged UUID/serial/address verified
+--- PASS: TestLiveCatalystCenterManagementAddressGuardRefusal (1.80s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.526s

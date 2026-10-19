@@ -1,0 +1,248 @@
+=== RUN   TestDiscoveryActiveOwnershipReplacementAndPruning
+--- PASS: TestDiscoveryActiveOwnershipReplacementAndPruning (0.87s)
+=== RUN   TestDiscoveryActiveCreationStillRequiresNativeFingerprint
+--- PASS: TestDiscoveryActiveCreationStillRequiresNativeFingerprint (0.28s)
+=== RUN   TestDiscoveryCohortProgressWhileRetainedJobActive
+--- PASS: TestDiscoveryCohortProgressWhileRetainedJobActive (0.32s)
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift/initial-drift
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-drift
+=== RUN   TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-identity
+--- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift (0.09s)
+    --- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift/initial-drift (0.03s)
+    --- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-drift (0.03s)
+    --- PASS: TestDiscoveryCohortActivePeerDoesNotMaskDrift/late-identity (0.03s)
+=== RUN   TestDiscoveryExportSiteSelection
+=== RUN   TestDiscoveryExportSiteSelection/single-state
+=== RUN   TestDiscoveryExportSiteSelection/global
+=== RUN   TestDiscoveryExportSiteSelection/per-site
+=== RUN   TestDiscoveryExportSiteSelection/exact-site
+=== RUN   TestDiscoveryExportSiteSelection/global-and-sites
+--- PASS: TestDiscoveryExportSiteSelection (0.01s)
+    --- PASS: TestDiscoveryExportSiteSelection/single-state (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/global (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/per-site (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/exact-site (0.00s)
+    --- PASS: TestDiscoveryExportSiteSelection/global-and-sites (0.00s)
+=== RUN   TestDiscoveryExportSelectionRefusesHiddenInvalidInput
+--- PASS: TestDiscoveryExportSelectionRefusesHiddenInvalidInput (0.01s)
+=== RUN   TestDiscoverySelectedManifestLifecycle
+--- PASS: TestDiscoverySelectedManifestLifecycle (0.24s)
+=== RUN   TestDiscoveryOwnedFieldMaskPreservesOriginalPublicShape
+--- PASS: TestDiscoveryOwnedFieldMaskPreservesOriginalPublicShape (0.00s)
+=== RUN   TestDiscoveryOutcomePaginationAndValidation
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/valid
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/repeat
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/duplicate-address
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/null
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/missing
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/invalid-ip
+=== RUN   TestDiscoveryOutcomePaginationAndValidation/oversize
+--- PASS: TestDiscoveryOutcomePaginationAndValidation (0.09s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/valid (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/repeat (0.02s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/duplicate-address (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/null (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/missing (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/invalid-ip (0.01s)
+    --- PASS: TestDiscoveryOutcomePaginationAndValidation/oversize (0.01s)
+=== RUN   TestDiscoveryOutcomeReportSeparatesConfigurationAndCollection
+--- PASS: TestDiscoveryOutcomeReportSeparatesConfigurationAndCollection (0.01s)
+=== RUN   TestDiscoveryEmptyOutcomesAreUnverified
+--- PASS: TestDiscoveryEmptyOutcomesAreUnverified (0.00s)
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/unchanged
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/credential-replaced
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/job-appeared
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/model-mutated
+=== RUN   TestDiscoveryOwnedSubmissionPreflightAndSingleUse/ambiguous-result
+--- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse (0.06s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/unchanged (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/credential-replaced (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/job-appeared (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/model-mutated (0.01s)
+    --- PASS: TestDiscoveryOwnedSubmissionPreflightAndSingleUse/ambiguous-result (0.01s)
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-task
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-native-id
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/wrong-native-name
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/duplicate
+=== RUN   TestDiscoveryOwnedReceiptReleaseAndCapacity/foreign-owner
+--- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity (0.02s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-task (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/missing-native-id (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/wrong-native-name (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/duplicate (0.00s)
+    --- PASS: TestDiscoveryOwnedReceiptReleaseAndCapacity/foreign-owner (0.00s)
+=== RUN   TestDiscoveryOwnedResultRecoversOriginalCredentialIDs
+--- PASS: TestDiscoveryOwnedResultRecoversOriginalCredentialIDs (0.01s)
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unchanged
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/foreign-id
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/changed-footprint
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/active-job
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/credential-replaced
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/lost-ack
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unowned
+--- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay (0.09s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unchanged (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/foreign-id (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/changed-footprint (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/active-job (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/credential-replaced (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/lost-ack (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unowned (0.01s)
+=== RUN   TestDiscoveryOwnedDeletionRequiresLineageAndAbsence
+--- PASS: TestDiscoveryOwnedDeletionRequiresLineageAndAbsence (0.01s)
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/stable
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/inventory-owner-pruned
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/template-owner-pruned
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/foreign-inventory-owner
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/receipt-pruned
+--- PASS: TestDiscoveryMixedDispatchRequiresAllOwners (0.17s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/stable (0.04s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/inventory-owner-pruned (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/template-owner-pruned (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/foreign-inventory-owner (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/receipt-pruned (0.03s)
+=== RUN   TestDiscoveryMixedNamespaceAndCallbackDelegation
+--- PASS: TestDiscoveryMixedNamespaceAndCallbackDelegation (0.01s)
+=== RUN   TestDiscoveryDuplicateLogicalReceiptAcrossNamespaces
+--- PASS: TestDiscoveryDuplicateLogicalReceiptAcrossNamespaces (0.02s)
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/false
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/true
+--- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner (0.06s)
+    --- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/false (0.03s)
+    --- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/true (0.03s)
+=== RUN   TestDiscoveryOwnedPrunePublicCycle
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/prune
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/retain
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/lost-ack
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/backend-error
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/source-change
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/prune-omitted
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/retain-omitted
+=== RUN   TestDiscoveryOwnedPrunePublicCycle/prune-failed
+--- PASS: TestDiscoveryOwnedPrunePublicCycle (1.58s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/prune (0.22s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/retain (0.03s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/lost-ack (0.27s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/backend-error (0.28s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/source-change (0.32s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/prune-omitted (0.22s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/retain-omitted (0.03s)
+    --- PASS: TestDiscoveryOwnedPrunePublicCycle/prune-failed (0.22s)
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/stable
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/active
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/renamed
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/replaced
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/missing
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/changed-effect
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/receipt-pruned
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/owner-changed
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/paused
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/source-changed
+=== RUN   TestDiscoveryPruneFinalDispatchAndIdentity/foreign-unrelated
+--- PASS: TestDiscoveryPruneFinalDispatchAndIdentity (0.33s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/stable (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/active (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/renamed (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/replaced (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/missing (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/changed-effect (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/receipt-pruned (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/owner-changed (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/paused (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/source-changed (0.03s)
+    --- PASS: TestDiscoveryPruneFinalDispatchAndIdentity/foreign-unrelated (0.03s)
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/null
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/unknown
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/tags
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/devices
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/prior-other-receipt
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/prior-credential
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/other-section
+=== RUN   TestDiscoveryPruneScopeAndEmptyModel/CR-delete
+--- PASS: TestDiscoveryPruneScopeAndEmptyModel (0.15s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/null (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/unknown (0.02s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/tags (0.02s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/devices (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/prior-other-receipt (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/prior-credential (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/other-section (0.01s)
+    --- PASS: TestDiscoveryPruneScopeAndEmptyModel/CR-delete (0.01s)
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/active-other-owned
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/legacy
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-owner
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/externally-missing-kept
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/duplicate
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-tombstone-replacement
+=== RUN   TestDiscoveryPruneWholeCohortAndOwnershipPreflight/unowned
+--- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight (0.16s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/active-other-owned (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/legacy (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-owner (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/externally-missing-kept (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/duplicate (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/foreign-tombstone-replacement (0.02s)
+    --- PASS: TestDiscoveryPruneWholeCohortAndOwnershipPreflight/unowned (0.02s)
+=== RUN   TestDiscoveryPruneReintroductionRequiresLaterInput
+--- PASS: TestDiscoveryPruneReintroductionRequiresLaterInput (0.01s)
+=== RUN   TestDiscoveryPrunePreservesDeclaredImportAndForeignReceipt
+--- PASS: TestDiscoveryPrunePreservesDeclaredImportAndForeignReceipt (0.08s)
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=false
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=true
+--- PASS: TestDiscoveryManifestCreateRestartAndNoOp (0.26s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=false (0.10s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=true (0.15s)
+=== RUN   TestDiscoveryLegacyAcceptedRecovery
+--- PASS: TestDiscoveryLegacyAcceptedRecovery (0.10s)
+=== RUN   TestDiscoveryOwnedReplacementCycle
+--- PASS: TestDiscoveryOwnedReplacementCycle (0.24s)
+=== RUN   TestDiscoveryMixedOwnedReplacement
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false
+--- PASS: TestDiscoveryMixedOwnedReplacement (0.93s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false (0.31s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true (0.31s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false (0.31s)
+=== RUN   TestDiscoveryPureToMixedOwnership
+--- PASS: TestDiscoveryPureToMixedOwnership (0.32s)
+=== RUN   TestDiscoveryMixedLegacyAcceptedRecovery
+--- PASS: TestDiscoveryMixedLegacyAcceptedRecovery (0.15s)
+=== RUN   TestDiscoveryModelRejectsUnresolvedOrSecretIntent
+--- PASS: TestDiscoveryModelRejectsUnresolvedOrSecretIntent (0.00s)
+=== RUN   TestDiscoveryCrossTypeCredentialAmbiguity
+--- PASS: TestDiscoveryCrossTypeCredentialAmbiguity (0.00s)
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/null
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/duplicate-id
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/duplicate-name
+=== RUN   TestDiscoveryPaginationAndReadShapeFailures/bad-type
+--- PASS: TestDiscoveryPaginationAndReadShapeFailures (0.04s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/null (0.01s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/duplicate-id (0.01s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/duplicate-name (0.01s)
+    --- PASS: TestDiscoveryPaginationAndReadShapeFailures/bad-type (0.01s)
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-resource
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-task
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/running
+=== RUN   TestDiscoveryVerifyRequiresTaskResourceAndCompletion/malformed-data
+--- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion (0.04s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-resource (0.01s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/wrong-task (0.01s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/running (0.01s)
+    --- PASS: TestDiscoveryVerifyRequiresTaskResourceAndCompletion/malformed-data (0.01s)
+=== RUN   TestDiscoveryPagination
+--- PASS: TestDiscoveryPagination (0.03s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.863s

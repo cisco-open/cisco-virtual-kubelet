@@ -1,0 +1,4 @@
+=== RUN   TestTemplateContentExamplesCompile
+--- PASS: TestTemplateContentExamplesCompile (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.380s

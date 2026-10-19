@@ -1,0 +1,33 @@
+{
+  "result": "PASS",
+  "qualification": "isolated native RF definition create/update/readback/no-op/delete",
+  "model": "netascode-catalystcenter 0.5.0",
+  "binary_sha256": "84ecc09ba118b8401777d57e559e1c4966a095ede1ff74c5481ee50754cf901f",
+  "fixture": "CVK_12221332",
+  "resource_id": "mdeYq1zl-xZeY-mJiX-mZmY-qZbwmuSYxZmXndi1mJyYnZe4mZKZ",
+  "tasks": {
+    "create": "01a1322e-c712-7b9c-8e11-9a6f6ababccd",
+    "update": "01a1322e-ce09-71d5-b31b-54f973a392fb",
+    "delete": "01a1322e-d42a-7b33-a642-6ef6cc63be2d"
+  },
+  "change": {
+    "radioTypeAProperties.maxRadioClients": [
+      100,
+      200
+    ]
+  },
+  "baseline_restored": true,
+  "fixture_removed": true,
+  "notes": [
+    "Initial attempt failed baseline decoding before mutations: built-in 6 GHz parent values differ from the pinned write schema. Reader corrected and regression fixture added.",
+    "No worker deployment, physical AP/WLC provisioning or default-selection transition was performed.",
+    "Only a subset of the 88 mapped fields was exercised against the live API."
+  ],
+  "pending": [
+    "manifest-worker rollout and live restart qualification",
+    "default selection transitions",
+    "physical radio behavior",
+    "remaining field combinations",
+    "associations, adoption and prune"
+  ]
+}

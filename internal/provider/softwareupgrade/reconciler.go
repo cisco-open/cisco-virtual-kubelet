@@ -49,6 +49,7 @@ import (
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	"github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	"github.com/cisco/virtual-kubelet-cisco/internal/controllerhandoff"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
@@ -218,6 +219,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		span.End()
 	}()
 
+	// Controller mutations remain fenced even if the parent is deleted. The
+	// controller worker never owns or releases this device lease.
+	if !up.DeletionTimestamp.IsZero() && up.Spec.ImageSource.CatalystCenter != nil && up.Status.StagingRequested && up.Status.Phase != opsv1alpha1.UpgradePhaseSucceeded {
+		return r.holdControllerDeletion(ctx, &up, now)
+	}
 	// Deletion path.
 	if !up.DeletionTimestamp.IsZero() {
 		return r.handleDelete(ctx, &up, now)
@@ -292,6 +298,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (resu
 		}
 	}
 
+	if up.Spec.ImageSource.CatalystCenter != nil && up.Status.Phase != "" && up.Status.Phase != opsv1alpha1.UpgradePhasePending {
+		return r.runControllerHandoff(ctx, &up, now)
+	}
 	switch up.Status.Phase {
 	case "", opsv1alpha1.UpgradePhasePending:
 		return r.runPending(ctx, &up, now)
@@ -502,6 +511,14 @@ func (r *Reconciler) runPending(ctx context.Context, up *opsv1alpha1.IOSXESoftwa
 	default:
 		return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "UnsupportedUpgradeStrategy",
 			fmt.Sprintf("unsupported upgrade strategy %q; refusing implicit reload", up.Spec.Strategy), now)
+	}
+	if up.Spec.ImageSource.CatalystCenter != nil {
+		if !r.ManagedTopology || up.Annotations[managedprotocol.AnnotationManaged] != "true" || r.Lifecycle == nil {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "ControllerHandoffUnavailable", "Catalyst Center requires managed rollout admission and native IOS XE verification", now)
+		}
+		if up.Spec.MaxTransferBytesPerSecond != 0 || up.Spec.Strategy != opsv1alpha1.UpgradeStrategyReload || up.Spec.RollbackOnFailure == nil || *up.Spec.RollbackOnFailure {
+			return r.terminal(ctx, up, opsv1alpha1.UpgradePhasePreflightFailed, "ControllerStrategyUnsupported", "Catalyst Center handoff requires Reload and no automatic direct rollback", now)
+		}
 	}
 	if up.Spec.Strategy == opsv1alpha1.UpgradeStrategyPrepareOnly {
 		if r.Lifecycle == nil {
@@ -1947,8 +1964,7 @@ func (r *Reconciler) deviceUpgradeOwner(ctx context.Context, up *opsv1alpha1.IOS
 			continue
 		}
 		if !item.DeletionTimestamp.IsZero() ||
-			terminalUpgradePhase(item.Status.Phase) || inertManagedSettledTombstone(item) ||
-			settledManagedCancellationAuditRecord(item) {
+			terminalUpgradePhase(item.Status.Phase) || SettledUnclaimedManagedOperation(item) {
 			continue
 		}
 		if item.Status.Phase == "" || item.Status.Phase == opsv1alpha1.UpgradePhasePending {
@@ -2025,7 +2041,24 @@ func inertManagedSettledTombstone(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 // queue and topology handoff interpret the same immutable acknowledgements and
 // mutation markers.
 func SettledUnclaimedManagedOperation(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
-	return inertManagedSettledTombstone(up) || settledManagedCancellationAuditRecord(up)
+	return inertManagedSettledTombstone(up) || settledManagedCancellationAuditRecord(up) || settledUnstartedDrainAuditRecord(up)
+}
+
+// A drain can be cancelled and settled before the software worker initializes
+// its execution state. Retain that audit without retaining queue ownership.
+// Reject every other worker field, including future additions, so this never
+// turns an ambiguous software operation into an unstarted one.
+func settledUnstartedDrainAuditRecord(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
+	if up == nil || up.Status.ManagerDrain == nil || !settledManagedCancellationBinding(up) {
+		return false
+	}
+	status := *up.Status.DeepCopy()
+	status.ManagerAdmission, status.ManagerControl, status.ManagerDrain = nil, nil, nil
+	status.WorkerControl, status.WorkerDrain = nil, nil
+	if !reflect.DeepEqual(status, opsv1alpha1.IOSXESoftwareUpgradeStatus{}) {
+		return false
+	}
+	return settledCancellationWorkerAcknowledged(up) && settledManagedDrainAuditBinding(up)
 }
 
 // settledManagedCancellationAuditRecord recognizes a manager-settled retained
@@ -2037,7 +2070,7 @@ func SettledUnclaimedManagedOperation(up *opsv1alpha1.IOSXESoftwareUpgrade) bool
 // retained leaf continues to own the legacy per-device queue.
 func settledManagedCancellationAuditRecord(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	if up == nil || up.Status.Phase == "" ||
-		up.Status.ExecutionModel != opsv1alpha1.UpgradeExecutionModelAtMostOnceV1 ||
+		!controllerhandoff.KnownExecution(up) ||
 		!managedCancellationPreDispatchPhase(up.Status.Phase) ||
 		len(up.Status.ManagedMutationClaims) != 0 ||
 		mutationguard.UpgradeMutationSubmitted(up) ||
@@ -2045,6 +2078,10 @@ func settledManagedCancellationAuditRecord(up *opsv1alpha1.IOSXESoftwareUpgrade)
 		return false
 	}
 
+	return settledCancellationWorkerAcknowledged(up) && settledManagedDrainAuditBinding(up)
+}
+
+func settledCancellationWorkerAcknowledged(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	admission := up.Status.ManagerAdmission
 	control := up.Status.ManagerControl
 	worker := up.Status.WorkerControl
@@ -2056,7 +2093,7 @@ func settledManagedCancellationAuditRecord(up *opsv1alpha1.IOSXESoftwareUpgrade)
 			worker.EffectiveState != opsv1alpha1.UpgradeWorkerControlDenied) {
 		return false
 	}
-	return settledManagedDrainAuditBinding(up)
+	return true
 }
 
 func managedCancellationPreDispatchPhase(phase opsv1alpha1.UpgradePhase) bool {
@@ -2107,7 +2144,35 @@ func settledManagedDrainAuditBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool 
 		validContentDigest(worker.ObservedWorkerConfigRevision) && worker.InventoryRevision > 0 &&
 		!worker.InventoryObservedAt.IsZero() && !worker.UpdatedAt.IsZero() && worker.InventoryComplete &&
 		worker.ForeignDeviceWorkloadCount >= 0 && worker.UnknownDeviceWorkloadCount == 0 &&
-		len(worker.RemainingAuthorizedPodUIDs) == 0
+		settledDrainRemainingPodsUnclaimed(drain, worker.RemainingAuthorizedPodUIDs)
+}
+
+// A cancelled drain may retain an older inventory containing Pods which were
+// released without ever being evicted. Those are ordinary workloads, not an
+// unresolved drain mutation. Any eviction/cleanup marker keeps the queue held.
+func settledDrainRemainingPodsUnclaimed(drain *opsv1alpha1.UpgradeManagerDrainStatus, remaining []string) bool {
+	seen := make(map[string]bool)
+	for _, uid := range remaining {
+		if uid == "" || seen[uid] {
+			return false
+		}
+		seen[uid] = true
+		matches := 0
+		for _, pod := range drain.Pods {
+			if pod.UID != uid {
+				continue
+			}
+			matches++
+			if pod.Phase != opsv1alpha1.UpgradeDrainPodComplete || pod.ReleasedAt == nil || pod.ReleasedAt.IsZero() ||
+				pod.EvictionRequestedAt != nil || pod.DeletionObservedAt != nil || pod.DeviceCleanAt != nil || pod.DeviceCleanInventoryRevision != 0 {
+				return false
+			}
+		}
+		if matches != 1 {
+			return false
+		}
+	}
+	return true
 }
 
 func settledManagedCancellationBinding(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
@@ -2242,13 +2307,13 @@ func (r *Reconciler) ensureExecutionModel(
 	up *opsv1alpha1.IOSXESoftwareUpgrade,
 	now time.Time,
 ) (bool, reconcile.Result, error) {
-	if up.Status.ExecutionModel == opsv1alpha1.UpgradeExecutionModelAtMostOnceV1 {
+	if controllerhandoff.KnownExecution(up) {
 		return false, reconcile.Result{}, nil
 	}
 	switch up.Status.Phase {
 	case "", opsv1alpha1.UpgradePhasePending, opsv1alpha1.UpgradePhaseResolving:
 		result, err := r.updateStatus(ctx, up, func(cur *opsv1alpha1.IOSXESoftwareUpgrade) {
-			cur.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+			cur.Status.ExecutionModel = controllerhandoff.ExecutionModel(cur)
 			if cur.Status.Phase == "" {
 				cur.Status.Phase = opsv1alpha1.UpgradePhasePending
 			}
@@ -4053,7 +4118,7 @@ func successfulUpgradeOutcome(phase opsv1alpha1.UpgradePhase) bool {
 
 func unsupportedExecutionModel(up *opsv1alpha1.IOSXESoftwareUpgrade) bool {
 	return up != nil && up.Status.ExecutionModel != "" &&
-		up.Status.ExecutionModel != opsv1alpha1.UpgradeExecutionModelAtMostOnceV1
+		!controllerhandoff.KnownExecution(up)
 }
 
 func markTransferComplete(up *opsv1alpha1.IOSXESoftwareUpgrade) {
@@ -4169,7 +4234,8 @@ func upgradeStatusCASMatches(expected, current *opsv1alpha1.IOSXESoftwareUpgrade
 		return false
 	}
 	e, c := expected.Status, current.Status
-	return e.SourceDigest == c.SourceDigest &&
+	return reflect.DeepEqual(e.ControllerHandoff, c.ControllerHandoff) &&
+		e.SourceDigest == c.SourceDigest &&
 		e.SourceSize == c.SourceSize &&
 		reflect.DeepEqual(e.PreparedReceipt, c.PreparedReceipt) &&
 		reflect.DeepEqual(e.ManagerInvalidation, c.ManagerInvalidation) &&
@@ -4285,6 +4351,12 @@ func (r *Reconciler) emitEvent(up *opsv1alpha1.IOSXESoftwareUpgrade, eventType, 
 
 func validateImageSource(src opsv1alpha1.UpgradeImageSource) error {
 	count := 0
+	if src.CatalystCenter != nil {
+		count++
+		if err := controllerhandoff.ValidateSource(src.CatalystCenter); err != nil {
+			return err
+		}
+	}
 	if src.URL != "" {
 		count++
 	}
@@ -4301,10 +4373,10 @@ func validateImageSource(src opsv1alpha1.UpgradeImageSource) error {
 		count++
 	}
 	if count == 0 {
-		return errors.New("imageSource: exactly one of url, configMapRef, preinstalled, deviceFile, or localPath is required")
+		return errors.New("imageSource: exactly one of url, configMapRef, preinstalled, deviceFile, localPath, or catalystCenter is required")
 	}
 	if count > 1 {
-		return errors.New("imageSource: only one of url, configMapRef, preinstalled, deviceFile, or localPath may be set")
+		return errors.New("imageSource: only one of url, configMapRef, preinstalled, deviceFile, localPath, or catalystCenter may be set")
 	}
 	if (src.URL == "") != (src.SHA256 == "") {
 		return errors.New("imageSource.sha256 must be set if and only if imageSource.url is set")

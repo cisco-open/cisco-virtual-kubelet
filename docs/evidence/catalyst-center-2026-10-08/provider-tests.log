@@ -1,0 +1,3 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider	5.247s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard	(cached)

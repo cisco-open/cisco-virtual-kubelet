@@ -1,0 +1,131 @@
+{
+  "productionSHA256": "abc49311e223396fb0f9f8e34d30b0aaf1c7d96d10c1e488ddacba51abce341e",
+  "upstreamVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "upstreamDiscoveryTerraformSHA256": "114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c",
+  "nullableFields": [
+    "cdp_level",
+    "lldp_level",
+    "retry",
+    "time_out",
+    "netconf_port",
+    "preferred_mgmt_ip_method",
+    "ip_filter_list"
+  ],
+  "semantics": "unselected optional fields; present null suppresses fallback; no native null/default/reset invented",
+  "requiredAndUnsupportedNullsRefusedBeforeIO": true,
+  "native": {
+    "checkpoint": "/private/tmp/cvk-discovery-owned-2367546028",
+    "id": "238",
+    "testElapsedSeconds": 30.42,
+    "sourceRetainedAllNullKeys": true,
+    "transitions": {
+      "creatorReceiptPreserved": true,
+      "fields": [
+        "cdp_level",
+        "lldp_level",
+        "retry",
+        "time_out",
+        "netconf_port",
+        "preferred_mgmt_ip_method",
+        "ip_filter_list"
+      ],
+      "installedClusterMutated": false,
+      "mutationAttempts": 1,
+      "transitions": [
+        "null-to-omitted",
+        "omitted-to-null"
+      ]
+    },
+    "cleanup": {
+      "deleteTaskId": "01a14d42-e38b-7710-afc0-f8bef0e1bb9d",
+      "deleted": true,
+      "id": "238",
+      "injectedKnownTaskRecovery": true,
+      "installedClusterMutated": false,
+      "managerEnrolled": true,
+      "managerReleased": true,
+      "publicLifecycle": true
+    },
+    "completion": {
+      "cleaned": true,
+      "deletes": 1,
+      "installedClusterMutated": false,
+      "inventoryIdentityPreserved": true,
+      "managerEnrolled": true,
+      "managerReleased": true,
+      "posts": 1,
+      "publicLifecycle": true
+    },
+    "installedActors": false,
+    "fixtureCleanupUnknownInjected": true
+  },
+  "gates": {
+    "discoveryRace": {
+      "passed": true,
+      "seconds": 19.588
+    },
+    "realAPIPersistenceRace": {
+      "passed": true,
+      "seconds": 9.463
+    },
+    "migrationExportRace": {
+      "passed": true,
+      "seconds": 2.151
+    },
+    "pinnedModelRace": {
+      "passed": true,
+      "seconds": 1.374
+    },
+    "applyExamplesRace": {
+      "passed": true,
+      "seconds": 3.365
+    },
+    "productionBuild": {
+      "passed": true
+    },
+    "fullHandoffBaseline": {
+      "passed": true,
+      "elapsedSeconds": 1688.248,
+      "passedTestEvents": 13593,
+      "evidence": "discovery-handoff-full-suite.json",
+      "boundary": "pre-optional-null"
+    },
+    "optionalNullFullRace": {
+      "state": "passed",
+      "elapsedSeconds": 1688.36,
+      "passedTestEvents": 13627,
+      "evidence": "discovery-null-full-suite.json",
+      "sourceSHA256": "abc49311e223396fb0f9f8e34d30b0aaf1c7d96d10c1e488ddacba51abce341e"
+    }
+  },
+  "fullAuditBoundary": "Optional-null discovery production source; predates private discovery credential projection/identity/verification additions",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/discovery.go": "55bc5ed15cbe9f00fd34ab780f511bf103ca28db47cc5fbebb37c9963ca3659e",
+    "internal/controlleradapter/catalystcenter/discovery_defaults_export.go": "3529c43cfb16dcf6f5aa84535a9f16cd46f1e239fd3d09217940d1500ba22163",
+    "internal/controlleradapter/catalystcenter/discovery_null_test.go": "4a5a8a204646b18c08de993c05edab995142a0af38fb53a0c4a16fcb8e5c32a6",
+    "internal/controlleradapter/catalystcenter/discovery_null_envtest_test.go": "bf8b3b7b22be92a15c5d2c48863dd84913b524fb98a490574ad6cee7e4d93863",
+    "internal/controlleradapter/catalystcenter/discovery_test.go": "a91eaf1a17cee0a6263e75187067aa2ea00883552eaef37827417c519e4de49b",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "1c9d8a446114dca819c0667699303eb00f25dd23ae83c3be031bd9bfc7955f3e",
+    "examples/configs/catalyst-center/discovery-null-apply.yaml": "fbc7746436e67979d909dc557278af347dfba713b120b316f0a178acb297d182"
+  },
+  "binary": {
+    "path": "/private/tmp/cvk-discovery-null-final",
+    "sha256": "cd4b417db3d51b4cc83f0fb611469eec24163afc064bee13c1a2d3bdad4913e4"
+  },
+  "checkpointSHA256": {
+    "/private/tmp/cvk-discovery-owned-2367546028/source.json": "473e3cc358c59222c7f1c6582192a6596e553529dee8d517c648559285f764ac",
+    "/private/tmp/cvk-discovery-owned-2367546028/public-completion-status.json": "46ebdffd640a13e9f1db94bf3afc10f48699c40bcc6fa1983d345c0881e5453d",
+    "/private/tmp/cvk-discovery-owned-2367546028/public-injected-unknown.json": "2f0df90d90b52d91b86c746328dcea13f633c1bef78c26f1ed9d6db7570573db",
+    "/private/tmp/cvk-discovery-owned-2367546028/accepted-3f6f70bdd279685816508b470e1dd337.json": "ce573cfab3c20c59be0666c29a0ec878bc55cbdf914e9af42f9c8ba16176869e",
+    "/private/tmp/cvk-discovery-owned-2367546028/public-enrollment.json": "46f0f72df8194dad9837ad4514fb25bde0d3520380fc61f4c624f9b0cde45b9f",
+    "/private/tmp/cvk-discovery-owned-2367546028/cleanup.json": "865e176c51a9603284e8f718c40127672c4384dd7b24eb7105a415c8fb4d7f3d",
+    "/private/tmp/cvk-discovery-owned-2367546028/identity.json": "bb5b8fcbebb6e8a9d0b3fb84001d6cefa745546c380fa9530b0ce6e259032be6",
+    "/private/tmp/cvk-discovery-owned-2367546028/baseline.json": "a2a1dbeb0e6dea73a8d0c67646616d9cf3b8364e4c0e4fa67bcd2b45344e84d7",
+    "/private/tmp/cvk-discovery-owned-2367546028/journal.json": "ce81ef49aa5d173a91f43f0e7502ed985ddc4730a76b830b67a296bdf9a10c79",
+    "/private/tmp/cvk-discovery-owned-2367546028/complete.json": "683a992f0b7f224f1293d7552bab88c7690afa1e84c3b77c56a7b2791ba8623b",
+    "/private/tmp/cvk-discovery-owned-2367546028/public-release.json": "789305651da13eae2be0b9a737c858ab82bd91b1119623dbd663f5a6cc579fae",
+    "/private/tmp/cvk-discovery-owned-2367546028/public-journal.json": "8c28957f770fc6a333de8155cc4548f0452ee9d7acc4c05a0c68b3f98b1ef5ae",
+    "/private/tmp/cvk-discovery-owned-2367546028/null-omission-transitions.json": "e201a4fbc9f4446aed17cd7462b01bb34791e686a7a0de9182ea301579ac1fda"
+  }
+}

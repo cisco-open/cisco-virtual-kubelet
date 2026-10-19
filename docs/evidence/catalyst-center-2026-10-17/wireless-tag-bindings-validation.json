@@ -1,0 +1,93 @@
+{
+  "scope": "Completed passing families only. Combined local/API runs failed later at the old producer-changed phase expectation; neither aggregate is a passing gate. Full corrected receipt suites provide the remaining 46 cases per surface. The final modular verification adapter branch is independently covered by the 17-case readback gate; source fingerprints are current code/test inputs, not per-run binary attestations.",
+  "families": [
+    {
+      "surface": "local",
+      "test": "TestWirelessTagMembershipRemoval",
+      "passedCases": 34,
+      "familySeconds": 65.22,
+      "rawLog": "wireless-tag-bindings-combined-local.log"
+    },
+    {
+      "surface": "local",
+      "test": "TestWirelessTagPrune",
+      "passedCases": 60,
+      "familySeconds": 152.9,
+      "rawLog": "wireless-tag-bindings-combined-local.log"
+    },
+    {
+      "surface": "api",
+      "test": "TestEnvtestWirelessTagMembershipRemoval",
+      "passedCases": 34,
+      "familySeconds": 175.51,
+      "rawLog": "wireless-tag-bindings-combined-api.log"
+    },
+    {
+      "surface": "api",
+      "test": "TestEnvtestWirelessTagPrune",
+      "passedCases": 60,
+      "familySeconds": 404.42,
+      "rawLog": "wireless-tag-bindings-combined-api.log"
+    },
+    {
+      "surface": "local",
+      "test": "TestWirelessTagReceipts",
+      "passedCases": 46,
+      "rawLog": "wireless-tag-bindings-receipts-local.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t52.407s"
+    },
+    {
+      "surface": "api",
+      "test": "TestEnvtestWirelessTagReceipts",
+      "passedCases": 46,
+      "rawLog": "wireless-tag-bindings-receipts-api.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t135.759s"
+    }
+  ],
+  "focused": {
+    "protocol": {
+      "log": "wireless-tag-bindings-protocol.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t2.365s"
+    },
+    "readback": {
+      "log": "wireless-tag-bindings-readback.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t2.980s"
+    },
+    "legacy": {
+      "log": "wireless-tag-bindings-legacy.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t6.881s"
+    },
+    "positive": {
+      "log": "wireless-tag-bindings-positive.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t16.337s"
+    },
+    "live-build": {
+      "log": "wireless-tag-bindings-live-build.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t3.051s"
+    },
+    "swim": {
+      "log": "wireless-tag-bindings-swim.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t3.012s"
+    },
+    "wire-contract": {
+      "log": "wireless-tag-bindings-wire-contract.log",
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t2.382s",
+      "scope": "Exact v4 canonical bytes preserved for references and empty graphs."
+    },
+    "dependencies-local": {
+      "log": "wireless-tag-bindings-dependencies-local.log",
+      "passedCases": {
+        "TestProfileSiteTagDependencies": 28,
+        "TestProfileSiteTagProjectionScope": 9
+      },
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t69.415s"
+    },
+    "dependencies-api": {
+      "log": "wireless-tag-bindings-dependencies-api.log",
+      "passedCases": {
+        "TestEnvtestProfileSiteTagDependencies": 28
+      },
+      "goResult": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t173.284s"
+    }
+  }
+}

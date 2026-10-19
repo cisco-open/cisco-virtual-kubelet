@@ -1,0 +1,93 @@
+{
+  "scope": "Public private-keyed area/building/floor lifecycle; real appliance with simulated Kubernetes persistence; separate real API-server tests; installed qualification pending",
+  "source_sha256": {
+    "examples/configs/catalyst-center/sites-private-hierarchy-lifecycle.yaml": "4e12d69a3a158d6296de894be213f3d5862797ef716dad2b52f6ed86d760dd11",
+    "examples/configs/catalyst-center/sites-private-lifecycle.yaml": "d3992798b0dd8fd106ed5043ee93ce356111909baf9d6e3d6306a388fd9eb582",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "7f87632c25c9d8d4dc94d145d2abeb6950ec67c45e91e1604f962962b97f7e6c",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "adee2d560987cfb643db699cf4602673f94451135c24127391a2da20110b20cc",
+    "internal/controlleradapter/catalystcenter/site_bulk_manifest_live_test.go": "64fb41d658e59a5e3ca346584affc4ee486b5fb59a022e5bf815c801f60b6dc5",
+    "internal/controlleradapter/catalystcenter/site_lifecycle_trace_live_test.go": "f40bff8b390eaa8bac5624da7340c5d85f59b99952b8e4b8be750db4029251c7",
+    "internal/controlleradapter/catalystcenter/site_prune_apply.go": "07a476cf124320cd028bb3f817170aeec8d868e36a1eae86bf082d86f72ada50",
+    "internal/controlleradapter/catalystcenter/site_prune_apply_envtest_test.go": "8db7db9c07a2bed28665a6021cd61fb030575b3e9e9d6313449e3363af2b4cc1",
+    "internal/controlleradapter/catalystcenter/site_prune_apply_test.go": "2f05c39ec7b77f589e09b791f72113e54f6fed832914fc951e09e0f1366bad06",
+    "internal/controlleradapter/catalystcenter/site_recreation_execution.go": "8399959e90cd73a7a878da3766aa1e85b1aa390271bf56d3ae86b24ceadda8cd",
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "31b623e5abd4b6a99aaa9ae56e7ce1998969bd2c9854811d829ff26a94c1e297",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "395ed8f6d6e88c314ceeed7d59681fe71e123657c3a6c632c0aa376fbee4c540",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "59a648957fc8fd9be6cde2752f19b053154f495decc6a724d8b11d8919c82e21",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch.go": "637802ee2d112e15d38905e138ddfafe25c657ae49a5ccf3d19831771994d92f"
+  },
+  "gates": {
+    "prune-regression-final": {
+      "families": 3,
+      "subcases": 25,
+      "seconds": 18.495,
+      "exit_code": 0,
+      "log_sha256": "377ec3957d88407be762faf914ec42b89d7816141aaa2038a3df1b9bfd1c909c"
+    },
+    "api-final": {
+      "families": 2,
+      "subcases": 8,
+      "seconds": 36.157,
+      "exit_code": 0,
+      "log_sha256": "9ad7b1bb20eb875639f8753ce74632f3d842f170f014507c8bf290fbfc49526f"
+    },
+    "allowlist-final": {
+      "families": 1,
+      "subcases": 0,
+      "seconds": 2.359,
+      "exit_code": 0,
+      "log_sha256": "022407b09cdad89aafc2614a2986a355b5103c4418d787cd9bd1091179b0ec89"
+    },
+    "native": {
+      "families": 1,
+      "subcases": 0,
+      "seconds": 134.507,
+      "exit_code": 0,
+      "log_sha256": "ab551ea0ce205b1778553a9ae5a3cca63d12348a19356d73144d73e7bf8e51b1"
+    }
+  },
+  "initial_fixture_failures": {
+    "prune-regression": {
+      "reason": "Fixture omitted required floor planned-AP consumer inventory; production refusal retained",
+      "log_sha256": "d0a8c939f6d7f48c3a69a36552f5376f38e243bfc80de4ea990a760e96fbad85"
+    },
+    "api": {
+      "reason": "Fixture omitted required floor planned-AP consumer inventory; production refusal retained",
+      "log_sha256": "5c5de6d61f97d91ef1825485f1ca93817260286157cfe14bc30c7de91a879fbd"
+    }
+  },
+  "native": {
+    "outcome": {
+      "archivedCohorts": 3,
+      "areaBuildingFloor": true,
+      "baselineRestored": true,
+      "deletes": 6,
+      "firstID": "3b3effdf-10e8-4b33-b0c2-abc850eb4f24",
+      "installed": false,
+      "parentChild": true,
+      "parentHandoff": true,
+      "posts": 6,
+      "publicRetirementRouting": true,
+      "secondID": "a4f4b5e8-358d-4718-a3bb-83c7c4f7bf10"
+    },
+    "task_ids": [
+      "01a14ba8-0972-71bc-9a02-e8a5e95ee67f",
+      "01a14ba8-136b-7e30-81d6-9c8078ac95be",
+      "01a14ba8-227c-7db9-9db9-5430748f883f",
+      "01a14ba8-6cb3-7928-977a-62007a63daee",
+      "01a14ba8-afe0-7437-8381-4515950aca73",
+      "01a14ba8-f305-7c74-878e-9696302e867a",
+      "01a14ba9-0358-7043-a0af-fdbd974b78e0",
+      "01a14ba9-1cab-7728-b2a5-f5f7e1be2de6",
+      "01a14ba9-2c19-77ae-8640-bad8f2d2101e",
+      "01a14ba9-770d-7901-8f32-6cfe217c139d",
+      "01a14ba9-ba36-70f1-be8c-e2ededb17ff7",
+      "01a14ba9-fd66-79e1-9b6d-ac9ca3c16287"
+    ],
+    "receipt_count": 12,
+    "archived_rows": 6,
+    "retained_owners": 1,
+    "active_operation": false,
+    "private_checkpoint": "/private/tmp/cvk-site-lifecycle-3768613283"
+  }
+}

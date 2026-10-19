@@ -610,3 +610,49 @@ func assertNoSharedWorkerAuthority(t *testing.T, r *CiscoDeviceReconciler, names
 		}
 	}
 }
+
+func TestManagedNamespaceSWIMBindingContract(t *testing.T) {
+	for _, variant := range []string{"valid", "broadened", "extra-subject", "stale-uid", "unowned-account", "inline-password", "wrong-name"} {
+		t.Run(variant, func(t *testing.T) {
+			device := managedAccessDevice("switch-swim")
+			device.Spec.Password = ""
+			controller := &ciskov1.NetworkController{ObjectMeta: metav1.ObjectMeta{Name: "catc", Namespace: device.Namespace, UID: "catc-uid"}, Spec: ciskov1.NetworkControllerSpec{Type: "catalyst-center"}}
+			name := networkControllerWorkerName(controller.Name)
+			binding := namespacedRBACBinding(device.Namespace, name, "ClusterRole", managedprotocol.CatalystCenterSWIMClusterRole)
+			binding.Subjects = []rbacv1.Subject{{Kind: rbacv1.ServiceAccountKind, Name: name, Namespace: device.Namespace}}
+			setNetworkControllerWorkerMetadata(binding, controller, nil)
+			account := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: device.Namespace}}
+			setNetworkControllerWorkerMetadata(account, controller, nil)
+			role := &rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: managedprotocol.CatalystCenterSWIMClusterRole}, Rules: managedprotocol.CatalystCenterSWIMRules()}
+			switch variant {
+			case "broadened":
+				role.Rules = append(role.Rules, rbacv1.PolicyRule{APIGroups: []string{""}, Resources: []string{"secrets"}, Verbs: []string{"get"}})
+			case "extra-subject":
+				binding.Subjects = append(binding.Subjects, rbacv1.Subject{Kind: rbacv1.UserKind, Name: "other"})
+			case "stale-uid":
+				binding.Annotations[networkControllerUIDAnnotation] = "old"
+			case "unowned-account":
+				account.Annotations = nil
+			case "inline-password":
+				device.Spec.Password = "inline-lab-password"
+			case "wrong-name":
+				binding.Name = "other"
+			}
+			r := reconcilerFor(t, device, controller, binding, account, role)
+			err := r.inspectManagedWorkerNamespaceRBAC(context.Background(), device, "app-worker", "network-worker")
+			if variant == "valid" && err != nil {
+				t.Fatalf("canonical SWIM binding rejected: %v", err)
+			}
+			if variant != "valid" && err == nil {
+				t.Fatal("unsafe SWIM delegation accepted")
+			}
+		})
+	}
+}
+
+func TestChartSWIMRoleMatchesNamespaceAuditContract(t *testing.T) {
+	role := workerClusterRoles(t)[managedprotocol.CatalystCenterSWIMClusterRole]
+	if err := managedprotocol.ValidateCatalystCenterSWIMRole(&role); err != nil {
+		t.Fatal(err)
+	}
+}

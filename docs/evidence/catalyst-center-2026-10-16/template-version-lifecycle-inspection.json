@@ -1,0 +1,13 @@
+{
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "file": "internal/provider/resource_catalystcenter_template_version.go",
+  "fileSHA256": "05d845ce0f03df71a68690a30eabe82b437d6acbbe8864904c53af7bfc2c3e47",
+  "createBehavior": "POST commit, then read versions and select ID by versionComment",
+  "updateBehavior": "PUT version endpoint",
+  "deleteBehavior": "Remove Terraform state only; no native API call",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "moduleBehavior": "Regular version comments hash content and parameter semantics; composite comments hash member semantics",
+  "implication": "Do not invent native version-deletion requirements; owned project/template removal is a separate scope"
+}

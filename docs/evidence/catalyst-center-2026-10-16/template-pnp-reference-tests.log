@@ -1,0 +1,242 @@
+=== RUN   TestPnPClaimWorkflowReferences
+=== RUN   TestPnPClaimWorkflowReferences/task-only
+=== RUN   TestPnPClaimWorkflowReferences/task-duplicate
+=== RUN   TestPnPClaimWorkflowReferences/task-conflict
+=== RUN   TestPnPClaimWorkflowReferences/task-foreign-pending-image
+=== RUN   TestPnPClaimWorkflowReferences/task-malformed
+=== RUN   TestPnPClaimWorkflowReferences/task-empty
+=== RUN   TestPnPClaimWorkflowReferences/match
+=== RUN   TestPnPClaimWorkflowReferences/foreign-image
+=== RUN   TestPnPClaimWorkflowReferences/foreign-template
+=== RUN   TestPnPClaimWorkflowReferences/missing-image
+=== RUN   TestPnPClaimWorkflowReferences/missing-template
+=== RUN   TestPnPClaimWorkflowReferences/missing-workflow
+=== RUN   TestPnPClaimWorkflowReferences/missing-workflow-id
+=== RUN   TestPnPClaimWorkflowReferences/system-only
+=== RUN   TestPnPClaimWorkflowReferences/reset-only
+=== RUN   TestPnPClaimWorkflowReferences/foreign-template-pending-image
+=== RUN   TestPnPClaimWorkflowReferences/foreign-image-pending-template
+=== RUN   TestPnPClaimWorkflowReferences/skip-image
+=== RUN   TestPnPClaimWorkflowReferences/default-skip-image
+=== RUN   TestPnPClaimWorkflowReferences/no-template
+=== RUN   TestPnPClaimWorkflowReferences/not-requested
+=== RUN   TestPnPClaimWorkflowReferences/foreign-pnp
+=== RUN   TestPnPClaimWorkflowReferences/foreign-site
+=== RUN   TestPnPClaimWorkflowReferences/malformed-workflow
+=== RUN   TestPnPClaimWorkflowReferences/completed-native-state
+=== RUN   TestPnPClaimWorkflowReferences/failed-native-state
+--- PASS: TestPnPClaimWorkflowReferences (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-only (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-duplicate (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-conflict (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-foreign-pending-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-malformed (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/task-empty (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/match (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-workflow (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/missing-workflow-id (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/system-only (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/reset-only (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-template-pending-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-image-pending-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/skip-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/default-skip-image (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/no-template (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/not-requested (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-pnp (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/foreign-site (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/malformed-workflow (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/completed-native-state (0.00s)
+    --- PASS: TestPnPClaimWorkflowReferences/failed-native-state (0.00s)
+=== RUN   TestPnPDeviceInventory
+=== RUN   TestPnPDeviceInventory/valid
+=== RUN   TestPnPDeviceInventory/empty
+=== RUN   TestPnPDeviceInventory/paged
+=== RUN   TestPnPDeviceInventory/repeat
+=== RUN   TestPnPDeviceInventory/oversized
+=== RUN   TestPnPDeviceInventory/missing-id
+=== RUN   TestPnPDeviceInventory/missing-info
+=== RUN   TestPnPDeviceInventory/duplicate-serial
+=== RUN   TestPnPDeviceInventory/stack
+=== RUN   TestPnPDeviceInventory/stack-alias
+=== RUN   TestPnPDeviceInventory/bad-member
+=== RUN   TestPnPDeviceInventory/conflicting-site
+=== RUN   TestPnPDeviceInventory/null
+=== RUN   TestPnPDeviceInventory/envelope
+=== RUN   TestPnPDeviceInventory/partial
+=== RUN   TestPnPDeviceInventory/no-content
+--- PASS: TestPnPDeviceInventory (0.26s)
+    --- PASS: TestPnPDeviceInventory/valid (0.01s)
+    --- PASS: TestPnPDeviceInventory/empty (0.01s)
+    --- PASS: TestPnPDeviceInventory/paged (0.04s)
+    --- PASS: TestPnPDeviceInventory/repeat (0.06s)
+    --- PASS: TestPnPDeviceInventory/oversized (0.03s)
+    --- PASS: TestPnPDeviceInventory/missing-id (0.01s)
+    --- PASS: TestPnPDeviceInventory/missing-info (0.01s)
+    --- PASS: TestPnPDeviceInventory/duplicate-serial (0.01s)
+    --- PASS: TestPnPDeviceInventory/stack (0.01s)
+    --- PASS: TestPnPDeviceInventory/stack-alias (0.01s)
+    --- PASS: TestPnPDeviceInventory/bad-member (0.01s)
+    --- PASS: TestPnPDeviceInventory/conflicting-site (0.01s)
+    --- PASS: TestPnPDeviceInventory/null (0.01s)
+    --- PASS: TestPnPDeviceInventory/envelope (0.01s)
+    --- PASS: TestPnPDeviceInventory/partial (0.01s)
+    --- PASS: TestPnPDeviceInventory/no-content (0.01s)
+=== RUN   TestPnPWorkflowMetadataProjection
+=== RUN   TestPnPWorkflowMetadataProjection/valid
+=== RUN   TestPnPWorkflowMetadataProjection/unknown-state
+=== RUN   TestPnPWorkflowMetadataProjection/unfinished
+=== RUN   TestPnPWorkflowMetadataProjection/absent-times
+=== RUN   TestPnPWorkflowMetadataProjection/bad-image-id
+=== RUN   TestPnPWorkflowMetadataProjection/bad-config-id
+=== RUN   TestPnPWorkflowMetadataProjection/negative-time
+=== RUN   TestPnPWorkflowMetadataProjection/fractional-time
+=== RUN   TestPnPWorkflowMetadataProjection/unsafe-integer
+=== RUN   TestPnPWorkflowMetadataProjection/inverted-times
+=== RUN   TestPnPWorkflowMetadataProjection/duplicate-sequence
+=== RUN   TestPnPWorkflowMetadataProjection/oversized
+=== RUN   TestPnPWorkflowMetadataProjection/string-time
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-state
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-inverted
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-fractional
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-string-time
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-limit
+=== RUN   TestPnPWorkflowMetadataProjection/work-item-total-limit
+--- PASS: TestPnPWorkflowMetadataProjection (0.63s)
+    --- PASS: TestPnPWorkflowMetadataProjection/valid (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/unknown-state (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/unfinished (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/absent-times (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/bad-image-id (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/bad-config-id (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/negative-time (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/fractional-time (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/unsafe-integer (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/inverted-times (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/duplicate-sequence (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/oversized (0.06s)
+    --- PASS: TestPnPWorkflowMetadataProjection/string-time (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-state (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-inverted (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-fractional (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-string-time (0.01s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-limit (0.04s)
+    --- PASS: TestPnPWorkflowMetadataProjection/work-item-total-limit (0.35s)
+=== RUN   TestPnPWorkflowReferenceInventory
+=== RUN   TestPnPWorkflowReferenceInventory/empty
+=== RUN   TestPnPWorkflowReferenceInventory/one
+=== RUN   TestPnPWorkflowReferenceInventory/paged
+=== RUN   TestPnPWorkflowReferenceInventory/repeat
+=== RUN   TestPnPWorkflowReferenceInventory/short-count
+=== RUN   TestPnPWorkflowReferenceInventory/changed-count
+=== RUN   TestPnPWorkflowReferenceInventory/missing-count
+=== RUN   TestPnPWorkflowReferenceInventory/null-count
+=== RUN   TestPnPWorkflowReferenceInventory/fractional-count
+=== RUN   TestPnPWorkflowReferenceInventory/negative-count
+=== RUN   TestPnPWorkflowReferenceInventory/too-large-count
+=== RUN   TestPnPWorkflowReferenceInventory/native-id
+=== RUN   TestPnPWorkflowReferenceInventory/equal-ids
+=== RUN   TestPnPWorkflowReferenceInventory/conflicting-ids
+=== RUN   TestPnPWorkflowReferenceInventory/bad-task-config
+=== RUN   TestPnPWorkflowReferenceInventory/bad-id
+=== RUN   TestPnPWorkflowReferenceInventory/bad-config
+=== RUN   TestPnPWorkflowReferenceInventory/private-values
+=== RUN   TestPnPWorkflowReferenceInventory/unavailable
+=== RUN   TestPnPWorkflowReferenceInventory/enveloped-list
+--- PASS: TestPnPWorkflowReferenceInventory (0.25s)
+    --- PASS: TestPnPWorkflowReferenceInventory/empty (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/one (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/paged (0.03s)
+    --- PASS: TestPnPWorkflowReferenceInventory/repeat (0.04s)
+    --- PASS: TestPnPWorkflowReferenceInventory/short-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/changed-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/missing-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/null-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/fractional-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/negative-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/too-large-count (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/native-id (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/equal-ids (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/conflicting-ids (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/bad-task-config (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/bad-id (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/bad-config (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/private-values (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/unavailable (0.01s)
+    --- PASS: TestPnPWorkflowReferenceInventory/enveloped-list (0.01s)
+=== RUN   TestTemplatePnPReferences
+=== RUN   TestTemplatePnPReferences/library-task
+=== RUN   TestTemplatePnPReferences/library-task-version
+=== RUN   TestTemplatePnPReferences/library-task-duplicate
+=== RUN   TestTemplatePnPReferences/library-task-two-aliases
+=== RUN   TestTemplatePnPReferences/main-task
+=== RUN   TestTemplatePnPReferences/system-task
+=== RUN   TestTemplatePnPReferences/reset-task
+=== RUN   TestTemplatePnPReferences/task-private-only
+=== RUN   TestTemplatePnPReferences/late-task
+=== RUN   TestTemplatePnPReferences/bad-task-config
+=== RUN   TestTemplatePnPReferences/empty
+=== RUN   TestTemplatePnPReferences/library-base
+=== RUN   TestTemplatePnPReferences/library-version
+=== RUN   TestTemplatePnPReferences/main
+=== RUN   TestTemplatePnPReferences/system
+=== RUN   TestTemplatePnPReferences/reset
+=== RUN   TestTemplatePnPReferences/all-instances
+=== RUN   TestTemplatePnPReferences/parameters
+=== RUN   TestTemplatePnPReferences/parameters-version
+=== RUN   TestTemplatePnPReferences/parameters-duplicate
+=== RUN   TestTemplatePnPReferences/parameters-missing-id
+=== RUN   TestTemplatePnPReferences/parameters-private-only
+=== RUN   TestTemplatePnPReferences/late-parameters
+=== RUN   TestTemplatePnPReferences/completed
+=== RUN   TestTemplatePnPReferences/unrelated-private-text
+=== RUN   TestTemplatePnPReferences/library-link
+=== RUN   TestTemplatePnPReferences/dangling-link
+=== RUN   TestTemplatePnPReferences/partial-inline-link
+=== RUN   TestTemplatePnPReferences/missing-instance-id
+=== RUN   TestTemplatePnPReferences/bad-instance-config
+=== RUN   TestTemplatePnPReferences/late-library
+=== RUN   TestTemplatePnPReferences/late-instance
+=== RUN   TestTemplatePnPReferences/device-count-change
+=== RUN   TestTemplatePnPReferences/workflow-unavailable
+--- PASS: TestTemplatePnPReferences (0.52s)
+    --- PASS: TestTemplatePnPReferences/library-task (0.02s)
+    --- PASS: TestTemplatePnPReferences/library-task-version (0.02s)
+    --- PASS: TestTemplatePnPReferences/library-task-duplicate (0.02s)
+    --- PASS: TestTemplatePnPReferences/library-task-two-aliases (0.02s)
+    --- PASS: TestTemplatePnPReferences/main-task (0.02s)
+    --- PASS: TestTemplatePnPReferences/system-task (0.02s)
+    --- PASS: TestTemplatePnPReferences/reset-task (0.02s)
+    --- PASS: TestTemplatePnPReferences/task-private-only (0.02s)
+    --- PASS: TestTemplatePnPReferences/late-task (0.02s)
+    --- PASS: TestTemplatePnPReferences/bad-task-config (0.01s)
+    --- PASS: TestTemplatePnPReferences/empty (0.02s)
+    --- PASS: TestTemplatePnPReferences/library-base (0.02s)
+    --- PASS: TestTemplatePnPReferences/library-version (0.02s)
+    --- PASS: TestTemplatePnPReferences/main (0.02s)
+    --- PASS: TestTemplatePnPReferences/system (0.02s)
+    --- PASS: TestTemplatePnPReferences/reset (0.02s)
+    --- PASS: TestTemplatePnPReferences/all-instances (0.02s)
+    --- PASS: TestTemplatePnPReferences/parameters (0.02s)
+    --- PASS: TestTemplatePnPReferences/parameters-version (0.02s)
+    --- PASS: TestTemplatePnPReferences/parameters-duplicate (0.02s)
+    --- PASS: TestTemplatePnPReferences/parameters-missing-id (0.01s)
+    --- PASS: TestTemplatePnPReferences/parameters-private-only (0.02s)
+    --- PASS: TestTemplatePnPReferences/late-parameters (0.02s)
+    --- PASS: TestTemplatePnPReferences/completed (0.02s)
+    --- PASS: TestTemplatePnPReferences/unrelated-private-text (0.02s)
+    --- PASS: TestTemplatePnPReferences/library-link (0.02s)
+    --- PASS: TestTemplatePnPReferences/dangling-link (0.01s)
+    --- PASS: TestTemplatePnPReferences/partial-inline-link (0.01s)
+    --- PASS: TestTemplatePnPReferences/missing-instance-id (0.01s)
+    --- PASS: TestTemplatePnPReferences/bad-instance-config (0.01s)
+    --- PASS: TestTemplatePnPReferences/late-library (0.01s)
+    --- PASS: TestTemplatePnPReferences/late-instance (0.02s)
+    --- PASS: TestTemplatePnPReferences/device-count-change (0.01s)
+    --- PASS: TestTemplatePnPReferences/workflow-unavailable (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.036s

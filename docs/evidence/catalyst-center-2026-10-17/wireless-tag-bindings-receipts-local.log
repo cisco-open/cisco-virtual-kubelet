@@ -1,0 +1,96 @@
+=== RUN   TestWirelessTagReceipts
+=== RUN   TestWirelessTagReceipts/cohort-false/complete
+=== RUN   TestWirelessTagReceipts/cohort-false/import
+=== RUN   TestWirelessTagReceipts/cohort-false/capacity
+=== RUN   TestWirelessTagReceipts/cohort-false/legacy
+=== RUN   TestWirelessTagReceipts/cohort-false/legacy-private
+=== RUN   TestWirelessTagReceipts/cohort-false/drop-verified
+=== RUN   TestWirelessTagReceipts/cohort-false/edit-verified
+=== RUN   TestWirelessTagReceipts/cohort-false/drop-effect
+=== RUN   TestWirelessTagReceipts/cohort-false/history-race
+=== RUN   TestWirelessTagReceipts/cohort-false/producer-changed
+=== RUN   TestWirelessTagReceipts/cohort-false/key-removed
+=== RUN   TestWirelessTagReceipts/cohort-false/key-rotated
+=== RUN   TestWirelessTagReceipts/cohort-false/native-edit
+=== RUN   TestWirelessTagReceipts/cohort-false/uuid-replaced
+=== RUN   TestWirelessTagReceipts/cohort-false/alias
+=== RUN   TestWirelessTagReceipts/cohort-false/receipt-edited
+=== RUN   TestWirelessTagReceipts/cohort-false/replace-at-capacity
+=== RUN   TestWirelessTagReceipts/cohort-false/child-failed
+=== RUN   TestWirelessTagReceipts/cohort-false/tree-missing
+=== RUN   TestWirelessTagReceipts/cohort-false/lost-ack
+=== RUN   TestWirelessTagReceipts/cohort-false/managed-drift
+=== RUN   TestWirelessTagReceipts/cohort-false/source
+=== RUN   TestWirelessTagReceipts/cohort-false/owner
+=== RUN   TestWirelessTagReceipts/cohort-true/complete
+=== RUN   TestWirelessTagReceipts/cohort-true/import
+=== RUN   TestWirelessTagReceipts/cohort-true/capacity
+=== RUN   TestWirelessTagReceipts/cohort-true/legacy
+=== RUN   TestWirelessTagReceipts/cohort-true/legacy-private
+=== RUN   TestWirelessTagReceipts/cohort-true/drop-verified
+=== RUN   TestWirelessTagReceipts/cohort-true/edit-verified
+=== RUN   TestWirelessTagReceipts/cohort-true/drop-effect
+=== RUN   TestWirelessTagReceipts/cohort-true/history-race
+=== RUN   TestWirelessTagReceipts/cohort-true/producer-changed
+=== RUN   TestWirelessTagReceipts/cohort-true/key-removed
+=== RUN   TestWirelessTagReceipts/cohort-true/key-rotated
+=== RUN   TestWirelessTagReceipts/cohort-true/native-edit
+=== RUN   TestWirelessTagReceipts/cohort-true/uuid-replaced
+=== RUN   TestWirelessTagReceipts/cohort-true/alias
+=== RUN   TestWirelessTagReceipts/cohort-true/receipt-edited
+=== RUN   TestWirelessTagReceipts/cohort-true/replace-at-capacity
+=== RUN   TestWirelessTagReceipts/cohort-true/child-failed
+=== RUN   TestWirelessTagReceipts/cohort-true/tree-missing
+=== RUN   TestWirelessTagReceipts/cohort-true/lost-ack
+=== RUN   TestWirelessTagReceipts/cohort-true/managed-drift
+=== RUN   TestWirelessTagReceipts/cohort-true/source
+=== RUN   TestWirelessTagReceipts/cohort-true/owner
+--- PASS: TestWirelessTagReceipts (50.03s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/complete (2.11s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/import (0.24s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/capacity (6.94s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/legacy (0.48s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/legacy-private (1.46s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/drop-verified (0.34s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/edit-verified (0.35s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/drop-effect (0.35s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/history-race (0.33s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/producer-changed (0.35s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/key-removed (0.57s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/key-rotated (0.57s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/native-edit (0.66s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/uuid-replaced (0.65s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/alias (0.65s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/receipt-edited (0.58s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/replace-at-capacity (5.57s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/child-failed (0.32s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/tree-missing (0.33s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/lost-ack (0.30s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/managed-drift (0.31s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/source (0.29s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/owner (0.29s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/complete (1.89s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/import (0.25s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/capacity (7.01s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/legacy (0.53s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/legacy-private (1.93s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/drop-verified (0.39s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/edit-verified (0.39s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/drop-effect (0.42s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/history-race (0.37s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/producer-changed (0.38s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/key-removed (0.64s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/key-rotated (0.62s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/native-edit (0.73s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/uuid-replaced (0.73s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/alias (0.74s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/receipt-edited (0.63s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/replace-at-capacity (6.23s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/child-failed (0.41s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/tree-missing (0.37s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/lost-ack (0.32s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/managed-drift (0.37s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/source (0.34s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/owner (0.34s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	52.407s

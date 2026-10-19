@@ -1,0 +1,76 @@
+=== RUN   TestTemplateAttachedProfilesCompleteness
+=== RUN   TestTemplateAttachedProfilesCompleteness/empty
+=== RUN   TestTemplateAttachedProfilesCompleteness/one
+=== RUN   TestTemplateAttachedProfilesCompleteness/many
+=== RUN   TestTemplateAttachedProfilesCompleteness/duplicate
+=== RUN   TestTemplateAttachedProfilesCompleteness/missing-id
+=== RUN   TestTemplateAttachedProfilesCompleteness/null-list
+=== RUN   TestTemplateAttachedProfilesCompleteness/missing-list
+=== RUN   TestTemplateAttachedProfilesCompleteness/short-list
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-change
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-missing
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-null
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-negative
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-fraction
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-string
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-too-large
+=== RUN   TestTemplateAttachedProfilesCompleteness/count-unavailable
+=== RUN   TestTemplateAttachedProfilesCompleteness/list-unavailable
+=== RUN   TestTemplateAttachedProfilesCompleteness/partial-list
+=== RUN   TestTemplateAttachedProfilesCompleteness/bad-target
+--- PASS: TestTemplateAttachedProfilesCompleteness (0.20s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/empty (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/one (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/many (0.02s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/duplicate (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/missing-id (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/null-list (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/missing-list (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/short-list (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-change (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-missing (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-null (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-negative (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-fraction (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-string (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-too-large (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/count-unavailable (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/list-unavailable (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/partial-list (0.01s)
+    --- PASS: TestTemplateAttachedProfilesCompleteness/bad-target (0.00s)
+=== RUN   TestTemplateProfileReferenceViews
+=== RUN   TestTemplateProfileReferenceViews/empty
+=== RUN   TestTemplateProfileReferenceViews/dayn
+=== RUN   TestTemplateProfileReferenceViews/onboarding
+=== RUN   TestTemplateProfileReferenceViews/modern-only
+=== RUN   TestTemplateProfileReferenceViews/legacy-only
+=== RUN   TestTemplateProfileReferenceViews/unknown-attribute
+=== RUN   TestTemplateProfileReferenceViews/unknown-member
+=== RUN   TestTemplateProfileReferenceViews/bad-member
+=== RUN   TestTemplateProfileReferenceViews/duplicate-group
+=== RUN   TestTemplateProfileReferenceViews/duplicate-member
+=== RUN   TestTemplateProfileReferenceViews/missing-detail
+=== RUN   TestTemplateProfileReferenceViews/renamed-detail
+=== RUN   TestTemplateProfileReferenceViews/summary-error
+=== RUN   TestTemplateProfileReferenceViews/late-modern-same-count
+=== RUN   TestTemplateProfileReferenceViews/late-legacy-reference
+=== RUN   TestTemplateProfileReferenceViews/unrelated-settings
+--- PASS: TestTemplateProfileReferenceViews (0.20s)
+    --- PASS: TestTemplateProfileReferenceViews/empty (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/dayn (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/onboarding (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/modern-only (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/legacy-only (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/unknown-attribute (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/unknown-member (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/bad-member (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/duplicate-group (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/duplicate-member (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/missing-detail (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/renamed-detail (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/summary-error (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/late-modern-same-count (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/late-legacy-reference (0.01s)
+    --- PASS: TestTemplateProfileReferenceViews/unrelated-settings (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.812s

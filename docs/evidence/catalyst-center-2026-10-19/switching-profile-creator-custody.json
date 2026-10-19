@@ -1,0 +1,123 @@
+{
+  "scope": "Public switching profile task-correlated creator custody and mandatory atomic receipt-gated release",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "resourceComplete": false,
+  "publicCreatorPublicationImplemented": true,
+  "adoptionOrPruneAuthorityAdded": false,
+  "installedQualification": false,
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "5601ec4aba520f09dfdd23ff9ca0d56c0e832bb78d1a88e680910400557ee57a",
+    "internal/controlleradapter/catalystcenter/nacmodel": "1827e09b755df6480bf7d80a78e51ed4ccd8ef02a4bf923ac460e7262dd96b82",
+    "tools/cvk-netascode-migrate": "49e5e6ea5ef31b4c3204a5fec1714a6a2e410f36046031692dc0905e4e046ed4"
+  },
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "log": "switching-profile-creator-custody-focusedRace.log",
+      "sha256": "1a43f1cb22cab24eadda365a3bd5fa03ff887ab09a445afb562dfbfbde296e15",
+      "passingTestEvents": 794
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "log": "switching-profile-creator-custody-temporaryAPI.log",
+      "sha256": "51a94b2bd4b8099385c09622574d7f8dd79f830b46cbcfc30e90bfd2bb697766",
+      "passingTestEvents": 64
+    },
+    "native": {
+      "exitCode": 0,
+      "log": "switching-profile-creator-custody-native.log",
+      "sha256": "cbe3639d73d2e791a9ffbb93408660f5f570f10f3fb94355146b8b372ac50288",
+      "passingTestEvents": 1
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-custody-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-custody-docs.log",
+      "sha256": "a65d2b0bb2a214177dbaa13026cb07ccb90ca401b6c7482179574bf7f2482673"
+    },
+    "diffCheck": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-switching-custody-diffcheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19870,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "log": "/private/tmp/cvk-switching-custody-final-regression.jsonl",
+      "sha256": "e19e5b064d11dd6779c646a7d74cbc95b58407cb9e8f6fe3fc359de4a1457431"
+    }
+  },
+  "remaining": [
+    "Latest-effect/private native baselines before destructive lifecycle",
+    "Adoption/prune/source/config/controller deletion and owned recreation after native loss",
+    "Owner/key/receipt handoff and lifetime capacity retirement",
+    "Wholesale creator ledger erasure after journal release is not reconstructed; imports remain unowned",
+    "Installed actors/schema rollout/downgrade and broader onboarding/composite/multi-site/physical qualification",
+    "Other 93-resource schema/default/catalogue/execution/ownership/recovery gaps",
+    "Partial PnP acquisition cancellation original-manager quiescence proof"
+  ],
+  "nativeCycle": {
+    "operations": [
+      {
+        "action": "Create",
+        "resource": "profiles/#created:v1:7df8ae582536f5ec5193fdc1f0344d9cd198a940d93b7a060dc85cf7213724d5",
+        "taskID": "01a15486-233b-7d83-a16a-17b2e0d90ce1"
+      },
+      {
+        "action": "Update",
+        "resource": "sites/profile-site-add:v1:b4516c302a55792e75738ae64316454e9ece0175f26e467ac71f163b09540598:f345b4b35b27dee358a4e1b0d4bb38195177e103f41cea67827abedce3e91a0f",
+        "taskID": "01a15486-635e-70fa-ab90-70eca3421ff9"
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-141715",
+        "taskID": "01a15486-90d7-7330-b372-cef8c7c14620"
+      },
+      {
+        "action": "Update",
+        "resource": "profiles/CVK-Q-Profile-20261019-141715",
+        "taskID": "01a15486-c988-7aba-8512-8c75e19fa5f2"
+      }
+    ],
+    "createdProfileID": "de6a80a5-a69a-414f-9ce4-c3db41dba5da",
+    "originalCreateTaskID": "01a15486-233b-7d83-a16a-17b2e0d90ce1",
+    "creatorReceiptPublished": true,
+    "immutableCreatorReceiptChecks": 4,
+    "definitionTasksRecoveredUnknown": 3,
+    "generatedArtifactsCleaned": true,
+    "nativeKubernetesPersistence": "simulated; separate real temporary-API qualification",
+    "realDeviceTargeted": false,
+    "templateDeploymentPerformed": false
+  },
+  "fixtureCorrections": [
+    "Initial strict result fixtures lacked service/progress and canonical UUID fields; fixtures were corrected without loosening production verification.",
+    "Exact duplicate ledger keys are rejected by the real API map-list schema; fake-storage runtime guards cover malformed duplicate state separately.",
+    "Post-review owned UUID/name-alias guard was added and final race/API/native/regression gates rerun against that source."
+  ],
+  "resourceChecklistDistinctRows": 93
+}

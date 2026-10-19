@@ -1,0 +1,20 @@
+=== RUN   TestLiveCatalystCenterNetworkNativeComparison
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-051033-000000000
+    site_execution_live_test.go:452: submitted task=01a14844-d84d-751f-aae9-a55abb4482b8 at=2026-10-17T05:10:33.685081Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a14844-dac5-7f5f-803b-24f80cf6aa94 at=2026-10-17T05:10:34.313886Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a14844-dd64-7e22-b4ba-90f50d66a84d at=2026-10-17T05:10:34.95232Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a14844-e430-7e83-99cc-cbc3e391ab53 at=2026-10-17T05:10:36.680879Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:525: partial telemetry phase=0 original task=01a14844-ffbe-7184-95bb-f3338a4af398: all native groups preserved except selected mask, Unknown recovery, latest receipt and repeated no-op verified
+    site_execution_live_test.go:525: partial telemetry phase=1 original task=01a14845-2c89-7ba1-a6e3-e4537adab53e: all native groups preserved except selected mask, Unknown recovery, latest receipt and repeated no-op verified
+    site_execution_live_test.go:525: partial telemetry phase=2 original task=01a14845-592a-75be-827f-466cfd5c75e4: all native groups preserved except selected mask, Unknown recovery, latest receipt and repeated no-op verified
+    site_execution_live_test.go:525: three partial-source public updates, complete native profile preservation, three original task recoveries and one latest application; actual native API with simulated Kubernetes storage/actors
+    site_execution_live_test.go:525: v2 expected full native profile/ancestry MACs retained through restarted observation and replaced atomically; approved key projection is a fixture, no raw native values persisted
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterNetworkNativeComparison (46.48s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	48.665s

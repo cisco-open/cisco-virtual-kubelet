@@ -1,0 +1,47 @@
+# Update the EXISTING config UID/key after two-site private tag baselines and
+# both profile/site association receipts have been recorded.
+# This one source revision removes Global/CVK-Lab-Removed from both tags and
+# the parent assignment. CVK verifies tag Updates before it may unassign the site.
+# All affected subtrees must be unused; foreign/unselected tags and missing
+# evidence continue to block the whole candidate cohort. No whole-tag deletion,
+# adoption, device movement or physical provisioning is authorized here.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-tag-baselines
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [network_profiles]
+  scope: global
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: network_profiles
+      path: /network_profiles
+      source: comparison
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-tag-dependency-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_profiles:
+          wireless:
+            - name: CVK-Lab-Wireless
+              ssid_details:
+                - name: CVK-Lab-Disabled
+                  wlan_profile_name: CVK-Lab-WLAN
+              sites: [Global/CVK-Lab]
+              site_tags:
+                - name: CVK-Lab-Site
+                  sites: [Global/CVK-Lab]
+                  ap_profile_name: default-ap-profile
+              policy_tags:
+                - name: CVK-Lab-Policy
+                  sites: [Global/CVK-Lab]

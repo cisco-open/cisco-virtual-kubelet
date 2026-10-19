@@ -1,0 +1,14 @@
+{
+  "operationUID": "ae945c1e-dd78-4e55-872c-6959723294a5",
+  "leaseUID": "805d5577-2ee9-4f1b-96c5-a243a3712116",
+  "path": "flash:c9kwireshark.tar",
+  "size": 1134488576,
+  "sha256": "e924da8df505f46d6d0746ad2115cb0b81ee5c2f294c2dae9e23b69dbe9c8633",
+  "sha512": "36fd7de370098e09ae8be78275de7fb9c1c2ae57ae759dfdf244459dfead7c760b92937fe130414af9322f73cd4d7c35e4fa98e2976821a2d7852805189cb0d6",
+  "backup": "/home/cisco/cvk-lab-backups/20261009-cat9k-lab-101/c9kwireshark.tar",
+  "submittedAt": "2026-10-09T05:01:32.373434+00:00",
+  "mode": "SupervisedUnusedApplicationArchiveOffload",
+  "verifiedAt": "2026-10-09T05:01:35.986627+00:00",
+  "freeBytes": 3108274176,
+  "result": "VerifiedOffloaded"
+}

@@ -1,0 +1,43 @@
+{
+  "status": "passed",
+  "test": "TestLiveInstalledPrivateSiteExecution",
+  "seconds": 76.85,
+  "goSeconds": 78.928,
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "4e656e523497842796799555570b81baac4f04bffdc28b85f95501f44c84cd90"
+  },
+  "testBinaryRuntime": "host test observer with real Kubernetes client and shared Catalyst Center client; mutations execute through installed worker",
+  "workerImage": "cvk-catc-worker-qualification:20261017-v5-4f576991afb0",
+  "cluster": "cvk-catc-qualification-20261017",
+  "distinctInstalledTasks": {
+    "01a14a87-41e6-7a4e-9e7b-cbdd3f82d8df": "Create",
+    "01a14a87-97c7-7fa9-a82b-3db1d5145309": "Create",
+    "01a14a87-fa44-7781-8289-9da8768f5f54": "Update"
+  },
+  "independentSupervisedCleanupTasks": [
+    {
+      "type": "building",
+      "taskID": "01a14a88-5ce8-7faa-9125-a6b5760255cf"
+    },
+    {
+      "type": "area",
+      "taskID": "01a14a88-6392-72a8-8df4-e797210788e3"
+    }
+  ],
+  "privateCreators": 2,
+  "latestAppliedRows": 1,
+  "realPodReplacementAfterVerifiedUpdate": true,
+  "freshInstalledInSyncAfterReplacement": true,
+  "retainConfigDeleted": true,
+  "retainedOwners": 1,
+  "retainedActionRows": 3,
+  "baselinesRestored": true,
+  "physicalOperationSubmitted": false,
+  "limitations": [
+    "Worker replacement happened after verified update, not during accepted-task uncertainty",
+    "Private MAC construction is performed by real installed worker; independent native readback and existing structural receipt validators check resulting state without exporting the key",
+    "No wire proxy counted HTTP requests; unchanged journal and native state after restart are the observed no-op evidence",
+    "Site cleanup is supervised and independent, not public manifest-driven site Delete",
+    "Owner/private history remains retained after Retain configuration deletion; no ownership handoff or retirement attested"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "sourceScope": "Current qualification sources; native lifecycle/fixture fixed before final native run, later fixture-only deployment cases validated by final focused tests",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/template_binding_fixture_test.go": "87dd615a30e361c1b5e895367505d85b1e365d3f2ecac6e30adce5fd77c1109b",
+    "internal/controlleradapter/catalystcenter/template_binding_metadata_live_test.go": "9ef68b3a67845b9a4c93bdf3f0dbbffb4d19872d8bbd46e0095c92de68110241",
+    "internal/controlleradapter/catalystcenter/template_binding_parameters_test.go": "fa1faf80c298f3da2c58c70bcc56bb0f8013609f35768f15f35cf8609eb7e490",
+    "internal/controlleradapter/catalystcenter/template_software_version_test.go": "08caac2591b1e4a2948bcd59b019fa8db726b43b0e9c29e8b94b3cbe4b55908d",
+    "internal/controlleradapter/catalystcenter/template_parameter_order_test.go": "58676eee5697afd16bf40e86e6a811da2c8e96ec509a8ce5ec5a47b5e6c1d6bc",
+    "internal/controlleradapter/catalystcenter/template_deployment_execution_test.go": "32b78dc59085af61d46d6e618daad702698d86d05b16e955e027c84206fcab9f",
+    "internal/controlleradapter/catalystcenter/template_variable_metadata_test.go": "d84a5cadeadfab203d29a403ac6b50c7cdeebe2760de38b83af52f3949bf3b0e",
+    "internal/controlleradapter/catalystcenter/template_variable_metadata_envtest_test.go": "b04807311d4175b95c0b6ef6807575ae5359a4887e1a962d73748ee8246d0f56",
+    "internal/controlleradapter/catalystcenter/report_examples_test.go": "1ea2f3243ca599c1e1ee5cba86bfa02af7dacbafd55b83d858c34f5d209a1a32",
+    "internal/controlleradapter/catalystcenter/template_commit_live_test.go": "6c4e290936b851578c7ef9d582653b679770c7641f995c270cdfa01c705d2ff5",
+    "internal/controlleradapter/catalystcenter/template_projects_live_test.go": "c236c3e3dc988d3ec627e079b3cef333531215e33dd73def28db2b23eb146cb3",
+    "examples/configs/catalyst-center/template-binding-execution.yaml": "ee5675b42b353bd3dc8e7453d5fbe18043fe86a9c0ed6ec8d5da1182ed451bce"
+  }
+}

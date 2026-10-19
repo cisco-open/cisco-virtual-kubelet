@@ -1,0 +1,53 @@
+# Applies regular draft definitions and commits matching versions. No device deployment.
+# Requires matching journal CRDs, manager and worker. Retain policies preserve objects.
+# Explicit template tags require manual (STATIC or MIXED) association evidence;
+# a rule-only match does not satisfy this assignment.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-template-tag
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      templates:
+        tags:
+          - name: CVK-Lab-Template-Tag
+            description: CVK template association
+            system_tag: false
+        projects:
+          - name: CVK-Lab-Templates
+            dayn_templates:
+              - name: sample
+                description: CVK example
+                language: JINJA
+                software_type: IOS-XE
+                device_types:
+                  - product_family: Switches and Hubs
+                variables: []
+                tags: [CVK-Lab-Template-Tag]
+  cvk-template-assets.json: |
+    {"CVK-Lab-Templates#sample.j2":"! CVK template example\n"}
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-template-tag-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [templates]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-template-content-example-v1
+  source:
+    configMapRef:
+      name: catc-template-tag
+      key: model.yaml

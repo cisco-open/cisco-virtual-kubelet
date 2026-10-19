@@ -1,0 +1,9 @@
+{
+  "spec": {
+    "approval": {
+      "planHash": "sha256:9c264600ed528f02aa8d0c3ec41a9c5d9d921a2da2f326f981b51c11dfde6ffb",
+      "approvedBy": "system:admin",
+      "approvedAt": "2026-10-08T14:38:20Z"
+    }
+  }
+}

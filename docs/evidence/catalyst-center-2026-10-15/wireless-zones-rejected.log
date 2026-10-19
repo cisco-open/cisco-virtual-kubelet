@@ -1,0 +1,10 @@
+=== RUN   TestLiveWirelessProfileCustomZones
+    wireless_profile_execution_live_test.go:79: existing RF reference HIGH mda0seLh-seGW-stfh-mKGZ-sdrjnuC2sdDioeK5rZeWsdeXsdeY
+    wireless_profile_execution_live_test.go:82: isolated names CVK_N_7338236f5b422b34 CVK_S_9b495f4d5d649955
+    wireless_profile_execution_live_test.go:228: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_9b495f4d5d649955 Create 01a13e50-8451-758a-9ebf-b6cde3f7686f
+    wireless_profile_execution_live_test.go:237: owned SSID CVK_S_9b495f4d5d649955 mdiYq1zl-x1nF-owi0-otvM-ngq1zdy0otK1numWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:289: submission uncertain; retain wireless/wireless-profile:CVK_N_7338236f5b422b34:cba979dc4500e217d65d22255b8388e3027f4115d96dc21a8e62bad194917047 REST POST /dna/intent/api/v1/wirelessProfiles failed with status Not Acceptable
+--- FAIL: TestLiveWirelessProfileCustomZones (4.56s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.614s
+FAIL

@@ -1,0 +1,29 @@
+2026/10/14 19:40:07 http: TLS handshake error from 127.0.0.1:58834: remote error: tls: bad certificate
+--- FAIL: TestFabricEWLCPublicLifecycle (0.03s)
+    --- FAIL: TestFabricEWLCPublicLifecycle/existing-roles-false (0.03s)
+panic: runtime error: invalid memory address or nil pointer dereference [recovered, repanicked]
+[signal SIGSEGV: segmentation violation code=0x2 addr=0x0 pc=0x10225b800]
+
+goroutine 18043 [running]:
+testing.tRunner.func1.2({0x103f82580, 0x1043714e0})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:1974 +0x2b8
+testing.tRunner.func1()
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:1977 +0x460
+panic({0x103f82580?, 0x1043714e0?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/panic.go:860 +0x12c
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.testPublicHandoffPreparation(0xc00033f8c8, 0xc00078b550, 0xc0008a0c08)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/fabric_handoff_public_preparation_test.go:49 +0x990
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.testFabricEWLCPublicLifecycle(0xc00033f8c8, 0x0)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/fabric_ewlc_public_test.go:102 +0xb74
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestFabricEWLCPublicLifecycle.func1(0xc00033f8c8)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/fabric_ewlc_public_test.go:27 +0x38
+testing.tRunner(0xc00033f8c8, 0xc00045d9b0)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+created by testing.(*T).Run in goroutine 18042
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	25.308s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	4.694s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	31.844s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	33.831s
+ok  	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk	11.421s
+FAIL

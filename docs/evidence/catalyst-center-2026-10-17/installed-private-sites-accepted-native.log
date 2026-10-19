@@ -1,0 +1,16 @@
+=== RUN   TestLiveInstalledPrivateSiteExecution
+    installed_site_execution_live_test.go:109: installed private-site baseline absent Global/CVK_INST_2acd459889ea
+    installed_site_execution_live_test.go:158: installed verified original task Create 01a14a8f-3d0d-75be-b128-f01ad69fe2ba
+    installed_site_execution_live_test.go:158: installed verified original task Create 01a14a8f-93ce-7e9c-b640-616dfaf653a8
+    installed_site_execution_live_test.go:228: installed worker process restarted with original acknowledged update still retained 01a14a8f-ee4c-7acc-ad9d-449d12abedcc
+    installed_site_execution_live_test.go:230: installed verified original task Create 01a14a8f-3d0d-75be-b128-f01ad69fe2ba
+    installed_site_execution_live_test.go:230: installed verified original task Create 01a14a8f-93ce-7e9c-b640-616dfaf653a8
+    installed_site_execution_live_test.go:230: installed verified original task Update 01a14a8f-ee4c-7acc-ad9d-449d12abedcc
+    installed_site_execution_live_test.go:242: real restarted worker recovered original acknowledged update through full task tree and private latest-applied publication 01a14a8f-ee4c-7acc-ad9d-449d12abedcc
+    installed_site_execution_live_test.go:267: real worker replacement retained two private creators and one latest-applied receipt; source/native readback and refreshed InSync verified
+    installed_site_execution_live_test.go:340: supervised generated-site cleanup verified building 01a14a90-44e9-7d9a-b67b-fd366e62c188
+    installed_site_execution_live_test.go:340: supervised generated-site cleanup verified area 01a14a90-4b9f-7423-b36e-cf930bdb0fb3
+    installed_site_execution_live_test.go:346: installed private Create/Update, real Pod replacement, Retain intent retirement and supervised exact cleanup passed; all site baselines restored; no physical operation
+--- PASS: TestLiveInstalledPrivateSiteExecution (71.99s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	74.412s

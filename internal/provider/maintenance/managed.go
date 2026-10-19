@@ -589,7 +589,11 @@ func validateMaintenanceAcknowledgement(
 		session.Operation != request.Operation || !session.RequestedAt.Time.Equal(request.RequestedAt) {
 		return fmt.Errorf("manager maintenance acknowledgement does not match the current Lease request")
 	}
-	if request.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 {
+	if request.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolConfigurationV1 {
+		if request.Purpose != ciskov1.DeviceMaintenancePurposeConfigurationMutation || session.ProtocolVersion != request.ProtocolVersion || session.Purpose != request.Purpose || session.AcknowledgedAt.Before(&session.RequestedAt) || session.AcknowledgedAt.After(time.Now()) {
+			return fmt.Errorf("configuration maintenance acknowledgement has invalid protocol, purpose or timing")
+		}
+	} else if request.ProtocolVersion == ciskov1.DeviceMaintenanceProtocolPDBDrainV1 {
 		if session.ProtocolVersion != request.ProtocolVersion || session.Purpose != request.Purpose {
 			return fmt.Errorf("manager maintenance acknowledgement has the wrong drain protocol or purpose")
 		}

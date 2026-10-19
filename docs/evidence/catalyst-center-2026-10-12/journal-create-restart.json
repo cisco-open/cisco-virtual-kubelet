@@ -1,0 +1,103 @@
+{
+  "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+  "tasks": [
+    "01a1308d-0bd5-72f5-a674-6dfeb4fd1314"
+  ],
+  "restarted": true,
+  "events": [
+    {
+      "phase": "Waiting",
+      "operation": "fcf867a3a952f42229935ad518ca8138",
+      "operationPhase": "Accepted",
+      "task": "01a1308d-0bd5-72f5-a674-6dfeb4fd1314"
+    },
+    {
+      "phase": "Waiting",
+      "operation": "fcf867a3a952f42229935ad518ca8138",
+      "operationPhase": "Verifying",
+      "task": "01a1308d-0bd5-72f5-a674-6dfeb4fd1314"
+    },
+    {
+      "phase": "Verifying",
+      "operation": "fcf867a3a952f42229935ad518ca8138",
+      "operationPhase": "Verified",
+      "task": "01a1308d-0bd5-72f5-a674-6dfeb4fd1314"
+    },
+    {
+      "phase": "Waiting",
+      "operation": null,
+      "operationPhase": null,
+      "task": null
+    },
+    {
+      "phase": "InSync",
+      "operation": null,
+      "operationPhase": null,
+      "task": null
+    }
+  ],
+  "oldPodUID": "95412e49-fe8c-47e1-80f1-43393b2199bd",
+  "restartTask": "01a1308d-0bd5-72f5-a674-6dfeb4fd1314",
+  "result": "passed",
+  "status": {
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-10-12T14:35:53Z",
+        "message": "Catalyst Center configuration adapter is available",
+        "observedGeneration": 2,
+        "reason": "AdapterAvailable",
+        "status": "True",
+        "type": "AdapterAvailable"
+      },
+      {
+        "lastTransitionTime": "2026-10-12T14:35:53Z",
+        "message": "Owned configuration attributes match authoritative controller state",
+        "observedGeneration": 2,
+        "reason": "ApplyVerified",
+        "status": "True",
+        "type": "IntentValid"
+      },
+      {
+        "lastTransitionTime": "2026-10-12T14:37:36Z",
+        "message": "Owned configuration attributes match authoritative controller state",
+        "observedGeneration": 2,
+        "reason": "ApplyVerified",
+        "status": "True",
+        "type": "Ready"
+      }
+    ],
+    "controllerAPIVersion": "v1/v2",
+    "lastAppliedTime": "2026-10-12T14:37:36Z",
+    "lastControllerCheck": "2026-10-12T14:37:36Z",
+    "observedGeneration": 2,
+    "phase": "InSync",
+    "sectionStatus": [
+      {
+        "name": "templates",
+        "state": "InSync"
+      },
+      {
+        "name": "inventory",
+        "resourceCount": 1,
+        "state": "InSync"
+      }
+    ]
+  },
+  "journal": {
+    "owners": [
+      {
+        "configName": "catc-nac-journal-qualification",
+        "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+        "section": "inventory"
+      },
+      {
+        "configName": "catc-nac-journal-qualification",
+        "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+        "section": "templates"
+      }
+    ]
+  },
+  "newPodUIDs": [
+    "d60b69ad-97ba-42f8-9d45-616f4eb80925"
+  ]
+}

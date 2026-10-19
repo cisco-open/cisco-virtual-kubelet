@@ -1,0 +1,12 @@
+=== RUN   TestWirelessTagReceipts
+=== RUN   TestWirelessTagReceipts/cohort-false/legacy
+=== RUN   TestWirelessTagReceipts/cohort-false/legacy-private
+=== RUN   TestWirelessTagReceipts/cohort-true/legacy
+=== RUN   TestWirelessTagReceipts/cohort-true/legacy-private
+--- PASS: TestWirelessTagReceipts (4.82s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/legacy (1.06s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/legacy-private (1.43s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/legacy (0.50s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/legacy-private (1.82s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.881s

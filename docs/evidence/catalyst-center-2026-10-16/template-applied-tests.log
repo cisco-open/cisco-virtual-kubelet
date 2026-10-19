@@ -1,0 +1,242 @@
+=== RUN   TestTemplateAppliedPublicFlow
+=== RUN   TestTemplateAppliedPublicFlow/project-update/known
+=== RUN   TestTemplateAppliedPublicFlow/project-update/key-change-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/project-update/key-change-restore
+=== RUN   TestTemplateAppliedPublicFlow/project-update/native-state-race
+=== RUN   TestTemplateAppliedPublicFlow/project-update/wrong-declared-body
+=== RUN   TestTemplateAppliedPublicFlow/project-update/source-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/project-update/owner-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/project-update/receipt-conflict
+=== RUN   TestTemplateAppliedPublicFlow/project-update/receipt-lost-ack
+=== RUN   TestTemplateAppliedPublicFlow/project-update/receipt-pruned
+=== RUN   TestTemplateAppliedPublicFlow/project-update/source-fields-pruned
+=== RUN   TestTemplateAppliedPublicFlow/project-update/baseline-pruned
+=== RUN   TestTemplateAppliedPublicFlow/project-update/baseline-wrong-key
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/known
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/key-change-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/key-change-restore
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/native-state-race
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/wrong-declared-body
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/source-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/owner-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/receipt-conflict
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/receipt-lost-ack
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/receipt-pruned
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/source-fields-pruned
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/baseline-pruned
+=== RUN   TestTemplateAppliedPublicFlow/draft-update/baseline-wrong-key
+=== RUN   TestTemplateAppliedPublicFlow/commit/known
+=== RUN   TestTemplateAppliedPublicFlow/commit/key-change-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/commit/key-change-restore
+=== RUN   TestTemplateAppliedPublicFlow/commit/native-state-race
+=== RUN   TestTemplateAppliedPublicFlow/commit/wrong-declared-body
+=== RUN   TestTemplateAppliedPublicFlow/commit/source-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/commit/owner-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/commit/receipt-conflict
+=== RUN   TestTemplateAppliedPublicFlow/commit/receipt-lost-ack
+=== RUN   TestTemplateAppliedPublicFlow/commit/receipt-pruned
+=== RUN   TestTemplateAppliedPublicFlow/commit/source-fields-pruned
+=== RUN   TestTemplateAppliedPublicFlow/commit/baseline-pruned
+=== RUN   TestTemplateAppliedPublicFlow/commit/baseline-wrong-key
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/known
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/key-change-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/key-change-restore
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/native-state-race
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/wrong-declared-body
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/source-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/owner-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/receipt-conflict
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/receipt-lost-ack
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/receipt-pruned
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/source-fields-pruned
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/baseline-pruned
+=== RUN   TestTemplateAppliedPublicFlow/composite-draft/baseline-wrong-key
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/known
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/key-change-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/key-change-restore
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/native-state-race
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/wrong-declared-body
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/source-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/owner-during-proof
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/receipt-conflict
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/receipt-lost-ack
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/receipt-pruned
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/source-fields-pruned
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/baseline-pruned
+=== RUN   TestTemplateAppliedPublicFlow/composite-commit/baseline-wrong-key
+--- PASS: TestTemplateAppliedPublicFlow (37.56s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/known (0.76s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/key-change-during-proof (0.46s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/key-change-restore (0.15s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/native-state-race (0.90s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/wrong-declared-body (0.91s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/source-during-proof (0.44s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/owner-during-proof (0.43s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/receipt-conflict (0.15s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/receipt-lost-ack (0.13s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/receipt-pruned (0.47s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/source-fields-pruned (0.45s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/baseline-pruned (0.40s)
+    --- PASS: TestTemplateAppliedPublicFlow/project-update/baseline-wrong-key (0.47s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/known (0.31s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/key-change-during-proof (0.52s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/key-change-restore (0.32s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/native-state-race (1.34s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/wrong-declared-body (1.01s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/source-during-proof (0.48s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/owner-during-proof (0.49s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/receipt-conflict (0.33s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/receipt-lost-ack (0.34s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/receipt-pruned (0.55s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/source-fields-pruned (0.46s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/baseline-pruned (0.49s)
+    --- PASS: TestTemplateAppliedPublicFlow/draft-update/baseline-wrong-key (0.44s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/known (0.18s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/key-change-during-proof (0.51s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/key-change-restore (0.20s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/native-state-race (1.48s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/wrong-declared-body (1.04s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/source-during-proof (0.51s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/owner-during-proof (0.56s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/receipt-conflict (0.21s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/receipt-lost-ack (0.18s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/receipt-pruned (0.53s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/source-fields-pruned (0.48s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/baseline-pruned (0.46s)
+    --- PASS: TestTemplateAppliedPublicFlow/commit/baseline-wrong-key (0.46s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/known (0.49s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/key-change-during-proof (0.58s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/key-change-restore (0.50s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/native-state-race (2.06s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/wrong-declared-body (1.14s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/source-during-proof (0.56s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/owner-during-proof (0.57s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/receipt-conflict (0.50s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/receipt-lost-ack (0.44s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/receipt-pruned (0.61s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/source-fields-pruned (0.54s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/baseline-pruned (0.53s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-draft/baseline-wrong-key (0.54s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/known (0.25s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/key-change-during-proof (0.58s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/key-change-restore (0.28s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/native-state-race (2.30s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/wrong-declared-body (1.14s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/source-during-proof (0.56s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/owner-during-proof (0.58s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/receipt-conflict (0.32s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/receipt-lost-ack (0.25s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/receipt-pruned (0.62s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/source-fields-pruned (0.54s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/baseline-pruned (0.53s)
+    --- PASS: TestTemplateAppliedPublicFlow/composite-commit/baseline-wrong-key (0.55s)
+=== RUN   TestTemplateAppliedRecordEnvelope
+=== RUN   TestTemplateAppliedRecordEnvelope/p
+=== RUN   TestTemplateAppliedRecordEnvelope/p/valid
+=== RUN   TestTemplateAppliedRecordEnvelope/p/missing-creator
+=== RUN   TestTemplateAppliedRecordEnvelope/p/wrong-uuid
+=== RUN   TestTemplateAppliedRecordEnvelope/p/wrong-parent
+=== RUN   TestTemplateAppliedRecordEnvelope/p/wrong-owner
+=== RUN   TestTemplateAppliedRecordEnvelope/p/wrong-key
+=== RUN   TestTemplateAppliedRecordEnvelope/p/missing-mac
+=== RUN   TestTemplateAppliedRecordEnvelope/p/wrong-lineage
+=== RUN   TestTemplateAppliedRecordEnvelope/p/stripped-mode
+=== RUN   TestTemplateAppliedRecordEnvelope/p/duplicate
+=== RUN   TestTemplateAppliedRecordEnvelope/p/future
+=== RUN   TestTemplateAppliedRecordEnvelope/p/old-generation
+=== RUN   TestTemplateAppliedRecordEnvelope/p/wrong-section
+=== RUN   TestTemplateAppliedRecordEnvelope/p/unverified
+=== RUN   TestTemplateAppliedRecordEnvelope/r
+=== RUN   TestTemplateAppliedRecordEnvelope/r/valid
+=== RUN   TestTemplateAppliedRecordEnvelope/r/missing-creator
+=== RUN   TestTemplateAppliedRecordEnvelope/r/wrong-uuid
+=== RUN   TestTemplateAppliedRecordEnvelope/r/wrong-parent
+=== RUN   TestTemplateAppliedRecordEnvelope/r/wrong-owner
+=== RUN   TestTemplateAppliedRecordEnvelope/r/wrong-key
+=== RUN   TestTemplateAppliedRecordEnvelope/r/missing-mac
+=== RUN   TestTemplateAppliedRecordEnvelope/r/wrong-lineage
+=== RUN   TestTemplateAppliedRecordEnvelope/r/stripped-mode
+=== RUN   TestTemplateAppliedRecordEnvelope/r/duplicate
+=== RUN   TestTemplateAppliedRecordEnvelope/r/future
+=== RUN   TestTemplateAppliedRecordEnvelope/r/old-generation
+=== RUN   TestTemplateAppliedRecordEnvelope/r/wrong-section
+=== RUN   TestTemplateAppliedRecordEnvelope/r/unverified
+=== RUN   TestTemplateAppliedRecordEnvelope/c
+=== RUN   TestTemplateAppliedRecordEnvelope/c/valid
+=== RUN   TestTemplateAppliedRecordEnvelope/c/missing-creator
+=== RUN   TestTemplateAppliedRecordEnvelope/c/wrong-uuid
+=== RUN   TestTemplateAppliedRecordEnvelope/c/wrong-parent
+=== RUN   TestTemplateAppliedRecordEnvelope/c/wrong-owner
+=== RUN   TestTemplateAppliedRecordEnvelope/c/wrong-key
+=== RUN   TestTemplateAppliedRecordEnvelope/c/missing-mac
+=== RUN   TestTemplateAppliedRecordEnvelope/c/wrong-lineage
+=== RUN   TestTemplateAppliedRecordEnvelope/c/stripped-mode
+=== RUN   TestTemplateAppliedRecordEnvelope/c/duplicate
+=== RUN   TestTemplateAppliedRecordEnvelope/c/future
+=== RUN   TestTemplateAppliedRecordEnvelope/c/old-generation
+=== RUN   TestTemplateAppliedRecordEnvelope/c/wrong-section
+=== RUN   TestTemplateAppliedRecordEnvelope/c/unverified
+--- PASS: TestTemplateAppliedRecordEnvelope (0.01s)
+    --- PASS: TestTemplateAppliedRecordEnvelope/p (0.01s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/valid (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/missing-creator (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/wrong-uuid (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/wrong-parent (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/wrong-owner (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/wrong-key (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/missing-mac (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/wrong-lineage (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/stripped-mode (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/duplicate (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/future (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/old-generation (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/wrong-section (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/p/unverified (0.00s)
+    --- PASS: TestTemplateAppliedRecordEnvelope/r (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/valid (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/missing-creator (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/wrong-uuid (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/wrong-parent (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/wrong-owner (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/wrong-key (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/missing-mac (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/wrong-lineage (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/stripped-mode (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/duplicate (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/future (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/old-generation (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/wrong-section (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/r/unverified (0.00s)
+    --- PASS: TestTemplateAppliedRecordEnvelope/c (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/valid (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/missing-creator (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/wrong-uuid (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/wrong-parent (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/wrong-owner (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/wrong-key (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/missing-mac (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/wrong-lineage (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/stripped-mode (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/duplicate (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/future (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/old-generation (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/wrong-section (0.00s)
+        --- PASS: TestTemplateAppliedRecordEnvelope/c/unverified (0.00s)
+=== RUN   TestTemplateVersionFootprintProtectsHistory
+=== RUN   TestTemplateVersionFootprintProtectsHistory/stable
+=== RUN   TestTemplateVersionFootprintProtectsHistory/old-body-edit
+=== RUN   TestTemplateVersionFootprintProtectsHistory/metadata-edit
+=== RUN   TestTemplateVersionFootprintProtectsHistory/new-version
+=== RUN   TestTemplateVersionFootprintProtectsHistory/foreign-body
+=== RUN   TestTemplateVersionFootprintProtectsHistory/duplicate-version
+=== RUN   TestTemplateVersionFootprintProtectsHistory/wrong-group
+--- PASS: TestTemplateVersionFootprintProtectsHistory (0.08s)
+    --- PASS: TestTemplateVersionFootprintProtectsHistory/stable (0.01s)
+    --- PASS: TestTemplateVersionFootprintProtectsHistory/old-body-edit (0.01s)
+    --- PASS: TestTemplateVersionFootprintProtectsHistory/metadata-edit (0.01s)
+    --- PASS: TestTemplateVersionFootprintProtectsHistory/new-version (0.01s)
+    --- PASS: TestTemplateVersionFootprintProtectsHistory/foreign-body (0.01s)
+    --- PASS: TestTemplateVersionFootprintProtectsHistory/duplicate-version (0.01s)
+    --- PASS: TestTemplateVersionFootprintProtectsHistory/wrong-group (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	39.940s

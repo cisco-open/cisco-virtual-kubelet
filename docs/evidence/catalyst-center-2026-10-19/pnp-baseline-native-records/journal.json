@@ -1,0 +1,29 @@
+{
+  "actionApplications": [
+    {
+      "section": "inventory",
+      "resource": "pnp-record:6ad581c50bc0186771cb10a3:removal:v1:Y3ZrNzQyZjU3Njg:803bbcbaddcebd7a4c8d048bbdda39c31dcd657d8c2bf8059b16c10b87e4bb47:cd9666c2ff604175af464c1b1fb15ab3ab9d5c792cbbfa1dcf5fd982be5115d8",
+      "operation": {
+        "id": "7e7b69de9bab98e768a72392d1dddbc5",
+        "configName": "sites",
+        "configUID": "config",
+        "configGeneration": 1,
+        "controllerGeneration": 1,
+        "section": "inventory",
+        "resource": "pnp-register:250c146ec692b7b849c652c89522718d87c86afb444898302b315c49d94db461",
+        "action": "Create",
+        "phase": "Verified",
+        "submittedAt": "2026-10-19T02:34:44Z",
+        "createdResourceID": "6ad581c50bc0186771cb10a3"
+      },
+      "verifiedAt": "2026-10-19T02:34:45Z"
+    }
+  ],
+  "owners": [
+    {
+      "section": "inventory",
+      "configName": "sites",
+      "configUID": "config"
+    }
+  ]
+}

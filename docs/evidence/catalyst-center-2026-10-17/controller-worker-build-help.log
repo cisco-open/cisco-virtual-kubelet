@@ -1,0 +1,18 @@
+Run the adapter registered for one NetworkController in a
+namespace-scoped controller-runtime manager. This internal command is normally
+started by the central manager rather than invoked directly.
+
+Usage:
+  cisco-vk controller-worker [flags]
+
+Flags:
+      --config string                         Path to the projected NetworkController worker bootstrap document.
+      --controller-descriptor-digest string   Expected manager-side adapter descriptor fingerprint.
+      --controller-generation int             NetworkController generation used to build this worker Pod and its projected volumes.
+      --controller-name string                Immutable name identity for the NetworkController worker.
+      --controller-namespace string           Immutable namespace identity for the NetworkController worker.
+      --controller-type string                Immutable registered adapter type for the NetworkController worker.
+      --controller-uid string                 Immutable Kubernetes UID identity for the NetworkController worker.
+      --health-probe-bind-address string      The address the worker health endpoint binds to. (default ":8081")
+  -h, --help                                  help for controller-worker
+      --metrics-bind-address string           The address the worker metrics endpoint binds to. (default ":8080")

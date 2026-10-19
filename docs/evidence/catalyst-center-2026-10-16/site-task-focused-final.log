@@ -1,0 +1,314 @@
+=== RUN   TestSiteSingularPublicNoDispatch
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/area-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/stable
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-create/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/stable
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/building-update/lost-ack
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/stable
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/native-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/source-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/partial-read
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/owner-edit
+=== RUN   TestSiteSingularPublicNoDispatch/floor-update/lost-ack
+--- PASS: TestSiteSingularPublicNoDispatch (8.00s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/stable (0.85s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/native-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/source-edit (0.32s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/partial-read (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/owner-edit (0.20s)
+    --- PASS: TestSiteSingularPublicNoDispatch/area-create/lost-ack (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/stable (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/native-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/source-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/partial-read (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/owner-edit (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-create/lost-ack (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/stable (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/native-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/source-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/partial-read (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/owner-edit (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-create/lost-ack (0.23s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/stable (0.24s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/native-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/source-edit (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/partial-read (0.25s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/owner-edit (0.21s)
+    --- PASS: TestSiteSingularPublicNoDispatch/building-update/lost-ack (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/stable (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/native-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/source-edit (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/partial-read (0.27s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/owner-edit (0.22s)
+    --- PASS: TestSiteSingularPublicNoDispatch/floor-update/lost-ack (0.23s)
+=== RUN   TestSiteSingularPublicTaskRecovery
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-owner
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-pending
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-failed
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-foreign
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-unavailable
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-source
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-owner
+--- PASS: TestSiteSingularPublicTaskRecovery (8.39s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-pending (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-failed (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-foreign (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-unavailable (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-source (0.22s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-owner (0.21s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-pending (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-failed (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-foreign (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-unavailable (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-source (0.22s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-owner (0.21s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover (0.27s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-pending (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-failed (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-foreign (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-unavailable (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-source (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-owner (0.23s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-pending (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-failed (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-foreign (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-unavailable (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-source (0.22s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-owner (0.21s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-pending (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-failed (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-foreign (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-unavailable (0.25s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-source (0.24s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-owner (0.23s)
+=== RUN   TestSiteSingularTaskCompletion
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/area-create/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/area-create/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/building-create/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/building-create/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-create/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/building-update/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/building-update/Unknown/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Accepted/missing-root
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/complete
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/pending-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/failed-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/foreign-child
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/unavailable
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/partial
+=== RUN   TestSiteSingularTaskCompletion/floor-update/Unknown/missing-root
+--- PASS: TestSiteSingularTaskCompletion (0.69s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/area-create/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-create/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-create/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/building-update/Unknown/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Accepted/missing-root (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/complete (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/pending-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/failed-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/foreign-child (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/unavailable (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/partial (0.01s)
+    --- PASS: TestSiteSingularTaskCompletion/floor-update/Unknown/missing-root (0.01s)
+=== RUN   TestSiteKnownTaskRecoveryScope
+=== RUN   TestSiteKnownTaskRecoveryScope/create
+=== RUN   TestSiteKnownTaskRecoveryScope/update
+=== RUN   TestSiteKnownTaskRecoveryScope/taskless
+=== RUN   TestSiteKnownTaskRecoveryScope/undeclared
+=== RUN   TestSiteKnownTaskRecoveryScope/bulk
+=== RUN   TestSiteKnownTaskRecoveryScope/root
+=== RUN   TestSiteKnownTaskRecoveryScope/delete
+=== RUN   TestSiteKnownTaskRecoveryScope/prepared
+=== RUN   TestSiteKnownTaskRecoveryScope/parentless
+=== RUN   TestSiteKnownTaskRecoveryScope/physical
+=== RUN   TestSiteKnownTaskRecoveryScope/created-id
+=== RUN   TestSiteKnownTaskRecoveryScope/credentials
+=== RUN   TestSiteKnownTaskRecoveryScope/foreign-section
+=== RUN   TestSiteKnownTaskRecoveryScope/bad-id
+=== RUN   TestSiteKnownTaskRecoveryScope/missing-config
+=== RUN   TestSiteKnownTaskRecoveryScope/missing-time
+=== RUN   TestSiteKnownTaskRecoveryScope/accepted
+--- PASS: TestSiteKnownTaskRecoveryScope (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/create (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/update (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/taskless (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/undeclared (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/bulk (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/root (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/delete (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/prepared (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/parentless (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/physical (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/created-id (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/credentials (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/foreign-section (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/bad-id (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/missing-config (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/missing-time (0.00s)
+    --- PASS: TestSiteKnownTaskRecoveryScope/accepted (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	19.432s

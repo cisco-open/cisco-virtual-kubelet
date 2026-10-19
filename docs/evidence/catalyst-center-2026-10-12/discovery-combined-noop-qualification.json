@@ -1,0 +1,24 @@
+{
+  "recordedAt": "2026-10-12T20:01:44.510113+00:00",
+  "test": "TestLiveCombinedDiscoveryNoOp",
+  "result": "PASS",
+  "binarySHA256": "07f0dd28af03b2c09205fe2a8aae484196dbd5b14e7aceb6370f1f9cfbafdae2",
+  "discovery": "Switches",
+  "tag": "CVK-NAC-Journal-0146d7a983a4",
+  "sectionOrders": [
+    [
+      "templates",
+      "inventory"
+    ],
+    [
+      "inventory",
+      "templates"
+    ]
+  ],
+  "resourceCount": 2,
+  "mutations": false,
+  "limitations": [
+    "Native no-op verification only",
+    "Combined create/restart verified with fixtures; deployed-worker qualification pending"
+  ]
+}

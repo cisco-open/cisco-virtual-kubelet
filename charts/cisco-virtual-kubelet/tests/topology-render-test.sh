@@ -21,6 +21,14 @@ managed_lease_namespace_render="$scratch_dir/managed-lease-namespace.yaml"
 strict_render_bundle="$scratch_dir/managed-and-examples.yaml"
 error_output="$scratch_dir/error.txt"
 
+# Helm schema validators report either JSON Pointer or dotted property paths.
+assert_schema_path() {
+  local pointer="$1"
+  local dotted="${pointer#/}"
+  dotted="${dotted//\//.}"
+  grep -Fq "$pointer" "$error_output" || grep -Fq "$dotted" "$error_output"
+}
+
 has_named_binding() {
   local manifest="$1"
   local expected_name="$2"
@@ -51,6 +59,9 @@ has_named_service_account() {
     END { exit(found ? 0 : 1) }
   ' "$manifest"
 }
+
+bash "$chart_dir/tests/configuration-protocol-render-test.sh"
+bash "$chart_dir/tests/metadata-protocol-render-test.sh"
 
 helm lint "$chart_dir" --kube-version 1.28.0 >/dev/null
 helm lint "$chart_dir" --kube-version 1.35.0 \
@@ -180,7 +191,7 @@ helm template cvk "$chart_dir" \
   --set rbac.profile=strict \
   --set-json 'topology.policy.disruptionProtections=null' \
   --set-json 'topology.policy.riskGroups=null' >"$managed_legacy_values_render"
-helm template cvk "$chart_dir" --namespace cisco-vk-system --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
+helm template cvk "$chart_dir" --namespace cisco-vk-system --kube-version 1.35.0 --set topology.enabled=true --set controller.leaderElect=true --set rbac.profile=strict \
   --set config.leaseNamespace=cvk-leases >"$managed_lease_namespace_render"
 
 # The Go contract reader uses a duplicate-key-aware YAML decoder. Include the
@@ -248,6 +259,15 @@ grep -Fq -- '- --app-hosting-access-mode=readWrite' "$managed_render"
 grep -Fq -- '- --network-management-service-account=cvk-cisco-virtual-kubelet-network-management' "$managed_render"
 grep -Fq -- '- --network-management-access-mode=readOnly' "$managed_render"
 
+# The live admission contract is discovered by the Helm release label. A
+# rendered-but-unlabelled SWIM policy would be omitted from that inventory.
+swim_admission_render="$scratch_dir/swim-admission.yaml"
+helm template cvk "$chart_dir" --namespace cisco-vk-system \
+  --kube-version 1.35.0 --set topology.enabled=true \
+  --set controller.leaderElect=true --set rbac.profile=strict \
+  --show-only templates/swim-handoff-admission.yaml >"$swim_admission_render"
+test "$(grep -c '^    app.kubernetes.io/instance: cvk$' "$swim_admission_render")" -eq 2
+
 # Derived names reserve suffix space before truncation, so long release names
 # cannot collapse the two cluster-reserved identities onto the same DNS label.
 long_name_render="$scratch_dir/long-name.yaml"
@@ -280,8 +300,8 @@ grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-policy' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-ledger' "$managed_render"
 grep -Fq 'name: cvk-cisco-virtual-kubelet-topology-graph-viewer' "$managed_render"
 grep -Fq 'topology.cisco.vk/admission-policy-prefix: "cvk-cisco-virtual-kubelet"' "$managed_render"
-test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 55
-test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 66
+test "$(grep -c '^    topology.cisco.vk/admission-contract-version: "v2"$' "$managed_render")" -eq 59
+test "$(grep -c '^    helm.sh/resource-policy: keep$' "$managed_render")" -eq 70
 grep -Fq '"globalMaxConcurrentTransfers":1' "$managed_render"
 grep -Fq '"domainMaxConcurrentTransfers":{"topology.kubernetes.io/region":1}' "$managed_render"
 grep -Fq '"appHostingServiceAccountName":"cvk-cisco-virtual-kubelet-app-hosting"' "$managed_render"
@@ -336,8 +356,12 @@ if grep -Eq '^[[:space:]]+topology\.cisco\.vk/ledger-uid:' "$managed_render"; th
   exit 1
 fi
 
-test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 27
-test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 27
+# The established 29-policy set plus retained bootstrap and metadata custody.
+test "$(grep -c '^kind: ValidatingAdmissionPolicy$' "$managed_render")" -eq 31
+test "$(grep -c '^kind: ValidatingAdmissionPolicyBinding$' "$managed_render")" -eq 31
+grep -Fq 'name: cvk-cisco-virtual-kubelet-bootstrap-fence' "$managed_render"
+grep -Fq 'name: cvk-cisco-virtual-kubelet-metadata-handoff' "$managed_render"
+grep -Fq 'ops.cisco.vk/metadata-handoff-protocol: controller-metadata-handoff-v1' "$managed_render"
 test "$(grep -c '^    topology.cisco.vk/admission-contract-digest: "sha256:02c0e65602ac0ebcc3d19b15bd7cbcd7c3840c081d72f7541efbafc394f2ee76"$' "$managed_render")" -eq 2
 grep -Fq 'upgrade this release once with topology.enabled=true before disabling topology' \
   "$chart_dir/templates/_helpers.tpl"
@@ -385,7 +409,8 @@ assert_policy_shape managed-drain-pod 1 5 3
 assert_policy_shape managed-device 0 10 16
 assert_policy_shape managed-rollout 0 1 9
 assert_policy_shape managed-upgrade-leaf 1 5 8
-assert_policy_shape managed-maintenance-lease 1 11 8
+assert_policy_shape managed-maintenance-lease 1 11 9
+assert_policy_shape configuration-reservation 0 26 4
 assert_policy_shape topology-policy 1 4 5
 assert_policy_shape topology-ledger 1 4 4
 
@@ -430,7 +455,7 @@ grep -Fq "object.status.managerDrain.pods.exists(p, p.uid == uid)" "$managed_ren
 grep -Fq "f == 'ops.cisco.vk/iosxe-rollout-drain'" "$managed_render"
 grep -Fq "variables.oldSession == '' || variables.newSession == ''" "$managed_render"
 grep -Fq "variables.oldSession == variables.newSession" "$managed_render"
-grep -Fq "'^(software-upgrade|software-drain|operational-action)/" "$managed_render"
+grep -Fq "'^(software-upgrade|software-drain|operational-action|controller-configuration)/" "$managed_render"
 grep -Fq "maintenance-session-token'].matches(" "$managed_render"
 grep -Fq -- "-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-" "$managed_render"
 
@@ -718,9 +743,23 @@ for worker_role in \
   "$app_ro_role" "$app_rw_role" "$app_device_role" \
   "$network_global_role" "$network_lease_ro_role" "$network_lease_rw_role" \
   "$network_ro_role" "$network_rw_role"; do
-  if grep -Eq 'resources: \["(serviceaccounts|serviceaccounts/token|rolebindings|clusterrolebindings|roles|clusterroles)"\]|resources: \["\*"\]|verbs: \["\*"\]' "$worker_role"; then
+  if grep -Eq 'resources: \["(serviceaccounts|serviceaccounts/token|clusterrolebindings|roles)"\]|resources: \["\*"\]|verbs: \["\*"\]' "$worker_role"; then
     echo "managed worker profile retained token, RBAC, or wildcard authority" >&2
     exit 1
+  fi
+  # Admission verification may inspect fixed roles and the local worker grant.
+  # The exact rendered-rule Go check above also rejects any additional verbs.
+  if grep -Fq 'resources: ["clusterroles"]' "$worker_role"; then
+    if [ "$worker_role" != "$network_global_role" ] || ! grep -A1 -F 'resources: ["clusterroles"]' "$worker_role" | grep -Fq 'verbs: ["get"]'; then
+      echo "unexpected worker ClusterRole access" >&2
+      exit 1
+    fi
+  fi
+  if grep -Fq 'resources: ["rolebindings"]' "$worker_role"; then
+    if [ "$worker_role" != "$network_rw_role" ] || ! grep -A1 -F 'resources: ["rolebindings"]' "$worker_role" | grep -Fq 'verbs: ["get"]'; then
+      echo "unexpected worker RoleBinding access" >&2
+      exit 1
+    fi
   fi
 done
 
@@ -743,12 +782,12 @@ if grep -Eq 'pods/(log|exec)|verbs:.*(create.*pods|delete.*nodes)' "$app_rw_role
 fi
 if grep -Fq 'resources: ["ciscodevices"]' "$app_ro_role" ||
    grep -Fq 'resources: ["ciscodevices"]' "$app_rw_role" ||
-   grep -Fq 'resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]' "$app_rw_role"; then
+   grep -Fq 'resources: ["iosxesoftwareupgrades", "iosxeoperationalactions", "controllerconfigurationreservations"]' "$app_rw_role"; then
   echo "cluster-bound app profile retained tenant operation reads" >&2
   exit 1
 fi
 grep -A1 -F 'resources: ["ciscodevices"]' "$app_device_role" | grep -Fq 'verbs: ["get"]'
-grep -A1 -F 'resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]' "$app_device_role" | grep -Fq 'verbs: ["get", "list", "watch"]'
+grep -A1 -F 'resources: ["iosxesoftwareupgrades", "iosxeoperationalactions", "controllerconfigurationreservations"]' "$app_device_role" | grep -Fq 'verbs: ["get", "list", "watch"]'
 grep -A1 -F 'resources: ["iosxesoftwareupgrades/status"]' "$app_device_role" | grep -Fq 'verbs: ["get", "update", "patch"]'
 if grep -Eq 'create|delete|secrets|nodes|pods|leases' "$app_device_role"; then
   echo "app-hosting device support exceeds its admission-fenced drain inventory role" >&2
@@ -940,7 +979,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "managed topology rendered without leader election" >&2
   exit 1
 fi
-grep -Fq '/controller/leaderElect' "$error_output"
+assert_schema_path '/controller/leaderElect'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --skip-schema-validation \
@@ -1082,7 +1121,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "managed topology rendered with generic write-class gNOI enabled" >&2
   exit 1
 fi
-grep -Fq '/gnoi/enableWriteClass' "$error_output"
+assert_schema_path '/gnoi/enableWriteClass'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --skip-schema-validation \
@@ -1194,7 +1233,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "unknown disruption-protection reason passed values schema" >&2
   exit 1
 fi
-grep -Fq '/topology/policy/disruptionProtections/0/reason' "$error_output"
+assert_schema_path '/topology/policy/disruptionProtections/0/reason'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \
@@ -1256,7 +1295,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "workload drain rendered while managed topology was disabled" >&2
   exit 1
 fi
-grep -Fq '/topology/enabled' "$error_output"
+assert_schema_path '/topology/enabled'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \
@@ -1269,7 +1308,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "workload drain rendered while gNOI software upgrade was disabled" >&2
   exit 1
 fi
-grep -Fq '/gnoi/enableSoftwareUpgrade' "$error_output"
+assert_schema_path '/gnoi/enableSoftwareUpgrade'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \
@@ -1283,7 +1322,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "workload drain rendered while the global gNOI kill switch was active" >&2
   exit 1
 fi
-grep -Fq '/gnoi/disabled' "$error_output"
+assert_schema_path '/gnoi/disabled'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true \
@@ -1327,7 +1366,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "invalid topology policy namespace passed values schema" >&2
   exit 1
 fi
-grep -Fq '/topology/policy/namespace' "$error_output"
+assert_schema_path '/topology/policy/namespace'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true --set controller.leaderElect=true \
@@ -1336,7 +1375,8 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "invalid label-selector operator/value combination passed schema" >&2
   exit 1
 fi
-grep -Fq "maxItems: got 1, want 0" "$error_output"
+assert_schema_path '/topology/policy/fleetSelector/matchExpressions/0/values'
+grep -Eq 'maxItems: got 1, want 0|Array must have at most 0 items' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true --set controller.leaderElect=true \
@@ -1345,7 +1385,8 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "invalid label-selector key passed schema" >&2
   exit 1
 fi
-grep -Fq "invalid propertyName 'bad key'" "$error_output"
+assert_schema_path '/topology/policy/fleetSelector/matchLabels'
+grep -Fq "invalid propertyName 'bad key'" "$error_output" || grep -Fq 'Property name of "bad key" does not match' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true --set controller.leaderElect=true \
@@ -1354,7 +1395,8 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "unprotected fleet enrollment selector rendered" >&2
   exit 1
 fi
-grep -Fq "invalid propertyName 'app'" "$error_output"
+assert_schema_path '/topology/policy/fleetSelector/matchLabels'
+grep -Fq "invalid propertyName 'app'" "$error_output" || grep -Fq 'Property name of "app" does not match' "$error_output"
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true --set controller.leaderElect=true \
@@ -1364,7 +1406,7 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "operational risk key rendered as a scheduler-visible Node projection" >&2
   exit 1
 fi
-grep -Fq '/topology/policy/projectedTopologyKeys/0' "$error_output"
+assert_schema_path '/topology/policy/projectedTopologyKeys/0'
 
 if helm template cvk "$chart_dir" --kube-version 1.35.0 \
     --set topology.enabled=true --set controller.leaderElect=true \
@@ -1374,6 +1416,6 @@ if helm template cvk "$chart_dir" --kube-version 1.35.0 \
   echo "artifact distribution key rendered as a scheduler-visible Node projection" >&2
   exit 1
 fi
-grep -Fq '/topology/policy/projectedTopologyKeys/0' "$error_output"
+assert_schema_path '/topology/policy/projectedTopologyKeys/0'
 
 echo "managed topology Helm render contract passed"

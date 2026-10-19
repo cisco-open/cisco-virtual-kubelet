@@ -1,0 +1,91 @@
+{
+  "fullModelComplete": false,
+  "branch": "pr/johalley/catc-support",
+  "scope": "Explicit private typed original Prepared metadata PnP submission via existing journal/claim/transport, verification and original no-dispatch proof; settlement/public activation incomplete",
+  "source": {
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "8a0371712cdf00969303e8451b99b98029d70deda7da0ff47c6fc82b199c4c38"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "eb32904d69c5427ac7151f98f4bcaea237eff5eaa6fdf468f232cee2e0251887"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1698,
+      "sha256": "7931f3eaad4143d17a072a4924cad8ca2e5628bd81b22342383156ec8f677823"
+    },
+    "internal/controllerconfiguration": {
+      "files": 156,
+      "sha256": "ea214c068cedfaeb4c9f0da58c61ee8072a5a445c1d7ecfc28f39bf01d6651b7"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "8ffa14352644c314420221e7660422148c13901a50306ae636293d219327f412"
+    },
+    "manifests": {
+      "config/crd/cisco.vk_networkcontrollers.yaml": "9742625699c2de1eaef0c18a041cbe4a5d1579b035aa482d3f9fefccb4697737",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "9742625699c2de1eaef0c18a041cbe4a5d1579b035aa482d3f9fefccb4697737",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "96abff78b668f7d2b3e361135c6109e631d9a04818d133e0e8b6f3df22390d79"
+    }
+  },
+  "gates": {
+    "typedSubmissionRealAPI": {
+      "result": "PASS",
+      "passingEvents": 5,
+      "packages": 1,
+      "packageSeconds": 29.724,
+      "log": "/private/tmp/cvk-metadata-submit-complete-api.log"
+    },
+    "foundationRealAPI": {
+      "result": "PASS",
+      "passingEvents": 79,
+      "packages": 1,
+      "packageSeconds": 23.759,
+      "log": "/private/tmp/cvk-metadata-submit-foundation-api.log"
+    },
+    "sharedFoundations": {
+      "result": "PASS",
+      "passingEvents": 3382,
+      "packages": 7,
+      "packageSeconds": 32.75,
+      "log": "/private/tmp/cvk-metadata-submit-foundation.log"
+    },
+    "PnPSWIMAndJournalCompatibility": {
+      "result": "PASS",
+      "passingEvents": 1221,
+      "packages": 1,
+      "packageSeconds": 20.712,
+      "log": "/private/tmp/cvk-metadata-submit-complete-compat.log"
+    },
+    "permitEpoch": {
+      "result": "PASS",
+      "passingEvents": 22,
+      "packages": 1,
+      "packageSeconds": 4.08,
+      "log": "/private/tmp/cvk-metadata-submit-epoch.log"
+    }
+  },
+  "mainBuild": "PASS",
+  "sourceAndFormat": "PASS",
+  "uniquePinnedResourceRows": 93,
+  "automaticActivation": false,
+  "labMutations": false,
+  "qualifiedNativeService": "controlled HTTP only",
+  "qualificationLimits": [
+    "Three actual isolated API workflows (verified tombstone, pre-HTTP refusal, native lost response) use controlled appliance HTTP",
+    "Manager/worker impersonation broad test RBAC isolates admission; worker readiness/background compiler publication/remaining deployed compatibility staged",
+    "Exact server Lease UIDs and real source/actor/status schema retention qualified; no installed worker or real Catalyst Center mutation qualified",
+    "Unsealed configured execution remains Prepared; default/private legacy behavior unchanged for unconfigured callers",
+    "Worker finish/new planning cannot release or replace manager-retained custody",
+    "Configured runtime also rejects a manually tampered unsealed Submitting slot at the native authority guard"
+  ],
+  "remaining": [
+    "Original verified-absence/certified-refusal manager outcome reconstruction and exact original fence settlement",
+    "UID/RV-conditional deletion, lost-response/restart recovery, manager release acknowledgement and handoff retirement",
+    "Fresh next-UUID cohort, public routing and full installed/native lab qualification",
+    "Complete consumer protection, deletion/missing-source finalization and wider pinned 93-resource hardware/execution gaps"
+  ],
+  "mainBuildBinary": "/private/tmp/cvk-metadata-submit-complete-cisco-vk",
+  "strictDocumentation": "PASS"
+}

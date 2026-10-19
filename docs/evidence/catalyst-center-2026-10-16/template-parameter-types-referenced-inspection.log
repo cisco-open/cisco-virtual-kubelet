@@ -1,0 +1,7 @@
+{"nativeParameterCount": 5, "expectedParameterCount": 5, "customParamsOrder": false}
+{"path": "/templateParams/4/dataType", "expectedShape": "str", "actualShape": "str", "present": true, "actualEnum": "STRING"}
+{"path": "/templateParams/4/required", "expectedShape": "bool", "actualShape": "bool", "present": true, "actualEnum": null}
+{"path": "/templateParams/4/notParam", "expectedShape": "bool", "actualShape": "bool", "present": true, "actualEnum": null}
+{"path": "/templateParams/4/description", "expectedShape": "str", "actualShape": "NoneType", "present": true, "actualEnum": null}
+{"path": "/templateParams/4/displayName", "expectedShape": "str", "actualShape": "NoneType", "present": true, "actualEnum": null}
+{"path": "/templateParams/4/instructionText", "expectedShape": "str", "actualShape": "NoneType", "present": true, "actualEnum": null}

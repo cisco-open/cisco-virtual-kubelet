@@ -1,0 +1,530 @@
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/valid
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/disabled
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/invalid-flag
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/missing-owner
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/foreign-owner
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/prepared
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/wrong-parent
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/changed-source
+=== RUN   TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/paused
+--- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal (0.76s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/valid (0.66s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/disabled (0.01s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/invalid-flag (0.01s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/missing-owner (0.01s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/foreign-owner (0.01s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/prepared (0.01s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/wrong-parent (0.01s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/changed-source (0.01s)
+    --- PASS: TestAnycastBulkBindingRequiresExactSourceOwnerAndJournal/paused (0.01s)
+=== RUN   TestAnycastBulkStableTwentyMemberChunks
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/complete
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/partial
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/late-cohort-conflict
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/late-pool
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/tail-source-change
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/legacy-large-recovery
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/public-manifest
+=== RUN   TestAnycastBulkStableTwentyMemberChunks/bad-offset
+--- PASS: TestAnycastBulkStableTwentyMemberChunks (13.03s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/complete (1.00s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/partial (0.17s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/late-cohort-conflict (0.04s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/late-pool (0.12s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/tail-source-change (0.16s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/legacy-large-recovery (0.08s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/public-manifest (11.33s)
+    --- PASS: TestAnycastBulkStableTwentyMemberChunks/bad-offset (0.15s)
+=== RUN   TestAnycastBulkAcknowledgedRecovery
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-unknown
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-partial
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-option-removed
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-child-failed
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-child-pending
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-tree-unavailable
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-source-changed
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-parent-replaced
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-taskless
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-binding-changed
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-existing-replaced
+=== RUN   TestAnycastBulkAcknowledgedRecovery/public-legacy-known
+--- PASS: TestAnycastBulkAcknowledgedRecovery (75.67s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-unknown (11.17s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-partial (11.21s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-option-removed (5.99s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-child-failed (5.18s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-child-pending (5.16s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-tree-unavailable (5.15s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-source-changed (2.89s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-parent-replaced (3.94s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-taskless (2.91s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-binding-changed (5.13s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-existing-replaced (5.12s)
+    --- PASS: TestAnycastBulkAcknowledgedRecovery/public-legacy-known (11.81s)
+=== RUN   TestAnycastBulkRecoverySelection
+=== RUN   TestAnycastBulkRecoverySelection/chunk
+=== RUN   TestAnycastBulkRecoverySelection/legacy
+=== RUN   TestAnycastBulkRecoverySelection/taskless
+=== RUN   TestAnycastBulkRecoverySelection/foreign-scope
+=== RUN   TestAnycastBulkRecoverySelection/source-digest
+=== RUN   TestAnycastBulkRecoverySelection/count
+=== RUN   TestAnycastBulkRecoverySelection/mask
+=== RUN   TestAnycastBulkRecoverySelection/empty-binding
+=== RUN   TestAnycastBulkRecoverySelection/phase
+=== RUN   TestAnycastBulkRecoverySelection/action
+=== RUN   TestAnycastBulkRecoverySelection/target
+=== RUN   TestAnycastBulkRecoverySelection/parent
+=== RUN   TestAnycastBulkRecoverySelection/physical
+=== RUN   TestAnycastBulkRecoverySelection/prepared
+=== RUN   TestAnycastBulkRecoverySelection/credentials
+=== RUN   TestAnycastBulkRecoverySelection/source-pair
+--- PASS: TestAnycastBulkRecoverySelection (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/chunk (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/legacy (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/taskless (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/foreign-scope (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/source-digest (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/count (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/mask (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/empty-binding (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/phase (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/action (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/target (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/parent (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/physical (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/prepared (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/credentials (0.00s)
+    --- PASS: TestAnycastBulkRecoverySelection/source-pair (0.00s)
+=== RUN   TestAnycastBulkRecoveryPreservesOtherCallbacks
+--- PASS: TestAnycastBulkRecoveryPreservesOtherCallbacks (0.00s)
+=== RUN   TestAnycastBulkReceiptCanonicalRoundTrip
+--- PASS: TestAnycastBulkReceiptCanonicalRoundTrip (0.00s)
+=== RUN   TestAnycastBulkAcceptedChildrenHoldOriginalOperation
+=== RUN   TestAnycastBulkAcceptedChildrenHoldOriginalOperation/public-accepted-child-failed
+=== RUN   TestAnycastBulkAcceptedChildrenHoldOriginalOperation/public-accepted-child-pending
+--- PASS: TestAnycastBulkAcceptedChildrenHoldOriginalOperation (10.04s)
+    --- PASS: TestAnycastBulkAcceptedChildrenHoldOriginalOperation/public-accepted-child-failed (5.03s)
+    --- PASS: TestAnycastBulkAcceptedChildrenHoldOriginalOperation/public-accepted-child-pending (5.01s)
+=== RUN   TestAnycastGatewayBulkNativeLifecycle
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/create
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/existing-member
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/noop
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/partial
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/lost
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/denied
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/missing-guard
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/duplicate
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/pending-vlan-conflict
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/late-pool
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/guard-pool-race
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/l2-conflict
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/replacement-readback
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/wrong-readback
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/changed-intent
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/malformed-mask
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/pending-name-conflict
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/unresolved-later-model
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/baseline-replaced-before-submit
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/caller-payload-mutation
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/existing-member-omitted-field
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/mixed-fabric
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/executor-create
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/executor-partial
+=== RUN   TestAnycastGatewayBulkNativeLifecycle/executor-waiting-invalid-existing
+--- PASS: TestAnycastGatewayBulkNativeLifecycle (0.57s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/create (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/existing-member (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/noop (0.01s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/partial (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/lost (0.02s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/denied (0.02s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/missing-guard (0.01s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/duplicate (0.00s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/pending-vlan-conflict (0.01s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/late-pool (0.02s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/guard-pool-race (0.02s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/l2-conflict (0.01s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/replacement-readback (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/wrong-readback (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/changed-intent (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/malformed-mask (0.02s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/pending-name-conflict (0.01s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/unresolved-later-model (0.01s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/baseline-replaced-before-submit (0.02s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/caller-payload-mutation (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/existing-member-omitted-field (0.03s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/mixed-fabric (0.02s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/executor-create (0.06s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/executor-partial (0.06s)
+    --- PASS: TestAnycastGatewayBulkNativeLifecycle/executor-waiting-invalid-existing (0.02s)
+=== RUN   TestAnycastSecondaryReleaseMinimum
+--- PASS: TestAnycastSecondaryReleaseMinimum (0.00s)
+=== RUN   TestAnycastCapabilityEvidence
+=== RUN   TestAnycastCapabilityEvidence/supported
+=== RUN   TestAnycastCapabilityEvidence/ordinary
+=== RUN   TestAnycastCapabilityEvidence/old
+=== RUN   TestAnycastCapabilityEvidence/partial
+=== RUN   TestAnycastCapabilityEvidence/missing
+=== RUN   TestAnycastCapabilityEvidence/wrong-type
+=== RUN   TestAnycastCapabilityEvidence/release-changed
+--- PASS: TestAnycastCapabilityEvidence (0.06s)
+    --- PASS: TestAnycastCapabilityEvidence/supported (0.01s)
+    --- PASS: TestAnycastCapabilityEvidence/ordinary (0.00s)
+    --- PASS: TestAnycastCapabilityEvidence/old (0.01s)
+    --- PASS: TestAnycastCapabilityEvidence/partial (0.01s)
+    --- PASS: TestAnycastCapabilityEvidence/missing (0.01s)
+    --- PASS: TestAnycastCapabilityEvidence/wrong-type (0.01s)
+    --- PASS: TestAnycastCapabilityEvidence/release-changed (0.01s)
+=== RUN   TestAnycastGatewayFabricDependencies
+=== RUN   TestAnycastGatewayFabricDependencies/site
+=== RUN   TestAnycastGatewayFabricDependencies/zone
+=== RUN   TestAnycastGatewayFabricDependencies/anchored-site
+=== RUN   TestAnycastGatewayFabricDependencies/missing-membership
+=== RUN   TestAnycastGatewayFabricDependencies/missing-parent
+=== RUN   TestAnycastGatewayFabricDependencies/parent-drift
+=== RUN   TestAnycastGatewayFabricDependencies/wrong-reservation-owner
+=== RUN   TestAnycastGatewayFabricDependencies/changed-parent-id
+=== RUN   TestAnycastGatewayFabricDependencies/changed-vn-id
+--- PASS: TestAnycastGatewayFabricDependencies (0.18s)
+    --- PASS: TestAnycastGatewayFabricDependencies/site (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/zone (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/anchored-site (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/missing-membership (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/missing-parent (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/parent-drift (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/wrong-reservation-owner (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/changed-parent-id (0.02s)
+    --- PASS: TestAnycastGatewayFabricDependencies/changed-vn-id (0.02s)
+=== RUN   TestAnycastGatewayNativeCreation
+=== RUN   TestAnycastGatewayNativeCreation/create
+=== RUN   TestAnycastGatewayNativeCreation/zone
+=== RUN   TestAnycastGatewayNativeCreation/lost-receipt
+=== RUN   TestAnycastGatewayNativeCreation/stale-before-submit
+=== RUN   TestAnycastGatewayNativeCreation/changed-pool-after-submit
+=== RUN   TestAnycastGatewayNativeCreation/wrong-readback
+=== RUN   TestAnycastGatewayNativeCreation/incomplete-model
+=== RUN   TestAnycastGatewayNativeCreation/name-conflict-before-submit
+=== RUN   TestAnycastGatewayNativeCreation/id-conflict-before-submit
+=== RUN   TestAnycastGatewayNativeCreation/zone-conflict-before-submit
+=== RUN   TestAnycastGatewayNativeCreation/other-fabric-allocation
+=== RUN   TestAnycastGatewayNativeCreation/l2-name-conflict
+=== RUN   TestAnycastGatewayNativeCreation/l2-id-conflict
+=== RUN   TestAnycastGatewayNativeCreation/l2-zone-conflict
+=== RUN   TestAnycastGatewayNativeCreation/l2-other-fabric
+=== RUN   TestAnycastGatewayNativeCreation/l2-unavailable
+--- PASS: TestAnycastGatewayNativeCreation (0.33s)
+    --- PASS: TestAnycastGatewayNativeCreation/create (0.03s)
+    --- PASS: TestAnycastGatewayNativeCreation/zone (0.03s)
+    --- PASS: TestAnycastGatewayNativeCreation/lost-receipt (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/stale-before-submit (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/changed-pool-after-submit (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/wrong-readback (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/incomplete-model (0.01s)
+    --- PASS: TestAnycastGatewayNativeCreation/name-conflict-before-submit (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/id-conflict-before-submit (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/zone-conflict-before-submit (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/other-fabric-allocation (0.03s)
+    --- PASS: TestAnycastGatewayNativeCreation/l2-name-conflict (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/l2-id-conflict (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/l2-zone-conflict (0.02s)
+    --- PASS: TestAnycastGatewayNativeCreation/l2-other-fabric (0.03s)
+    --- PASS: TestAnycastGatewayNativeCreation/l2-unavailable (0.02s)
+=== RUN   TestAnycastExecutorParentOrdering
+=== RUN   TestAnycastExecutorParentOrdering/create
+=== RUN   TestAnycastExecutorParentOrdering/missing-parent-declaration
+=== RUN   TestAnycastExecutorParentOrdering/incomplete-child
+=== RUN   TestAnycastExecutorParentOrdering/missing-zone-membership
+=== RUN   TestAnycastExecutorParentOrdering/replaced-parent
+=== RUN   TestAnycastExecutorParentOrdering/bulk-create
+=== RUN   TestAnycastExecutorParentOrdering/bulk-incomplete-child
+=== RUN   TestAnycastExecutorParentOrdering/bulk-replaced-parent
+--- PASS: TestAnycastExecutorParentOrdering (0.54s)
+    --- PASS: TestAnycastExecutorParentOrdering/create (0.05s)
+    --- PASS: TestAnycastExecutorParentOrdering/missing-parent-declaration (0.01s)
+    --- PASS: TestAnycastExecutorParentOrdering/incomplete-child (0.01s)
+    --- PASS: TestAnycastExecutorParentOrdering/missing-zone-membership (0.01s)
+    --- PASS: TestAnycastExecutorParentOrdering/replaced-parent (0.04s)
+    --- PASS: TestAnycastExecutorParentOrdering/bulk-create (0.15s)
+    --- PASS: TestAnycastExecutorParentOrdering/bulk-incomplete-child (0.02s)
+    --- PASS: TestAnycastExecutorParentOrdering/bulk-replaced-parent (0.23s)
+=== RUN   TestAnycastObservationEvidence
+=== RUN   TestAnycastObservationEvidence/minimal
+=== RUN   TestAnycastObservationEvidence/secondary
+=== RUN   TestAnycastObservationEvidence/empty-secondary
+=== RUN   TestAnycastObservationEvidence/null-secondary
+=== RUN   TestAnycastObservationEvidence/unknown
+=== RUN   TestAnycastObservationEvidence/unknown-secondary
+=== RUN   TestAnycastObservationEvidence/missing-id
+=== RUN   TestAnycastObservationEvidence/missing-vlan
+=== RUN   TestAnycastObservationEvidence/bad-boolean
+=== RUN   TestAnycastObservationEvidence/bad-vlan
+=== RUN   TestAnycastObservationEvidence/duplicate-pool
+=== RUN   TestAnycastObservationEvidence/duplicate-order
+=== RUN   TestAnycastObservationEvidence/wrong-order
+=== RUN   TestAnycastObservationEvidence/infra
+=== RUN   TestAnycastObservationEvidence/infra-secondary
+=== RUN   TestAnycastObservationEvidence/bad-pool-type
+--- PASS: TestAnycastObservationEvidence (0.02s)
+    --- PASS: TestAnycastObservationEvidence/minimal (0.00s)
+    --- PASS: TestAnycastObservationEvidence/secondary (0.00s)
+    --- PASS: TestAnycastObservationEvidence/empty-secondary (0.00s)
+    --- PASS: TestAnycastObservationEvidence/null-secondary (0.00s)
+    --- PASS: TestAnycastObservationEvidence/unknown (0.00s)
+    --- PASS: TestAnycastObservationEvidence/unknown-secondary (0.00s)
+    --- PASS: TestAnycastObservationEvidence/missing-id (0.00s)
+    --- PASS: TestAnycastObservationEvidence/missing-vlan (0.00s)
+    --- PASS: TestAnycastObservationEvidence/bad-boolean (0.00s)
+    --- PASS: TestAnycastObservationEvidence/bad-vlan (0.00s)
+    --- PASS: TestAnycastObservationEvidence/duplicate-pool (0.00s)
+    --- PASS: TestAnycastObservationEvidence/duplicate-order (0.00s)
+    --- PASS: TestAnycastObservationEvidence/wrong-order (0.00s)
+    --- PASS: TestAnycastObservationEvidence/infra (0.00s)
+    --- PASS: TestAnycastObservationEvidence/infra-secondary (0.00s)
+    --- PASS: TestAnycastObservationEvidence/bad-pool-type (0.00s)
+=== RUN   TestAnycastInventoryCompleteness
+=== RUN   TestAnycastInventoryCompleteness/paged
+=== RUN   TestAnycastInventoryCompleteness/repeated
+=== RUN   TestAnycastInventoryCompleteness/partial
+=== RUN   TestAnycastInventoryCompleteness/duplicate-pool
+=== RUN   TestAnycastInventoryCompleteness/duplicate-vlan
+=== RUN   TestAnycastInventoryCompleteness/duplicate-name
+=== RUN   TestAnycastInventoryCompleteness/other-fabric
+--- PASS: TestAnycastInventoryCompleteness (0.14s)
+    --- PASS: TestAnycastInventoryCompleteness/paged (0.02s)
+    --- PASS: TestAnycastInventoryCompleteness/repeated (0.03s)
+    --- PASS: TestAnycastInventoryCompleteness/partial (0.01s)
+    --- PASS: TestAnycastInventoryCompleteness/duplicate-pool (0.02s)
+    --- PASS: TestAnycastInventoryCompleteness/duplicate-vlan (0.02s)
+    --- PASS: TestAnycastInventoryCompleteness/duplicate-name (0.02s)
+    --- PASS: TestAnycastInventoryCompleteness/other-fabric (0.02s)
+=== RUN   TestAnycastGatewaySemanticReadback
+=== RUN   TestAnycastGatewaySemanticReadback/generated
+=== RUN   TestAnycastGatewaySemanticReadback/explicit
+=== RUN   TestAnycastGatewaySemanticReadback/critical-data
+=== RUN   TestAnycastGatewaySemanticReadback/critical-voice
+=== RUN   TestAnycastGatewaySemanticReadback/secondary
+=== RUN   TestAnycastGatewaySemanticReadback/wrong-secondary-binding
+=== RUN   TestAnycastGatewaySemanticReadback/missing-secondary
+=== RUN   TestAnycastGatewaySemanticReadback/missing-flag
+=== RUN   TestAnycastGatewaySemanticReadback/unknown
+=== RUN   TestAnycastGatewaySemanticReadback/wrong-generated-name
+=== RUN   TestAnycastGatewaySemanticReadback/wrong-declared-flag
+=== RUN   TestAnycastGatewaySemanticReadback/wrong-pool-binding
+=== RUN   TestAnycastGatewaySemanticReadback/inherited
+=== RUN   TestAnycastGatewaySemanticReadback/wrong-parent-vlan
+=== RUN   TestAnycastGatewaySemanticReadback/wrong-parent-name
+=== RUN   TestAnycastGatewaySemanticReadback/wrong-parent-pool
+=== RUN   TestAnycastGatewaySemanticReadback/infra
+--- PASS: TestAnycastGatewaySemanticReadback (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/generated (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/explicit (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/critical-data (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/critical-voice (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/secondary (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/wrong-secondary-binding (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/missing-secondary (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/missing-flag (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/unknown (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/wrong-generated-name (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/wrong-declared-flag (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/wrong-pool-binding (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/inherited (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/wrong-parent-vlan (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/wrong-parent-name (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/wrong-parent-pool (0.00s)
+    --- PASS: TestAnycastGatewaySemanticReadback/infra (0.00s)
+=== RUN   TestAnycastGatewayPinnedModel
+=== RUN   TestAnycastGatewayPinnedModel/normal
+=== RUN   TestAnycastGatewayPinnedModel/secondary
+=== RUN   TestAnycastGatewayPinnedModel/infra-ap
+=== RUN   TestAnycastGatewayPinnedModel/infra-extended
+=== RUN   TestAnycastGatewayPinnedModel/bad-pool-type
+=== RUN   TestAnycastGatewayPinnedModel/infra-normal-flags
+=== RUN   TestAnycastGatewayPinnedModel/normal-infra-flags
+=== RUN   TestAnycastGatewayPinnedModel/infra-secondary
+=== RUN   TestAnycastGatewayPinnedModel/too-many-pools
+=== RUN   TestAnycastGatewayPinnedModel/duplicate-pool
+=== RUN   TestAnycastGatewayPinnedModel/primary-as-secondary
+=== RUN   TestAnycastGatewayPinnedModel/wrong-secondary-type
+=== RUN   TestAnycastGatewayPinnedModel/bad-mss
+=== RUN   TestAnycastGatewayPinnedModel/bad-vlan
+=== RUN   TestAnycastGatewayPinnedModel/critical-without-auto
+=== RUN   TestAnycastGatewayPinnedModel/auto-with-name
+=== RUN   TestAnycastGatewayPinnedModel/bad-boolean
+=== RUN   TestAnycastGatewayPinnedModel/unknown
+=== RUN   TestAnycastGatewayPinnedModel/null-optionals
+--- PASS: TestAnycastGatewayPinnedModel (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/normal (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/secondary (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/infra-ap (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/infra-extended (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/bad-pool-type (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/infra-normal-flags (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/normal-infra-flags (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/infra-secondary (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/too-many-pools (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/duplicate-pool (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/primary-as-secondary (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/wrong-secondary-type (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/bad-mss (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/bad-vlan (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/critical-without-auto (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/auto-with-name (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/bad-boolean (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/unknown (0.00s)
+    --- PASS: TestAnycastGatewayPinnedModel/null-optionals (0.00s)
+=== RUN   TestAnycastGatewayNestedModel
+=== RUN   TestAnycastGatewayNestedModel/valid
+=== RUN   TestAnycastGatewayNestedModel/empty
+=== RUN   TestAnycastGatewayNestedModel/duplicate-pool
+=== RUN   TestAnycastGatewayNestedModel/missing-reference
+=== RUN   TestAnycastGatewayNestedModel/duplicate-reference
+=== RUN   TestAnycastGatewayNestedModel/zone-override
+=== RUN   TestAnycastGatewayNestedModel/null
+=== RUN   TestAnycastGatewayNestedModel/wrong-parent
+=== RUN   TestAnycastGatewayNestedModel/unknown-site
+=== RUN   TestAnycastGatewayNestedModel/unknown-zone
+=== RUN   TestAnycastGatewayNestedModel/l2-vlan-collision
+=== RUN   TestAnycastGatewayNestedModel/gateway-vlan-collision
+--- PASS: TestAnycastGatewayNestedModel (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/valid (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/empty (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/duplicate-pool (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/missing-reference (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/duplicate-reference (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/zone-override (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/null (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/wrong-parent (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/unknown-site (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/unknown-zone (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/l2-vlan-collision (0.00s)
+    --- PASS: TestAnycastGatewayNestedModel/gateway-vlan-collision (0.00s)
+=== RUN   TestAnycastPoolDependencies
+=== RUN   TestAnycastPoolDependencies/valid
+=== RUN   TestAnycastPoolDependencies/secondary
+=== RUN   TestAnycastPoolDependencies/missing
+=== RUN   TestAnycastPoolDependencies/wrong-site
+=== RUN   TestAnycastPoolDependencies/ambiguous
+=== RUN   TestAnycastPoolDependencies/outside-parent
+=== RUN   TestAnycastPoolDependencies/changed-reservation-id
+=== RUN   TestAnycastPoolDependencies/changed-prefix
+=== RUN   TestAnycastPoolDependencies/changed-global-id
+--- PASS: TestAnycastPoolDependencies (0.11s)
+    --- PASS: TestAnycastPoolDependencies/valid (0.01s)
+    --- PASS: TestAnycastPoolDependencies/secondary (0.01s)
+    --- PASS: TestAnycastPoolDependencies/missing (0.01s)
+    --- PASS: TestAnycastPoolDependencies/wrong-site (0.01s)
+    --- PASS: TestAnycastPoolDependencies/ambiguous (0.01s)
+    --- PASS: TestAnycastPoolDependencies/outside-parent (0.01s)
+    --- PASS: TestAnycastPoolDependencies/changed-reservation-id (0.01s)
+    --- PASS: TestAnycastPoolDependencies/changed-prefix (0.01s)
+    --- PASS: TestAnycastPoolDependencies/changed-global-id (0.01s)
+=== RUN   TestAnycastInventoryBatchReadBound
+--- PASS: TestAnycastInventoryBatchReadBound (0.03s)
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/observed
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/declared-reservation
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/declared-parent
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/undeclared
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/wrong-owner
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/changed-reservation
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/changed-parent
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/observed-with-parent-change
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/overlap
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/missing-site
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-missing
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-duplicate
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-declared
+=== RUN   TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-wrong-owner
+--- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites (0.16s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/observed (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/declared-reservation (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/declared-parent (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/undeclared (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/wrong-owner (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/changed-reservation (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/changed-parent (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/observed-with-parent-change (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/overlap (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/missing-site (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-missing (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-duplicate (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-declared (0.01s)
+    --- PASS: TestAnycastPoolPreviewDistinguishesDeclaredPrerequisites/secondary-wrong-owner (0.01s)
+=== RUN   TestFabricGatewayManifest
+=== RUN   TestFabricGatewayManifest/apply
+=== RUN   TestFabricGatewayManifest/report
+=== RUN   TestFabricGatewayManifest/lost-gateway-receipt
+=== RUN   TestFabricGatewayManifest/replaced-parent-gateway
+=== RUN   TestFabricGatewayManifest/missing-pool
+=== RUN   TestFabricGatewayManifest/incomplete-payload
+=== RUN   TestFabricGatewayManifest/secondary-apply
+=== RUN   TestFabricGatewayManifest/secondary-old-release
+=== RUN   TestFabricGatewayManifest/secondary-release-changed
+=== RUN   TestFabricGatewayManifest/secondary-missing-readback
+=== RUN   TestFabricGatewayManifest/secondary-pool-replaced
+=== RUN   TestFabricGatewayManifest/ipam-apply
+=== RUN   TestFabricGatewayManifest/ipam-report
+=== RUN   TestFabricGatewayManifest/ipam-reverse-order
+=== RUN   TestFabricGatewayManifest/ipam-lost-pool-receipt
+=== RUN   TestFabricGatewayManifest/ipam-lost-reservation-receipt
+=== RUN   TestFabricGatewayManifest/ipam-incomplete-payload
+=== RUN   TestFabricGatewayManifest/ipam-wrong-owner
+=== RUN   TestFabricGatewayManifest/ipam-owner-conflict
+=== RUN   TestFabricGatewayManifest/ipam-secondary-apply
+=== RUN   TestFabricGatewayManifest/ipam-secondary-report
+=== RUN   TestFabricGatewayManifest/ipam-secondary-old-release
+=== RUN   TestFabricGatewayManifest/ipam-secondary-release-changed
+=== RUN   TestFabricGatewayManifest/ipam-secondary-missing-readback
+=== RUN   TestFabricGatewayManifest/ipam-secondary-pool-replaced
+=== RUN   TestFabricGatewayManifest/ipam-secondary-lost-receipt
+=== RUN   TestFabricGatewayManifest/ipam-dualstack-apply
+=== RUN   TestFabricGatewayManifest/ipam-dualstack-report
+=== RUN   TestFabricGatewayManifest/ipam-dualstack-missing-v6
+=== RUN   TestFabricGatewayManifest/ipam-dualstack-parent-replaced
+=== RUN   TestFabricGatewayManifest/bulk-apply
+=== RUN   TestFabricGatewayManifest/bulk-lost-gateway-receipt
+=== RUN   TestFabricGatewayManifest/bulk-replaced-parent-gateway
+=== RUN   TestFabricGatewayManifest/bulk-ipam-apply
+=== RUN   TestFabricGatewayManifest/bulk-ipam-secondary-apply
+=== RUN   TestFabricGatewayManifest/bulk-option-removed
+--- PASS: TestFabricGatewayManifest (73.30s)
+    --- PASS: TestFabricGatewayManifest/apply (2.20s)
+    --- PASS: TestFabricGatewayManifest/report (1.84s)
+    --- PASS: TestFabricGatewayManifest/lost-gateway-receipt (0.79s)
+    --- PASS: TestFabricGatewayManifest/replaced-parent-gateway (1.83s)
+    --- PASS: TestFabricGatewayManifest/missing-pool (1.06s)
+    --- PASS: TestFabricGatewayManifest/incomplete-payload (1.04s)
+    --- PASS: TestFabricGatewayManifest/secondary-apply (2.42s)
+    --- PASS: TestFabricGatewayManifest/secondary-old-release (0.97s)
+    --- PASS: TestFabricGatewayManifest/secondary-release-changed (1.86s)
+    --- PASS: TestFabricGatewayManifest/secondary-missing-readback (1.87s)
+    --- PASS: TestFabricGatewayManifest/secondary-pool-replaced (1.87s)
+    --- PASS: TestFabricGatewayManifest/ipam-apply (2.95s)
+    --- PASS: TestFabricGatewayManifest/ipam-report (2.15s)
+    --- PASS: TestFabricGatewayManifest/ipam-reverse-order (2.93s)
+    --- PASS: TestFabricGatewayManifest/ipam-lost-pool-receipt (0.91s)
+    --- PASS: TestFabricGatewayManifest/ipam-lost-reservation-receipt (0.98s)
+    --- PASS: TestFabricGatewayManifest/ipam-incomplete-payload (1.58s)
+    --- PASS: TestFabricGatewayManifest/ipam-wrong-owner (1.59s)
+    --- PASS: TestFabricGatewayManifest/ipam-owner-conflict (0.81s)
+    --- PASS: TestFabricGatewayManifest/ipam-secondary-apply (3.16s)
+    --- PASS: TestFabricGatewayManifest/ipam-secondary-report (2.28s)
+    --- PASS: TestFabricGatewayManifest/ipam-secondary-old-release (1.50s)
+    --- PASS: TestFabricGatewayManifest/ipam-secondary-release-changed (2.59s)
+    --- PASS: TestFabricGatewayManifest/ipam-secondary-missing-readback (2.59s)
+    --- PASS: TestFabricGatewayManifest/ipam-secondary-pool-replaced (1.77s)
+    --- PASS: TestFabricGatewayManifest/ipam-secondary-lost-receipt (1.09s)
+    --- PASS: TestFabricGatewayManifest/ipam-dualstack-apply (3.11s)
+    --- PASS: TestFabricGatewayManifest/ipam-dualstack-report (2.24s)
+    --- PASS: TestFabricGatewayManifest/ipam-dualstack-missing-v6 (1.50s)
+    --- PASS: TestFabricGatewayManifest/ipam-dualstack-parent-replaced (1.64s)
+    --- PASS: TestFabricGatewayManifest/bulk-apply (4.02s)
+    --- PASS: TestFabricGatewayManifest/bulk-lost-gateway-receipt (0.85s)
+    --- PASS: TestFabricGatewayManifest/bulk-replaced-parent-gateway (1.74s)
+    --- PASS: TestFabricGatewayManifest/bulk-ipam-apply (4.47s)
+    --- PASS: TestFabricGatewayManifest/bulk-ipam-secondary-apply (4.72s)
+    --- PASS: TestFabricGatewayManifest/bulk-option-removed (2.37s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	177.182s

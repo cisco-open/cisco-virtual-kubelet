@@ -1,0 +1,12 @@
+=== RUN   TestSitePrivateExampleContract
+=== RUN   TestSitePrivateExampleContract/site-private-creator-execution.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-private-state.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-type-update.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-floor-handoff.yaml
+--- PASS: TestSitePrivateExampleContract (0.00s)
+    --- PASS: TestSitePrivateExampleContract/site-private-creator-execution.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-private-state.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-type-update.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-floor-handoff.yaml (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.145s

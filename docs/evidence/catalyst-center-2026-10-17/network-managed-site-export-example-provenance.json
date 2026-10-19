@@ -1,0 +1,24 @@
+{
+  "siteSelection": {
+    "optionsSHA256": "607f049e9daabca0afc4496346b1589c369ed1b37d9ced8134d878913f8378df",
+    "selectedSiteCount": 1
+  },
+  "exporter": "cvk-network-selected-v1:policy-sha256:48cd63c3069219396ee6ad563cf1ef7e9d70a60caa6fcaa0cb5ffab98d99ceb1",
+  "executionSyntaxValidated": true,
+  "leafSchemaValidated": false,
+  "format": "netascode-catalyst-center",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "policySHA256": "48cd63c3069219396ee6ad563cf1ef7e9d70a60caa6fcaa0cb5ffab98d99ceb1",
+  "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+  "inputSHA256": "990a69cb4e8520e56932649dbf53afeaf30e70b6e235356f5656cfd12aeb2ab9",
+  "outputSHA256": "2ccfd1a989d881a9567d6fa9bf34ae7d23d37ce993f80e75027bcea6382068e0",
+  "resolutionScope": "network-settings-profiles-and-site-selection",
+  "configurationParity": false,
+  "limitations": [
+    "Not full nested schema validation or complete model/default parity.",
+    "No multi-file merging, native identity resolution, ownership transfer or API execution.",
+    "Explicit null collector selection and null default overrides require upstream resolution.",
+    "Selection applies only to validated network/telemetry profile bindings, not other module sections; literal upstream prefix semantics apply."
+  ]
+}

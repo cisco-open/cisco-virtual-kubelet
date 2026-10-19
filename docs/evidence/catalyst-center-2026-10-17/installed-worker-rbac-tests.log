@@ -1,0 +1,98 @@
+=== RUN   TestVKRBACStrictProfileGatesHighRiskRules
+--- PASS: TestVKRBACStrictProfileGatesHighRiskRules (0.00s)
+=== RUN   TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites
+=== RUN   TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/both-disabled
+=== RUN   TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/software-upgrade-only
+=== RUN   TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/write-class-only
+=== RUN   TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/both-enabled
+--- PASS: TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites (0.34s)
+    --- PASS: TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/both-disabled (0.17s)
+    --- PASS: TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/software-upgrade-only (0.06s)
+    --- PASS: TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/write-class-only (0.05s)
+    --- PASS: TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites/both-enabled (0.06s)
+=== RUN   TestNetworkControllerWorkerRBACStaysSecretlessAndStatusOnly
+--- PASS: TestNetworkControllerWorkerRBACStaysSecretlessAndStatusOnly (0.00s)
+=== RUN   TestManagerBindMarkerCoversEveryAuditedWorkerRole
+--- PASS: TestManagerBindMarkerCoversEveryAuditedWorkerRole (0.00s)
+=== RUN   TestSWIMWorkerCannotOwnDeviceMutation
+--- PASS: TestSWIMWorkerCannotOwnDeviceMutation (0.01s)
+=== RUN   TestManagerSWIMRecoveryHasReadOnlyJournalAccess
+--- PASS: TestManagerSWIMRecoveryHasReadOnlyJournalAccess (0.00s)
+=== RUN   TestManagerDefaultOffCanInspectRetainedReservationsWithoutMutation
+=== RUN   TestManagerDefaultOffCanInspectRetainedReservationsWithoutMutation/default
+=== RUN   TestManagerDefaultOffCanInspectRetainedReservationsWithoutMutation/strict
+--- PASS: TestManagerDefaultOffCanInspectRetainedReservationsWithoutMutation (0.16s)
+    --- PASS: TestManagerDefaultOffCanInspectRetainedReservationsWithoutMutation/default (0.08s)
+    --- PASS: TestManagerDefaultOffCanInspectRetainedReservationsWithoutMutation/strict (0.08s)
+=== RUN   TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority
+=== RUN   TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/exact_legacy_identity_impersonation
+=== RUN   TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/exact_managed_identity_for_namespace_peer
+=== RUN   TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/wildcard_identity_impersonation
+=== RUN   TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/unscoped_identity_impersonation
+=== RUN   TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/service_account_collection_deletion
+=== RUN   TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/wildcard_verb_includes_collection_deletion
+--- PASS: TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority (0.93s)
+    --- PASS: TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/exact_legacy_identity_impersonation (0.68s)
+    --- PASS: TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/exact_managed_identity_for_namespace_peer (0.05s)
+    --- PASS: TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/wildcard_identity_impersonation (0.05s)
+    --- PASS: TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/unscoped_identity_impersonation (0.05s)
+    --- PASS: TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/service_account_collection_deletion (0.05s)
+    --- PASS: TestGeneratedWorkerNamespaceRBACRiskRevokesAuthority/wildcard_verb_includes_collection_deletion (0.05s)
+=== RUN   TestManagedNamespaceRBACRejectsBuiltInEditStyleClusterRole
+--- PASS: TestManagedNamespaceRBACRejectsBuiltInEditStyleClusterRole (0.02s)
+=== RUN   TestManagedNamespaceRBACAcceptsSafeCustomRole
+--- PASS: TestManagedNamespaceRBACAcceptsSafeCustomRole (0.05s)
+=== RUN   TestManagedNamespaceRBACRejectsSensitiveNamespaceReads
+=== RUN   TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/secrets
+=== RUN   TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/device_specs
+=== RUN   TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/network_configuration
+=== RUN   TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/inline_credential_workload
+--- PASS: TestManagedNamespaceRBACRejectsSensitiveNamespaceReads (0.07s)
+    --- PASS: TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/secrets (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/device_specs (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/network_configuration (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsSensitiveNamespaceReads/inline_credential_workload (0.02s)
+=== RUN   TestManagedNamespaceRBACAllowsWorkloadObservationWithSecretCredentials
+--- PASS: TestManagedNamespaceRBACAllowsWorkloadObservationWithSecretCredentials (0.05s)
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/wildcard
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/reserved_service_account_impersonation
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/worker_scale_with_resource_name
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/deployment_status_with_resource_name
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/replicaset_status_wildcard
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/worker_eviction
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/pod_binding_subresource
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/legacy_binding_resource_with_managed_name
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/constrained_service_account_impersonation
+=== RUN   TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/constrained_service_account_impersonation-on
+--- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation (0.16s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/wildcard (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/reserved_service_account_impersonation (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/worker_scale_with_resource_name (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/deployment_status_with_resource_name (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/replicaset_status_wildcard (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/worker_eviction (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/pod_binding_subresource (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/legacy_binding_resource_with_managed_name (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/constrained_service_account_impersonation (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsWildcardAndReservedImpersonation/constrained_service_account_impersonation-on (0.02s)
+=== RUN   TestManagedNamespaceRBACRejectsDelegationSpecialVerbs
+=== RUN   TestManagedNamespaceRBACRejectsDelegationSpecialVerbs/bind_named_ClusterRole
+=== RUN   TestManagedNamespaceRBACRejectsDelegationSpecialVerbs/escalate_any_Role
+=== RUN   TestManagedNamespaceRBACRejectsDelegationSpecialVerbs/wildcard_resource_and_verb
+--- PASS: TestManagedNamespaceRBACRejectsDelegationSpecialVerbs (0.05s)
+    --- PASS: TestManagedNamespaceRBACRejectsDelegationSpecialVerbs/bind_named_ClusterRole (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsDelegationSpecialVerbs/escalate_any_Role (0.02s)
+    --- PASS: TestManagedNamespaceRBACRejectsDelegationSpecialVerbs/wildcard_resource_and_verb (0.02s)
+=== RUN   TestManagedNamespaceRBACAuditUsesAPIReader
+--- PASS: TestManagedNamespaceRBACAuditUsesAPIReader (0.02s)
+=== RUN   TestManagedNamespaceRBACRiskQuarantinesExistingSharedBindings
+--- PASS: TestManagedNamespaceRBACRiskQuarantinesExistingSharedBindings (0.08s)
+=== RUN   TestManagedNamespaceRBACQuarantinesBroadenedTrustedRole
+--- PASS: TestManagedNamespaceRBACQuarantinesBroadenedTrustedRole (0.06s)
+=== RUN   TestManagedNamespaceRBACEventMappings
+--- PASS: TestManagedNamespaceRBACEventMappings (0.02s)
+=== RUN   TestSharedUnsafeRBACQuarantineDeletesCanonicalBindingWithUnexpectedRole
+--- PASS: TestSharedUnsafeRBACQuarantineDeletesCanonicalBindingWithUnexpectedRole (0.07s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	4.386s

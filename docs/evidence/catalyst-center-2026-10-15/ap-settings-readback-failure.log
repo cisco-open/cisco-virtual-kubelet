@@ -1,0 +1,39 @@
+=== RUN   TestLiveWirelessAPCalendar
+    wireless_ap_calendar_live_test.go:43: isolated names CVK_C_6a12ca01343034c6 [CVK_P_44a930df3f278b64 CVK_Q_7c5616ced959b19c]
+    wireless_ap_calendar_live_test.go:233: definition task power-profile:CVK_P_44a930df3f278b64 Create 01a13df9-1c0d-7027-965f-9cdf5825fe18
+    wireless_ap_calendar_live_test.go:242: owned power UUID CVK_P_44a930df3f278b64 mdiYq1zl-x1bF-ndrH-otmW-zgyZzJi3ogi2nemWvJflmL8ZudrF
+    wireless_ap_calendar_live_test.go:233: definition task power-profile:CVK_Q_7c5616ced959b19c Create 01a13df9-238d-7e43-82cf-d69e96497e79
+    wireless_ap_calendar_live_test.go:242: owned power UUID CVK_Q_7c5616ced959b19c mdiYq1zl-x1fF-n2m1-nJe2-y2vKotu5yJe5y0mWvJflmL8ZutrF
+    wireless_ap_calendar_live_test.go:251: definition task ap-profile:CVK_C_6a12ca01343034c6 Create 01a13df9-2c19-7904-9e48-b25923983c19
+    wireless_ap_calendar_live_test.go:260: owned AP UUID mdiYq1zl-x0nF-nMeX-mMnH-mdeZndmWmZrJnKmWvJflmL8ZqZrF
+    wireless_ap_calendar_live_test.go:286: qualified calendar DAILY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-373b-7b0d-a9ef-e3a4c2a6d366
+    wireless_ap_calendar_live_test.go:286: qualified calendar WEEKLY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-4121-736a-a776-2f1afb57cfb3
+    wireless_ap_calendar_live_test.go:286: qualified calendar MONTHLY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-4aeb-7771-8afb-5a692e0a3eac
+    wireless_ap_calendar_live_test.go:286: qualified calendar MULTIPLE same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-5593-7e15-a882-5aeaed085a6d
+    wireless_ap_calendar_live_test.go:286: qualified calendar REORDERED same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-637c-7616-8d31-97f1ceda8aa2
+    wireless_ap_calendar_live_test.go:286: qualified calendar CLEAR same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-6c94-7c8c-a184-e8789b4fe0e6
+    wireless_ap_calendar_live_test.go:286: qualified calendar STATIC_POWER same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-7603-7e52-a6d2-92a7d803aa7d
+    wireless_ap_calendar_live_test.go:286: qualified calendar SECURITY_FEATURES same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-7ea4-72b3-9c5c-99605f0ef65b
+    wireless_ap_calendar_live_test.go:286: qualified calendar MESH same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:272: definition task ap-profile:CVK_C_6a12ca01343034c6 Update 01a13df9-8759-7709-8823-01fef313ba9a
+    wireless_ap_calendar_live_test.go:286: qualified calendar RESET same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:307: cleanup task AP mdiYq1zl-x0nF-nMeX-mMnH-mdeZndmWmZrJnKmWvJflmL8ZqZrF 01a13df9-8fff-7f96-acab-46f6d1aba51d
+    wireless_ap_calendar_live_test.go:311: cleanup task CVK_Q_7c5616ced959b19c mdiYq1zl-x1fF-n2m1-nJe2-y2vKotu5yJe5y0mWvJflmL8ZutrF 01a13df9-9601-76ef-97d4-3f4a1dc81f9e
+    wireless_ap_calendar_live_test.go:311: cleanup task CVK_P_44a930df3f278b64 mdiYq1zl-x1bF-ndrH-otmW-zgyZzJi3ogi2nemWvJflmL8ZudrF 01a13df9-9bf0-766c-9f82-853c07d03d1f
+    wireless_ap_calendar_live_test.go:315: baseline restored; no assignment, provisioning or device action submitted
+--- PASS: TestLiveWirelessAPCalendar (35.17s)
+=== RUN   TestLiveWirelessAPExecution
+    wireless_ap_execution_live_test.go:54: create CVK_A_da5cde9e4be29d6d 01a13df9-a39b-705d-8e6e-56a61e89c1da
+    wireless_ap_execution_live_test.go:61: readback incomplete; retain fixture CVK_A_da5cde9e4be29d6d invalid Catalyst Center API response
+--- FAIL: TestLiveWirelessAPExecution (1.77s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	37.812s
+FAIL

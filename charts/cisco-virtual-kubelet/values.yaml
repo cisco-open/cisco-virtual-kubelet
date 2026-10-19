@@ -94,6 +94,11 @@ aggregator:
 # write-class controllers grant no latent authority.
 topology:
   enabled: false
+  # Explicit group installation; requires managed topology and readWrite network workers.
+  # Complete retained work before changing protocols; rollout qualification is pending.
+  configurationReservationProtocol: controller-configuration-v1
+  # Opt-in metadata-only cleanup; uses the existing controller worker and shared fence namespace.
+  controllerMetadataHandoff: false
 
   # workerAccounts replaces per-device ServiceAccounts with exactly two named,
   # reusable functional identity slots in every managed CiscoDevice namespace.
@@ -363,6 +368,9 @@ config:
   # With managed topology this resolved choice is immutable after bootstrap.
   # Retire managed topology and re-enroll before moving Lease authority; an
   # in-place change is rejected so no writable binding remains behind.
+  # Bootstrap fence admission uses this common namespace, or the Helm release
+  # namespace when empty. It never uses a tenant/device namespace fallback.
+  # Public bootstrap claiming remains gated; the policy only protects evidence.
   leaseNamespace: ""
 
 # podSecurityContext is applied at the controller pod level. Defaults meet

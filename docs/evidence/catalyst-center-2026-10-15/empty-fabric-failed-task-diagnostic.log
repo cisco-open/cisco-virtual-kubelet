@@ -1,0 +1,9 @@
+private task evidence /private/tmp/cvk-empty-fabric-failed-task-xsky0mlh
+task 01a14076-2b2e-70dd-8551-9ed29c8b161c terminal True failed True code NCSP11008
+failureReason NCSP11008: Package required to process the request was not found. Additional info for support: No application found for type 'ConnectivityDomain' and qualifier 'null'.
+progress TASK_PROVISION
+task 01a14076-34c2-7395-8b61-db012f5079b1 terminal True failed False code None
+progress SUB_TASK_FOR_AUDITS
+fabrics count 0
+zones count 0
+assigned count 0

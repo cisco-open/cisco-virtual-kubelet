@@ -1,0 +1,24 @@
+=== RUN   TestLiveCatalystCenterIPAMExecution
+    site_execution_live_test.go:68: isolated qualification hierarchy: Global/CVK-Q-20261015-003628-000000000
+    site_execution_live_test.go:276: submitted task=01a13cfd-321d-737b-92cc-586a6ec4abdd at=2026-10-15T00:36:29.03513Z
+    site_execution_live_test.go:294: verified Create area
+    site_execution_live_test.go:276: submitted task=01a13cfd-3822-7ee6-9da4-697c45b18183 at=2026-10-15T00:36:30.584111Z
+    site_execution_live_test.go:294: verified Create building
+    site_execution_live_test.go:276: submitted task=01a13cfd-3e55-7984-831d-855902fd323c at=2026-10-15T00:36:32.087104Z
+    site_execution_live_test.go:294: verified Create floor
+    site_execution_live_test.go:276: submitted task=01a13cfd-4498-73ae-9097-164934eb75dc at=2026-10-15T00:36:33.675711Z
+    site_execution_live_test.go:294: verified Update floor
+    site_execution_live_test.go:303: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:308: submitted ip-pool:CVK-Q-20261015-003628-000000000-pool task=01a13cfd-4c8a-726d-a591-931ed49a6477
+    site_execution_live_test.go:308: submitted ip-reservation:Global/CVK-Q-20261015-003628-000000000#CVK-Q-20261015-003628-000000000-subnet task=01a13cfd-547f-7d10-93c4-a343708a2a4c
+    site_execution_live_test.go:308: qualified isolated LAN pool usage: total=128 unassignable=0 assigned=0 defaultAssigned=3 conservativeRemaining=125
+    site_execution_live_test.go:308: global IPv4 pool and site reservation created and read-back verified
+    ipam_execution_live_test.go:163: verified fixture removal /dna/intent/api/v1/ipam/siteIpAddressPools fc4b26b8-11ee-4ea9-83a7-d3daef4336d6
+    ipam_execution_live_test.go:163: verified fixture removal /dna/intent/api/v1/ipam/globalIpAddressPools d0442ef2-900f-4c7e-9762-077a4acefcc0
+    site_execution_live_test.go:179: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterIPAMExecution (18.39s)
+=== RUN   TestLiveCatalystCenterLANActiveSessions
+    lan_active_sessions_live_test.go:29: qualified native activity snapshot: maximum=5 active=0; no automation action submitted
+--- PASS: TestLiveCatalystCenterLANActiveSessions (0.42s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	19.745s

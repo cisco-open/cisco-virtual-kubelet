@@ -1,0 +1,348 @@
+=== RUN   TestFabricDevicesBulkPublicDeviceEvidence
+--- PASS: TestFabricDevicesBulkPublicDeviceEvidence (1.32s)
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-accepted
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-unknown
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-running
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-failed
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-partial
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-owner
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-source
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/record
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-proof
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/proof-denied
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/native-proof-race
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/source-proof-race
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/authorization-denied
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/revoked-during-authorization
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-member
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/lost-response
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/undeclared
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/future-task-end
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/completion-proof-race
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/subsecond-unrepresentable-end
+--- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt (1.39s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-accepted (0.08s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-unknown (0.08s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-running (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-failed (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-partial (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-owner (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-source (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/record (0.27s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-proof (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/proof-denied (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/native-proof-race (0.06s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/source-proof-race (0.06s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/authorization-denied (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/revoked-during-authorization (0.08s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-member (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/lost-response (0.08s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/undeclared (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/future-task-end (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/completion-proof-race (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/subsecond-unrepresentable-end (0.05s)
+=== RUN   TestWiredBulkDeviceWorkerEvidence
+=== RUN   TestWiredBulkDeviceWorkerEvidence/observed
+=== RUN   TestWiredBulkDeviceWorkerEvidence/pending
+=== RUN   TestWiredBulkDeviceWorkerEvidence/missing-member
+=== RUN   TestWiredBulkDeviceWorkerEvidence/missing-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/extra-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/identity-only
+=== RUN   TestWiredBulkDeviceWorkerEvidence/bad-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/failed
+=== RUN   TestWiredBulkDeviceWorkerEvidence/old-generation
+=== RUN   TestWiredBulkDeviceWorkerEvidence/unbound
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-worker
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-owner
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-command
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-serial
+=== RUN   TestWiredBulkDeviceWorkerEvidence/truncated
+=== RUN   TestWiredBulkDeviceWorkerEvidence/redacted
+=== RUN   TestWiredBulkDeviceWorkerEvidence/artifact
+=== RUN   TestWiredBulkDeviceWorkerEvidence/before-task
+=== RUN   TestWiredBulkDeviceWorkerEvidence/future-result
+=== RUN   TestWiredBulkDeviceWorkerEvidence/stale-result
+=== RUN   TestWiredBulkDeviceWorkerEvidence/duplicate-ready
+=== RUN   TestWiredBulkDeviceWorkerEvidence/source-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/native-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/completion-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/authority-revoked
+=== RUN   TestWiredBulkDeviceWorkerEvidence/journal-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/query-change
+=== RUN   TestWiredBulkDeviceWorkerEvidence/foreign-section-owner
+--- PASS: TestWiredBulkDeviceWorkerEvidence (8.95s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/observed (0.37s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/pending (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/missing-member (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/missing-query (0.31s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/extra-query (0.31s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/identity-only (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/bad-query (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/failed (0.34s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/old-generation (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/unbound (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-worker (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-owner (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-command (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-serial (0.31s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/truncated (0.35s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/redacted (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/artifact (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/before-task (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/future-result (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/stale-result (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/duplicate-ready (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/source-race (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/native-race (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/completion-race (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/authority-revoked (0.29s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/journal-race (0.29s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/query-change (0.32s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/foreign-section-owner (0.30s)
+=== RUN   TestWiredBulkDeviceEvidenceWaitsForPostTaskBoundary
+--- PASS: TestWiredBulkDeviceEvidenceWaitsForPostTaskBoundary (0.22s)
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/match
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind
+--- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/match (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6 (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind (0.00s)
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/inherited
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/nearest
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/per-kind
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/undefined
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/bad-profile
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/bad-geometry
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/missing-context
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/unknown-section
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/credential-profile
+--- PASS: TestWiredBulkNetworkContextUsesPinnedModel (0.03s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/inherited (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/nearest (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/per-kind (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/undefined (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/bad-profile (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/bad-geometry (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/missing-context (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/unknown-section (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/credential-profile (0.00s)
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/matching
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-before-prepare
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-prepare
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-dispatch
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-acceptance
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-source
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-device-proof
+--- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery (1.44s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/matching (0.28s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-before-prepare (0.05s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-prepare (0.13s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-dispatch (0.19s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-acceptance (0.28s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-source (0.14s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-device-proof (0.37s)
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/matching
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/different-device-policy
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/nonsemantic-output
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/mixed-matching
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-drift
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-incomplete
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-redacted
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/timezone-drift
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/timezone-dst
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/dependency-only
+--- PASS: TestWiredBulkDeclaredNetworkWorkerComparison (5.19s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/matching (0.47s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/different-device-policy (0.48s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/nonsemantic-output (0.47s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/mixed-matching (0.52s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-drift (0.51s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-incomplete (0.51s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-redacted (0.49s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/timezone-drift (0.51s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/timezone-dst (0.52s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/dependency-only (0.72s)
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/matching
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/different-device-policy
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/nonsemantic-output
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/mixed-matching
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-drift
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-incomplete
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-redacted
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-drift
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-dst
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/dependency-only
+--- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence (8.24s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/matching (0.80s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/different-device-policy (0.77s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/nonsemantic-output (0.78s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/mixed-matching (0.87s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-drift (0.84s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-incomplete (0.85s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-redacted (0.81s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-drift (0.85s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-dst (0.86s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/dependency-only (0.81s)
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/inline
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/multiline
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/crlf
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/raw-control
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/printable
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/whitespace
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/empty
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/different
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/trimmed
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/extra-newline
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/missing-close
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/duplicate
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/trailing-cli
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/wrong-kind
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/partial
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/unicode-delimiter
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/unsupported-caret
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/invalid-utf8
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/builtin
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/nul-source
+--- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/inline (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/multiline (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/crlf (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/raw-control (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/printable (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/whitespace (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/empty (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/different (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/trimmed (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/extra-newline (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/missing-close (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/duplicate (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/trailing-cli (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/wrong-kind (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/partial (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/unicode-delimiter (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/unsupported-caret (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/invalid-utf8 (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/builtin (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/nul-source (0.00s)
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/utc
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-utc
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/gmt
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-gmt
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/minutes
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/regional-zone
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/seasonal-alias
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-offset
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-minutes
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-label
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/recurring-summer
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/dated-summer
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/missing
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/duplicate
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/bad-fields
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/unrelated-clock
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/status-only
+--- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/utc (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-utc (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/gmt (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-gmt (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/minutes (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/regional-zone (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/seasonal-alias (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-offset (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-minutes (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-label (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/recurring-summer (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/dated-summer (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/missing (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/duplicate (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/bad-fields (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/unrelated-clock (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/status-only (0.00s)
+=== RUN   TestWiredBulkNetworkQueriesUseExistingWorkerPolicy
+--- PASS: TestWiredBulkNetworkQueriesUseExistingWorkerPolicy (0.00s)
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled
+--- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback (0.10s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled (0.01s)
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/accepted
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/unknown
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/running
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/failed
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/partial
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/revoked
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/changed-source
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/pruned-group
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/invalid-bulk-options
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/removed-bulk-options
+--- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence (1.39s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/accepted (0.17s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/unknown (0.17s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/running (0.13s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/failed (0.13s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/partial (0.15s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/revoked (0.11s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/changed-source (0.10s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/pruned-group (0.09s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/invalid-bulk-options (0.17s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/removed-bulk-options (0.17s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	30.610s

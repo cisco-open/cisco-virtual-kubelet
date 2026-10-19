@@ -1,0 +1,73 @@
+{
+  "scope": "Versioned parent replacement/child recreation authority with native generated-area lifecycle and simulated Kubernetes persistence; not public/installed retirement routing",
+  "gates": {
+    "regression": {
+      "families": 65,
+      "subcases": 904,
+      "seconds": 81.969,
+      "exit_code": 0,
+      "log_sha256": "4cce4312cc01a1336c498359f5ea187c8cc16be8fecffedad6d064c789bd8e85"
+    },
+    "api": {
+      "families": 8,
+      "subcases": 106,
+      "seconds": 75.116,
+      "exit_code": 0,
+      "log_sha256": "b4ef98cc3bcda671058bb1a9d27477b38ec060459cce75f9a7ab702fd9348395"
+    }
+  },
+  "native": {
+    "result": {
+      "archivedCohorts": 2,
+      "baselineRestored": true,
+      "deletes": 4,
+      "firstID": "b13cffe0-32fa-4fa3-8f97-14842fe506e9",
+      "installed": false,
+      "parentChild": true,
+      "parentHandoff": true,
+      "posts": 4,
+      "publicRetirementRouting": false,
+      "secondID": "13ebfdb7-75ce-4cdf-8d55-a4dd9fc06545"
+    },
+    "task_ids": [
+      "01a14b6c-6cd3-7a94-97df-948961544c8f",
+      "01a14b6c-7579-787f-b2ee-9bd3438de9aa",
+      "01a14b6c-a460-7e29-9bf7-cd1a2b5df0c4",
+      "01a14b6c-ced8-77c6-aaac-274d82f571e1",
+      "01a14b6c-dd0c-71e4-982d-4ce7a1d341a2",
+      "01a14b6c-ebf2-73e9-ac54-d7172100c970",
+      "01a14b6d-1c9b-79c3-aecb-cd9e7dcabea8",
+      "01a14b6d-471b-79da-b3ab-9f2ec16cef8c"
+    ],
+    "receipt_count": 8,
+    "archived_rows": 4,
+    "retained_owners": 1,
+    "active_operation": false,
+    "same_intent_generation": 5,
+    "seconds": 60.59,
+    "go_test_seconds": 62.789,
+    "exit_code": 0,
+    "log_sha256": "23e4d905d7791c2bbe3ef7bf8a62466bcbed464c25f15ea5f45a4f1ff9e0ac09",
+    "private_checkpoint": "/private/tmp/cvk-site-lifecycle-391420378"
+  },
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/site_recreation.go": "8e96848809d9e1c18bec7ccbf16b9ee4c43947b6afa80951ee99d83f33975b06",
+    "internal/controlleradapter/catalystcenter/site_recreation_parent.go": "d303e3c96e27ca70a268deeb5cf00bd1a6cff309887df00bd8c2ff0407aec85d",
+    "internal/controlleradapter/catalystcenter/site_recreation_parent_test.go": "eb276055581258b7c12a9eae156006577f01a5991e7c315753fda769b9ee43b3",
+    "internal/controlleradapter/catalystcenter/site_recreation_parent_envtest_test.go": "a71df468a387db43a36cba737f33af05147c47eee36617693ae331e83ad0cbc8",
+    "internal/controlleradapter/catalystcenter/site_recreation_execution.go": "76d58fb5a71df26f1f603078471ccb35983bf187d473cb92c0b7666ed0bbe96d",
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "1626406e465637859557d20062a412600caff50afcb4bdf006ba05b5357980d3",
+    "internal/controlleradapter/catalystcenter/site_retired_dependents.go": "bcde3c2cdefd28ffee37156c8e42adaceeffbcbfdee0882c0ec10c7c7abe25ef",
+    "internal/controlleradapter/catalystcenter/site_creation_publication.go": "a25b46022fc8f2681b518cc1777c5e32563b51350ec853e2103279805fa782d2",
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "ae5efdf035b4607942506f8ff233f8dd497d2beb9537392fe042370e169ba898"
+  },
+  "pinned_resource_rows": 93,
+  "remaining": [
+    "public policy/compiler routing",
+    "complete operational/settings consumer ownership",
+    "configuration deletion",
+    "building/floor native handoff",
+    "nested multi-ancestor native replacement",
+    "installed complete-cycle qualification"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "interface": {
+    "responseType": "list",
+    "rows": 0,
+    "envelopeFields": [
+      "response",
+      "version"
+    ]
+  },
+  "networkdevice": {
+    "responseType": "list",
+    "rows": 0,
+    "envelopeFields": [
+      "response",
+      "version"
+    ]
+  },
+  "template": {
+    "responseType": "list",
+    "rows": 0,
+    "envelopeFields": [
+      "response",
+      "version"
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "files": [
+    {
+      "file": "internal/provider/model_catalystcenter_template.go",
+      "sha256": "351d34dc5bd0873c608e0c0690b0b8cc0e0c5c5624f95acbbe4db1cf45d8081f"
+    },
+    {
+      "file": "internal/provider/resource_catalystcenter_template.go",
+      "sha256": "788d4fedfa4d5efc20303fdb361d3cf788e2b484c3c94afb3780e63bb238f55d"
+    }
+  ],
+  "contracts": {
+    "dataTypeRequired": [
+      "STRING",
+      "INTEGER",
+      "IPADDRESS",
+      "MACADDRESS",
+      "SECTIONDIVIDER"
+    ],
+    "selectionTypeOptional": [
+      "SINGLE_SELECT",
+      "MULTI_SELECT"
+    ],
+    "optionalNullFields": "Omitted by provider body encoding; required datatype remains required",
+    "defaultValueType": "string",
+    "selectionValuesType": "map(string)"
+  },
+  "nativeObservation": "Repeated generated-template reads permuted templateParams with customParamsOrder=false; preserving all fields and sorting solely by unique parameterName produced identical complete bodies. True/missing flags remain order-sensitive in CVK; the normalization rule is an inference qualified against these observed lab responses, not a claim of global appliance behavior."
+}

@@ -1,0 +1,34 @@
+# Extend the existing inventory owner. This starts a discovery job against the
+# declared address; use credentials already registered in Catalyst Center.
+# Discovery-only configs retain verified native ownership. A later change to an
+# owned job uses exact-ID stop/remove and create; imported jobs are never adopted.
+# See discovery-replacement-apply.yaml for a follow-on revision of this config.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]

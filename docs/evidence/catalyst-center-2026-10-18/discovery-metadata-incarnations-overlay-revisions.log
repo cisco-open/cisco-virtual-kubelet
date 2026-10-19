@@ -1,0 +1,295 @@
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/legacy-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/continuation-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/unknown-version
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/wrong-target
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change
+--- PASS: TestDiscoveryCredentialMetadataInputProtocol (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/legacy-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/continuation-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/unknown-version (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/wrong-target (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change (0.00s)
+=== RUN   TestDiscoveryCredentialMetadataActionHistory
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/fabricated-delivery
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/missing-versioned-pair
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/metadata-version-binding
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/queued-scope-change
+=== RUN   TestDiscoveryCredentialMetadataActionHistory/queued-scope-downgrade
+--- PASS: TestDiscoveryCredentialMetadataActionHistory (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/fabricated-delivery (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/missing-versioned-pair (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/metadata-version-binding (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/queued-scope-change (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataActionHistory/queued-scope-downgrade (0.00s)
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/rotate-inline
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/rotate-configmap
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/leaf-reintroduction
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/leaf-reuse-refused
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/prune-recreate
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 5216 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc0005a6340, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x1066ca388, 0x10781ee00}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc0003ff730, {0x1066ca388, 0x10781ee00}, {{{0xc000f92960, 0x22}, {0xc000e617fc, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialRevision(0xc000472488, 0xc000b32420, 0xc001488c08, {0xc000f74468, 0xe}, 0x0, {0x1066ed660, 0xc0007634d0}, 0x1, {0xc0006ce731, ...})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_revision_test.go:545 +0x4514
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialCustodyExecution(0xc000472488, 0xc000b32420, 0xc001488c08, {0xc000f7445f, 0x17}, 0x0, {0x1066ed660, 0xc0007634d0}, 0x1)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_custody_execution_test.go:265 +0x3094
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialPublicHandoff(0xc000472488, 0xc000b32420, 0xc001488c08, {0xc000f7445f, 0x17}, 0x0, {0xc000820580, 0xad}, {0x1066ed660, 0xc0007634d0}, ...)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_public_handoff_test.go:237 +0x1dc0
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialHandoffObservation(0xc000472488, 0xc000b32420, 0xc000fc8308, {0xc000f74450, 0x26}, 0x1, {0x0, 0x0, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_handoff_observation_test.go:322 +0x3410
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.discoveryCredentialCleanupObservationScenario(0xc000472488, {0xc000f74440, 0x36}, 0xc000971e88)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_config_cleanup_observation_test.go:648 +0x6304
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestDiscoveryCredentialCustodyRevision.func1(0xc000472488)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_revision_envtest_test.go:13 +0xfc
+	>  testing.tRunner(0xc000472488, 0xc000c0c960)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 241
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/prune-inline
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/prune-configmap
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/retain
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/old-counter
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/projection-lag
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/archive-return
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/seal-loss
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/lost-accepted-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/lost-retirement-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/lost-permit-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/ambiguous-delete
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/unknown-delete
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/configmap-source-loss
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/scope-loss-after-submit
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-inline
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-configmap
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-retain
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-recreate
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-lost-accepted-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-lost-retirement-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-lost-permit-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-ambiguous-delete
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-unknown-delete
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-configmap-source-loss
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-scope-loss-after-submit
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-seal-loss
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-archive-return
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/empty-native-return
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-inline
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-configmap
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-reintroduce
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-version-reuse
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-prune
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-prune-recreate
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-mixed
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-accepted-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-retirement-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-permit-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-ambiguous-delete
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-unknown-delete
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-configmap-source-loss
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-scope-loss-after-submit
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-accepted-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-permit-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-receipt-ack
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-rejected-metadata-receipt
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-ambiguous-create
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-configmap-create-source-loss
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-unknown-create
+--- PASS: TestEnvtestDiscoveryCredentialCustodyRevision (287.86s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/rotate-inline (6.42s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/rotate-configmap (3.99s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/leaf-reintroduction (7.42s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/leaf-reuse-refused (8.27s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/prune-recreate (5.59s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata (3.83s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/prune-inline (3.98s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/prune-configmap (4.11s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/retain (4.05s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/old-counter (4.34s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/projection-lag (2.90s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/archive-return (4.22s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/seal-loss (4.00s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/lost-accepted-ack (3.82s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/lost-retirement-ack (3.74s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/lost-permit-ack (3.66s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/ambiguous-delete (3.83s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/unknown-delete (3.85s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/configmap-source-loss (3.41s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/scope-loss-after-submit (4.29s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-inline (4.88s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-configmap (5.02s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-retain (4.96s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-recreate (6.71s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-lost-accepted-ack (4.90s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-lost-retirement-ack (4.92s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-lost-permit-ack (3.37s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-ambiguous-delete (3.45s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-unknown-delete (4.96s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-configmap-source-loss (3.30s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-scope-loss-after-submit (3.78s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-seal-loss (3.53s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-archive-return (3.79s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/empty-native-return (4.58s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap (6.52s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-inline (6.27s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-configmap (6.56s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth (6.40s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-reintroduce (8.34s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-version-reuse (5.60s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-prune (6.27s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-prune-recreate (7.88s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-mixed (8.54s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-accepted-ack (6.37s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-retirement-ack (6.33s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-permit-ack (3.43s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-ambiguous-delete (3.49s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-unknown-delete (6.32s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-configmap-source-loss (3.29s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-scope-loss-after-submit (3.88s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-accepted-ack (6.29s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-permit-ack (3.77s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-receipt-ack (6.34s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-rejected-metadata-receipt (6.50s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-ambiguous-create (3.78s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-configmap-create-source-loss (3.74s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-unknown-create (6.30s)
+=== RUN   TestDiscoveryCredentialCustodyRevision
+=== RUN   TestDiscoveryCredentialCustodyRevision/rotate-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/rotate-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/leaf-reintroduction
+=== RUN   TestDiscoveryCredentialCustodyRevision/leaf-reuse-refused
+=== RUN   TestDiscoveryCredentialCustodyRevision/prune-recreate
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata
+=== RUN   TestDiscoveryCredentialCustodyRevision/prune-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/prune-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/retain
+=== RUN   TestDiscoveryCredentialCustodyRevision/old-counter
+=== RUN   TestDiscoveryCredentialCustodyRevision/projection-lag
+=== RUN   TestDiscoveryCredentialCustodyRevision/archive-return
+=== RUN   TestDiscoveryCredentialCustodyRevision/seal-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/ambiguous-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/unknown-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/configmap-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/scope-loss-after-submit
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-retain
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-recreate
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-ambiguous-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-unknown-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-configmap-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-scope-loss-after-submit
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-seal-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-archive-return
+=== RUN   TestDiscoveryCredentialCustodyRevision/empty-native-return
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-global-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-global-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-noauth
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-reintroduce
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-version-reuse
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-prune
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-prune-recreate
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-mixed
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-retirement-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-unknown-delete
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-configmap-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-scope-loss-after-submit
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-accepted-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-permit-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-receipt-ack
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-rejected-metadata-receipt
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-create
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-configmap-create-source-loss
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-unknown-create
+--- PASS: TestDiscoveryCredentialCustodyRevision (125.71s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/rotate-inline (1.70s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/rotate-configmap (1.69s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/leaf-reintroduction (3.32s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/leaf-reuse-refused (3.49s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/prune-recreate (2.57s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata (1.67s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/prune-inline (1.74s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/prune-configmap (1.76s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/retain (1.80s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/old-counter (1.84s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/projection-lag (1.16s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/archive-return (1.74s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/seal-loss (1.52s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/lost-accepted-ack (1.67s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/lost-retirement-ack (1.67s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/lost-permit-ack (1.41s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/ambiguous-delete (1.50s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/unknown-delete (1.68s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/configmap-source-loss (1.29s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/scope-loss-after-submit (1.77s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-inline (2.27s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-configmap (2.29s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-retain (2.34s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-recreate (3.21s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-lost-accepted-ack (2.29s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-lost-retirement-ack (2.29s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-lost-permit-ack (1.26s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-ambiguous-delete (1.29s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-unknown-delete (2.28s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-configmap-source-loss (1.25s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-scope-loss-after-submit (1.55s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-seal-loss (1.31s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-archive-return (1.50s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/empty-native-return (1.91s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap (3.11s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-global-inline (3.08s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-global-configmap (3.12s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-noauth (3.07s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-reintroduce (4.09s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-version-reuse (2.42s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-prune (3.01s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-prune-recreate (3.86s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-mixed (4.19s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-accepted-ack (3.07s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-retirement-ack (3.06s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-permit-ack (1.31s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-delete (1.36s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-unknown-delete (3.07s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-configmap-source-loss (1.27s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-scope-loss-after-submit (1.63s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-accepted-ack (3.08s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-permit-ack (1.48s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-lost-metadata-receipt-ack (3.14s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-rejected-metadata-receipt (3.11s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-ambiguous-create (1.53s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-configmap-create-source-loss (1.45s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-unknown-create (3.14s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	416.012s

@@ -2622,3 +2622,63 @@ func TestManagedClaimCoverageRejectsOldOrCorruptWorkerStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestSettledUnstartedDrainReleasesOnlyUnclaimedQueueOwner(t *testing.T) {
+	base := managedCancellationAuditRecord("a-cancelled-drain", true)
+	base.Status.ExecutionModel = ""
+	base.Status.Phase = ""
+	base.Status.ManagerDrain.Pods[0].ReleasedAt = &metav1.Time{Time: managedTestTime}
+	base.Status.WorkerDrain.RemainingAuthorizedPodUIDs = []string{"pod-uid-1"}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*opsv1alpha1.IOSXESoftwareUpgrade)
+		want   bool
+	}{
+		{"settled never started", func(*opsv1alpha1.IOSXESoftwareUpgrade) {}, true},
+		{"not released", func(u *opsv1alpha1.IOSXESoftwareUpgrade) { u.Status.ManagerDrain.Pods[0].ReleasedAt = nil }, false},
+		{"eviction requested", func(u *opsv1alpha1.IOSXESoftwareUpgrade) {
+			u.Status.ManagerDrain.Pods[0].EvictionRequestedAt = &metav1.Time{Time: managedTestTime}
+		}, false},
+		{"deletion observed", func(u *opsv1alpha1.IOSXESoftwareUpgrade) {
+			u.Status.ManagerDrain.Pods[0].DeletionObservedAt = &metav1.Time{Time: managedTestTime}
+		}, false},
+		{"unknown remaining UID", func(u *opsv1alpha1.IOSXESoftwareUpgrade) {
+			u.Status.WorkerDrain.RemainingAuthorizedPodUIDs = []string{"other"}
+		}, false},
+		{"duplicate remaining UID", func(u *opsv1alpha1.IOSXESoftwareUpgrade) {
+			u.Status.WorkerDrain.RemainingAuthorizedPodUIDs = []string{"pod-uid-1", "pod-uid-1"}
+		}, false},
+		{"started software", func(u *opsv1alpha1.IOSXESoftwareUpgrade) { u.Status.StartTime = &metav1.Time{Time: managedTestTime} }, false},
+		{"handoff exists", func(u *opsv1alpha1.IOSXESoftwareUpgrade) {
+			u.Status.ControllerHandoff = &opsv1alpha1.UpgradeControllerHandoffStatus{}
+		}, false},
+		{"not settled", func(u *opsv1alpha1.IOSXESoftwareUpgrade) {
+			u.Status.ManagerAdmission.State = opsv1alpha1.UpgradeManagerAdmissionGranted
+		}, false},
+		{"worker stale", func(u *opsv1alpha1.IOSXESoftwareUpgrade) { u.Status.WorkerControl.ObservedControlRevision++ }, false},
+		{"not cancelled", func(u *opsv1alpha1.IOSXESoftwareUpgrade) { u.Status.ManagerControl.Cancel = false }, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			old := base.DeepCopy()
+			tc.mutate(old)
+			if got := SettledUnclaimedManagedOperation(old); got != tc.want {
+				t.Fatalf("quiescent=%v want %v", got, tc.want)
+			}
+			up := newUpgrade("z-next", nil)
+			r := newReconciler(t, newRig(t), up)
+			if err := r.Client.Create(context.Background(), old); err != nil {
+				t.Fatal(err)
+			}
+			owner, err := r.deviceUpgradeOwner(context.Background(), up, managedTestTime)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tc.want && owner == old.Name {
+				t.Fatal("settled unstarted drain retained queue")
+			}
+			if !tc.want && owner != old.Name {
+				t.Fatalf("ambiguous record lost queue: %s", owner)
+			}
+		})
+	}
+}

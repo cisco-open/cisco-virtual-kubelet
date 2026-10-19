@@ -1,0 +1,128 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "pinnedModelCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "scope": "Known/unknown legacy device enrollment, shared aggregator fence checks and metadata global CiscoDevice identity census",
+  "fullModelComplete": false,
+  "installedMutationQualified": false,
+  "productionRuntimeHooksRemainUnset": true,
+  "source": {
+    "internal/controllerconfiguration": {
+      "files": 158,
+      "sha256": "d71493e064162c11f831f29945ecc639dd0e673ddb0c411cb61e6a3cebf0195c"
+    },
+    "internal/controller": {
+      "files": 94,
+      "sha256": "3c65cdf0b24fe3b17705d4b93eedd33238a66871b1c184b14aeccfefd2f28ddc"
+    },
+    "internal/aggregator": {
+      "files": 11,
+      "sha256": "137bc460cb8794a00d09429e5291a0736a783f60389e6da00ebdf8f5b0631083"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1701,
+      "sha256": "352bfc265299738e7c056332dc9d0fe665604eccbd7e24b19552331fe408284a"
+    },
+    "cmd/cisco-vk": {
+      "files": 48,
+      "sha256": "1e3220c4e9cbd792830bf6dcfc6129568f0600eb290bd0c098eb33c98eeffd4e"
+    },
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "768f409f8ae7f17180077aa6e74c59f87d692dc3ea5de35233eaad73ebb9ab9a"
+    }
+  },
+  "gates": {
+    "focusedFinal": {
+      "result": "PASS",
+      "passingEvents": 94,
+      "packages": 3,
+      "packageSecondsSum": 2.444,
+      "log": "/private/tmp/cvk-metadata-consumers-focused-final.log"
+    },
+    "legacyEnrollmentRealAPI": {
+      "result": "PASS",
+      "passingEvents": 4,
+      "packages": 1,
+      "packageSecondsSum": 6.83,
+      "log": "/private/tmp/cvk-metadata-consumers-api.log"
+    },
+    "metadataScopeRealAPIFinal": {
+      "result": "PASS",
+      "passingEvents": 2,
+      "packages": 1,
+      "packageSecondsSum": 12.334,
+      "log": "/private/tmp/cvk-metadata-consumers-scope-api-final.log"
+    },
+    "publicPnPActorAPIFinal": {
+      "result": "PASS",
+      "passingEvents": 5,
+      "packages": 1,
+      "packageSecondsSum": 32.682,
+      "log": "/private/tmp/cvk-metadata-consumers-public-api-final.log"
+    },
+    "sharedFoundationNDDirectUpgrade": {
+      "result": "PASS",
+      "passingEvents": 3941,
+      "packages": 12,
+      "packageSecondsSum": 47.945,
+      "log": "/private/tmp/cvk-metadata-consumers-foundation.log"
+    },
+    "PnPJournalSWIM": {
+      "result": "PASS",
+      "passingEvents": 931,
+      "packages": 1,
+      "packageSecondsSum": 19.413,
+      "log": "/private/tmp/cvk-metadata-consumers-pnp.log"
+    },
+    "nativePublicCycle": {
+      "result": "PASS",
+      "passingEvents": 2,
+      "packages": 1,
+      "packageSecondsSum": 30.218,
+      "log": "/private/tmp/cvk-metadata-consumers-native.log"
+    }
+  },
+  "nativePublicCycle": {
+    "result": "PASS",
+    "registrationPOSTs": 2,
+    "creatorBoundDELETEs": 2,
+    "privateEvidenceDirectory": "/private/tmp/cvk-pnp-cohort-3964836917",
+    "records": [
+      {
+        "uuid": "6ad5c3b00bc0186771cb1678",
+        "serial": "CVKC5FB7370"
+      },
+      {
+        "uuid": "6ad5c3b60bc0186771cb1679",
+        "serial": "CVKC5FB7371"
+      }
+    ],
+    "emptyPnPCatalog": true,
+    "unchangedNetworkInventory": true,
+    "finalOperation": null,
+    "finalHandoff": null,
+    "retainedCreatorRows": 2,
+    "verifiedTombstoneRows": 2,
+    "KubernetesAuthority": "simulated; real API qualification is separate",
+    "mustNotReplayCompletedEvidence": true
+  },
+  "mainBuild": {
+    "result": "PASS",
+    "path": "/private/tmp/cvk-metadata-consumers-qualified-cisco-vk",
+    "sha256": "b737271c59d095bf5765069c070565b2f50404b7a74d93964f82bdb5fdb7b24c"
+  },
+  "remaining": [
+    "Installed manager/worker/enrollment/settlement compatibility and composition",
+    "Other retained metadata handoffs without active operations in the global census",
+    "Unknown orphan aliases and cross-process active-operation proof",
+    "Generation/domain, config/controller deletion and source-lost finalization",
+    "Physical PnP claim completion",
+    "Other pinned 93-resource execution/hardware gaps"
+  ],
+  "sourceFrozen": "PASS",
+  "uniqueResourceRows": 93,
+  "formatting": "PASS",
+  "scopedWhitespaceCheck": "PASS",
+  "strictDocumentation": "PASS"
+}

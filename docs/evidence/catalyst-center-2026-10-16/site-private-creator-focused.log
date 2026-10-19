@@ -1,0 +1,114 @@
+=== RUN   TestSitePrivateNativeMAC
+=== RUN   TestSitePrivateNativeMAC/same
+=== RUN   TestSitePrivateNativeMAC/order
+=== RUN   TestSitePrivateNativeMAC/unknown-edit
+=== RUN   TestSitePrivateNativeMAC/number-edit
+=== RUN   TestSitePrivateNativeMAC/null-absent
+=== RUN   TestSitePrivateNativeMAC/other-object
+=== RUN   TestSitePrivateNativeMAC/other-key
+=== RUN   TestSitePrivateNativeMAC/same-key-other-scope
+--- PASS: TestSitePrivateNativeMAC (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/same (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/order (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/unknown-edit (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/number-edit (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/null-absent (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/other-object (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/other-key (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/same-key-other-scope (0.00s)
+=== RUN   TestSitePrivateCreatorReceiptBoundaries
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/valid
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/missing-baseline
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/bad-baseline
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/wrong-key
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/lost-producer
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/lost-source
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/alias-legacy
+--- PASS: TestSitePrivateCreatorReceiptBoundaries (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/valid (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/missing-baseline (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/bad-baseline (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/wrong-key (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/lost-producer (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/lost-source (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/alias-legacy (0.00s)
+=== RUN   TestSitePrivatePublicCreatorBaseline
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/recover-private
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/recover-private
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/recover-private
+--- PASS: TestSitePrivatePublicCreatorBaseline (8.52s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-known (1.09s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-native-edit (0.54s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-key-change (0.55s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-option-loss (0.52s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/recover-private (0.50s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-known (0.50s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-native-edit (0.55s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-key-change (0.54s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-option-loss (0.52s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/recover-private (0.51s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-known (0.52s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-native-edit (0.57s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-key-change (0.56s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-option-loss (0.54s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/recover-private (0.52s)
+=== RUN   TestSitePrivateDispatchFootprint
+=== RUN   TestSitePrivateDispatchFootprint/area-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/area-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/area-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/area-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/area-create/uncertain
+=== RUN   TestSitePrivateDispatchFootprint/building-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/building-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/building-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/building-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/building-create/uncertain
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/uncertain
+--- PASS: TestSitePrivateDispatchFootprint (0.23s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/number-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/uncertain (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/number-edit (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/uncertain (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/number-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/uncertain (0.02s)
+=== RUN   TestSitePrivateDoesNotBackfillOwnership
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/legacy-creator
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/imported
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/new-absent
+--- PASS: TestSitePrivateDoesNotBackfillOwnership (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/legacy-creator (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/imported (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/new-absent (0.00s)
+=== RUN   TestSitePrivateUpdateCannotOverwriteCreatorBaseline
+--- PASS: TestSitePrivateUpdateCannotOverwriteCreatorBaseline (0.00s)
+=== RUN   TestSitePrivateExampleContract
+--- PASS: TestSitePrivateExampleContract (0.00s)
+=== RUN   TestSitePrivateFootprintSeparatesParentSettings
+--- PASS: TestSitePrivateFootprintSeparatesParentSettings (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.125s

@@ -1,0 +1,6 @@
+=== RUN   TestLiveNoAuthGeneratedNativeExecution
+    discovery_noauth_native_execution_staged_test.go:262: native NoAuth qualification incomplete native execution did not reach InSync within bounded observation created 1 deleted 0 baseline restored false supervised cleanup false
+--- FAIL: TestLiveNoAuthGeneratedNativeExecution (135.00s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	136.229s
+FAIL

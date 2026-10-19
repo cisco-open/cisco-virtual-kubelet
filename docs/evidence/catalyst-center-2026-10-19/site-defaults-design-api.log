@@ -1,0 +1,10 @@
+=== RUN   TestEnvtestSiteDefaultsDesignManifest
+=== RUN   TestEnvtestSiteDefaultsDesignManifest/defaults-recover-private
+=== RUN   TestEnvtestSiteDefaultsDesignManifest/image-defaults-recover-private
+=== RUN   TestEnvtestSiteDefaultsDesignManifest/image-defaults-keyed-recover-private
+--- PASS: TestEnvtestSiteDefaultsDesignManifest (9.06s)
+    --- PASS: TestEnvtestSiteDefaultsDesignManifest/defaults-recover-private (2.61s)
+    --- PASS: TestEnvtestSiteDefaultsDesignManifest/image-defaults-recover-private (1.05s)
+    --- PASS: TestEnvtestSiteDefaultsDesignManifest/image-defaults-keyed-recover-private (1.80s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.182s

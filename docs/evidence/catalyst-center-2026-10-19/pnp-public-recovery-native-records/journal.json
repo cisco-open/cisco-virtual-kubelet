@@ -1,0 +1,47 @@
+{
+  "actionApplications": [
+    {
+      "section": "inventory",
+      "resource": "pnp-record:6ad589f80bc0186771cb115f:removal:v1:Y3ZrNTIyZDVkZjA:bfa415d60d221a5483d73beba608fb995cbd7f035593b1afaf86feef19521480:276074586f2f1d3be23e34edb0fae666f9a8c8e3a7246c760f482d5d1095cc31",
+      "operation": {
+        "id": "8a2fd87bbdecb5135efdb77883443df9",
+        "configName": "sites",
+        "configUID": "config",
+        "configGeneration": 1,
+        "controllerGeneration": 1,
+        "section": "inventory",
+        "resource": "pnp-register:4787f01f7d5196fef27edcbbfcbbbe947709e527b02ca98a039e3d4ced62fc9c",
+        "action": "Create",
+        "phase": "Verified",
+        "submittedAt": "2026-10-19T03:09:43Z",
+        "createdResourceID": "6ad589f80bc0186771cb115f"
+      },
+      "verifiedAt": "2026-10-19T03:09:44Z"
+    },
+    {
+      "section": "inventory",
+      "resource": "pnp-removed:v1:6ad589f80bc0186771cb115f:e8031784e6671a5fd69489c2b67963ca08c3b998c337745d73aa8ca4874aaa2c",
+      "operation": {
+        "id": "1f874ab0d4de881976e7cc1dba39cc9e",
+        "configName": "sites",
+        "configUID": "config",
+        "configGeneration": 2,
+        "controllerGeneration": 1,
+        "section": "inventory",
+        "resource": "pnp-remove:v2:6ad589f80bc0186771cb115f:e8031784e6671a5fd69489c2b67963ca08c3b998c337745d73aa8ca4874aaa2c",
+        "targetID": "6ad589f80bc0186771cb115f",
+        "action": "Delete",
+        "phase": "Verified",
+        "submittedAt": "2026-10-19T03:09:50Z"
+      },
+      "verifiedAt": "2026-10-19T03:09:52Z"
+    }
+  ],
+  "owners": [
+    {
+      "section": "inventory",
+      "configName": "sites",
+      "configUID": "config"
+    }
+  ]
+}

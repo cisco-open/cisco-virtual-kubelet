@@ -16,6 +16,7 @@ package transport
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -77,6 +78,13 @@ type sshCLIConfig struct {
 //     return everything between the command echo and the prompt.
 //   - Final "exit" closes the session.
 func runShowCommandsViaSSH(cfg sshCLIConfig, commands []string) ([]CommandResult, error) {
+	return runCommandsViaSSHContext(context.Background(), cfg, commands)
+}
+
+func runCommandsViaSSHContext(ctx context.Context, cfg sshCLIConfig, commands []string) ([]CommandResult, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if cfg.Address == "" {
 		return nil, fmt.Errorf("ssh-cli: empty Address")
 	}
@@ -100,10 +108,32 @@ func runShowCommandsViaSSH(cfg sshCLIConfig, commands []string) ([]CommandResult
 		Timeout:         timeout,
 	}
 	addr := net.JoinHostPort(cfg.Address, strconv.Itoa(port))
-	client, err := ssh.Dial("tcp", addr, clientCfg)
+	// ssh.Dial's timeout bounds TCP connection establishment, not the SSH
+	// handshake. Register cancellation before authentication so a silent peer
+	// cannot strand a claimed cleanup operation indefinitely.
+	conn, err := (&net.Dialer{Timeout: timeout}).DialContext(ctx, "tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("ssh-cli: dial %s: %w", addr, err)
 	}
+	defer conn.Close()
+	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	defer stop()
+	deadline := time.Now().Add(timeout)
+	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
+		deadline = d
+	}
+	if err = conn.SetDeadline(deadline); err != nil {
+		return nil, fmt.Errorf("ssh-cli: handshake deadline: %w", err)
+	}
+	c, channels, requests, err := ssh.NewClientConn(conn, addr, clientCfg)
+	if err != nil {
+		return nil, fmt.Errorf("ssh-cli: handshake %s: %w", addr, err)
+	}
+	if err = conn.SetDeadline(time.Time{}); err != nil {
+		_ = c.Close()
+		return nil, fmt.Errorf("ssh-cli: reset handshake deadline: %w", err)
+	}
+	client := ssh.NewClient(c, channels, requests)
 	defer client.Close()
 
 	session, err := client.NewSession()

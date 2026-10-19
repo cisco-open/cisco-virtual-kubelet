@@ -1,0 +1,9 @@
+=== RUN   TestLivePnPRegistrationPrimitiveNoDispatchReplan
+    pnp_registration_stage_live_test.go:113: private registration recovery directory /private/tmp/cvk-pnp-registration-2801821610
+    pnp_registration_stage_live_test.go:113: primitive original final-preflight refusal retired with zero native POSTs; inventory owner retained
+    pnp_registration_stage_live_test.go:113: owned native registration 6ad413d80bc0186771caf0ee CVK6ABB40A8
+    pnp_registration_stage_live_test.go:113: public reconciler qualification true
+    pnp_registration_stage_live_test.go:113: registration, serialized journal stages, owned no-op and exact UUID cleanup verified; no claim/reset/device action submitted
+--- PASS: TestLivePnPRegistrationPrimitiveNoDispatchReplan (9.11s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.554s

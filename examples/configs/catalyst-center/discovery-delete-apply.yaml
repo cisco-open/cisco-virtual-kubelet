@@ -1,0 +1,36 @@
+# Opt in to manager-enrolled, receipt-owned discovery CR cleanup.
+# Use an exclusive inventory/templates owner for this controller/namespace.
+# Native jobs are deleted only by their retained UUID and field fingerprint.
+# The manager alone enrolls/releases the discovery cleanup finalizer.
+# Owner/tombstone audit history remains after CR deletion. Newly attested pure
+# discovery owners can hand off after their UID disappears and native absence
+# is reverified; legacy owners without that attestation remain fenced.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-owned-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Delete
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-delete-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]

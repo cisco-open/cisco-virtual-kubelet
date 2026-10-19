@@ -1,0 +1,168 @@
+=== RUN   TestApplyExamplesCompile
+=== RUN   TestApplyExamplesCompile/aaa-apply.yaml
+=== RUN   TestApplyExamplesCompile/aaa-prerequisites-apply.yaml
+=== RUN   TestApplyExamplesCompile/anycast-gateways-apply.yaml
+=== RUN   TestApplyExamplesCompile/authentication-templates-apply.yaml
+=== RUN   TestApplyExamplesCompile/composite-template-deployment-apply.yaml
+=== RUN   TestApplyExamplesCompile/device-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-cohort-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-composition-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-delete-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-noauth-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-noauth-retain-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-null-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-prune-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-replacement-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-templates-apply.yaml
+=== RUN   TestApplyExamplesCompile/dynamic-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/extranet-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-associated-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-authentication-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-l2-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-l3-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-sites-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-transits-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-zones-apply.yaml
+=== RUN   TestApplyExamplesCompile/global-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/inventory-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-dualstack-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-fabric-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-prune-apply.yaml
+=== RUN   TestApplyExamplesCompile/ise-policy-server-apply.yaml
+=== RUN   TestApplyExamplesCompile/merged-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-credentials-combined-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-profiles-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-settings-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-settings-reset-apply.yaml
+=== RUN   TestApplyExamplesCompile/planned-ap-apply.yaml
+=== RUN   TestApplyExamplesCompile/policy-servers-apply.yaml
+=== RUN   TestApplyExamplesCompile/policy-servers-keywrap-apply.yaml
+=== RUN   TestApplyExamplesCompile/rma-mark-apply.yaml
+=== RUN   TestApplyExamplesCompile/rma-unmark-apply.yaml
+=== RUN   TestApplyExamplesCompile/site-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/sites-apply.yaml
+=== RUN   TestApplyExamplesCompile/sites-bulk-apply.yaml
+=== RUN   TestApplyExamplesCompile/snmpv3-noauth-apply.yaml
+=== RUN   TestApplyExamplesCompile/system-external-auth-apply.yaml
+=== RUN   TestApplyExamplesCompile/system-settings-apply.yaml
+=== RUN   TestApplyExamplesCompile/tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/tags-owned-prune-apply.yaml
+=== RUN   TestApplyExamplesCompile/tags-owned-prune-empty-apply.yaml
+=== RUN   TestApplyExamplesCompile/telemetry-partial-apply.yaml
+=== RUN   TestApplyExamplesCompile/template-deployment-apply.yaml
+=== RUN   TestApplyExamplesCompile/template-projects-apply.yaml
+=== RUN   TestApplyExamplesCompile/wired-provision-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-acls-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-anchor-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-anchor-multi-peer-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ap-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ap-calendar-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ap-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-cleanair-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-dot11be-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-feature-prune-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-feature-recreate-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-fra-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-interfaces-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-policy-cohort-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-power-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-profile-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-profile-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-rf-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-empty-multipsk-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-multipsk-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-retire-priority4-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-tag-baselines-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-tag-membership-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-tag-prune-apply.yaml
+--- PASS: TestApplyExamplesCompile (0.86s)
+    --- PASS: TestApplyExamplesCompile/aaa-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/aaa-prerequisites-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/anycast-gateways-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/authentication-templates-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/composite-template-deployment-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/device-credentials-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/discovery-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-cohort-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-composition-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-delete-apply.yaml (0.60s)
+    --- PASS: TestApplyExamplesCompile/discovery-noauth-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/discovery-noauth-retain-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-null-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-prune-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-replacement-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-tags-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/discovery-templates-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/dynamic-tags-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/extranet-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-associated-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-authentication-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-l2-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-l3-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-sites-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-transits-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-zones-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/global-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/inventory-tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-dualstack-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-fabric-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-prune-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ise-policy-server-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/merged-tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/network-credentials-combined-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/network-profiles-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/network-settings-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/network-settings-reset-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/planned-ap-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/policy-servers-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/policy-servers-keywrap-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/rma-mark-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/rma-unmark-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/site-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/sites-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/sites-bulk-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/snmpv3-noauth-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/system-external-auth-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/system-settings-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/tags-owned-prune-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/tags-owned-prune-empty-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/telemetry-partial-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/template-deployment-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/template-projects-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wired-provision-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-acls-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-anchor-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-anchor-multi-peer-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ap-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ap-calendar-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ap-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-cleanair-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-dot11be-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-feature-prune-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-feature-recreate-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-fra-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-interfaces-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-policy-cohort-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-power-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-profile-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-profile-tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-rf-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-empty-multipsk-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-multipsk-credentials-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-retire-priority4-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/wireless-tag-baselines-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-tag-membership-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-tag-prune-apply.yaml (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.353s

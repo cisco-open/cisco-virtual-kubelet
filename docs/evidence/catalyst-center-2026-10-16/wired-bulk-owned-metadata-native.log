@@ -1,0 +1,9 @@
+=== RUN   TestLiveGlobalCredentialNoAuthManifest
+    global_credential_metadata_live_test.go:213: real native public metadata create/update receipt composed with private bulk dependency; missing receipt refused and restored without extra native writes; Kubernetes actors simulated
+    global_credential_metadata_live_test.go:220: NOAUTHNOPRIV public manifest phase verified step 0 target 71fbfafc-c8af-4e78-a3df-937fd051783c task 01a14450-4542-7e89-84cc-342572f4da80
+    global_credential_metadata_live_test.go:213: real native public metadata create/update receipt composed with private bulk dependency; missing receipt refused and restored without extra native writes; Kubernetes actors simulated
+    global_credential_metadata_live_test.go:220: NOAUTHNOPRIV public manifest phase verified step 1 target 71fbfafc-c8af-4e78-a3df-937fd051783c task 01a14450-78fc-78b6-93d4-78a2ea18b327
+    global_credential_metadata_live_test.go:170: isolated SNMP credential removed; complete non-secret baseline restored target 71fbfafc-c8af-4e78-a3df-937fd051783c cleanupTask 01a14450-b043-7bd3-a98e-0b30bb04ed89
+--- PASS: TestLiveGlobalCredentialNoAuthManifest (31.23s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	33.601s

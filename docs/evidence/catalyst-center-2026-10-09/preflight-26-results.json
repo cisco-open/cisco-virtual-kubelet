@@ -1,0 +1,178 @@
+[
+  {
+    "name": "Startup config check",
+    "type": "PRE_VALIDATION",
+    "operationType": "READINESS_CHECK",
+    "parentId": "01a11e8b-e021-778e-aa47-47c62168da0e",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "startTime": 1791513847130,
+    "endTime": 1791513859137,
+    "managementAddress": "198.51.100.101",
+    "resultDetails": [
+      {
+        "key": "ACTUAL",
+        "value": ""
+      },
+      {
+        "key": "EXPECTED",
+        "value": ""
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Startup configuration exist for this device"
+      },
+      {
+        "key": "ACTION",
+        "value": ""
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ],
+    "id": "350c8a96-f10d-47c0-856e-d665f26c1044"
+  },
+  {
+    "name": "Config register check",
+    "type": "PRE_VALIDATION",
+    "operationType": "READINESS_CHECK",
+    "parentId": "01a11e8b-e021-778e-aa47-47c62168da0e",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "startTime": 1791513846988,
+    "endTime": 1791513858131,
+    "managementAddress": "198.51.100.101",
+    "resultDetails": [
+      {
+        "key": "ACTUAL",
+        "value": ""
+      },
+      {
+        "key": "EXPECTED",
+        "value": "0x102,0x2102"
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Config-register verified successfully"
+      },
+      {
+        "key": "ACTION",
+        "value": "No action required"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ],
+    "id": "90b50c9d-8d48-47a3-8a10-e34d93b6dd28"
+  },
+  {
+    "name": "Flash check",
+    "type": "PRE_VALIDATION",
+    "operationType": "READINESS_CHECK",
+    "parentId": "01a11e8b-e021-778e-aa47-47c62168da0e",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "startTime": 1791513846952,
+    "endTime": 1791513857604,
+    "managementAddress": "198.51.100.101",
+    "resultDetails": [
+      {
+        "key": "EXPECTED",
+        "value": "2651 MB\n Available Free space is: 3129 MB [Install mode needs free space to 2.2 times of Image size]"
+      },
+      {
+        "key": "STATUS",
+        "value": "SUCCESS"
+      }
+    ],
+    "id": "ee155fc2-0218-4502-b515-741dfb6f7b91"
+  },
+  {
+    "name": "File Transfer Check",
+    "type": "PRE_VALIDATION",
+    "operationType": "READINESS_CHECK",
+    "parentId": "01a11e8b-e021-778e-aa47-47c62168da0e",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "startTime": 1791513846880,
+    "endTime": 1791513857429,
+    "managementAddress": "198.51.100.101",
+    "resultDetails": [
+      {
+        "value": "FALSE"
+      },
+      {
+        "value": "FALSE"
+      },
+      {
+        "key": "EXPECTED",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254. The Netconf transfer failed, likely because the device is unable to ping 192.0.2.254 through the default VRF."
+      },
+      {
+        "key": "ACTION",
+        "value": "Check the default VRF for Netconf"
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254/ Netconf transfer failed"
+      },
+      {
+        "key": "STATUS",
+        "value": "warning"
+      }
+    ],
+    "id": "4ffebd45-2361-459a-a71c-791159cceef5"
+  },
+  {
+    "name": "Image Version Support",
+    "type": "PRE_VALIDATION",
+    "operationType": "READINESS_CHECK",
+    "parentId": "01a11e8b-e021-778e-aa47-47c62168da0e",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "startTime": 1791513846851,
+    "endTime": 1791513848298,
+    "managementAddress": "198.51.100.101",
+    "resultDetails": [
+      {
+        "key": "DESCRIPTION",
+        "value": "The standard image is applicable to the device"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ],
+    "id": "20ef8501-8e66-4837-a5d6-cc6cbe0e95cd"
+  },
+  {
+    "name": "XFSU Compatibility Check",
+    "type": "PRE_VALIDATION",
+    "operationType": "READINESS_CHECK",
+    "parentId": "01a11e8b-e021-778e-aa47-47c62168da0e",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "startTime": 1791513846693,
+    "endTime": 1791513847466,
+    "managementAddress": "198.51.100.101",
+    "resultDetails": [
+      {
+        "key": "ACTUAL",
+        "value": "Standard Image Version: 26.02.01, Running Image Version: 17.18.4"
+      },
+      {
+        "key": "EXPECTED",
+        "value": "If upgrade image version is greater than 26.1.x, the running image version also must be 26.1.x or higher."
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Upgrades using xfsu to 26.02.01 is not supported from running image version 17.18.4"
+      },
+      {
+        "key": "ACTION",
+        "value": ""
+      },
+      {
+        "key": "STATUS",
+        "value": "warning"
+      }
+    ],
+    "id": "d931d0a8-7aa0-4190-862b-f4492c35a919"
+  }
+]

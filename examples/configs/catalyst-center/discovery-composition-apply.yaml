@@ -1,0 +1,43 @@
+# Controlled/API-server qualified. Live credential delivery remains pending.
+# Authorize alias discovery-cli -> Secret catc-discovery-inputs, key cli on catc.
+# Its value is the common versioned envelope with a JSON string password array.
+# Resolve lab-user and both global credential names before using the example.
+# Secret paths refer to the original source row, irrespective of execution order.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-composed-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-composition-example-v1
+  secretRefs:
+    - section: inventory
+      path: /discovery/1/password_list
+      source: discovery-cli
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-Global-Lab-103
+              type: SINGLE
+              ip_address_list: 198.51.100.103
+              protocol_order: SSH
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]
+            - name: CVK-Credential-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              user_name_list: [lab-user]
+              password_list_version: 1

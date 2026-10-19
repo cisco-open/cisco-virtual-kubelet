@@ -1,0 +1,31 @@
+{
+  "credentialDelivery": false,
+  "installedActors": false,
+  "nativeDevices": 3,
+  "nativeDiscoveryJobs": 1,
+  "nativeMutationAttempts": 0,
+  "nativeReadFailureInjected": true,
+  "operationRetired": true,
+  "originalPreparedOperation": {
+    "id": "c8a0fc81c3d4d63c296f8984be2b1ae6",
+    "configName": "sites",
+    "configUID": "8a211cf0-539a-4fef-bb84-07845234f966",
+    "configGeneration": 2,
+    "controllerGeneration": 2,
+    "section": "inventory",
+    "resource": "discovery-credential-input:v3:a5195f15d2e9d18c93dfa85a7ea22eb95c76650ab110f36dce81539171451ecb:98f0a7befb00b459fc021a2f748edb07ded78ad47b3f2bd4c5364dcb779b276c:8735b62545d0e983a21d1ed6bee10f04d02e72d2b8a41588ae505d2dd9868120:100f:997a6b3a81a36e34e0ecadfa57925edf217aa6937e7630149d19ecb741231547:-",
+    "action": "Create",
+    "phase": "Prepared",
+    "credentialVersions": [
+      {
+        "path": "/discovery/0/password_list",
+        "version": 1,
+        "sourceAlias": "discovery-0",
+        "secretName": "discovery-inputs",
+        "secretKey": "discovery-0"
+      }
+    ]
+  },
+  "provenUndispatchedOperationID": "18aae81f519d32fc3405ad311008287b",
+  "realIsolatedKubernetesAPI": true
+}

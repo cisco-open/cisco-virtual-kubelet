@@ -1,0 +1,23 @@
+{
+  "scope": "Only the verified orphan pair from this completed timed-out test was signalled; other test servers and the installed cluster were untouched. Initial three-second shutdown poll expired; subsequent inspection confirmed graceful exit without SIGKILL.",
+  "processes": [
+    {
+      "pid": 17334,
+      "binary": "etcd",
+      "createdDuringTimedOutGate": true,
+      "priorOrphanPPID": 1,
+      "SIGTERMsent": true,
+      "terminationConfirmed": true,
+      "temporaryDataRetained": true
+    },
+    {
+      "pid": 17336,
+      "binary": "kube-apiserver",
+      "createdDuringTimedOutGate": true,
+      "priorOrphanPPID": 1,
+      "SIGTERMsent": true,
+      "terminationConfirmed": true,
+      "temporaryDataRetained": true
+    }
+  ]
+}

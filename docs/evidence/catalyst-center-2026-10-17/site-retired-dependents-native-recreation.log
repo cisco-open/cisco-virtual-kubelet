@@ -1,0 +1,14 @@
+=== RUN   TestLiveCatalystCenterSiteRetirementRecreation
+    site_recreation_live_test.go:142: private generated-site recovery checkpoint: /private/tmp/cvk-site-lifecycle-3811087092
+    site_recreation_live_test.go:254: singular manifest create task 01a14b62-f6fc-783f-a8b2-59f5c1adb86f
+    site_recreation_live_test.go:268: original area creator verified 484a4105-209b-4297-ac4a-fb53de8eb5e6 01a14b62-f6fc-783f-a8b2-59f5c1adb86f
+    site_recreation_live_test.go:298: retirement acknowledged; restarting observation of original task 01a14b63-2185-72a3-93e9-a000f757f09c
+    site_recreation_live_test.go:317: original retirement task and absence atomically verified 01a14b63-2185-72a3-93e9-a000f757f09c
+    site_recreation_live_test.go:378: recreation acknowledged; restarting observation of original task 01a14b63-2f78-7c16-b581-da07b7633f22
+    site_recreation_live_test.go:424: new native creator and complete predecessor archive verified d6b65c4c-df88-403b-9d2c-99e4f45d489d
+    site_recreation_live_test.go:298: retirement acknowledged; restarting observation of original task 01a14b63-5ba4-76f1-aee3-cc4622c56d07
+    site_recreation_live_test.go:317: original retirement task and absence atomically verified 01a14b63-5ba4-76f1-aee3-cc4622c56d07
+    site_recreation_live_test.go:339: native generated-area lifecycle passed: 2 Creates, 2 Deletes; original tasks, retained history and typed baseline verified; parent/child=false; simulated Kubernetes journal
+--- PASS: TestLiveCatalystCenterSiteRetirementRecreation (30.39s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	32.755s

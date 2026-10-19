@@ -1,0 +1,8 @@
+=== RUN   TestTemplateInventoryManifestCycle
+=== RUN   TestTemplateInventoryManifestCycle/empty-selection
+=== RUN   TestTemplateInventoryManifestCycle/composite-empty-selection
+--- PASS: TestTemplateInventoryManifestCycle (1.62s)
+    --- PASS: TestTemplateInventoryManifestCycle/empty-selection (1.04s)
+    --- PASS: TestTemplateInventoryManifestCycle/composite-empty-selection (0.58s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.969s

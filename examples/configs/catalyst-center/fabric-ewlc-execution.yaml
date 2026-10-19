@@ -1,0 +1,42 @@
+# Fixture-qualified public enable/update lifecycle; lab/installed actors pending.
+# Requires the explicit group reservation runtime and matching managed identities
+# for every affected fabric member. Site assignment, wired provisioning, base
+# fabric roles and declared AP locations must already match Catalyst Center.
+# Replace the example identity and sites. Platform/package qualification remains
+# an operator prerequisite. Disable/reload execution is not yet enabled.
+# An embedded-only fabric_roles list preserves observed base membership; it
+# requires that membership to exist and does not create or change base roles.
+# Set mode: report for read-only native drift without group runtime or workers.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-fabric-ewlc
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-fabric-ewlc-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          devices:
+            - name: edge
+              serial_number: FOC12345678
+              site: Global/Lab/Building
+              state: PROVISION
+              fabric_site: Global/Lab
+              fabric_roles: [EDGE_NODE, EMBEDDED_WIRELESS_CONTROLLER_NODE]
+              enable_wireless: true
+              enable_rolling_ap_upgrade: true
+              ap_reboot_percentage: 25
+              primary_managed_ap_locations: [Global/Lab/Building]

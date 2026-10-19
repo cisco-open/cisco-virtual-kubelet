@@ -1,0 +1,91 @@
+{
+  "image": "cvk-catc-worker-qualification:20261017-image-lifetime-44ace7027833",
+  "binarySha256": "44ace7027833c0a9ab5b54af751d46fc517271b0adfff3d118c2e8d373c22512",
+  "sources": {
+    "internal/controlleradapter/catalystcenter/floor_image_journal.go": "db26e225330a2d77da600488dc965241e2b15d847ebb226e3503ca1c536834ca",
+    "internal/controlleradapter/catalystcenter/floor_image_journal_test.go": "eb736005e882049015299d7161597b2f68a38c2c5d70d1a722a0dad0a3300dc3",
+    "internal/controlleradapter/catalystcenter/floor_image_path_identity_test.go": "5d6265ffbece2c87fef0291958e5a279b96d27b0b9210f6c5da6d19377c4d0ea",
+    "internal/controlleradapter/catalystcenter/floor_image_live_test.go": "2e36d010bc5d75a4e1f4c5293c4d4de014c127ac3444950bfe26114b3e37b6e2",
+    "internal/controlleradapter/catalystcenter/floor_image_execution_test.go": "400e28be2468bee2206d78ae712da8f21316251c0fbcb56d36d0ccc66cb97f25",
+    "internal/controlleradapter/catalystcenter/floor_image_assets_test.go": "2b9899fd6ce83ffdacea8d7fc31c66be79f002248323565c147aaa4f3a2ff8b7",
+    "internal/controlleradapter/catalystcenter/floor_image_assets.go": "ba8f887c52cc92bf91c50bff8dc0e537b972a7ffedb437f10138c8c240c34a1e",
+    "internal/controlleradapter/catalystcenter/floor_image_preflight_test.go": "ab4c52d4f11a69b3548bab4571dfd3942dbd745d4c67cd187136b6e7fb7a2d30",
+    "internal/controlleradapter/catalystcenter/floor_image_report_test.go": "003e95a7401bc5f32c2a3142f9161d720eb915ff436b60f379250fbe3d153420",
+    "internal/controlleradapter/catalystcenter/floor_image_omission.go": "34f02594eca3e29b79027e3d6d16f55d3e993e12f53fd86bfa55c177ce959807",
+    "internal/controlleradapter/catalystcenter/floor_image_receipt.go": "2b38322b571f456b96d5b54c414d7f6a656f978af6dc16d81c923e83cc4dac57",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "c700f827a8f49a028a12d121685c0d5270945bebd336be871a96c9be8d96c32c",
+    "internal/controlleradapter/catalystcenter/floor_image_execution.go": "465d27045fcb5b842123633ce672300204dc854d063e33c290e328a76bc3ebac",
+    "internal/controlleradapter/catalystcenter/floor_image_model_test.go": "9957319bc785f508f9303e48f8e52f1ebc23744449fb0735eaa77c6fd4d684ca",
+    "internal/controlleradapter/catalystcenter/floor_image_model.go": "649a81ad0a52cd35be6bdbe4bfeb8eecdf7261aab2e4bcccf64164157da6f879",
+    "internal/controlleradapter/catalystcenter/floor_image_receipt_test.go": "ab9e591fbd8a541d3db467236cd6845805c16d5178ec9a426780c3169713f1fc",
+    "internal/controlleradapter/catalystcenter/floor_image_omission_envtest_test.go": "57156f092aacd82706d90d26a9a3e83aa76124a747ddf233e8286893578124de",
+    "internal/controlleradapter/catalystcenter/floor_image_omission_test.go": "18acb78e8eeae42fc9794dcc2ddfdd7eabadc4f6d4d0e94567a7d64a9c99e6bd",
+    "internal/controlleradapter/catalystcenter/floor_image_upload.go": "37c02bf5a87651aa49cd4093920cd58c9b0c6d7d58d65ec206b469c05e4ab192",
+    "internal/controlleradapter/catalystcenter/floor_image_sync_test.go": "04ad5246e9b1ea6f5a82835f11400ef82dd6f9a3fc5a5c874dc663890e36b3e2",
+    "internal/controlleradapter/catalystcenter/floor_image_upload_test.go": "7afe2d73b2254b6586359ec5b1d47d1e8422c415a2b31873d3d426c2019e5b6d"
+  },
+  "qualificationSourceSha256": {
+    "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "03abe83fca2ebef54f14a1321ec982f16b2b94a2b7a9014f001c4f732edf4043",
+    "internal/controlleradapter/catalystcenter/installed_floor_images_live_test.go": "188658522d5488e2bd577b9762725221ea5bd797965648e8306389f6a495e833",
+    "internal/controlleradapter/catalystcenter/installed_site_cleanup_live_test.go": "e653dc206b1d1d0c1b39b8d5ba420e74191a813668ce164f48055b30146a3653"
+  },
+  "status": "passed",
+  "seconds": 198.14,
+  "goSeconds": 200.49,
+  "controllerUID": "a2629d8f-392e-4238-9958-562cd4bd0d65",
+  "clusterUID": "5d2a68ec-9be0-4597-90f8-35f2f3e707f1",
+  "log": "floor-image-lifetime-native.log",
+  "synchronousUploadCheckpoints": 5,
+  "reintroductionCycles": 2,
+  "samePathAndBytesReintroduced": true,
+  "unchangedConfigurationGeneration": true,
+  "perFloorReceiptSlots": 1,
+  "retainedReceiptCount": 5,
+  "originalGeometryTaskRecovered": true,
+  "podReplacementPassed": true,
+  "allTypedSiteBaselinesRestored": true,
+  "activeIntentCount": 0,
+  "outstandingOperation": false,
+  "finalControllerPhase": "Ready",
+  "finalImageOperation": {
+    "action": "Update",
+    "configGeneration": 2,
+    "configName": "installed-private-sites",
+    "configUID": "fa76f469-8d9b-4e9a-b1ca-dd4d86ce5ba3",
+    "controllerGeneration": 1,
+    "id": "fbfa751016e740e23d4cf59bdc5c81a2",
+    "phase": "Verified",
+    "resource": "floor-image-sync:v2:5b3d0e930ca521e5f336e559eda95ebc5904e61f864092fface2a4e86a692003:c07306a03f10288f4a2fbea0bdd283c8549d629f33f28bcc95d2ecb2b5085428:170add14ba8233f2080df38d55da60b537573a53dbc9c23a4040955af1f1b8f2",
+    "section": "sites",
+    "sourceUID": "6ed579e4-aa3f-4b4c-a36b-ffe3499cabe7",
+    "sourceVersion": "16360",
+    "submittedAt": "2026-10-17T17:27:17Z",
+    "targetID": "fe965b0d-2718-426b-9a50-49eb278ab626"
+  },
+  "installedTasks": {
+    "01a14ae4-c0d7-7149-a941-4a3b13da63aa": "Create",
+    "01a14ae5-17a3-7ff7-9bde-3fd638018032": "Create",
+    "01a14ae5-7042-7545-b246-7aa8f48c11fb": "Create",
+    "01a14ae5-d81a-7b96-9cae-33f72e656da3": "Update"
+  },
+  "supervisedCleanupTasks": [
+    {
+      "type": "floor",
+      "taskID": "01a14ae7-ae32-7e76-beea-5997aa3148c8"
+    },
+    {
+      "type": "building",
+      "taskID": "01a14ae7-b528-7793-9244-fb6e92622f98"
+    },
+    {
+      "type": "area",
+      "taskID": "01a14ae7-bc2f-75cb-bb6e-68f6a82b2ec5"
+    }
+  ],
+  "limitations": [
+    "PNG on a generated empty floor only",
+    "No independent remote image-byte equality or wire-level upload request count",
+    "Legacy historical source_path is not inferred",
+    "Not public site Delete, custody handoff, physical/AP or full pinned-model parity"
+  ]
+}

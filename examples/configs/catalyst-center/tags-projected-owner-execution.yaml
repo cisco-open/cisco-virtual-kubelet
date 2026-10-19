@@ -1,0 +1,41 @@
+# Update the ConfigMap to revise desired tags without replacing the config UID.
+# Delete-policy cleanup can use settled receipts if this ConfigMap is removed.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-tag-model
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      inventory:
+        tags:
+          - name: CVK-Managed-Demo
+            description: Projected owned tag lifecycle demonstration
+            system_tag: false
+      templates:
+        tags: []
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-owned-tags
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory, templates]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Delete
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-projected-owned-tags-example-v1
+  source:
+    configMapRef:
+      name: catc-tag-model
+      key: model.yaml

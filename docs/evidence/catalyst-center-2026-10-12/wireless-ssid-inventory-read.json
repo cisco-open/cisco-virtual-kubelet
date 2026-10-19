@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "test": "TestLiveWirelessSSIDInventory",
+  "binary_sha256": "e9cae6c6e9ff66e9471434f4e7fcec619f93ba42aa6a955dff82d2a9a3822085",
+  "site_id": "8995b7da-5b82-40fd-a706-82150affe92d",
+  "scope": "Global",
+  "observed_count": 0,
+  "mutations": 0,
+  "verified": [
+    "Global site resolution through existing client",
+    "authenticated SSID inventory read",
+    "empty collection decode"
+  ],
+  "not_qualified": [
+    "populated live SSID metadata",
+    "native SSID writes",
+    "full-object credential preservation and rotation",
+    "manifest/report integration",
+    "device provisioning, associations, adoption and prune"
+  ]
+}

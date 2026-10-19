@@ -1,0 +1,38 @@
+# Read-only example. Requires matching manager/worker builds of this branch.
+# sites supplies reference context; this report neither creates sites nor writes settings.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-network-settings-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 5m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-network-report-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          global:
+            network_settings:
+              network: lab-network
+        network_settings:
+          network:
+            - name: lab-network
+              ntp_servers: [192.0.2.10]
+              dhcp_servers: [192.0.2.20]
+              domain_name: example.test
+              dns_servers: [192.0.2.53]
+              timezone: Europe/Berlin
+              banner: |
+                Authorized lab access only.

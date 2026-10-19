@@ -1,0 +1,8 @@
+=== RUN   TestLiveNetworkApplicationRetainedCleanup
+    network_application_cleanup_live_test.go:140: exact generated cleanup task 01a147f6-c7fb-73d2-8332-cdc1b57a56bb
+    network_application_cleanup_live_test.go:140: exact generated cleanup task 01a147f6-cf8b-785d-9cc8-23a80eb94910
+    network_application_cleanup_live_test.go:140: exact generated cleanup task 01a147f6-d6c4-7194-8b5e-c20006d92794
+    network_application_cleanup_live_test.go:157: retained application hierarchy removed by exact original creator UUIDs; unchanged geometry/settings, empty assignments, complete delete tasks and final absence verified
+--- PASS: TestLiveNetworkApplicationRetainedCleanup (7.38s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.782s

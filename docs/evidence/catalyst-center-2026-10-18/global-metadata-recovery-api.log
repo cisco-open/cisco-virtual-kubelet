@@ -1,0 +1,30 @@
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/cli_credentials/combined=false
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/cli_credentials/combined=true
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/https_read_credentials/combined=false
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/https_read_credentials/combined=true
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/https_write_credentials/combined=false
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/https_write_credentials/combined=true
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_read_credentials/combined=false
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_read_credentials/combined=true
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_write_credentials/combined=false
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_write_credentials/combined=true
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv3_credentials/combined=false
+=== RUN   TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv3_credentials/combined=true
+--- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery (17.34s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/cli_credentials/combined=false (3.29s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/cli_credentials/combined=true (1.26s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/https_read_credentials/combined=false (0.61s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/https_read_credentials/combined=true (1.20s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/https_write_credentials/combined=false (0.61s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/https_write_credentials/combined=true (1.16s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_read_credentials/combined=false (0.58s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_read_credentials/combined=true (1.19s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_write_credentials/combined=false (0.58s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv2_write_credentials/combined=true (1.16s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv3_credentials/combined=false (0.63s)
+    --- PASS: TestEnvtestGlobalCredentialKnownTaskRecovery/snmpv3_credentials/combined=true (1.27s)
+=== RUN   TestEnvtestGlobalCredentialMetadataKnownTaskRecovery
+--- PASS: TestEnvtestGlobalCredentialMetadataKnownTaskRecovery (6.34s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	25.880s

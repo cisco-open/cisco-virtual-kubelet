@@ -1,0 +1,94 @@
+{
+  "scope": "PnP final native absence-check guard proof composition",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/config_dispatch.go": "2fac2b14110a75c6b07183761738c72fcdc0c1b8e76bab488689ac0ecbc90330",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "17508512ea7937061259bae2a500d9791d521d52f5a77f1c0a1a24dde09e88a8",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "af773180bbf7bd5bc4553b6fee8ac0ab36a4eacd4554129ccc000033a51856cf",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage.go": "e97e043c0d390c6f767df0c121b23b6c2c5195d58638fd724750b27c0f5a9055",
+    "internal/controlleradapter/catalystcenter/pnp_registration_public.go": "dfd94199824ad08a55f899774c8f681ca03ab86c3f3932238421f0ce84ea26bc",
+    "internal/controlleradapter/catalystcenter/pnp_registration.go": "2139eecb807b5423cd40e5b77106aa0d5a83a7c82e45c367054597fdcaaf24de",
+    "internal/controlleradapter/catalystcenter/pnp_registration_journal.go": "a125163cbde7971f595a990d1ae988d8b7aa06a56bf479724b1e3ef16c685996",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch_test.go": "6afa42c741a3f0c04e4bcea1329a0e2d86692780553b5b4e8a82d3381b663e63",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage_test.go": "6b714ab6d7b0f14e95dc459d178da32ac41cb6b264f7784e89819c0cbea2887a",
+    "internal/controlleradapter/catalystcenter/pnp_registration_no_dispatch_test.go": "6f52befb7c600966c78f7cf64f217e384f124547a5ade8a04a46356b494fd29f",
+    "internal/controlleradapter/catalystcenter/pnp_registration_no_dispatch_envtest_test.go": "458a61ec6d2d992780868de789a93f5fa32ce4a9f9ce05bfd59c751ef4d76e54",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage_live_test.go": "846de6c4d706414f968a121909e55cb74a8332a4cc29f4134363a4d00b2406f3"
+  },
+  "gates": {
+    "regression": {
+      "families": 33,
+      "subcases": 616,
+      "seconds": 22.6
+    },
+    "api": {
+      "cases": 12,
+      "seconds": 14.041
+    },
+    "native": {
+      "seconds": 11.554,
+      "testSeconds": 9.11
+    },
+    "nd": {
+      "seconds": 4.701
+    },
+    "providerUpgrades": {
+      "seconds": 14.391
+    },
+    "controllerUpgrades": {
+      "seconds": 6.414
+    }
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-pnp-registration-2801821610",
+    "retiredOperationID": "3cdf198fcc0242970c59d6a20117cd84",
+    "retiredOperationPhase": "Submitting",
+    "freshOperationID": "0d9fa7557003b88cc6072dc386772382",
+    "createdUUID": "6ad413d80bc0186771caf0ee",
+    "activePnPReadsAtRefusal": 3,
+    "preDispatchPOSTs": 0,
+    "freshRegistrationPOSTs": 1,
+    "exactUUIDCleanupAndBaselinesVerified": true,
+    "kubernetesPersistence": "simulated",
+    "installed": false
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-pnp-primitive-no-dispatch",
+    "sha256": "dc4f5c73e940777204d466d7322d132f0e97eabe6465b78767ac1e330732c6ce",
+    "installed": false
+  },
+  "logs": {
+    "regression": {
+      "file": "pnp-primitive-no-dispatch-regression.log",
+      "sha256": "6c6699224090ca3826d7fd003c5cdfe02a60e09d2fc50af88b8fd5fb78bfd083"
+    },
+    "api": {
+      "file": "pnp-primitive-no-dispatch-api.log",
+      "sha256": "00061ea1d18aa0b75383bf412fe3117c358cfd4a3927be16612bfc637280f964"
+    },
+    "native": {
+      "file": "pnp-primitive-no-dispatch-native.log",
+      "sha256": "71c5ffc59cb01a211b7df4cc11f6d7a2281dd2b23b58680b5a0085275eee8a76"
+    },
+    "nd": {
+      "file": "pnp-primitive-no-dispatch-nd.log",
+      "sha256": "abd10da0f028a3db951348e818b51c431445b403a5523f15eb2b0cb91b83f2d4"
+    },
+    "provider-upgrades": {
+      "file": "pnp-primitive-no-dispatch-provider-upgrades.log",
+      "sha256": "6106efb39c7b6ae8aa8764b6e8792b05c02ace7d95686e420b4e36fcbd35db34"
+    },
+    "controller-upgrades": {
+      "file": "pnp-primitive-no-dispatch-controller-upgrades.log",
+      "sha256": "b110cd40e341736441960598c8b34812ac0731578d9c5459a814edafa846d56f"
+    },
+    "build": {
+      "file": "pnp-primitive-no-dispatch-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "limits": [
+    "All faults after entry to the registration POST closure remain unproven/Unknown; no legacy Unknown or taskless lost-ack adoption/replay is enabled.",
+    "Native qualification uses a local injected read failure with real inventories, registration and cleanup; Kubernetes persistence is simulated. Twelve real API cases use simulated native responses.",
+    "Physical claiming, workflow/preview completion, public pruning/deletion, mixed-state composition, installed qualification and full pinned-model parity remain pending."
+  ]
+}

@@ -1,0 +1,55 @@
+# Optional creation and latest verified mutation-state protection; no pruning.
+# Configure NetworkController.spec.intentSecretSources with alias template-state-key,
+# an operator-managed Secret name and key containing a random 64-hex-character key.
+# The existing manager projection supplies this key; do not put it in this model.
+# Applies regular draft definitions and commits matching versions. No device deployment.
+# Requires matching journal CRDs, manager and worker. Retain policies preserve objects.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-template-private-baseline
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      templates:
+        projects:
+          - name: CVK-Lab-Private-Baseline
+            dayn_templates:
+              - name: sample
+                description: CVK example
+                language: JINJA
+                software_type: IOS-XE
+                device_types:
+                  - product_family: Switches and Hubs
+                variables: []
+  cvk-template-assets.json: |
+    {"CVK-Lab-Private-Baseline#sample.j2":"! CVK template example\n"}
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-template-private-baseline-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: templates
+      path: /projects
+      source: template-state-key
+  managedSections: [templates]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-template-content-example-v1
+  source:
+    configMapRef:
+      name: catc-template-private-baseline
+      key: model.yaml

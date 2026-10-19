@@ -1,0 +1,13 @@
+=== RUN   TestLiveTagPrunePublicCycle
+    tag_prune_live_test.go:190: retained original task Create 01a15143-faa0-7836-9f09-dccac8025966
+    tag_prune_live_test.go:266: durable immutable creator and current latest-state rows 1 0
+    tag_prune_live_test.go:267: recovered native manifest revision without replay 1 f63dc9e9-0ffc-4817-8811-bf7bd68beea7
+    tag_prune_live_test.go:190: retained original task Update 01a15144-03ec-70f4-83cf-1613d60542a8
+    tag_prune_live_test.go:266: durable immutable creator and current latest-state rows 1 1
+    tag_prune_live_test.go:267: recovered native manifest revision without replay 2 f63dc9e9-0ffc-4817-8811-bf7bd68beea7
+    tag_prune_live_test.go:294: retained original Delete task 01a15144-1f76-767f-b60e-50976974f20b f63dc9e9-0ffc-4817-8811-bf7bd68beea7
+    tag_prune_live_test.go:332: manifest-driven prune and original-task recovery retained immutable creator, latest-state and absence tombstone f63dc9e9-0ffc-4817-8811-bf7bd68beea7
+    tag_prune_live_test.go:337: exact native mutation counts 1 1 1 legacyBaseline false inventoryOnly true
+--- PASS: TestLiveTagPrunePublicCycle (18.87s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.374s

@@ -1,0 +1,24 @@
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/matching
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/different-device-policy
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/nonsemantic-output
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/mixed-matching
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-drift
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-incomplete
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-redacted
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-drift
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-dst
+=== RUN   TestWiredBulkDeclaredNetworkRecoveryEvidence/dependency-only
+--- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence (9.21s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/matching (1.40s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/different-device-policy (0.86s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/nonsemantic-output (0.80s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/mixed-matching (0.87s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-drift (0.97s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-incomplete (0.93s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/banner-redacted (0.82s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-drift (0.88s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/timezone-dst (0.86s)
+    --- PASS: TestWiredBulkDeclaredNetworkRecoveryEvidence/dependency-only (0.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.594s

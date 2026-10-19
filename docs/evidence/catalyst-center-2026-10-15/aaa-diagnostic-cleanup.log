@@ -1,0 +1,4 @@
+Verified empty rejected-request area deleted: 54829380-0300-457c-b9cb-38101ee89168 Global/CVK-Cred-20261015-123509-000000000 task 01a13f9a-9ab1-7c33-abae-a26aff2e9a6a
+Verified empty rejected-request area deleted: 5907e3c5-2af0-458c-959b-49d36fd37edd Global/CVK-Cred-20261015-123704-000000000 task 01a13f9a-a193-7798-940b-c930ff33b5ea
+Verified empty rejected-request area deleted: f2628d74-eab1-4bf3-af73-7f4047a49cc6 Global/CVK-Cred-20261015-123809-000000000 task 01a13f9a-ad07-7d67-9605-69ba22822ce3
+All three AAA diagnostics removed after explicit rejection and empty readbacks; no old AAA request was replayed.

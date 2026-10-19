@@ -1,0 +1,15 @@
+=== RUN   TestLiveCatalystCenterSiteExecution
+    site_execution_live_test.go:39: isolated qualification hierarchy: Global/CVK-Q-20261014-132357-000000000
+    site_execution_live_test.go:178: submitted task=01a13a95-7fa7-7ec0-8296-d397897e7dfc at=2026-10-14T13:23:58.477757Z
+    site_execution_live_test.go:196: verified Create area
+    site_execution_live_test.go:178: submitted task=01a13a95-85c3-79e6-b78e-c3b51cd3d8a5 at=2026-10-14T13:24:00.055101Z
+    site_execution_live_test.go:196: verified Create building
+    site_execution_live_test.go:178: submitted task=01a13a95-8c54-7fbc-b66b-b6164b8efa22 at=2026-10-14T13:24:01.597596Z
+    site_execution_live_test.go:196: verified Create floor
+    site_execution_live_test.go:178: submitted task=01a13a95-92f3-7c40-a2c7-1c41f3da5725 at=2026-10-14T13:24:03.346508Z
+    site_execution_live_test.go:196: verified Update floor
+    site_execution_live_test.go:205: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:150: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSiteExecution (11.32s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.110s

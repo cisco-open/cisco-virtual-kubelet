@@ -1,0 +1,327 @@
+=== RUN   TestEnvtestTemplateNoDispatchReplan
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-create/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-create/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-create/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-update/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-update/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-update/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-create/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-create/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-create/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-update/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-update/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-update/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/commit/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/commit/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/commit/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-draft/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-draft/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-draft/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-commit/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-commit/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-commit/lost-ack
+--- PASS: TestEnvtestTemplateNoDispatchReplan (14.88s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-create/field-edit (2.92s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-create/read-error (0.32s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-create/lost-ack (0.16s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-update/field-edit (0.28s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-update/read-error (0.28s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-update/lost-ack (0.15s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-create/field-edit (0.55s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-create/read-error (0.65s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-create/lost-ack (0.17s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-update/field-edit (0.56s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-update/read-error (0.52s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-update/lost-ack (0.17s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/commit/field-edit (0.38s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/commit/read-error (0.35s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/commit/lost-ack (0.17s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-draft/field-edit (0.94s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-draft/read-error (0.93s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-draft/lost-ack (0.25s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-commit/field-edit (0.58s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-commit/read-error (0.56s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-commit/lost-ack (0.27s)
+=== RUN   TestEnvtestTemplateCreatorOwnership
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/known
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/missing-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/prose-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/json-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/wrong-service
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/foreign-task
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/wrong-uuid
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/same-name-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/source-during-proof
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/owner-during-proof
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/receipt-conflict
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/receipt-lost-ack
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/receipt-pruned
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/source-fields-pruned
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/noop-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/project-create/update-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/known
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/missing-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/prose-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/json-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/wrong-service
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/foreign-task
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/wrong-uuid
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/same-name-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/kind-changed
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/source-during-proof
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/owner-during-proof
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/receipt-conflict
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/receipt-lost-ack
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/receipt-pruned
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/source-fields-pruned
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/noop-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/draft-create/update-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/known
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/missing-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/prose-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/json-data
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/wrong-service
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/foreign-task
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/wrong-uuid
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/same-name-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/kind-changed
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/source-during-proof
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/owner-during-proof
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/receipt-conflict
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/receipt-lost-ack
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/receipt-pruned
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/source-fields-pruned
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/noop-replacement
+=== RUN   TestEnvtestTemplateCreatorOwnership/composite-draft/update-replacement
+--- PASS: TestEnvtestTemplateCreatorOwnership (73.69s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/known (2.32s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/missing-data (1.67s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/prose-data (1.70s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/json-data (1.67s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/wrong-service (1.65s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/foreign-task (1.65s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/wrong-uuid (1.76s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/same-name-replacement (1.83s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/source-during-proof (1.40s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/owner-during-proof (1.22s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/receipt-conflict (0.32s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/receipt-lost-ack (0.27s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/receipt-pruned (1.45s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/source-fields-pruned (1.11s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/noop-replacement (0.28s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/project-create/update-replacement (0.28s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/known (0.58s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/missing-data (1.64s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/prose-data (1.74s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/json-data (1.74s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/wrong-service (1.73s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/foreign-task (1.73s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/wrong-uuid (2.09s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/same-name-replacement (2.11s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/kind-changed (2.03s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/source-during-proof (1.36s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/owner-during-proof (1.32s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/receipt-conflict (0.62s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/receipt-lost-ack (0.58s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/receipt-pruned (1.44s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/source-fields-pruned (1.13s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/noop-replacement (0.54s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/draft-create/update-replacement (0.61s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/known (0.81s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/missing-data (1.80s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/prose-data (1.89s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/json-data (1.80s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/wrong-service (1.79s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/foreign-task (1.78s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/wrong-uuid (2.51s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/same-name-replacement (2.51s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/kind-changed (2.45s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/source-during-proof (1.48s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/owner-during-proof (1.39s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/receipt-conflict (0.90s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/receipt-lost-ack (0.83s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/receipt-pruned (1.55s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/source-fields-pruned (1.29s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/noop-replacement (0.80s)
+    --- PASS: TestEnvtestTemplateCreatorOwnership/composite-draft/update-replacement (0.84s)
+=== RUN   TestEnvtestTemplateCreatorInlineSource
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 47246 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc000728a80, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x1067cc148?, 0xc000728a80?}, 0xc000999618?}, {0x104019384, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000e7c2c8)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc001218d88, {0xc000123e78, 0x1, 0x100f98150?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestTemplateCreatorInlineSource(0xc001218d88)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/template_ownership_envtest_test.go:24 +0x58
+	>  testing.tRunner(0xc001218d88, 0x106774c20)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+--- PASS: TestEnvtestTemplateCreatorInlineSource (5.70s)
+=== RUN   TestEnvtestTemplateKnownTaskRecovery
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/known-legacy
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-create/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/known-legacy
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/project-update/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/known-legacy
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/known-legacy
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/known-legacy
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/commit/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/known-legacy
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-tree
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/known
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/known-legacy
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-task
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/source-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/owner-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/parent-changed
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-native
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/failed-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/pending-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/foreign-child
+=== RUN   TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-tree
+--- PASS: TestEnvtestTemplateKnownTaskRecovery (31.50s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/known (2.30s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/known-legacy (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/missing-task (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/source-changed (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/owner-changed (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/parent-changed (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/missing-native (0.31s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/failed-child (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/pending-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/foreign-child (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-create/missing-tree (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/known (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/known-legacy (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/missing-task (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/source-changed (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/owner-changed (0.24s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/parent-changed (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/missing-native (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/failed-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/pending-child (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/foreign-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/project-update/missing-tree (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/known (0.62s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/known-legacy (0.48s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-task (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/source-changed (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/owner-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/parent-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-native (0.32s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/failed-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/pending-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/foreign-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-create/missing-tree (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/known (0.48s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/known-legacy (0.51s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-task (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/source-changed (0.28s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/owner-changed (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/parent-changed (0.33s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-native (0.29s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/failed-child (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/pending-child (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/foreign-child (0.28s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/draft-update/missing-tree (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/known (0.32s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/known-legacy (0.32s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/missing-task (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/source-changed (0.28s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/owner-changed (0.25s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/parent-changed (0.33s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/missing-native (0.29s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/failed-child (0.28s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/pending-child (0.26s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/foreign-child (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/commit/missing-tree (0.27s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/known (0.87s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/known-legacy (0.71s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-task (0.36s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/source-changed (0.35s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/owner-changed (0.34s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/parent-changed (0.36s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-native (0.45s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/failed-child (0.36s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/pending-child (0.36s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/foreign-child (0.36s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-draft/missing-tree (0.35s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/known (0.45s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/known-legacy (0.43s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-task (0.37s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/source-changed (0.37s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/owner-changed (0.35s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/parent-changed (0.46s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-native (0.44s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/failed-child (0.37s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/pending-child (0.36s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/foreign-child (0.38s)
+    --- PASS: TestEnvtestTemplateKnownTaskRecovery/composite-commit/missing-tree (0.40s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	127.937s

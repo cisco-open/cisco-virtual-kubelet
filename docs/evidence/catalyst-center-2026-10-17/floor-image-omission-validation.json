@@ -1,0 +1,31 @@
+{
+  "status": "local-and-isolated-api-passed",
+  "nativeQualification": "passed; floor-image-lifetime-native-validation.json",
+  "connectivity": {
+    "tokenAuthentication": "successful",
+    "retainedPnPRecord": "6ad1123f0bc0186771caae30",
+    "lookupHTTP": 404,
+    "mutationPerformed": false
+  },
+  "sources": {
+    "internal/controlleradapter/catalystcenter/floor_image_omission.go": "34f02594eca3e29b79027e3d6d16f55d3e993e12f53fd86bfa55c177ce959807",
+    "internal/controlleradapter/catalystcenter/floor_image_receipt.go": "2b38322b571f456b96d5b54c414d7f6a656f978af6dc16d81c923e83cc4dac57",
+    "internal/controlleradapter/catalystcenter/floor_image_execution.go": "465d27045fcb5b842123633ce672300204dc854d063e33c290e328a76bc3ebac",
+    "internal/controlleradapter/catalystcenter/floor_image_journal.go": "db26e225330a2d77da600488dc965241e2b15d847ebb226e3503ca1c536834ca",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "c700f827a8f49a028a12d121685c0d5270945bebd336be871a96c9be8d96c32c",
+    "internal/controlleradapter/catalystcenter/floor_image_omission_test.go": "18acb78e8eeae42fc9794dcc2ddfdd7eabadc4f6d4d0e94567a7d64a9c99e6bd",
+    "internal/controlleradapter/catalystcenter/floor_image_omission_envtest_test.go": "57156f092aacd82706d90d26a9a3e83aa76124a747ddf233e8286893578124de"
+  },
+  "gates": [
+    {
+      "log": "floor-image-omission-local-current.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t18.535s",
+      "sha256": "31af1ca2fc18ff09d028bae1a02e6061f8876f0c0ca0c1d008d447dfe9b7a8b7"
+    },
+    {
+      "log": "floor-image-omission-api-current.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t12.967s",
+      "sha256": "f96262b69561de96339ec657776a82ce890eb03bd3f7ede8c60211572bf603fb"
+    }
+  ]
+}

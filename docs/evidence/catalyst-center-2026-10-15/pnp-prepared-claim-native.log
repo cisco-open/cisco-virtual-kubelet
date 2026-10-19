@@ -1,0 +1,9 @@
+=== RUN   TestLivePnPPreparedClaimHandoff
+    pnp_registration_stage_live_test.go:80: private registration recovery directory /private/tmp/cvk-pnp-registration-245782595
+    pnp_registration_stage_live_test.go:80: owned native registration 6ad11a9d0bc0186771caaeea CVKD5D14688
+    pnp_registration_stage_live_test.go:80: native Prepared v2 claim rebuilt and revalidated; denied admission retained the exact journal without site-claim POST b5cd3ded7bc9cd1397818d87180bf930
+    pnp_registration_stage_live_test.go:80: public reconciler qualification false
+    pnp_registration_stage_live_test.go:80: registration, serialized journal stages, owned no-op and exact UUID cleanup verified; no claim/reset/device action submitted
+--- PASS: TestLivePnPPreparedClaimHandoff (5.25s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.293s

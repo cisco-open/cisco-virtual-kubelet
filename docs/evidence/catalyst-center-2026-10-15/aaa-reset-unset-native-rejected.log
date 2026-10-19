@@ -1,0 +1,22 @@
+=== RUN   TestLiveCatalystCenterAAAOwnedReset
+    aaa_settings_manifest_live_test.go:95: isolated dual-protocol registration verified 1259edc0-c39b-453b-9857-e976e06281c2
+    aaa_settings_manifest_live_test.go:95: isolated dual-protocol registration verified f7bb4d44-80bb-4ad1-8d4c-1614f3a16545
+    aaa_settings_manifest_live_test.go:96: assignment fixture area task Global/CVK-Cred-20261015-130622-000000000 01a13fab-c03e-77f5-b626-3743b9bfae58
+    aaa_settings_manifest_live_test.go:81: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:298: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 1 credentialVersion 1 secondaryServers false
+    aaa_settings_manifest_live_test.go:266: AAA version projection lag refused without a native write
+    aaa_settings_manifest_live_test.go:81: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:298: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 2 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:81: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:298: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 3 credentialVersion 2 secondaryServers true
+    aaa_settings_manifest_live_test.go:81: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:298: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 4 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:81: isolated site AAA response HTTP 400 transportError false
+    aaa_settings_manifest_live_test.go:345: isolated AAA validation {"response":{"errorCode":"NCND00081","message":"NCND00081: The request cannot be completed because the request payload contains a validation error. Refer to the API documentation for any missing or incorrect values.","detail":"[\"NCND00027: This attribute (aaaClient.protocol) cannot be empty\",\"NCND00027: This attribute (aaaClient.protocol) cannot be empty\",\"NCND00027: This attribute (aaaClient.primaryServerIp) cannot be empty\"]"},"version":"1.0"}
+    aaa_settings_manifest_live_test.go:320: owned reset uncertain; retain without replay REST PUT /dna/intent/api/v1/sites/99234267-b1dd-419d-aa4b-e57bbc7f70ec/aaaSettings failed with status Bad Request
+    site_credentials_live_test.go:82: assignment fixture retained for inspection Global/CVK-Cred-20261015-130622-000000000 99234267-b1dd-419d-aa4b-e57bbc7f70ec
+    aaa_settings_registration_live_test.go:59: isolated AAA registration prerequisites retained 2
+--- FAIL: TestLiveCatalystCenterAAAOwnedReset (66.82s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	67.914s
+FAIL

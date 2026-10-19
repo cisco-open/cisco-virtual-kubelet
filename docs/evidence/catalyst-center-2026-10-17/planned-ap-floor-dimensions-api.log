@@ -1,0 +1,22 @@
+=== RUN   TestEnvtestPlannedAPFloorHandoff
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-recover-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/image-keyed-handoff-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-multiple-recover-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-unowned-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-disable-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-result-drift-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-ignored-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-missing-task-private
+--- PASS: TestEnvtestPlannedAPFloorHandoff (31.94s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-private (5.93s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-recover-private (3.36s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/image-keyed-handoff-private (4.17s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-multiple-recover-private (6.38s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-unowned-private (1.97s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-disable-private (1.70s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-result-drift-private (1.79s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-ignored-private (1.74s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-missing-task-private (1.33s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	34.094s

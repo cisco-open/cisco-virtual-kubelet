@@ -1,0 +1,20 @@
+=== RUN   TestEnvtestPnPRegistrationCapacity
+=== RUN   TestEnvtestPnPRegistrationCapacity/full
+=== RUN   TestEnvtestPnPRegistrationCapacity/cohort
+=== RUN   TestEnvtestPnPRegistrationCapacity/bytes
+=== RUN   TestEnvtestPnPRegistrationCapacity/edge
+=== RUN   TestEnvtestPnPRegistrationCapacity/late-count
+=== RUN   TestEnvtestPnPRegistrationCapacity/late-bytes
+=== RUN   TestEnvtestPnPRegistrationCapacity/publication-count
+=== RUN   TestEnvtestPnPRegistrationCapacity/publication-bytes
+--- PASS: TestEnvtestPnPRegistrationCapacity (53.82s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/full (5.99s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/cohort (3.34s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/bytes (5.80s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/edge (6.85s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/late-count (4.97s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/late-bytes (5.85s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/publication-count (7.83s)
+    --- PASS: TestEnvtestPnPRegistrationCapacity/publication-bytes (9.84s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	56.036s

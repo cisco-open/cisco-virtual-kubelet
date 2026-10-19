@@ -1,0 +1,5 @@
+=== RUN   TestLiveRetainedSSIDManifestCleanup
+    wireless_ssid_manifest_recovery_live_test.go:80: existing exact delete task recovered read-only; no deletion replay CVK_PSK_1389ce7762319d8f 01a1417c-03a1-746d-a5df-9fc2d8aa6f8f
+--- PASS: TestLiveRetainedSSIDManifestCleanup (0.64s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.427s

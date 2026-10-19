@@ -1,0 +1,52 @@
+=== RUN   TestEnvtestSitePrivateApplied
+=== RUN   TestEnvtestSitePrivateApplied/building-create/complete
+=== RUN   TestEnvtestSitePrivateApplied/building-create/recover
+=== RUN   TestEnvtestSitePrivateApplied/building-create/pending-child
+=== RUN   TestEnvtestSitePrivateApplied/building-create/failed-child
+=== RUN   TestEnvtestSitePrivateApplied/building-create/foreign-child
+=== RUN   TestEnvtestSitePrivateApplied/building-create/missing-result
+=== RUN   TestEnvtestSitePrivateApplied/building-create/foreign-result
+=== RUN   TestEnvtestSitePrivateApplied/building-create/lost-ack
+=== RUN   TestEnvtestSitePrivateApplied/building-create/source-change
+=== RUN   TestEnvtestSitePrivateApplied/building-create/owner-change
+=== RUN   TestEnvtestSitePrivateApplied/building-create/preflight-native
+=== RUN   TestEnvtestSitePrivateApplied/building-create/post-applied-drift
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/complete
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/recover
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/pending-child
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/failed-child
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/foreign-child
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/missing-result
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/foreign-result
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/lost-ack
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/source-change
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/owner-change
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/preflight-native
+=== RUN   TestEnvtestSitePrivateApplied/floor-create/post-applied-drift
+--- PASS: TestEnvtestSitePrivateApplied (65.80s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/complete (6.45s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/recover (3.75s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/pending-child (1.61s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/failed-child (1.60s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/foreign-child (1.63s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/missing-result (2.20s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/foreign-result (2.19s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/lost-ack (1.58s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/source-change (1.60s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/owner-change (1.53s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/preflight-native (3.97s)
+    --- PASS: TestEnvtestSitePrivateApplied/building-create/post-applied-drift (4.03s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/complete (3.89s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/recover (3.83s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/pending-child (1.63s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/failed-child (1.63s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/foreign-child (1.64s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/missing-result (2.19s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/foreign-result (2.26s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/lost-ack (1.55s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/source-change (1.57s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/owner-change (1.53s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/preflight-native (3.97s)
+    --- PASS: TestEnvtestSitePrivateApplied/floor-create/post-applied-drift (3.99s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	67.971s

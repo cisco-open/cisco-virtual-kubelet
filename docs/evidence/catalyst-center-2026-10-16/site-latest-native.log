@@ -1,0 +1,30 @@
+=== RUN   TestLiveCatalystCenterSitePrivateApplied
+    site_execution_live_test.go:100: isolated qualification hierarchy: Global/CVK-Q-20261016-203701-000000000
+    site_execution_live_test.go:247: singular manifest create task 01a1466e-c493-7e5c-9b92-954fb3f41f2a
+    site_execution_live_test.go:247: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:247: singular manifest create task 01a1466e-f188-7afc-9acd-ff9c0708fe7b
+    site_execution_live_test.go:247: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:247: singular manifest create task 01a1466f-25a5-7bd7-a9ba-fbbef515b167
+    site_execution_live_test.go:247: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:303: three original create-task result UUIDs bind exact native kind, path and parent; creator receipt identity independently verified
+    site_execution_live_test.go:315: three durable original-task site creator receipts retained through restarted reconciliation
+    site_execution_live_test.go:317: three singular manifest creates and complete native hierarchy verified
+    site_execution_live_test.go:428: public manifest step=0 status=Waiting operation=none task= reasons=[AdapterAvailable NativePreflightRefused NativePreflightRefused]
+    site_execution_live_test.go:428: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:428: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:435: submitted task=01a1466f-6864-74e3-90fc-f0bdb16a8adf at=2026-10-16T20:37:46Z
+    site_execution_live_test.go:453: verified Update floor
+    site_execution_live_test.go:462: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:465: public manifest step=0 status=Waiting operation=none task= reasons=[AdapterAvailable NativePreflightRefused NativePreflightRefused]
+    site_execution_live_test.go:465: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:465: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:465: public manifest step=0 status=Waiting operation=none task= reasons=[AdapterAvailable NativePreflightRefused NativePreflightRefused]
+    site_execution_live_test.go:465: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:465: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:465: two floor Updates replace one latest row; parent coordinate Update preserves child evidence; all three original creator receipts remain unchanged
+    site_execution_live_test.go:472: 6 acknowledged Unknown tasks recovered through restarted public reconciliation without resubmission
+    site_execution_live_test.go:478: 6 injected preflight failures retired without native effects; fresh public plans converged with 6 exact mutations and retained owners/history
+    site_execution_live_test.go:211: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSitePrivateApplied (104.58s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	106.750s

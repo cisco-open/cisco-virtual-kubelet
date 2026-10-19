@@ -1,0 +1,7 @@
+installed packages 49
+package cloud-connectivity-datahub 6.11.41
+package cloud-connectivity 6.11.28
+package cloud-connectivity-sense 7.1.10
+package sda 2.740.65729
+package sensor-automation 2.740.65729
+package names ['aca', 'ai-applications', 'ai-network-analytics', 'app-hosting', 'app-orchestrator', 'app-visibility-and-policy', 'appsvc-remediation', 'assurance', 'assurance-base-analytics', 'catalyst-center-api-catalog', 'catc-pre-hooks', 'cloud-connectivity', 'cloud-connectivity-datahub', 'cloud-connectivity-sense', 'core-addons', 'core-platform', 'data-analytics-infra', 'data-contextstore', 'data-ingestion-infra', 'data-platform-pipeline-infra', 'data-platform-ui', 'data-store-management', 'digestor', 'dnac-search', 'dnacaap', 'endpoint-analytics', 'gateway', 'group-based-policy-analytics', 'harbor-ui', 'iam', 'icap', 'idm-ui-plugin', 'ise-bridge', 'managed-services-shared', 'mks-upgrade', 'multi-dnac-enablement', 'ncp', 'platform-refresh', 'rca-scripts', 'rogue-management', 'sda', 'sensor-assurance', 'sensor-automation', 'ssa', 'support-services', 'system-commons', 'system-management-operations', 'telemetry', 'wide-area-bonjour']

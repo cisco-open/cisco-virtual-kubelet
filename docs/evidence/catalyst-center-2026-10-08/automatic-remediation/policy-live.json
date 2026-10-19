@@ -1,0 +1,18 @@
+{
+  "apiVersion": "v1",
+  "data": {
+    "policy.json": "{\"profile\":\"RetiredCVKImageArchivesV1\",\"requiredFreeBytes\":2936012800,\"headroomBytes\":134217728,\"maxFiles\":1,\"maxBytes\":1610612736}"
+  },
+  "immutable": true,
+  "kind": "ConfigMap",
+  "metadata": {
+    "creationTimestamp": "2026-10-08T18:20:37Z",
+    "labels": {
+      "ops.cisco.vk/swim-preparation-policy": "true"
+    },
+    "name": "swim-auto-cleanup-20261008",
+    "namespace": "cvk-live",
+    "resourceVersion": "11366535",
+    "uid": "7ed30098-ca6b-452f-91ad-322a08e5e3b2"
+  }
+}

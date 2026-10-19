@@ -1,0 +1,739 @@
+{
+  "rollout": {
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "IOSXESoftwareRollout",
+    "metadata": {
+      "creationTimestamp": "2026-10-08T14:38:01Z",
+      "finalizers": [
+        "ops.cisco.vk/iosxesoftwarerollout-safety"
+      ],
+      "generation": 7,
+      "name": "catc-handoff-20261008-101-r7",
+      "namespace": "cvk-live",
+      "resourceVersion": "11353530",
+      "uid": "b3091df5-c00f-48c0-a1cd-6fb8f0baba49"
+    },
+    "spec": {
+      "approval": {
+        "approvedAt": "2026-10-08T14:38:20Z",
+        "approvedBy": "system:admin",
+        "planHash": "sha256:9c264600ed528f02aa8d0c3ec41a9c5d9d921a2da2f326f981b51c11dfde6ffb"
+      },
+      "control": {
+        "pause": false,
+        "reason": "Resume after verified cleanup and successful device-correlated Catalyst Center inventory sync; fresh readiness required.",
+        "requestedAt": "2026-10-08T16:42:51.548561Z",
+        "requestedBy": "system:admin",
+        "revision": 5
+      },
+      "plan": {
+        "budgets": {
+          "domains": [
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "distribution.cisco.vk/cache-domain"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "operations.cisco.vk/redundancy-domain"
+            }
+          ],
+          "maxConcurrentTransfers": 1,
+          "maxUnavailable": 1
+        },
+        "canaries": [
+          {
+            "devices": [
+              "cat9k-lab-101"
+            ],
+            "name": "c9300-24p"
+          }
+        ],
+        "health": {
+          "canarySoakSeconds": 30,
+          "maxObservationAgeSeconds": 300,
+          "network": {
+            "enabled": true,
+            "requireCompleteEvidence": true
+          },
+          "waveSoakSeconds": 30
+        },
+        "image": {
+          "imageFamily": "cat9k",
+          "sha256": "e1eecde5e78d7cc061c83d49e0e2bbb6405f447faaced9e6ba24f0815bcc1a9b",
+          "sources": [
+            {
+              "catalystCenter": {
+                "controllerName": "catc",
+                "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+                "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+                "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+                "imageVersion": "17.18.04.0.759",
+                "transferFallbackAddress": "192.0.2.254"
+              },
+              "name": "catalyst-center",
+              "priority": 100
+            }
+          ]
+        },
+        "installTimeoutSeconds": 7200,
+        "pauseAfterCanary": false,
+        "rebootTimeoutSeconds": 3600,
+        "requestedAt": "2026-10-08T14:38:01Z",
+        "requestedBy": "system:admin",
+        "rollbackOnFailure": false,
+        "strategy": "Reload",
+        "targetVersion": "17.18.04",
+        "targets": {
+          "allowAll": false,
+          "maxTargets": 1,
+          "selector": {
+            "matchLabels": {
+              "topology.cisco.vk/lab-node": "cat9k-lab-101",
+              "topology.cisco.vk/lab-set": "pr194-physical-c9k",
+              "topology.cisco.vk/managed": "true"
+            }
+          }
+        },
+        "workloads": {
+          "policy": "BlockIfRunning"
+        }
+      }
+    },
+    "status": {
+      "approval": {
+        "planHash": "sha256:9c264600ed528f02aa8d0c3ec41a9c5d9d921a2da2f326f981b51c11dfde6ffb",
+        "reason": "ExactPlanApproved",
+        "valid": true,
+        "validatedAt": "2026-10-08T14:38:22Z"
+      },
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-10-08T14:38:02Z",
+          "message": "frozen plan created; approval of the exact plan hash is required",
+          "observedGeneration": 1,
+          "reason": "PlanFrozen",
+          "status": "True",
+          "type": "Planned"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T14:38:22Z",
+          "message": "exact frozen plan hash was approved",
+          "observedGeneration": 2,
+          "reason": "ExactPlanApproved",
+          "status": "True",
+          "type": "Approved"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T16:58:31Z",
+          "message": "all targets completed and passed their post-mutation health gates",
+          "observedGeneration": 7,
+          "reason": "Succeeded",
+          "status": "False",
+          "type": "Progressing"
+        }
+      ],
+      "control": {
+        "effectiveRevision": 5,
+        "requestedRevision": 5
+      },
+      "counts": {
+        "succeeded": 1,
+        "total": 1
+      },
+      "effectivePolicy": {
+        "epoch": 1,
+        "policy": {
+          "domains": [
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "distribution.cisco.vk/cache-domain"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "operations.cisco.vk/redundancy-domain"
+            },
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "topology.kubernetes.io/region"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "topology.kubernetes.io/zone"
+            }
+          ],
+          "healthFreshnessSeconds": 300,
+          "ledgerName": "cisco-vk-cisco-virtual-kubelet-topology-ledger",
+          "ledgerNamespace": "cisco-vk-system",
+          "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+          "maxActiveReservations": 3,
+          "maxConcurrentTransfers": 1,
+          "maxLedgerSizeBytes": 262144,
+          "maxTargets": 3,
+          "maxUnavailable": 1,
+          "name": "cisco-vk-cisco-virtual-kubelet-topology-policy",
+          "namespace": "cisco-vk-system",
+          "resourceVersion": "10532649",
+          "semanticHash": "sha256:4af003a1f88f5edd64e5ca1b71063ee6ac1ae5c51bce8c31999b8d11cc46c800",
+          "structuralHash": "sha256:b4c49ffaac4c3540a38fef3adc15c8dc4b48760d3034cf1721cd1c3ed41cca01",
+          "uid": "525ff87f-b74a-44c4-b54e-408e63a3a2e7"
+        },
+        "updatedAt": "2026-10-08T14:38:02Z"
+      },
+      "frozenPlan": {
+        "campaignGeneration": 1,
+        "createdAt": "2026-10-08T14:38:02Z",
+        "encodedSizeBytes": 3815,
+        "hash": "sha256:9c264600ed528f02aa8d0c3ec41a9c5d9d921a2da2f326f981b51c11dfde6ffb",
+        "policy": {
+          "domains": [
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "distribution.cisco.vk/cache-domain"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "operations.cisco.vk/redundancy-domain"
+            },
+            {
+              "maxConcurrentTransfers": 1,
+              "topologyKey": "topology.kubernetes.io/region"
+            },
+            {
+              "maxUnavailable": 1,
+              "topologyKey": "topology.kubernetes.io/zone"
+            }
+          ],
+          "healthFreshnessSeconds": 300,
+          "ledgerName": "cisco-vk-cisco-virtual-kubelet-topology-ledger",
+          "ledgerNamespace": "cisco-vk-system",
+          "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+          "maxActiveReservations": 3,
+          "maxConcurrentTransfers": 1,
+          "maxLedgerSizeBytes": 262144,
+          "maxTargets": 3,
+          "maxUnavailable": 1,
+          "name": "cisco-vk-cisco-virtual-kubelet-topology-policy",
+          "namespace": "cisco-vk-system",
+          "resourceVersion": "10532649",
+          "semanticHash": "sha256:4af003a1f88f5edd64e5ca1b71063ee6ac1ae5c51bce8c31999b8d11cc46c800",
+          "structuralHash": "sha256:b4c49ffaac4c3540a38fef3adc15c8dc4b48760d3034cf1721cd1c3ed41cca01",
+          "uid": "525ff87f-b74a-44c4-b54e-408e63a3a2e7"
+        },
+        "riskGroupMembershipHash": "sha256:17569b19e0d3ae1ce98c191c8d8977408cee00bcc7f3951d63265b54d11d5982",
+        "targets": [
+          {
+            "canaryCohort": "c9300-24p",
+            "childName": "catc-handoff-20261008-101-r7-cat9k-lab-101-2a89361f",
+            "deviceGeneration": 6,
+            "deviceName": "cat9k-lab-101",
+            "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+            "driver": "XE",
+            "imageFamily": "cat9k",
+            "nodeName": "cat9k-lab-101",
+            "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+            "physicalIdentity": "foc2520l6h1",
+            "projectionHash": "sha256:692be3346f119d8c911d6420967b74b764162eca6bcc3b33a31daf891c4484f2",
+            "qualificationCohort": "c9300-24p",
+            "source": {
+              "catalystCenter": {
+                "controllerName": "catc",
+                "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+                "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+                "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+                "imageVersion": "17.18.04.0.759",
+                "transferFallbackAddress": "192.0.2.254"
+              },
+              "name": "catalyst-center",
+              "priority": 100,
+              "sha256": "e1eecde5e78d7cc061c83d49e0e2bbb6405f447faaced9e6ba24f0815bcc1a9b"
+            },
+            "topology": [
+              {
+                "key": "distribution.cisco.vk/cache-domain",
+                "value": "ubuntu16"
+              },
+              {
+                "key": "operations.cisco.vk/redundancy-domain",
+                "value": "physical-c9k-lab"
+              },
+              {
+                "key": "topology.cisco.vk/lab-node",
+                "value": "cat9k-lab-101"
+              },
+              {
+                "key": "topology.cisco.vk/lab-set",
+                "value": "pr194-physical-c9k"
+              },
+              {
+                "key": "topology.cisco.vk/site",
+                "value": "ubuntu16-physical"
+              },
+              {
+                "key": "topology.kubernetes.io/region",
+                "value": "lab"
+              },
+              {
+                "key": "topology.kubernetes.io/zone",
+                "value": "physical-c9k-lab"
+              }
+            ],
+            "wave": 0,
+            "workerProtocolVersion": "rollout-v1"
+          }
+        ]
+      },
+      "message": "all targets completed and passed their post-mutation health gates",
+      "observedGeneration": 7,
+      "phase": "Succeeded",
+      "targets": [
+        {
+          "deviceName": "cat9k-lab-101",
+          "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+          "lastTransitionTime": "2026-10-08T16:58:31Z",
+          "leafName": "catc-handoff-20261008-101-r7-cat9k-lab-101-2a89361f",
+          "leafUID": "4960d563-e07f-4b5e-a6e3-ffcd013d454d",
+          "message": "Catalyst Center upgrade completed and native device inventory verified",
+          "phase": "Succeeded",
+          "reason": "HealthGatePassed"
+        }
+      ]
+    }
+  },
+  "upgrade": {
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "IOSXESoftwareUpgrade",
+    "metadata": {
+      "annotations": {
+        "topology.cisco.vk/app-worker-config-revision": "sha256:d1dc743cf4bc0cebd629e4116f2e0d4a1701d7957e649534c653739fc12153d1",
+        "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-754f74bdc4-dd98s",
+        "topology.cisco.vk/app-worker-pod-uid": "6e3ca2c0-2036-48a8-b89f-20728be616fc",
+        "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+        "topology.cisco.vk/campaign-name": "catc-handoff-20261008-101-r7",
+        "topology.cisco.vk/campaign-namespace": "cvk-live",
+        "topology.cisco.vk/campaign-uid": "b3091df5-c00f-48c0-a1cd-6fb8f0baba49",
+        "topology.cisco.vk/device-generation": "6",
+        "topology.cisco.vk/device-name": "cat9k-lab-101",
+        "topology.cisco.vk/device-namespace": "cvk-live",
+        "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "topology.cisco.vk/ledger-uid": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+        "topology.cisco.vk/managed": "true",
+        "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-567f469d6-nf8fc",
+        "topology.cisco.vk/network-worker-pod-uid": "93d91776-fa19-4604-954a-f2439b29d3b5",
+        "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "topology.cisco.vk/node-name": "cat9k-lab-101",
+        "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "topology.cisco.vk/plan-hash": "sha256:9c264600ed528f02aa8d0c3ec41a9c5d9d921a2da2f326f981b51c11dfde6ffb",
+        "topology.cisco.vk/reservation-id": "2a89361f41ef4ac6d44ed737fc0a9cc4",
+        "topology.cisco.vk/worker-protocol": "rollout-v1",
+        "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+      },
+      "creationTimestamp": "2026-10-08T14:38:27Z",
+      "finalizers": [
+        "ops.cisco.vk/iosxesoftwareupgrade-cleanup"
+      ],
+      "generation": 1,
+      "labels": {
+        "topology.cisco.vk/campaign-uid": "b3091df5-c00f-48c0-a1cd-6fb8f0baba49"
+      },
+      "name": "catc-handoff-20261008-101-r7-cat9k-lab-101-2a89361f",
+      "namespace": "cvk-live",
+      "resourceVersion": "11353532",
+      "uid": "4960d563-e07f-4b5e-a6e3-ffcd013d454d"
+    },
+    "spec": {
+      "deviceRef": {
+        "name": "cat9k-lab-101"
+      },
+      "imageSource": {
+        "catalystCenter": {
+          "controllerName": "catc",
+          "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+          "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+          "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+          "imageVersion": "17.18.04.0.759",
+          "transferFallbackAddress": "192.0.2.254"
+        }
+      },
+      "installTimeoutSeconds": 7200,
+      "maxRetries": 3,
+      "rebootTimeoutSeconds": 3600,
+      "requireNetworkEvidence": true,
+      "resumePolicy": "Retry",
+      "rollbackOnFailure": false,
+      "strategy": "Reload",
+      "targetVersion": "17.18.04"
+    },
+    "status": {
+      "activationStartTime": "2026-10-08T16:44:52Z",
+      "completionTime": "2026-10-08T16:57:22Z",
+      "conditions": [
+        {
+          "lastTransitionTime": "2026-10-08T16:57:22Z",
+          "message": "Catalyst Center upgrade completed and native device inventory verified",
+          "observedGeneration": 1,
+          "reason": "ControllerUpgradeVerified",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T16:57:22Z",
+          "message": "Catalyst Center upgrade completed and native device inventory verified",
+          "observedGeneration": 1,
+          "reason": "OutcomeVerified",
+          "status": "True",
+          "type": "DeviceMutationSettled"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T15:38:30Z",
+          "message": "claiming Catalyst Center distribution",
+          "observedGeneration": 1,
+          "reason": "StagingRequested",
+          "status": "False",
+          "type": "Staged"
+        },
+        {
+          "lastTransitionTime": "2026-10-08T16:44:52Z",
+          "message": "claiming Catalyst Center distribution/activation",
+          "observedGeneration": 1,
+          "reason": "ControllerActivationClaimed",
+          "status": "False",
+          "type": "Activated"
+        }
+      ],
+      "controllerHandoff": {
+        "controlRevision": 5,
+        "expiresAt": "2026-10-08T16:46:54Z",
+        "name": "swim-97c267f5d40df669026ee57a1f0b5e52",
+        "policyEpoch": 1,
+        "stage": "PrimaryActivation",
+        "token": "ca57512d-6a8e-489a-87df-b72ffe2a16c8",
+        "uid": "b434256d-84ac-43b5-b184-867c277a23e7",
+        "verifiedAt": "2026-10-08T16:57:22Z",
+        "verifiedVersion": "17.18.04.0.759.1784396682",
+        "workerPodUID": "93d91776-fa19-4604-954a-f2439b29d3b5"
+      },
+      "executionModel": "CatalystCenterV1",
+      "failureReason": "ControllerUpgradeVerified",
+      "installStartTime": "2026-10-08T15:38:30Z",
+      "managedMutationClaims": [
+        {
+          "claimedAt": "2026-10-08T16:44:52Z",
+          "controlRevision": 5,
+          "policyEpoch": 1,
+          "reservationID": "2a89361f41ef4ac6d44ed737fc0a9cc4",
+          "stage": "PrimaryActivation"
+        },
+        {
+          "claimedAt": "2026-10-08T15:38:30Z",
+          "controlRevision": 0,
+          "policyEpoch": 1,
+          "reservationID": "2a89361f41ef4ac6d44ed737fc0a9cc4",
+          "stage": "Staging"
+        }
+      ],
+      "managerAdmission": {
+        "campaignUID": "b3091df5-c00f-48c0-a1cd-6fb8f0baba49",
+        "controlRevision": 5,
+        "deviceGeneration": 6,
+        "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "leafUID": "4960d563-e07f-4b5e-a6e3-ffcd013d454d",
+        "ledgerUID": "8587a09e-451e-43a1-b638-0b2c11af78b6",
+        "networkEvidenceHash": "sha256:327781b45ceb5edb483ea45ea3db0a4cb8c67d2761f3a9bcb9fd3fe006fe991d",
+        "networkEvidenceNotAfter": "2026-10-08T17:02:16Z",
+        "networkEvidenceProducerRevision": "sha256:47f5c8fb029a0002acf389431f574ff1b989499f829569de633e8ed230b9fa81",
+        "networkEvidenceSampleSequence": 284,
+        "networkEvidenceWorkerPodUID": "93d91776-fa19-4604-954a-f2439b29d3b5",
+        "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "physicalIdentity": "foc2520l6h1",
+        "planHash": "sha256:9c264600ed528f02aa8d0c3ec41a9c5d9d921a2da2f326f981b51c11dfde6ffb",
+        "policyEpoch": 1,
+        "policyResourceVersion": "10532649",
+        "policyUID": "525ff87f-b74a-44c4-b54e-408e63a3a2e7",
+        "protocolVersion": "rollout-controller-swim-v1",
+        "reservationID": "2a89361f41ef4ac6d44ed737fc0a9cc4",
+        "state": "Settled",
+        "topologyLockID": "31c54011bf4f176690956e2ef1b0c9d0",
+        "updatedAt": "2026-10-08T16:58:31Z"
+      },
+      "managerControl": {
+        "reason": "CampaignControl",
+        "revision": 5,
+        "updatedAt": "2026-10-08T16:42:52Z"
+      },
+      "message": "Catalyst Center upgrade completed and native device inventory verified",
+      "observedGeneration": 1,
+      "phase": "Succeeded",
+      "previousVersion": "17.18.03.0.5496.1776157760",
+      "primarySupervisorActivationRequested": true,
+      "runningVersion": "17.18.04.0.759.1784396682",
+      "stagingRequested": true,
+      "startTime": "2026-10-08T14:39:10Z",
+      "workerControl": {
+        "effectiveState": "Settled",
+        "message": "managed upgrade has a terminal and conclusively settled worker outcome",
+        "observedAdmissionState": "Settled",
+        "observedControlRevision": 5,
+        "observedPolicyEpoch": 1,
+        "observedWorkerConfigRevision": "sha256:47f5c8fb029a0002acf389431f574ff1b989499f829569de633e8ed230b9fa81",
+        "updatedAt": "2026-10-08T16:58:32Z"
+      }
+    }
+  },
+  "handoff": {
+    "apiVersion": "ops.cisco.vk/v1alpha1",
+    "kind": "CatalystCenterSWIMHandoff",
+    "metadata": {
+      "creationTimestamp": "2026-10-08T14:39:11Z",
+      "generation": 1,
+      "name": "swim-97c267f5d40df669026ee57a1f0b5e52",
+      "namespace": "cvk-live",
+      "resourceVersion": "11353335",
+      "uid": "b434256d-84ac-43b5-b184-867c277a23e7"
+    },
+    "spec": {
+      "controllerGeneration": 2,
+      "controllerUsername": "system:serviceaccount:cvk-live:catc-controller-worker",
+      "deviceName": "cat9k-lab-101",
+      "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+      "deviceWorkerPodUID": "93d91776-fa19-4604-954a-f2439b29d3b5",
+      "deviceWorkerUsername": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+      "serial": "FOC2520L6H1",
+      "source": {
+        "controllerName": "catc",
+        "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+        "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+        "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+        "imageVersion": "17.18.04.0.759",
+        "transferFallbackAddress": "192.0.2.254"
+      },
+      "targetVersion": "17.18.04",
+      "upgradeName": "catc-handoff-20261008-101-r7-cat9k-lab-101-2a89361f",
+      "upgradeUID": "4960d563-e07f-4b5e-a6e3-ffcd013d454d"
+    },
+    "status": {
+      "activationClaim": "ca57512d-6a8e-489a-87df-b72ffe2a16c8",
+      "activationNotBefore": "2026-10-08T16:44:56Z",
+      "activationTask": "01a11c68-4e89-7db5-91e6-7828fc8de4e5",
+      "distributionClaim": "5800e435-eaa8-4dc3-b581-26102a657e99",
+      "distributionNotBefore": "2026-10-08T15:38:39Z",
+      "distributionTask": "01a11c2b-9ff7-7a65-aa15-3d7734f696e1",
+      "phase": "Succeeded",
+      "readinessClaim": "32709790-349b-4488-8490-6599a3f77865",
+      "readinessFor": "ReadyToActivate",
+      "readinessHistory": [
+        {
+          "claim": "11dea335-0667-4861-95cb-ccc6dcbd49e1",
+          "stage": "ReadyToActivate",
+          "submittedAt": "2026-10-08T15:50:46Z",
+          "task": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd"
+        },
+        {
+          "claim": "3764ce90-a5dc-4c1d-b6ec-22825766eb2e",
+          "stage": "ReadyToActivate",
+          "submittedAt": "2026-10-08T16:38:34Z",
+          "task": "01a11c62-78c5-713b-a7d0-558e2c1b336f"
+        }
+      ],
+      "readinessNotBefore": "2026-10-08T16:43:11Z",
+      "readinessTask": "01a11c66-b50a-7c8b-9b63-a0325bc9a6d9"
+    }
+  },
+  "lease": {
+    "apiVersion": "coordination.k8s.io/v1",
+    "kind": "Lease",
+    "metadata": {
+      "annotations": {
+        "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-754f74bdc4-dd98s",
+        "topology.cisco.vk/app-worker-pod-uid": "6e3ca2c0-2036-48a8-b89f-20728be616fc",
+        "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+        "topology.cisco.vk/device-name": "cat9k-lab-101",
+        "topology.cisco.vk/device-namespace": "cvk-live",
+        "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "topology.cisco.vk/lease-purpose": "device-mutation",
+        "topology.cisco.vk/managed": "true",
+        "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-567f469d6-nf8fc",
+        "topology.cisco.vk/network-worker-pod-uid": "93d91776-fa19-4604-954a-f2439b29d3b5",
+        "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "topology.cisco.vk/node-name": "cat9k-lab-101",
+        "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "topology.cisco.vk/retain-lease": "true",
+        "topology.cisco.vk/worker-protocol": "rollout-v1",
+        "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management"
+      },
+      "creationTimestamp": "2026-09-25T16:39:17Z",
+      "labels": {
+        "cisco.vk/device": "device-18bf8e21debc4863",
+        "cisco.vk/family": "device-disruptive-mutation"
+      },
+      "name": "cvk-device-18bf8e21debc4863-device-disruptive-mutation-27ab075b",
+      "namespace": "cvk-live",
+      "resourceVersion": "11353613",
+      "uid": "805d5577-2ee9-4f1b-96c5-a243a3712116"
+    },
+    "spec": {
+      "leaseTransitions": 15313
+    }
+  },
+  "maintenanceSession": {
+    "acknowledgedAt": "2026-10-08T14:39:04Z",
+    "controlRevision": 5,
+    "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+    "lease": {
+      "holder": "software-upgrade/4960d563-e07f-4b5e-a6e3-ffcd013d454d",
+      "name": "cvk-device-18bf8e21debc4863-device-disruptive-mutation-27ab075b",
+      "namespace": "cvk-live",
+      "uid": "805d5577-2ee9-4f1b-96c5-a243a3712116"
+    },
+    "message": "manager settled the operation outcome and released its reservation",
+    "nodeName": "cat9k-lab-101",
+    "nodeUID": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+    "operation": {
+      "name": "catc-handoff-20261008-101-r7-cat9k-lab-101-2a89361f",
+      "namespace": "cvk-live",
+      "uid": "4960d563-e07f-4b5e-a6e3-ffcd013d454d"
+    },
+    "phase": "Settled",
+    "requestedAt": "2026-10-08T14:38:42Z",
+    "sessionToken": "e095e64e-282a-4054-a806-265e82e2a48a"
+  },
+  "node": {
+    "apiVersion": "v1",
+    "kind": "Node",
+    "metadata": {
+      "annotations": {
+        "cisco.io/cdp-neighbor-count": "2",
+        "cisco.io/protocols": "cdp",
+        "node.alpha.kubernetes.io/ttl": "0",
+        "topology.cisco.vk/app-worker-pod-name": "cat9k-lab-101-vk-754f74bdc4-dd98s",
+        "topology.cisco.vk/app-worker-pod-uid": "6e3ca2c0-2036-48a8-b89f-20728be616fc",
+        "topology.cisco.vk/app-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+        "topology.cisco.vk/device-name": "cat9k-lab-101",
+        "topology.cisco.vk/device-namespace": "cvk-live",
+        "topology.cisco.vk/device-uid": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "topology.cisco.vk/managed": "true",
+        "topology.cisco.vk/managed-taints": "",
+        "topology.cisco.vk/network-worker-pod-name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network-567f469d6-nf8fc",
+        "topology.cisco.vk/network-worker-pod-uid": "93d91776-fa19-4604-954a-f2439b29d3b5",
+        "topology.cisco.vk/network-worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "topology.cisco.vk/node-uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95",
+        "topology.cisco.vk/projected-keys": "kubernetes.io/hostname,platform,provider,topology.cisco.vk/lab-node,topology.cisco.vk/site,topology.kubernetes.io/region,topology.kubernetes.io/zone,type",
+        "topology.cisco.vk/projection-hash": "sha256:692be3346f119d8c911d6420967b74b764162eca6bcc3b33a31daf891c4484f2",
+        "topology.cisco.vk/worker-observed-revision": "sha256:d1dc743cf4bc0cebd629e4116f2e0d4a1701d7957e649534c653739fc12153d1",
+        "topology.cisco.vk/worker-protocol": "rollout-v1",
+        "topology.cisco.vk/worker-username": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-app-hosting",
+        "virtual-kubelet.io/last-applied-node-status": "{\"capacity\":{\"memory\":\"2Gi\",\"pods\":\"2\",\"storage\":\"112487Mi\"},\"allocatable\":{\"memory\":\"2Gi\",\"pods\":\"2\",\"storage\":\"112487Mi\"},\"conditions\":[{\"type\":\"Ready\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-10-08T16:59:00Z\",\"lastTransitionTime\":\"2026-10-08T16:53:30Z\",\"reason\":\"KubeletReady\",\"message\":\"Cisco IOx is enabled and reachable\"},{\"type\":\"CiscoVirtualKubeletManagedReady\",\"status\":\"True\",\"lastHeartbeatTime\":\"2026-10-08T16:59:00Z\",\"lastTransitionTime\":\"2026-10-08T14:33:59Z\",\"reason\":\"StatusOnlyRolloutV1\",\"message\":\"worker is enforcing the rollout-v1 status-only Node writer contract\"},{\"type\":\"DiskPressure\",\"status\":\"False\",\"lastHeartbeatTime\":\"2026-10-08T16:59:00Z\",\"lastTransitionTime\":\"2026-10-08T14:33:59Z\",\"reason\":\"StorageAvailable\",\"message\":\"Sufficient storage available\"}],\"addresses\":[{\"type\":\"InternalIP\",\"address\":\"10.0.0.210\"}],\"daemonEndpoints\":{\"kubeletEndpoint\":{\"Port\":10250}},\"nodeInfo\":{\"machineID\":\"FOC2520L6H1\",\"systemUUID\":\"FOC2520L6H1\",\"bootID\":\"\",\"kernelVersion\":\"17.18.3\",\"osImage\":\"IOS-XE\",\"containerRuntimeVersion\":\"\",\"kubeletVersion\":\"v1.12.0\",\"kubeProxyVersion\":\"\",\"operatingSystem\":\"Cisco\",\"architecture\":\"C9300-24P\"}}",
+        "virtual-kubelet.io/last-applied-object-meta": "{\"name\":\"cat9k-lab-101\",\"uid\":\"1d153018-19a3-42dc-a7b9-da36c5bf0a95\",\"annotations\":{\"topology.cisco.vk/worker-observed-revision\":\"sha256:d1dc743cf4bc0cebd629e4116f2e0d4a1701d7957e649534c653739fc12153d1\"}}"
+      },
+      "creationTimestamp": "2026-09-09T18:49:29Z",
+      "finalizers": [
+        "wrangler.cattle.io/node"
+      ],
+      "labels": {
+        "kubernetes.io/hostname": "cat9k-lab-101",
+        "platform": "cisco-ios-xe",
+        "provider": "cisco-apphosting",
+        "topology.cisco.vk/lab-node": "cat9k-lab-101",
+        "topology.cisco.vk/site": "ubuntu16-physical",
+        "topology.kubernetes.io/region": "lab",
+        "topology.kubernetes.io/zone": "physical-c9k-lab",
+        "type": "virtual-kubelet"
+      },
+      "name": "cat9k-lab-101",
+      "resourceVersion": "11353601",
+      "uid": "1d153018-19a3-42dc-a7b9-da36c5bf0a95"
+    },
+    "spec": {
+      "podCIDR": "10.42.5.0/24",
+      "podCIDRs": [
+        "10.42.5.0/24"
+      ]
+    },
+    "status": {
+      "addresses": [
+        {
+          "address": "10.0.0.210",
+          "type": "InternalIP"
+        }
+      ],
+      "allocatable": {
+        "memory": "2Gi",
+        "pods": "2",
+        "storage": "112487Mi"
+      },
+      "capacity": {
+        "memory": "2Gi",
+        "pods": "2",
+        "storage": "112487Mi"
+      },
+      "conditions": [
+        {
+          "lastHeartbeatTime": "2026-10-08T16:59:00Z",
+          "lastTransitionTime": "2026-10-08T16:53:30Z",
+          "message": "Cisco IOx is enabled and reachable",
+          "reason": "KubeletReady",
+          "status": "True",
+          "type": "Ready"
+        },
+        {
+          "lastHeartbeatTime": "2026-10-08T16:59:00Z",
+          "lastTransitionTime": "2026-10-08T14:33:59Z",
+          "message": "worker is enforcing the rollout-v1 status-only Node writer contract",
+          "reason": "StatusOnlyRolloutV1",
+          "status": "True",
+          "type": "CiscoVirtualKubeletManagedReady"
+        },
+        {
+          "lastHeartbeatTime": "2026-10-08T16:59:00Z",
+          "lastTransitionTime": "2026-10-08T14:33:59Z",
+          "message": "Sufficient storage available",
+          "reason": "StorageAvailable",
+          "status": "False",
+          "type": "DiskPressure"
+        }
+      ],
+      "daemonEndpoints": {
+        "kubeletEndpoint": {
+          "Port": 10250
+        }
+      },
+      "nodeInfo": {
+        "architecture": "C9300-24P",
+        "bootID": "",
+        "containerRuntimeVersion": "",
+        "kernelVersion": "17.18.3",
+        "kubeProxyVersion": "",
+        "kubeletVersion": "v1.12.0",
+        "machineID": "FOC2520L6H1",
+        "operatingSystem": "Cisco",
+        "osImage": "IOS-XE",
+        "systemUUID": "FOC2520L6H1"
+      }
+    }
+  },
+  "workloads": [
+    {
+      "name": "cvk-topology-drain-a-0926-649c457fff-wrjds",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "ready": true
+    },
+    {
+      "name": "cvk-topology-drain-b-0926-67ff7d64b-wrnff",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "ready": true
+    }
+  ],
+  "helm": [
+    {
+      "name": "cisco-vk",
+      "namespace": "cisco-vk-system",
+      "revision": "176",
+      "updated": "2026-10-08 16:42:00.856928873 +0000 UTC",
+      "status": "deployed",
+      "chart": "cisco-virtual-kubelet-0.1.0",
+      "app_version": "v2026.10.0"
+    }
+  ]
+}

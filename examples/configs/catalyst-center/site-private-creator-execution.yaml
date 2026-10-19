@@ -1,0 +1,65 @@
+# Private creator and latest-applied state protection for singular sites. Retain only.
+# Configure NetworkController.spec.intentSecretSources with alias site-state-key
+# and an operator-managed Secret key containing a random 64-hex-character key.
+# The existing worker projection supplies it; never put the key in this model.
+# Create and Update retain separate creator/latest receipts with original-task recovery.
+# Out-of-band drift, key migration and adoption remain gated.
+# This example retains sites. For guarded pruning/recreation, see
+# sites-private-lifecycle.yaml and sites-private-hierarchy-lifecycle.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-site-private-creator
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      sites:
+        areas:
+          - name: CVK-Lab-Private-Creator
+            parent_name: Global
+        buildings:
+          - name: LabBuilding
+            parent_name: Global/CVK-Lab-Private-Creator
+            country: United States
+            latitude: 37.33812
+            longitude: -121.88612
+        floors:
+          - name: LabFloor
+            parent_name: Global/CVK-Lab-Private-Creator/LabBuilding
+            floor_number: 1
+            rf_model: Free Space
+            width: 12
+            length: 15
+            height: 3
+            units_of_measure: meters
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-site-private-creator-apply
+  namespace: cvk-live
+  annotations:
+    cisco.vk/catalyst-center-bulk-sites: "false"
+spec:
+  controllerRef:
+    name: catc
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: sites
+      path: /sites
+      source: site-state-key
+  managedSections: [sites]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-site-private-creator-example-v1
+  source:
+    configMapRef:
+      name: catc-site-private-creator
+      key: model.yaml

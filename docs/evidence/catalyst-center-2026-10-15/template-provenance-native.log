@@ -1,0 +1,25 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:112: submitted Create CVK-Q-Project-20261015-145035 01a1400b-2867-7d03-9b00-e349914d5bbe
+    template_projects_live_test.go:112: submitted Update CVK-Q-Project-20261015-145035 01a1400b-2b1d-76c2-90c7-6f6f709dbfb4
+    template_projects_live_test.go:130: project create and description update verified
+    template_projects_live_test.go:132: native template operation Create draft:CVK-Q-Project-20261015-145035#CVK-Commit-Qualification 01a1400b-306c-7909-a53f-627945027ccf
+    template_projects_live_test.go:132: native template operation Update commit:CVK-Q-Project-20261015-145035#CVK-Commit-Qualification 01a1400b-3c56-755e-a23b-d0d83203ecbe
+    template_projects_live_test.go:132: native template operation Update draft:CVK-Q-Project-20261015-145035#CVK-Commit-Qualification 01a1400b-4c42-77c0-8179-659cba949570
+    template_projects_live_test.go:132: native template operation Update commit:CVK-Q-Project-20261015-145035#CVK-Commit-Qualification 01a1400b-5a86-7c6b-bad9-48362019fc88
+    template_projects_live_test.go:132: native draft create/update and two committed versions verified 3934545a-b4cf-4bf6-91d8-145c52f531b4
+    template_projects_live_test.go:132: template tag operation Create 01a1400b-6c81-7bac-8aea-68ce2a2d4447
+    template_projects_live_test.go:132: template tag operation Update 01a1400b-8408-7e84-a5a0-12ff7e167ea0
+    template_projects_live_test.go:132: isolated template association class  count 1
+    template_projects_live_test.go:132: isolated template association class DYNAMIC count 0
+    template_projects_live_test.go:132: isolated template association class STATIC count 1
+    template_projects_live_test.go:132: isolated template association class MIXED count 0
+    template_projects_live_test.go:132: native tag creation and template association verified 1bcc4b51-9e48-47f4-a8f6-14c735a4e8ad 3934545a-b4cf-4bf6-91d8-145c52f531b4
+    template_membership_live_test.go:86: template mutation receipt DELETE 01a1400b-9629-72ee-8e1c-046851de59da
+    template_membership_live_test.go:94: template mutation receipt DELETE 01a1400b-9b07-7d31-aaef-b38f60359c3b
+    template_membership_live_test.go:105: association and tag cleanup verified 1bcc4b51-9e48-47f4-a8f6-14c735a4e8ad
+    template_commit_live_test.go:83: template mutation receipt DELETE 01a1400b-a0ea-7e3a-a472-114a282942af
+    template_commit_live_test.go:94: template fixture cleanup verified 3934545a-b4cf-4bf6-91d8-145c52f531b4
+    template_projects_live_test.go:94: isolated project cleanup verified 76017a7a-7250-4645-bc27-6d97aab0d4fa
+--- PASS: TestLiveCatalystCenterTemplateProject (33.03s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	35.147s

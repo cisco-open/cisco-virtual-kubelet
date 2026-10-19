@@ -1,0 +1,9 @@
+{
+  "at": "2026-10-09T17:20:52.993353+00:00",
+  "result": "PASS",
+  "scope": "Cached-image automatic cleanup, inventory sync and normal-reload version change",
+  "runtimeCommit": "4c6c529343c24e224ba7ae7203349c9e5e37c0ea",
+  "rollout": "catc-merge-unattended-20261009-101",
+  "baselineReset": "catc-merge-reset-final-20261009-101",
+  "noControlIntervention": true
+}

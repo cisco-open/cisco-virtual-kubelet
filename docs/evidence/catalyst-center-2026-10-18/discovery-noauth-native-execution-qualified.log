@@ -1,0 +1,26 @@
+=== RUN   TestLiveNoAuthGeneratedNativeExecution
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 175 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc0002f2a00, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x10aae21c0, 0xc0004de690}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc000030a10, {0x10aae21c0, 0xc0004de690}, {{{0xc0012da2d0, 0x17}, {0xc001c1a57c, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestLiveNoAuthGeneratedNativeExecution(0xc0005c0908)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_noauth_native_execution_staged_test.go:214 +0x4118
+	>  testing.tRunner(0xc0005c0908, 0x10aa80ce0)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+    discovery_noauth_native_execution_staged_test.go:266: generated NoAuth job create, original Unknown recovery, receipt-only metadata, config Delete and manager release passed; native baseline restored; no device authentication claim
+--- PASS: TestLiveNoAuthGeneratedNativeExecution (34.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	37.291s

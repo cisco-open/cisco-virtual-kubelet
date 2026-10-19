@@ -1,0 +1,4 @@
+Pinned NetAsCode Catalyst Center 0.5.0 cc_*.tf scope: 93 distinct resources.
+Ledger: 93 unique matching rows, no missing/extra types.
+Includes 91 catalystcenter types, terraform_data and time_sleep.
+Execution/ownership/recovery/native qualification must be assessed per row.

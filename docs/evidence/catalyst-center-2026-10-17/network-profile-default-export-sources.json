@@ -1,0 +1,57 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+  "policySourceSHA256": "f654e9b3ddf48e8fec07cfce98ee16ad43b858f0218d0f40cc4b8c8a23ffe002",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/nacmodel/network_defaults.go": "f654e9b3ddf48e8fec07cfce98ee16ad43b858f0218d0f40cc4b8c8a23ffe002",
+    "internal/controlleradapter/catalystcenter/nacmodel/network_defaults_test.go": "50f5665410fae5d3cf6cf4b6e9268ec332c96b4425579683f34fca3b89bd696c",
+    "internal/controlleradapter/catalystcenter/nacmodel/catalog.go": "8284c41e7d355534e0216a3bd919b0a501b021a673f242be60089f06b2701590",
+    "internal/controlleradapter/catalystcenter/nacmodel/upstream/0.5.0/defaults.yaml": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+    "internal/controlleradapter/catalystcenter/nacmodel/upstream/0.5.0/LICENSE": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9",
+    "internal/controlleradapter/catalystcenter/nacmodel/upstream/0.5.0/NOTICE": "73a38dd6c011a54d841d9896214f758fdf884e33fa161c7c3cc7b029eff350bf",
+    "internal/controlleradapter/catalystcenter/network_source_validation.go": "c496482bbac40b6e48038a66d2f235ef00cf7932c061025215128c81ff518d21",
+    "internal/controlleradapter/catalystcenter/network_defaults_live_test.go": "9657bb3f59fe4e19f8269a21415604215b746a3336d3c434302eedd0c71284c1",
+    "internal/controlleradapter/catalystcenter/network_defaults_envtest_test.go": "49a6fb96ed3b625f6c1b032982fbacc45d6196ceb94eccb3ade0da454183b673",
+    "internal/controlleradapter/catalystcenter/network_execution_live_test.go": "64fdec2d5314dd3f9bfc408d5722eb34a060e6dd1f3fe30ef1c696e76f759bae",
+    "tools/cvk-netascode-migrate/main.go": "0646b457af515117e439a3fdb060090b8136ff698c9044d8bfde02db22827855",
+    "tools/cvk-netascode-migrate/controller_export_network.go": "070d45c92b57c9c1c537f94070dbf29fcf2c3943d818bc60b7485896112c913d",
+    "tools/cvk-netascode-migrate/controller_export_network_test.go": "dd5c8a3bc75eaec6d1b57ec33c70881c1b622de755348a3329a2cbe9671ef0b9",
+    "examples/configs/catalyst-center/network-defaults-source.yaml": "aeee7639cd9edfa296667ac9804c603f6e8f064e1819abf3132ae0fe693f8318",
+    "examples/configs/catalyst-center/network-defaults-overrides.yaml": "abbb407361d08d493bb763cb8edcb340f2b4cfabcd2dcdbb61fc609ba5851094"
+  },
+  "upstream": [
+    {
+      "path": "defaults/defaults.yaml",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/defaults/defaults.yaml",
+      "sha256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f"
+    },
+    {
+      "path": "merge.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/merge.tf",
+      "sha256": "f233687b5d6cd244adcb08369a78b7082d3fcb389a7163601c0104975fb5a91f"
+    },
+    {
+      "path": "main.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/main.tf",
+      "sha256": "c1805f966e06057e417f43211caf17268183812007368b181035f16414ea072b"
+    },
+    {
+      "path": "variables.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/variables.tf",
+      "sha256": "120ef11439c33262823527298237b9829d607d84c6d34727197fd440c77e2138"
+    },
+    {
+      "path": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    },
+    {
+      "path": "LICENSE",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/LICENSE",
+      "sha256": "a6cba85bc92e0cff7a450b1d873c0eaa2e9fc96bf472df0247a26bec77bf3ff9"
+    }
+  ],
+  "scope": "Explicit offline network/telemetry profile default export only. Pinned fallback/predicate/conditional semantics and bounded non-null overrides; actual shared compiler and private new-file output; source-policy/defaults/input/output provenance is not schema, binary, ownership or full-model parity. Current actual API metadata lifecycle and real native two-revision setting execution qualify separate boundaries. No runtime default expansion, other-resource default/schema/merge scope, installed actors, native baselines or full configuration parity claim."
+}

@@ -1,0 +1,5 @@
+=== RUN   TestLiveCatalystCenterWiredBulkNetworkContext
+    wired_bulk_network_context_live_test.go:147: three live switch identities: scoped original context matched, changed source refused, original context rechecked; setting kinds=map[timezone:true] site scopes=1 batches=1 native configuration writes=0; no device convergence claimed
+--- PASS: TestLiveCatalystCenterWiredBulkNetworkContext (41.79s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	44.170s

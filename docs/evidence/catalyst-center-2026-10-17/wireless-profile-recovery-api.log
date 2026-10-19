@@ -1,0 +1,68 @@
+=== RUN   TestEnvtestWirelessProfileRecovery
+=== RUN   TestEnvtestWirelessProfileRecovery/cohort-false-complete
+=== RUN   TestEnvtestWirelessProfileRecovery/cohort-false-no-dispatch
+=== RUN   TestEnvtestWirelessProfileRecovery/cohort-true-complete
+=== RUN   TestEnvtestWirelessProfileRecovery/cohort-true-no-dispatch
+=== RUN   TestEnvtestWirelessProfileRecovery/profile-lost-ack
+=== RUN   TestEnvtestWirelessProfileRecovery/profile-child-failed
+=== RUN   TestEnvtestWirelessProfileRecovery/profile-tree-missing
+=== RUN   TestEnvtestWirelessProfileRecovery/profile-pending
+=== RUN   TestEnvtestWirelessProfileRecovery/profile-managed-drift
+=== RUN   TestEnvtestWirelessProfileRecovery/profile-source
+=== RUN   TestEnvtestWirelessProfileRecovery/profile-owner
+=== RUN   TestEnvtestWirelessProfileRecovery/site-tag-lost-ack
+=== RUN   TestEnvtestWirelessProfileRecovery/site-tag-child-failed
+=== RUN   TestEnvtestWirelessProfileRecovery/site-tag-tree-missing
+=== RUN   TestEnvtestWirelessProfileRecovery/site-tag-pending
+=== RUN   TestEnvtestWirelessProfileRecovery/site-tag-managed-drift
+=== RUN   TestEnvtestWirelessProfileRecovery/site-tag-source
+=== RUN   TestEnvtestWirelessProfileRecovery/site-tag-owner
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-tag-lost-ack
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-tag-child-failed
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-tag-tree-missing
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-tag-pending
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-tag-managed-drift
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-tag-source
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-tag-owner
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-cohort-lost-ack
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-cohort-child-failed
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-cohort-tree-missing
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-cohort-pending
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-cohort-managed-drift
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-cohort-source
+=== RUN   TestEnvtestWirelessProfileRecovery/policy-cohort-owner
+--- PASS: TestEnvtestWirelessProfileRecovery (31.39s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/cohort-false-complete (4.26s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/cohort-false-no-dispatch (2.25s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/cohort-true-complete (1.96s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/cohort-true-no-dispatch (2.69s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/profile-lost-ack (0.20s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/profile-child-failed (0.26s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/profile-tree-missing (0.25s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/profile-pending (0.24s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/profile-managed-drift (0.27s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/profile-source (0.30s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/profile-owner (0.24s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/site-tag-lost-ack (0.57s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/site-tag-child-failed (0.64s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/site-tag-tree-missing (0.62s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/site-tag-pending (0.64s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/site-tag-managed-drift (0.71s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/site-tag-source (0.58s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/site-tag-owner (0.55s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-tag-lost-ack (0.73s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-tag-child-failed (0.78s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-tag-tree-missing (0.77s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-tag-pending (0.77s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-tag-managed-drift (0.80s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-tag-source (0.73s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-tag-owner (0.76s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-cohort-lost-ack (0.74s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-cohort-child-failed (0.85s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-cohort-tree-missing (0.83s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-cohort-pending (0.80s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-cohort-managed-drift (0.87s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-cohort-source (0.76s)
+    --- PASS: TestEnvtestWirelessProfileRecovery/policy-cohort-owner (0.76s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	33.761s

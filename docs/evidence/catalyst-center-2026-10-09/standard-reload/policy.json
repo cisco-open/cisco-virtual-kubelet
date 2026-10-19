@@ -1,0 +1,18 @@
+{
+  "apiVersion": "v1",
+  "data": {
+    "policy.json": "{\"profile\":\"RetiredCVKImageArchivesV1\",\"requiredFreeBytes\":2936012800,\"headroomBytes\":134217728,\"distributionReserveBytes\":1264266123,\"maxFiles\":1,\"maxBytes\":1610612736}\n"
+  },
+  "immutable": true,
+  "kind": "ConfigMap",
+  "metadata": {
+    "creationTimestamp": "2026-10-09T04:21:57Z",
+    "labels": {
+      "ops.cisco.vk/swim-preparation-policy": "true"
+    },
+    "name": "swim-reload-reserve-20261009",
+    "namespace": "cvk-live",
+    "resourceVersion": "11485077",
+    "uid": "be622ad4-e3ce-49a9-9e52-e55e6978d444"
+  }
+}

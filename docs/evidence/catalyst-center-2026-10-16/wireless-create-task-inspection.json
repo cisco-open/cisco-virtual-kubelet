@@ -1,0 +1,266 @@
+[
+  {
+    "task": "01a1437b-31d7-7796-b9eb-f9480d52d38f",
+    "expected_native_id": "mde5q1zl-x0rs-xZuW-odyY-odC0mdaWmemWvJflmL8Zrdrsnv82",
+    "routes": {
+      "legacy": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "endTime",
+          "id",
+          "instanceTenantId",
+          "isError",
+          "progress",
+          "rootId",
+          "serviceType",
+          "startTime",
+          "version"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": "Common Setting Service"
+      },
+      "detail": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "progress"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": null
+      },
+      "tree": {
+        "status": 200,
+        "response_type": "list",
+        "fields": [],
+        "native_id_present": false
+      }
+    }
+  },
+  {
+    "task": "01a1437b-4acb-7225-beb5-c74d301ebc72",
+    "expected_native_id": "mde5q1zl-x0rs-xZuX-ntK0-nJyXotaWmemWvJflmL8Zrdrsnv82",
+    "routes": {
+      "legacy": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "endTime",
+          "id",
+          "instanceTenantId",
+          "isError",
+          "progress",
+          "rootId",
+          "serviceType",
+          "startTime",
+          "version"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": "Common Setting Service"
+      },
+      "detail": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "progress"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": null
+      },
+      "tree": {
+        "status": 200,
+        "response_type": "list",
+        "fields": [],
+        "native_id_present": false
+      }
+    }
+  },
+  {
+    "task": "01a1437b-5c94-7d32-a5c6-7fbb6ffe3e10",
+    "expected_native_id": "mde5q1zl-x0rs-xZuY-mdq5-nte5mJaWmemWvJflmL8Zrdrsnv82",
+    "routes": {
+      "legacy": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "endTime",
+          "id",
+          "instanceTenantId",
+          "isError",
+          "progress",
+          "rootId",
+          "serviceType",
+          "startTime",
+          "version"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": "Common Setting Service"
+      },
+      "detail": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "progress"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": null
+      },
+      "tree": {
+        "status": 200,
+        "response_type": "list",
+        "fields": [],
+        "native_id_present": false
+      }
+    }
+  },
+  {
+    "task": "01a1437b-6e39-72f9-9130-65b67026f8b9",
+    "expected_native_id": "9124c355-9dd6-33be-949b-807d720b27ff",
+    "routes": {
+      "legacy": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "endTime",
+          "id",
+          "instanceTenantId",
+          "isError",
+          "progress",
+          "rootId",
+          "serviceType",
+          "startTime",
+          "version"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": "Common Setting Service"
+      },
+      "detail": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "progress"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": null
+      },
+      "tree": {
+        "status": 200,
+        "response_type": "list",
+        "fields": [],
+        "native_id_present": false
+      }
+    }
+  },
+  {
+    "task": "01a1437b-7fb4-7cad-b9d7-05aedc23b7af",
+    "expected_native_id": "mde5q1zl-x0rs-xZuY-otuW-mdu4mdaWmemWvJflmL8Zrdrsnv82",
+    "routes": {
+      "legacy": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "endTime",
+          "id",
+          "instanceTenantId",
+          "isError",
+          "progress",
+          "rootId",
+          "serviceType",
+          "startTime",
+          "version"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": "Common Setting Service"
+      },
+      "detail": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "progress"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": null
+      },
+      "tree": {
+        "status": 200,
+        "response_type": "list",
+        "fields": [],
+        "native_id_present": false
+      }
+    }
+  },
+  {
+    "task": "01a1437b-91b5-79bf-81fc-32923eca73a6",
+    "expected_native_id": "mde5q1zl-x0rs-xZuZ-nda5-otGWmJaWmemWvJflmL8Zrdrsnv82",
+    "routes": {
+      "legacy": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "endTime",
+          "id",
+          "instanceTenantId",
+          "isError",
+          "progress",
+          "rootId",
+          "serviceType",
+          "startTime",
+          "version"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": "Common Setting Service"
+      },
+      "detail": {
+        "status": 200,
+        "response_type": "dict",
+        "fields": [
+          "progress"
+        ],
+        "native_id_present": false,
+        "data_matches_native_id": false,
+        "data_type": "NoneType",
+        "data_size": 0,
+        "service_type": null
+      },
+      "tree": {
+        "status": 200,
+        "response_type": "list",
+        "fields": [],
+        "native_id_present": false
+      }
+    }
+  }
+]

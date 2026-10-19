@@ -1,0 +1,16 @@
+=== RUN   TestLiveCatalystCenterSitePrivateCreatorBaselines
+    site_execution_live_test.go:92: isolated qualification hierarchy: Global/CVK-Q-20261016-200501-000000000
+    site_execution_live_test.go:239: singular manifest create task 01a14651-767b-713f-b881-8b355d44fb93
+    site_execution_live_test.go:239: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:239: singular manifest create task 01a14651-99a8-7751-9cca-3972ac57016e
+    site_execution_live_test.go:239: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:239: singular manifest create task 01a14651-c0db-77b5-a9ea-0fff8b43b4f6
+    site_execution_live_test.go:239: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:295: three original create-task result UUIDs bind exact native kind, path and parent; creator receipt identity independently verified
+    site_execution_live_test.go:307: three durable original-task site creator receipts retained through restarted reconciliation
+    site_execution_live_test.go:309: three singular manifest creates and complete native hierarchy verified
+    site_execution_live_test.go:331: three private creator baselines match complete native state across restarted no-ops; private Update/latest-applied is not yet enabled
+    site_execution_live_test.go:203: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSitePrivateCreatorBaselines (45.40s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	47.558s

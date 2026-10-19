@@ -1,0 +1,4 @@
+Pinned NetAsCode Catalyst Center 0.5.0 cc_*.tf inventory: 93 resource types.
+Matching unique ledger rows: 93. Missing/extra types: none.
+91 Catalyst Center resources plus terraform_data/time_sleep; this count is not parity completion.
+Creator ownership in this phase applies only to singular area/building/floor creates.

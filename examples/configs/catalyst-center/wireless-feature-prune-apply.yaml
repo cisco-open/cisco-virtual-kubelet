@@ -1,0 +1,35 @@
+# Follow-on revision of the SAME config that owns the feature creation receipts.
+# Retain is the default; Delete explicitly prunes omitted owned definitions.
+# The last verified complete native state must still match. Native imports,
+# external edits/replacements, profile references and incomplete reference
+# metadata are retained. Default/system designs are never removed.
+# Both explicit empty collections request cleanup of this owner's feature section.
+# A verified Delete retains original creator/applied records and a tombstone.
+# A later source revision may reintroduce the same names with new creator UUIDs.
+# The previous lifecycle stays archived. This example retains remote state on
+# CR removal; deletionPolicy: Delete separately opts into protected CR cleanup.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-features
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [feature_templates]
+  scope: global
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-feature-prune-example-v1
+  source:
+    inline:
+      catalyst_center:
+        feature_templates:
+          wireless:
+            cleanair: []
+            rrm_fra: []

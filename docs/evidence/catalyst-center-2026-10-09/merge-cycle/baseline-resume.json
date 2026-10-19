@@ -1,0 +1,29 @@
+[
+  {
+    "op": "test",
+    "path": "/metadata/uid",
+    "value": "7ff0e021-c445-4058-83fa-b8a9e0ea38c8"
+  },
+  {
+    "op": "test",
+    "path": "/spec/control",
+    "value": {
+      "pause": true,
+      "reason": "Qualify pause of future claims while an already-recorded Catalyst Center activation remains observable",
+      "requestedAt": "2026-10-09T13:18:11.686481Z",
+      "requestedBy": "system:admin",
+      "revision": 1
+    }
+  },
+  {
+    "op": "replace",
+    "path": "/spec/control",
+    "value": {
+      "pause": false,
+      "reason": "Resume after verifying effective pause and retained activation task",
+      "requestedAt": "2026-10-09T13:19:08.988311Z",
+      "requestedBy": "system:admin",
+      "revision": 2
+    }
+  }
+]

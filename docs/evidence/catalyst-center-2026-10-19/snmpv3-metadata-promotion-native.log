@@ -1,0 +1,14 @@
+=== RUN   TestLiveGlobalCredentialMetadataPromotion
+    global_credential_recovery_live_test.go:119: private unused SNMP recovery checkpoint: /private/tmp/cvk-global-credential-recovery-475945151
+    global_credential_recovery_live_test.go:321: retained original credential task as Unknown Create 01a153a3-074d-7976-bad9-ecab9a8557ce
+    global_credential_recovery_live_test.go:394: original task and version receipt verified 0 NOAUTHNOPRIV
+    global_credential_recovery_live_test.go:321: retained original credential task as Unknown Update 01a153a3-0fdc-78dd-90c0-333f7a5ba714
+    global_credential_recovery_live_test.go:394: original task and version receipt verified 1 AUTHNOPRIV
+    global_credential_recovery_live_test.go:321: retained original credential task as Unknown Update 01a153a3-19b9-7891-8e93-5f68c0315790
+    global_credential_recovery_live_test.go:394: original task and version receipt verified 2 AUTHPRIV
+    global_credential_recovery_live_test.go:321: retained original credential task as Unknown Update 01a153a3-2f10-7826-af62-00dee745c6bd
+    global_credential_recovery_live_test.go:394: original task and version receipt verified 3 AUTHPRIV
+    global_credential_recovery_live_test.go:441: unused SNMP known-task cycle passed: 4 writes, NOAUTH (when selected) / AUTHNOPRIV to AUTHPRIV, same UUID, version expansion/rotation, original-task recovery, no replay and supervised exact cleanup
+--- PASS: TestLiveGlobalCredentialMetadataPromotion (15.34s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.795s

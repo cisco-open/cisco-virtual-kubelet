@@ -1,0 +1,6 @@
+=== RUN   TestEnvtestSDATransitManagedIdentity
+    fabric_sda_transits_envtest_test.go:92: CiscoDevice.cisco.vk "edge0" is invalid: status.nodeIdentity: Invalid value: managed Node identity is immutable
+--- FAIL: TestEnvtestSDATransitManagedIdentity (6.63s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.798s
+FAIL

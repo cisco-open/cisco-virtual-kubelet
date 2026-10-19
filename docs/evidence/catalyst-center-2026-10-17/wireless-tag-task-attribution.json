@@ -1,0 +1,20 @@
+{
+  "taskId": "01a148ef-e922-746b-9748-4131c9cdf263",
+  "profileId": "fa7dc1d4-f125-45d5-8d24-7e880f75375b",
+  "nativeTagIds": [
+    "mdi0q1zl-x05F-ndKZ-ywu5-zwiZzda1zdK3nL9tqZbwmuSYxZno"
+  ],
+  "rootResponseFields": {
+    "endTime": "int",
+    "startTime": "int",
+    "version": "int",
+    "progress": "str",
+    "isError": "bool",
+    "serviceType": "str",
+    "instanceTenantId": "str",
+    "id": "str"
+  },
+  "rootTagIdentityPaths": [],
+  "treeTagIdentityPaths": [],
+  "scope": "Read-only inspection of generated site-tag task and its current tag identities; no raw task payload/progress or credentials retained."
+}

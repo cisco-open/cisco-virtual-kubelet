@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterTelemetryPartialExecution
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-042539-000000000
+    site_execution_live_test.go:452: submitted task=01a1481b-c028-7b40-bc43-1cfc11aca07b at=2026-10-17T04:25:40.546332Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a1481b-c299-788a-9150-31d76db655b1 at=2026-10-17T04:25:41.155389Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a1481b-c52f-7c06-b3e7-7c2c47af3bd4 at=2026-10-17T04:25:41.797079Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a1481b-c7dc-7118-a823-386053af42ba at=2026-10-17T04:25:42.417425Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:525: partial telemetry phase=0 original task=01a1481b-e352-769b-b86f-8cc4174cb296: all native groups preserved except selected mask, Unknown recovery, latest receipt and repeated no-op verified
+    site_execution_live_test.go:525: partial telemetry phase=1 original task=01a1481c-1901-71aa-a1c5-e8d7bd7369aa: all native groups preserved except selected mask, Unknown recovery, latest receipt and repeated no-op verified
+    site_execution_live_test.go:525: partial telemetry phase=2 original task=01a1481c-43ad-7126-810e-7b6144cee45f: all native groups preserved except selected mask, Unknown recovery, latest receipt and repeated no-op verified
+    site_execution_live_test.go:525: three partial-source public updates, complete native profile preservation, three original task recoveries and one latest application; actual native API with simulated Kubernetes storage/actors
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterTelemetryPartialExecution (48.91s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	51.303s

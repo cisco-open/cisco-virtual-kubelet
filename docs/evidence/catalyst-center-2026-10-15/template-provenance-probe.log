@@ -1,0 +1,8 @@
+=== RUN   TestLiveCatalystCenterTemplateTagAssociationFilters
+    template_membership_live_test.go:42: read-only template association query  count 0
+    template_membership_live_test.go:42: read-only template association query DYNAMIC count 0
+    template_membership_live_test.go:42: read-only template association query STATIC count 0
+    template_membership_live_test.go:42: read-only template association query MIXED count 0
+--- PASS: TestLiveCatalystCenterTemplateTagAssociationFilters (0.57s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.666s

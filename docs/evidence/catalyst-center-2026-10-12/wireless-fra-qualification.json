@@ -1,0 +1,30 @@
+{
+  "result": "PASS",
+  "scope": "Native isolated RRM FRA definition, 2.4/5 GHz band; no WLC deployment",
+  "fixture": "CVK_12210210",
+  "targetID": "d907dcdd-24f0-4268-ae21-e9382fd2c1e7",
+  "createTask": "01a131ed-7078-754e-9193-9c03379761e1",
+  "updateTask": "01a131ed-75c6-75dd-81ad-c7f3b13774d8",
+  "deleteTask": "01a131ed-7aa4-7c8e-9e6b-e8d689e1d0eb",
+  "intervalChange": [
+    3,
+    6
+  ],
+  "uuidPreserved": true,
+  "noOpVerified": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "receiptContractProbe": {
+    "fixture": "CVK_FRA_205656",
+    "id": "0b4de2ad-ae5d-445a-9426-a6dcd444ce6f",
+    "createTask": "01a131e8-ac96-7a34-8eb7-3d14604f70e9",
+    "deleteTask": "01a131ea-3def-7115-98e8-d732c7e14bf9",
+    "cleanupVerified": true,
+    "receipt": "taskId, not synchronous response.data"
+  },
+  "limits": [
+    "5/6 GHz band and other FRA transitions not live-qualified",
+    "Summary pagination beyond lab inventory is fixture-tested",
+    "Manifest restart is fixture-tested; worker and WLC behavior pending"
+  ]
+}

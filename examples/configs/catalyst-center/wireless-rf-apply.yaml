@@ -1,0 +1,33 @@
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-rf-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-rf-example-v1
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          rf_profiles:
+            - name: CVK_RF
+              default_rf_profile: false
+              enable_radio_type_a: true
+              enable_radio_type_b: false
+              enable_radio_type_c: false
+              radio_type_a_properties:
+                parent_profile: TYPICAL
+                max_radio_clients: 100

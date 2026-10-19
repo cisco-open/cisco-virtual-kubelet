@@ -99,7 +99,7 @@ rules:
     resources: ["ciscodevices"]
     verbs: ["get"]
   - apiGroups: ["ops.cisco.vk"]
-    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions", "controllerconfigurationreservations"]
     verbs: ["get", "list", "watch"]
   # Only app read-write receives this namespaced support role. Admission allows
   # only exact-Pod-bound workerDrain inventory, never software/control fields.
@@ -122,6 +122,10 @@ metadata:
     {{- include "cisco-virtual-kubelet.labels" . | nindent 4 }}
     app.kubernetes.io/component: managed-network-management
 rules:
+  # Corroborate the retained-fence namespace UID and active phase.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get"]
   # Maintenance fencing needs to observe workloads on the managed Node.
   - apiGroups: [""]
     resources: ["nodes"]
@@ -132,6 +136,13 @@ rules:
   - apiGroups: ["config.cisco.vk"]
     resources: ["iosxeconfigdefaults"]
     verbs: ["get", "list", "watch"]
+  # Verify the installed configuration-reservation admission and role contracts.
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingadmissionpolicies", "validatingadmissionpolicybindings"]
+    verbs: ["get"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["clusterroles"]
+    verbs: ["get"]
   - apiGroups: ["authentication.k8s.io"]
     resources: ["selfsubjectreviews"]
     verbs: ["create"]
@@ -221,7 +232,7 @@ rules:
     resources: ["deviceoperations"]
     verbs: ["get", "list", "watch", "create", "delete"]
   - apiGroups: ["ops.cisco.vk"]
-    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions", "controllerconfigurationreservations"]
     verbs: ["get", "list", "watch"]
   - apiGroups: ["ops.cisco.vk"]
     resources: ["deviceoperations/status"]
@@ -254,6 +265,16 @@ metadata:
     app.kubernetes.io/component: managed-network-management
     rbac.cisco.vk/access-mode: read-write
 rules:
+  # Corroborate the isolated connector and its declared configuration intent.
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get"]
+  - apiGroups: ["config.cisco.vk"]
+    resources: ["networkcontrollerconfigs"]
+    verbs: ["get"]
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["rolebindings"]
+    verbs: ["get"]
   - apiGroups: ["cisco.vk"]
     resources: ["ciscodevices"]
     verbs: ["get", "list", "watch"]
@@ -299,8 +320,18 @@ rules:
   # Both kinds remain observable so an unsettled operation always fences new
   # work after its individual mutation gate is disabled.
   - apiGroups: ["ops.cisco.vk"]
-    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+    resources: ["iosxesoftwareupgrades", "iosxeoperationalactions", "controllerconfigurationreservations"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["cisco.vk"]
+    resources: ["networkcontrollers"]
+    verbs: ["get"]
+  # Only the dedicated read-write device worker may settle reservation status.
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["controllerconfigurationreservations/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["catalystcenterswimhandoffs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # These bounded writes are stable profile capabilities. The corresponding
   # controller is registered only when its explicit runtime gate is enabled;
   # managed admission independently checks operation ownership and protocol.
@@ -364,6 +395,12 @@ rules:
   - apiGroups: ["apps"]
     resources: ["replicasets"]
     verbs: ["get", "list", "watch", "delete"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["controllerconfigurationreservations"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: ["ops.cisco.vk"]
+    resources: ["controllerconfigurationreservations/status"]
+    verbs: ["get", "update", "patch"]
   # Retained leaves still need exact worker identity repair when new upgrades
   # are disabled. Admission confines this to manager-authored metadata.
   - apiGroups: ["ops.cisco.vk"]

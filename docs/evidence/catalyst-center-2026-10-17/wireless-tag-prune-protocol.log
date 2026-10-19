@@ -1,0 +1,76 @@
+=== RUN   TestWirelessTagMembershipScopeEnvelope
+=== RUN   TestWirelessTagMembershipScopeEnvelope/valid
+=== RUN   TestWirelessTagMembershipScopeEnvelope/empty
+=== RUN   TestWirelessTagMembershipScopeEnvelope/unsorted
+=== RUN   TestWirelessTagMembershipScopeEnvelope/duplicate
+=== RUN   TestWirelessTagMembershipScopeEnvelope/null
+=== RUN   TestWirelessTagMembershipScopeEnvelope/noncanonical
+=== RUN   TestWirelessTagMembershipScopeEnvelope/future
+=== RUN   TestWirelessTagMembershipScopeEnvelope/create
+=== RUN   TestWirelessTagMembershipScopeEnvelope/over-capacity
+=== RUN   TestWirelessTagMembershipScopeEnvelope/cohort
+--- PASS: TestWirelessTagMembershipScopeEnvelope (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/valid (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/empty (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/unsorted (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/duplicate (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/null (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/noncanonical (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/future (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/create (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/over-capacity (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/cohort (0.00s)
+=== RUN   TestWirelessTagPruneExample
+--- PASS: TestWirelessTagPruneExample (0.00s)
+=== RUN   TestWirelessTagPruneEnvelope
+=== RUN   TestWirelessTagPruneEnvelope/valid
+=== RUN   TestWirelessTagPruneEnvelope/update
+=== RUN   TestWirelessTagPruneEnvelope/create
+=== RUN   TestWirelessTagPruneEnvelope/cohort
+=== RUN   TestWirelessTagPruneEnvelope/future
+=== RUN   TestWirelessTagPruneEnvelope/empty
+=== RUN   TestWirelessTagPruneEnvelope/duplicate
+=== RUN   TestWirelessTagPruneEnvelope/bad-group
+=== RUN   TestWirelessTagPruneEnvelope/no-target
+=== RUN   TestWirelessTagPruneEnvelope/physical
+=== RUN   TestWirelessTagPruneEnvelope/no-task
+=== RUN   TestWirelessTagPruneEnvelope/oversized
+=== RUN   TestWirelessTagPruneEnvelope/wrong-group
+--- PASS: TestWirelessTagPruneEnvelope (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/valid (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/update (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/create (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/cohort (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/future (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/empty (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/duplicate (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/bad-group (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/no-target (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/physical (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/no-task (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/oversized (0.00s)
+    --- PASS: TestWirelessTagPruneEnvelope/wrong-group (0.00s)
+=== RUN   TestWirelessTagProducerMemberBinding
+=== RUN   TestWirelessTagProducerMemberBinding/valid
+=== RUN   TestWirelessTagProducerMemberBinding/member-omitted
+=== RUN   TestWirelessTagProducerMemberBinding/member-added
+=== RUN   TestWirelessTagProducerMemberBinding/duplicate-logical
+=== RUN   TestWirelessTagProducerMemberBinding/duplicate-uuid
+=== RUN   TestWirelessTagProducerMemberBinding/future-version
+=== RUN   TestWirelessTagProducerMemberBinding/owner
+=== RUN   TestWirelessTagProducerMemberBinding/nonce
+=== RUN   TestWirelessTagProducerMemberBinding/creator-overlap
+=== RUN   TestWirelessTagProducerMemberBinding/native-alias
+--- PASS: TestWirelessTagProducerMemberBinding (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/valid (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/member-omitted (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/member-added (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/duplicate-logical (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/duplicate-uuid (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/future-version (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/owner (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/nonce (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/creator-overlap (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/native-alias (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.170s

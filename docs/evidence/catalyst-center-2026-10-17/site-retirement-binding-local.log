@@ -1,0 +1,128 @@
+=== RUN   TestSiteRetirementBinding
+=== RUN   TestSiteRetirementBinding/cm-false/stable
+=== RUN   TestSiteRetirementBinding/cm-false/latest
+=== RUN   TestSiteRetirementBinding/cm-false/retain
+=== RUN   TestSiteRetirementBinding/cm-false/delete-config
+=== RUN   TestSiteRetirementBinding/cm-false/legacy
+=== RUN   TestSiteRetirementBinding/cm-false/wrong-key
+=== RUN   TestSiteRetirementBinding/cm-false/same-source
+=== RUN   TestSiteRetirementBinding/cm-false/declared
+=== RUN   TestSiteRetirementBinding/cm-false/foreign-owner
+=== RUN   TestSiteRetirementBinding/cm-false/foreign-receipt
+=== RUN   TestSiteRetirementBinding/cm-false/missing-creator
+=== RUN   TestSiteRetirementBinding/cm-false/bad-latest
+=== RUN   TestSiteRetirementBinding/cm-false/effect-row
+=== RUN   TestSiteRetirementBinding/cm-false/credential-row
+=== RUN   TestSiteRetirementBinding/cm-false/pending
+=== RUN   TestSiteRetirementBinding/cm-false/native-drift
+=== RUN   TestSiteRetirementBinding/cm-false/missing
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-source
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-owner
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-history
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-key
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-pause
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-target
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-resource
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-task
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-phase
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-plan
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-caller-memory
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-late-owner
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-late-native
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-late-phase
+=== RUN   TestSiteRetirementBinding/cm-true/stable
+=== RUN   TestSiteRetirementBinding/cm-true/latest
+=== RUN   TestSiteRetirementBinding/cm-true/retain
+=== RUN   TestSiteRetirementBinding/cm-true/delete-config
+=== RUN   TestSiteRetirementBinding/cm-true/legacy
+=== RUN   TestSiteRetirementBinding/cm-true/wrong-key
+=== RUN   TestSiteRetirementBinding/cm-true/same-source
+=== RUN   TestSiteRetirementBinding/cm-true/declared
+=== RUN   TestSiteRetirementBinding/cm-true/foreign-owner
+=== RUN   TestSiteRetirementBinding/cm-true/foreign-receipt
+=== RUN   TestSiteRetirementBinding/cm-true/missing-creator
+=== RUN   TestSiteRetirementBinding/cm-true/bad-latest
+=== RUN   TestSiteRetirementBinding/cm-true/effect-row
+=== RUN   TestSiteRetirementBinding/cm-true/credential-row
+=== RUN   TestSiteRetirementBinding/cm-true/pending
+=== RUN   TestSiteRetirementBinding/cm-true/native-drift
+=== RUN   TestSiteRetirementBinding/cm-true/missing
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-source
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-owner
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-history
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-key
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-pause
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-target
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-resource
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-task
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-phase
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-plan
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-caller-memory
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-late-owner
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-late-native
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-late-phase
+--- PASS: TestSiteRetirementBinding (3.23s)
+    --- PASS: TestSiteRetirementBinding/cm-false/stable (0.68s)
+    --- PASS: TestSiteRetirementBinding/cm-false/latest (0.07s)
+    --- PASS: TestSiteRetirementBinding/cm-false/retain (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/delete-config (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/legacy (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/wrong-key (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/same-source (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/declared (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/foreign-owner (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/foreign-receipt (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/missing-creator (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/bad-latest (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/effect-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/credential-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/pending (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/native-drift (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/missing (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-source (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-owner (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-history (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-key (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-pause (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-target (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-resource (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-task (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-phase (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-plan (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-caller-memory (0.07s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-late-owner (0.06s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-late-native (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-late-phase (0.06s)
+    --- PASS: TestSiteRetirementBinding/cm-true/stable (0.07s)
+    --- PASS: TestSiteRetirementBinding/cm-true/latest (0.08s)
+    --- PASS: TestSiteRetirementBinding/cm-true/retain (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/delete-config (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/legacy (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-true/wrong-key (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-true/same-source (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/declared (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/foreign-owner (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/foreign-receipt (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/missing-creator (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/bad-latest (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/effect-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/credential-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/pending (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/native-drift (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/missing (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-source (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-owner (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-history (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-key (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-pause (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-target (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-resource (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-task (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-phase (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-plan (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-caller-memory (0.07s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-late-owner (0.06s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-late-native (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-late-phase (0.06s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.629s

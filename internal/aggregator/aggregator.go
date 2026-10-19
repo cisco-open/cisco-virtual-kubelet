@@ -33,6 +33,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -53,6 +54,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
+	configurationcontract "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/configdriver/engine"
 	"github.com/cisco/virtual-kubelet-cisco/internal/provider"
@@ -75,16 +77,25 @@ type AggregatedReconciler struct {
 	// LeaseNamespace is the shared namespace family leases land
 	// in. Empty falls back to each device's own namespace.
 	LeaseNamespace string
+	// BootstrapFenceNamespace is the manager-configured shared serial scope.
+	BootstrapFenceNamespace string
+	APIReader               client.Reader
 
-	mu      sync.Mutex
-	managed map[string]*deviceWorker
-	rootCtx context.Context
+	mu       sync.Mutex
+	managed  map[string]*deviceWorker
+	retiring map[string][]*deviceWorker
+	rootCtx  context.Context
 }
 
 // deviceWorker owns one device's reconciler goroutine.
 type deviceWorker struct {
-	cancel   context.CancelFunc
-	specHash string
+	cancel             context.CancelFunc
+	specHash           string
+	bindingHash        string
+	physicalIdentities []string
+	done               chan struct{}
+	closeErr           error
+	stopOnce           sync.Once
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch
@@ -168,6 +179,9 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err := r.Get(ctx, req.NamespacedName, &dev); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.stopWorker(req.String())
+			if !r.retiredWorkersDrained(req.String()) {
+				return ctrl.Result{RequeueAfter: time.Second}, nil
+			}
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -202,17 +216,35 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// apphosting either).
 	if !drivers.ConfigDriverRegistered(dev.Spec.Driver) {
 		r.stopWorker(req.String())
+		if !r.retiredWorkersDrained(req.String()) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, nil
 	}
 	owning := meta.FindStatusCondition(dev.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwning)
 	if owning != nil && owning.Status == metav1.ConditionTrue {
 		r.stopWorker(req.String())
+		if !r.retiredWorkersDrained(req.String()) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, nil
 	}
 	owned := meta.FindStatusCondition(dev.Status.Conditions, ciskov1.CiscoDeviceConditionAggregatorOwned)
 	if owned == nil || owned.Status != metav1.ConditionTrue {
 		r.stopWorker(req.String())
+		if !r.retiredWorkersDrained(req.String()) {
+			return ctrl.Result{RequeueAfter: time.Second}, nil
+		}
 		return ctrl.Result{}, nil
+	}
+
+	if guard := r.bootstrapMutationGuard(&dev); guard != nil {
+		_, finish, err := guard(ctx)
+		if err != nil {
+			r.stopWorker(req.String()) // Cancellation is not proof of drained I/O.
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+		}
+		finish(nil)
 	}
 
 	pwd, err := r.resolvePassword(ctx, &dev)
@@ -230,10 +262,17 @@ func (r *AggregatedReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	r.mu.Lock()
 	existing, ok := r.managed[req.String()]
 	r.mu.Unlock()
-	if ok && existing.specHash == hash {
-		return ctrl.Result{}, nil
+	if ok && existing.specHash == hash && existing.bindingHash == workerBindingHash(&dev) {
+		select {
+		case <-existing.done: // Exited workers cannot serve unchanged spec.
+		default:
+			return ctrl.Result{}, nil
+		}
 	}
 	r.stopWorker(req.String())
+	if !r.retiredWorkersDrained(req.String()) {
+		return ctrl.Result{RequeueAfter: time.Second}, nil
+	}
 	if err := r.startWorker(&dev, pwd, hash); err != nil {
 		if r.Recorder != nil {
 			r.Recorder.Eventf(&dev, corev1.EventTypeWarning, "AggregatorWorkerFailed",
@@ -259,6 +298,16 @@ func aggregatedReconcileResultAttribute(result ctrl.Result) string {
 // spins a `provider.ConfigReconciler.Run` goroutine bound to a
 // per-device context derived from rootCtx.
 func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, hash string) error {
+	physical, err := configurationcontract.DevicePhysicalIdentities(dev)
+	if err != nil {
+		return err
+	}
+	r.mu.Lock()
+	available := r.workerStartAllowedLocked(devKey(dev), physical)
+	r.mu.Unlock()
+	if !available {
+		return fmt.Errorf("aggregator worker retirement is not complete")
+	}
 	if dev.Spec.Driver == ciskov1.DeviceDriverNXOS {
 		return r.startNXOSWorker(dev, password, hash)
 	}
@@ -292,12 +341,12 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 	}
 	leaser := &engine.FamilyLeaser{Client: r.Client, Namespace: leaseNs}
 
-	notify := startSubscribeWatcher(r.rootCtx, dctx)
-
 	devCtx, cancel := context.WithCancel(r.rootCtx)
+	notify := startSubscribeWatcher(devCtx, dctx)
 	rec := &provider.ConfigReconciler{
-		Client:     r.Client,
-		DeviceName: dev.Name,
+		Client:          r.Client,
+		AcquireMutation: r.bootstrapMutationGuard(dev),
+		DeviceName:      dev.Name,
 		// DeviceNamespace scopes reconciliation to this device's namespace;
 		// deviceRef is same-namespace by contract, so without it the worker
 		// would reconcile IOSXEConfig objects from other namespaces whose
@@ -324,31 +373,24 @@ func (r *AggregatedReconciler) startWorker(dev *ciskov1.CiscoDevice, password, h
 		RuntimeID: newWorkerRuntimeID(),
 	}
 
-	r.mu.Lock()
-	r.managed[devKey(dev)] = &deviceWorker{
-		cancel:   cancel,
-		specHash: hash,
-	}
-	r.mu.Unlock()
-
-	transport := dctx.Transport
-	if dctx.Transport != nil && dctx.DeviceVersion == "" && dctx.FetchDeviceVersion != nil {
-		go retryDeviceVersion(devCtx, rec, dctx)
-	}
-	go func() {
-		defer func() {
-			if transport != nil {
-				_ = transport.Close()
-			}
-		}()
-		if err := rec.Run(devCtx); err != nil && err != context.Canceled {
-			if r.Recorder != nil {
-				r.Recorder.Eventf(dev, corev1.EventTypeWarning, "AggregatorWorkerExit",
-					"in-process reconciler exited: %v", err)
+	var auxiliary sync.WaitGroup
+	return r.startWorkerLoop(dev, hash, devCtx, cancel, func(ctx context.Context) error {
+		if dctx.Transport != nil && dctx.DeviceVersion == "" && dctx.FetchDeviceVersion != nil {
+			auxiliary.Add(1)
+			go func() { defer auxiliary.Done(); retryDeviceVersion(ctx, rec, dctx) }()
+		}
+		return rec.Run(ctx)
+	}, func() error {
+		auxiliary.Wait()
+		if notify != nil {
+			for range notify {
 			}
 		}
-	}()
-	return nil
+		if dctx.Transport != nil {
+			return dctx.Transport.Close()
+		}
+		return nil
+	})
 }
 
 func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx *drivers.ConfigDriverContext) {
@@ -385,19 +427,6 @@ func retryDeviceVersion(ctx context.Context, r *provider.ConfigReconciler, dctx 
 			Info("aggregator device version bound to writers after retry")
 		return
 	}
-}
-
-func (r *AggregatedReconciler) stopWorker(key string) {
-	r.mu.Lock()
-	w, ok := r.managed[key]
-	if ok {
-		delete(r.managed, key)
-	}
-	r.mu.Unlock()
-	if !ok {
-		return
-	}
-	w.cancel()
 }
 
 // resolvePassword reads the CiscoDevice's credential — either an
@@ -452,6 +481,18 @@ func specHash(dev *ciskov1.CiscoDevice, password string) string {
 		dev.Spec.TLS != nil && dev.Spec.TLS.Enabled,
 		passwordDigest(password),
 	)
+}
+
+// workerBindingHash excludes credential values. Generation/UID and retained
+// Node identity determine whether a running worker still represents this Device.
+func workerBindingHash(device *ciskov1.CiscoDevice) string {
+	raw, _ := json.Marshal(struct {
+		UID        types.UID
+		Generation int64
+		Identity   *ciskov1.DeviceNodeIdentityStatus
+	}{device.UID, device.Generation, device.Status.NodeIdentity})
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
 }
 
 // newWorkerRuntimeID returns a fresh hex-encoded random identifier

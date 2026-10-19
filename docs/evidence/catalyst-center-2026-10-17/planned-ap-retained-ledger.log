@@ -1,0 +1,3 @@
+Pinned NetAsCode 0.5.0: 14 immutable cc_*.tf source files verified against prior immutable-reference audit.
+93 distinct resource types equal 93 unique coverage rows; no missing/extra types.
+Scope accounting only: execution, ownership, recovery, native and hardware coverage remain resource-specific and incomplete.

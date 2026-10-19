@@ -1,0 +1,260 @@
+{
+  "generatedProject": "CVK-Q-Pacing-20261016-121657",
+  "checkedTasks": 5,
+  "generatedIdRoles": [
+    "project",
+    "template:base",
+    "template:combined",
+    "version:base:1",
+    "version:combined:1"
+  ],
+  "observations": [
+    {
+      "resource": "CVK-Q-Pacing-20261016-121657",
+      "taskId": "01a144a4-f85a-736a-ba88-9f499f76b3ee",
+      "view": "legacy",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "username",
+        "version"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": true,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      },
+      "dataShape": {
+        "canonicalUUID": true,
+        "serviceType": "NCTP",
+        "jsonType": "not-json"
+      }
+    },
+    {
+      "resource": "CVK-Q-Pacing-20261016-121657",
+      "taskId": "01a144a4-f85a-736a-ba88-9f499f76b3ee",
+      "view": "detail",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "progress"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": true,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      }
+    },
+    {
+      "resource": "draft:CVK-Q-Pacing-20261016-121657#base",
+      "taskId": "01a144a5-1d21-70f3-87d2-91e8c01af80e",
+      "view": "legacy",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "username",
+        "version"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": true,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      },
+      "dataShape": {
+        "canonicalUUID": true,
+        "serviceType": "NCTP",
+        "jsonType": "not-json"
+      }
+    },
+    {
+      "resource": "draft:CVK-Q-Pacing-20261016-121657#base",
+      "taskId": "01a144a5-1d21-70f3-87d2-91e8c01af80e",
+      "view": "detail",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "progress"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": true,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      }
+    },
+    {
+      "resource": "commit:CVK-Q-Pacing-20261016-121657#base",
+      "taskId": "01a144a5-5a49-7899-af3e-4715406b51cf",
+      "view": "legacy",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "username",
+        "version"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      },
+      "dataShape": {
+        "canonicalUUID": false,
+        "serviceType": "NCTP",
+        "jsonType": "not-json"
+      }
+    },
+    {
+      "resource": "commit:CVK-Q-Pacing-20261016-121657#base",
+      "taskId": "01a144a5-5a49-7899-af3e-4715406b51cf",
+      "view": "detail",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "progress"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      }
+    },
+    {
+      "resource": "draft:CVK-Q-Pacing-20261016-121657#combined",
+      "taskId": "01a144a5-c9d9-72cd-845b-ffecfa82253a",
+      "view": "legacy",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "username",
+        "version"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": true,
+        "version:combined:1": false
+      },
+      "dataShape": {
+        "canonicalUUID": true,
+        "serviceType": "NCTP",
+        "jsonType": "not-json"
+      }
+    },
+    {
+      "resource": "draft:CVK-Q-Pacing-20261016-121657#combined",
+      "taskId": "01a144a5-c9d9-72cd-845b-ffecfa82253a",
+      "view": "detail",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "progress"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": true,
+        "version:combined:1": false
+      }
+    },
+    {
+      "resource": "commit:CVK-Q-Pacing-20261016-121657#combined",
+      "taskId": "01a144a6-4334-7d8f-a0e1-22fd4dd29371",
+      "view": "legacy",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "username",
+        "version"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      },
+      "dataShape": {
+        "canonicalUUID": false,
+        "serviceType": "NCTP",
+        "jsonType": "not-json"
+      }
+    },
+    {
+      "resource": "commit:CVK-Q-Pacing-20261016-121657#combined",
+      "taskId": "01a144a6-4334-7d8f-a0e1-22fd4dd29371",
+      "view": "detail",
+      "httpStatus": 200,
+      "fields": [
+        "data",
+        "progress"
+      ],
+      "dataType": "str",
+      "dataMatchesGeneratedIds": {
+        "project": false,
+        "template:base": false,
+        "version:base:1": false,
+        "template:combined": false,
+        "version:combined:1": false
+      }
+    }
+  ],
+  "creatorOwnershipProven": false,
+  "scope": "Structural inspection only; no arbitrary task/progress/data content retained. Service type is restricted to known public labels."
+}

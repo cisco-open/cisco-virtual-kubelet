@@ -1,0 +1,30 @@
+=== RUN   TestEnvtestTelemetryPartial
+=== RUN   TestEnvtestTelemetryPartial/wired
+=== RUN   TestEnvtestTelemetryPartial/syslog
+=== RUN   TestEnvtestTelemetryPartial/snmp
+=== RUN   TestEnvtestTelemetryPartial/enable
+=== RUN   TestEnvtestTelemetryPartial/builtin
+=== RUN   TestEnvtestTelemetryPartial/null
+=== RUN   TestEnvtestTelemetryPartial/noop
+=== RUN   TestEnvtestTelemetryPartial/all-null
+=== RUN   TestEnvtestTelemetryPartial/missing
+=== RUN   TestEnvtestTelemetryPartial/race
+=== RUN   TestEnvtestTelemetryPartial/lost-ack
+=== RUN   TestEnvtestTelemetryPartial/source-null
+=== RUN   TestEnvtestTelemetryPartial/unknown-native
+--- PASS: TestEnvtestTelemetryPartial (9.73s)
+    --- PASS: TestEnvtestTelemetryPartial/wired (2.97s)
+    --- PASS: TestEnvtestTelemetryPartial/syslog (0.36s)
+    --- PASS: TestEnvtestTelemetryPartial/snmp (0.29s)
+    --- PASS: TestEnvtestTelemetryPartial/enable (0.29s)
+    --- PASS: TestEnvtestTelemetryPartial/builtin (0.29s)
+    --- PASS: TestEnvtestTelemetryPartial/null (0.29s)
+    --- PASS: TestEnvtestTelemetryPartial/noop (0.10s)
+    --- PASS: TestEnvtestTelemetryPartial/all-null (0.08s)
+    --- PASS: TestEnvtestTelemetryPartial/missing (0.20s)
+    --- PASS: TestEnvtestTelemetryPartial/race (0.35s)
+    --- PASS: TestEnvtestTelemetryPartial/lost-ack (0.23s)
+    --- PASS: TestEnvtestTelemetryPartial/source-null (0.25s)
+    --- PASS: TestEnvtestTelemetryPartial/unknown-native (0.18s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.893s

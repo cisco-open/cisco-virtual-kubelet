@@ -1,0 +1,10 @@
+{
+  "device": "198.51.100.101",
+  "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+  "path": "flash:c9kwireshark.tar",
+  "backup": "/home/cisco/cvk-lab-backups/20261009-cat9k-lab-101/c9kwireshark.tar",
+  "bytes": 1134488576,
+  "sha512": "36fd7de370098e09ae8be78275de7fb9c1c2ae57ae759dfdf244459dfead7c760b92937fe130414af9322f73cd4d7c35e4fa98e2976821a2d7852805189cb0d6",
+  "nativeHashMatched": true,
+  "time": "2026-10-09T04:59:06.653817+00:00"
+}

@@ -1,0 +1,17 @@
+=== RUN   TestLiveWirelessFRA
+    wireless_fra_live_test.go:45: create CVK_16025511 01a142a2-8e71-7807-ae9d-3c5f28e316cf
+    wireless_fra_live_test.go:80: generated-only concurrent freeze edit b81aaf99-cdcd-4932-8148-49244eff1c46 01a142a2-928c-79a9-85e7-86147871aa1c
+    wireless_fra_live_test.go:94: stale FRA snapshot refused and permit consumed
+    wireless_fra_live_test.go:101: update b81aaf99-cdcd-4932-8148-49244eff1c46 01a142a2-94d3-7e2f-99c3-2abb0c531042
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {2_4GHZ_5GHZ true true 1 Low} 01a142a2-9796-7f45-a1eb-26f5b9a95960
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {2_4GHZ_5GHZ false false 24 Medium} 01a142a2-9a4d-7298-9063-a426155fa70e
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {2_4GHZ_5GHZ true false 6 High} 01a142a2-9d29-7b96-a89d-6e5a9ff3dbf9
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {2_4GHZ_5GHZ false true 6 Higher} 01a142a2-a000-7799-8f76-628661bcd01d
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {2_4GHZ_5GHZ true false 6 Even Higher} 01a142a2-a2d2-7e09-bc83-e46d788744ca
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {2_4GHZ_5GHZ false false 6 Super High} 01a142a2-a598-7005-aa9e-5d162f41d2f1
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {5GHZ_6GHZ false true 24 } 01a142a2-a88c-7f26-9894-288a36b78436
+    wireless_fra_live_test.go:130: transition b81aaf99-cdcd-4932-8148-49244eff1c46 {2_4GHZ_5GHZ false false 3 Medium} 01a142a2-ac32-79de-8ce2-6ce035562ab5
+    wireless_fra_live_test.go:166: delete b81aaf99-cdcd-4932-8148-49244eff1c46 01a142a2-ae33-78dc-a16f-694bac806ac5
+--- PASS: TestLiveWirelessFRA (8.77s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.906s

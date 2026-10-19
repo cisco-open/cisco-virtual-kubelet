@@ -1,0 +1,116 @@
+=== RUN   TestEnvtestSiteRetirementBinding
+=== RUN   TestEnvtestSiteRetirementBinding/stable
+=== RUN   TestEnvtestSiteRetirementBinding/latest
+=== RUN   TestEnvtestSiteRetirementBinding/declared
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-source
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-owner
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-history
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-key
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-target
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-task
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-phase
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-caller-memory
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-late-owner
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-late-native
+=== RUN   TestEnvtestSiteRetirementBinding/dispatch-late-phase
+--- PASS: TestEnvtestSiteRetirementBinding (8.18s)
+    --- PASS: TestEnvtestSiteRetirementBinding/stable (2.80s)
+    --- PASS: TestEnvtestSiteRetirementBinding/latest (0.18s)
+    --- PASS: TestEnvtestSiteRetirementBinding/declared (0.06s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-source (0.10s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-owner (0.12s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-history (0.11s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-key (0.10s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-target (0.11s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-task (0.11s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-phase (0.11s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-caller-memory (0.15s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-late-owner (0.14s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-late-native (0.11s)
+    --- PASS: TestEnvtestSiteRetirementBinding/dispatch-late-phase (0.14s)
+=== RUN   TestEnvtestSiteRetirementReceipts
+=== RUN   TestEnvtestSiteRetirementReceipts/complete
+=== RUN   TestEnvtestSiteRetirementReceipts/latest
+=== RUN   TestEnvtestSiteRetirementReceipts/unknown
+=== RUN   TestEnvtestSiteRetirementReceipts/generic
+=== RUN   TestEnvtestSiteRetirementReceipts/pending
+=== RUN   TestEnvtestSiteRetirementReceipts/failed
+=== RUN   TestEnvtestSiteRetirementReceipts/conflict
+=== RUN   TestEnvtestSiteRetirementReceipts/lost-response
+=== RUN   TestEnvtestSiteRetirementReceipts/pruned-receipt
+=== RUN   TestEnvtestSiteRetirementReceipts/pruned-creator
+=== RUN   TestEnvtestSiteRetirementReceipts/pruned-operation
+=== RUN   TestEnvtestSiteRetirementReceipts/capacity
+=== RUN   TestEnvtestSiteRetirementReceipts/bytes
+=== RUN   TestEnvtestSiteRetirementReceipts/edit-target
+=== RUN   TestEnvtestSiteRetirementReceipts/edit-prepared
+=== RUN   TestEnvtestSiteRetirementReceipts/edit-source
+=== RUN   TestEnvtestSiteRetirementReceipts/edit-row-target
+=== RUN   TestEnvtestSiteRetirementReceipts/edit-result
+=== RUN   TestEnvtestSiteRetirementReceipts/edit-both-results
+=== RUN   TestEnvtestSiteRetirementReceipts/missing-time
+=== RUN   TestEnvtestSiteRetirementReceipts/future-time
+--- PASS: TestEnvtestSiteRetirementReceipts (11.63s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/complete (2.30s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/latest (0.29s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/unknown (0.26s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/generic (0.28s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/pending (0.18s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/failed (0.19s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/conflict (0.35s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/lost-response (0.26s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/pruned-receipt (0.24s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/pruned-creator (0.25s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/pruned-operation (0.24s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/capacity (0.53s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/bytes (0.76s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/edit-target (0.27s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/edit-prepared (0.26s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/edit-source (0.27s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/edit-row-target (0.26s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/edit-result (0.26s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/edit-both-results (0.26s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/missing-time (0.27s)
+    --- PASS: TestEnvtestSiteRetirementReceipts/future-time (0.27s)
+=== RUN   TestEnvtestSiteRetirementTaskRecovery
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/accepted
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/unknown
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/verifying
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/latest
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/latest-pruned
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/edited-state-proof
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/edited-ancestry-proof
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/replacement
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/parent-replaced
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/reappear
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/failed-child
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/pending-child
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/changed-completion
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/final-failure
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/task-source
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/task-owner
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/task-key
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/absence-history
+=== RUN   TestEnvtestSiteRetirementTaskRecovery/absence-phase
+--- PASS: TestEnvtestSiteRetirementTaskRecovery (9.66s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/accepted (2.25s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/unknown (0.22s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/verifying (0.21s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/latest (0.25s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/latest-pruned (0.20s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/edited-state-proof (0.20s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/edited-ancestry-proof (0.19s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/replacement (0.19s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/parent-replaced (0.19s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/reappear (0.20s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/failed-child (0.18s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/pending-child (0.17s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/changed-completion (0.22s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/final-failure (0.21s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/task-source (0.18s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/task-owner (0.20s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/task-key (0.18s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/absence-history (0.20s)
+    --- PASS: TestEnvtestSiteRetirementTaskRecovery/absence-phase (0.20s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	31.812s

@@ -1,0 +1,18 @@
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled
+--- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback (0.72s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected (0.63s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid (0.02s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected (0.02s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty (0.02s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.126s

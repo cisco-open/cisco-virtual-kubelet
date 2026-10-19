@@ -1,0 +1,19 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "scope": "Private AP updates consume strict verified floor checkpoints by explicit floor operation identity, advance bounded per-AP latest receipts and preserve immutable snapshots. Floor writer and native checkpoint publisher remain disabled; consumer fixtures seed synthetic already-verified floor evidence.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_authority.go": "adf4bf21e42a636d8ec350077ae17b9b778fe424a4ca51ceee7418fe0c16e22c",
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_authority_test.go": "c369a3c665104f2d52530280d90c973fbf5a52920ab66b17449506536062ce0f",
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_consumer_test.go": "a7a6402a8a57e6e5c4458a4d576afb7b80ee658b312cbf7890591207674b5c63",
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_consumer_envtest_test.go": "f269e2ba770a88ff1017a71724baf3b6f967562c02487ff94c3462bb6890c8cd",
+    "internal/controlleradapter/catalystcenter/planned_ap_baseline.go": "a9e126ab7a0d2b69456d99b5bd025e40a77214b6ad53be8ef4007df155cc8dde",
+    "internal/controlleradapter/catalystcenter/planned_ap_execution.go": "ca0a414b1308659615c1ebb1ba1c8a906d9a829a64d88b8fca2b23dcfd71c658",
+    "internal/controlleradapter/catalystcenter/planned_ap_identity.go": "dfd0169bd962a3e61ecee2a4d9560563434423cd46f97c301b5bd6e672de1707",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "d01384f0c5917575c1dd2cccc84fde2b19afbefea25198c3030be6ae8b7e583a",
+    "internal/controlleradapter/catalystcenter/site_design_dispatch.go": "3bc30c1ff5b2c8ff4107ca80f7dc75b1c41dfef295db97430bce9d36a1cd076d",
+    "internal/controlleradapter/catalystcenter/site_applied.go": "3aa95ef14f8727da83f7bda8c35ea94bd3a2742009253ad630209fd85f43543e",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "c7f41290c9306e42d2f9d5233cec6a3f4f38adbca1e5fefb4e1fadc655a69379"
+  }
+}

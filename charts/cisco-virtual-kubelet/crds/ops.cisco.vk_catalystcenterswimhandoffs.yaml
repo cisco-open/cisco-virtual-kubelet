@@ -1,0 +1,268 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: catalystcenterswimhandoffs.ops.cisco.vk
+spec:
+  group: ops.cisco.vk
+  names:
+    kind: CatalystCenterSWIMHandoff
+    listKind: CatalystCenterSWIMHandoffList
+    plural: catalystcenterswimhandoffs
+    shortNames:
+    - swimhandoff
+    singular: catalystcenterswimhandoff
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.upgradeName
+      name: Upgrade
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          CatalystCenterSWIMHandoff is a device-worker-created delegation journal.
+          It is not a user-created alternative to IOSXESoftwareRollout admission.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              controllerGeneration:
+                format: int64
+                type: integer
+              controllerUsername:
+                maxLength: 253
+                type: string
+              deviceName:
+                maxLength: 253
+                type: string
+              deviceUID:
+                maxLength: 253
+                type: string
+              deviceWorkerPodUID:
+                maxLength: 253
+                type: string
+              deviceWorkerUsername:
+                maxLength: 253
+                type: string
+              serial:
+                maxLength: 253
+                type: string
+              source:
+                description: |-
+                  CatalystCenterImageSource selects controller execution explicitly. It is a
+                  separate source union member so released workers reject it rather than
+                  silently performing a direct upgrade. All references are same-namespace.
+                properties:
+                  controllerName:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  controllerUID:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  deviceID:
+                    maxLength: 253
+                    pattern: ^[A-Za-z0-9_-]{1,128}$
+                    type: string
+                  imageID:
+                    maxLength: 253
+                    pattern: ^[A-Za-z0-9_-]{1,128}$
+                    type: string
+                  imageVersion:
+                    description: ImageVersion is the exact controller inventory version.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  preparation:
+                    description: |-
+                      Preparation pins an immutable administrator-owned ConfigMap policy.
+                      Omission preserves the existing controller execution profile.
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      sha256:
+                        pattern: ^[a-f0-9]{64}$
+                        type: string
+                      uid:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    - sha256
+                    - uid
+                    type: object
+                  standardReloadProfile:
+                    description: |-
+                      StandardReloadProfile opts into the release-qualified normal-reload contract.
+                      It selects no optional activation features and permits only the narrowly
+                      recognized xFSU version-path warning. Omission retains strict readiness.
+                    enum:
+                    - CatalystCenter323
+                    type: string
+                  transferFallbackAddress:
+                    description: TransferFallbackAddress qualifies only the known
+                      positive HTTPS/SCP check.
+                    maxLength: 253
+                    type: string
+                required:
+                - controllerName
+                - controllerUID
+                - deviceID
+                - imageID
+                - imageVersion
+                type: object
+              targetVersion:
+                maxLength: 253
+                type: string
+              upgradeName:
+                maxLength: 253
+                type: string
+              upgradeUID:
+                maxLength: 253
+                type: string
+            required:
+            - controllerGeneration
+            - controllerUsername
+            - deviceName
+            - deviceUID
+            - deviceWorkerPodUID
+            - deviceWorkerUsername
+            - serial
+            - source
+            - targetVersion
+            - upgradeName
+            - upgradeUID
+            type: object
+            x-kubernetes-validations:
+            - message: handoff spec is immutable
+              rule: self == oldSelf
+          status:
+            description: |-
+              Only the pinned controller worker writes the journal. The XE worker writes
+              the grant and fresh verification on the parent, preserving single ownership.
+            properties:
+              activationClaim:
+                maxLength: 253
+                type: string
+              activationNotBefore:
+                format: date-time
+                type: string
+              activationTask:
+                maxLength: 253
+                type: string
+              distributionClaim:
+                maxLength: 253
+                type: string
+              distributionNotBefore:
+                format: date-time
+                type: string
+              distributionTask:
+                maxLength: 253
+                type: string
+              inventorySyncs:
+                items:
+                  properties:
+                    claim:
+                      maxLength: 253
+                      type: string
+                    completedAt:
+                      format: date-time
+                      type: string
+                    preparationID:
+                      maxLength: 253
+                      type: string
+                    stage:
+                      maxLength: 253
+                      type: string
+                    submittedAt:
+                      format: date-time
+                      type: string
+                    task:
+                      maxLength: 253
+                      type: string
+                  required:
+                  - claim
+                  - preparationID
+                  - stage
+                  - submittedAt
+                  type: object
+                maxItems: 2
+                type: array
+              phase:
+                maxLength: 253
+                type: string
+              readinessClaim:
+                maxLength: 253
+                type: string
+              readinessFor:
+                maxLength: 253
+                type: string
+              readinessHistory:
+                description: |-
+                  ReadinessHistory preserves completed checks replaced after an explicit
+                  parent reauthorization. At most two replacements per stage are allowed.
+                items:
+                  properties:
+                    claim:
+                      maxLength: 253
+                      type: string
+                    stage:
+                      enum:
+                      - ReadyToDistribute
+                      - ReadyToActivate
+                      type: string
+                    submittedAt:
+                      format: date-time
+                      type: string
+                    task:
+                      maxLength: 253
+                      type: string
+                  required:
+                  - claim
+                  - stage
+                  - submittedAt
+                  - task
+                  type: object
+                maxItems: 5
+                type: array
+              readinessNotBefore:
+                format: date-time
+                type: string
+              readinessTask:
+                maxLength: 253
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

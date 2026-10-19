@@ -1,0 +1,47 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "scope": "Reserved v5 Create-only recreation envelope, complete archive-chain reader and fixture status/schema/receipt round trips. Planner does not emit v5 operations or archived rows. No native recreation or production atomic writer qualification.",
+  "gates": [
+    {
+      "name": "local",
+      "log": "wireless-tag-recreation-lineage-local.log",
+      "goSeconds": 9.818,
+      "topLevelPassingTests": 25,
+      "historyScenarios": 84,
+      "archiveScenarios": 76,
+      "envelopeScenarios": 24,
+      "validArchivedStatusRoundTrips": 8,
+      "statusBackend": "ordinary lifecycle test client"
+    },
+    {
+      "name": "api",
+      "log": "wireless-tag-recreation-lineage-api.log",
+      "goSeconds": 24.789,
+      "topLevelPassingTests": 25,
+      "historyScenarios": 84,
+      "archiveScenarios": 76,
+      "envelopeScenarios": 24,
+      "validArchivedStatusRoundTrips": 8,
+      "statusBackend": "temporary Kubernetes API"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate.go": "12d55cda0bee5bb8de5e539a7b24f7aa6a8c6b11d36c17b29e0fd5d4b7ac88bd",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_test.go": "1961a188534173b5f6e0a59577f5ff53679aa3240b956df521a6a6a42649067a",
+    "internal/controlleradapter/catalystcenter/wireless_tag_retired_test.go": "ec99fe94479afad41460684b56e46e7734716e9f37af6f95fbba5b6ad1d8a2ba",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_protocol_test.go": "845fe79ef113311e642c68dc3ac20f4854c7a3fc688a2ceae05fb11017b51877",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_test.go": "c3769aa1880a55e66822cb63d3e0d4ae2ca4417b47b051a83612aeb14dd03cfe",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_envtest_test.go": "021988c8c72c41a59973cd6345e4aa3437a6e0afc5e5943e2eb7b7a9a2523c17",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "10ae7788ae6c16cd915c1c859a35a1b3a4d16355cce69e5c48f3afa83bc4c265",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings.go": "127cd8f7a0d90c3d4a2ea6dd23ee602bf254bef519617b63d06e026ec6389e08",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings_readback_test.go": "1e61e9a74c519a2d32527059b89a8ef1f52caae0d396b99f2550589cc3dc3288"
+  },
+  "initialFailures": "Initial status-round-trip commands failed Go representation equality despite identical serialized JSON and valid active bookkeeping; retained separately. Corrected gates require both serialized equality and active receipt bookkeeping.",
+  "remaining": [
+    "Private incarnation-lineage binding across updates/deletes",
+    "Planner/capacity/final preflight integration",
+    "Atomic archive and new creator publication",
+    "Original-task recovery across failure/restart",
+    "Native lab recreation and installed-worker qualification"
+  ]
+}

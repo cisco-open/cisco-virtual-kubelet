@@ -1,0 +1,33 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-163249 01a1458f-289d-74a0-9fd2-444883052138
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-163249 01a1458f-3a2c-74a2-b4b8-8cce02bdb35b
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-163249#CVK-Commit-Qualification 01a1458f-57a9-7337-bb3c-cde4bcb761ed
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-163249#CVK-Commit-Qualification 01a1458f-914d-76d7-97dc-d43cb329246c
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-163249#CVK-Commit-Qualification 01a1458f-db88-7134-ae90-f9670ba8a94d
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-163249#CVK-Commit-Qualification 01a14590-2228-7e44-9471-aeda4c1950e5
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified cfe00c9e-2ac2-4a4a-9265-b2fab4121af2
+    template_projects_live_test.go:166: generated template metadata task inherited 01a14590-6268-7748-a242-db1fb706bedf
+    template_projects_live_test.go:166: generated template metadata task inherited 01a14590-8a0d-7938-bb10-c68bf53ee649
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified inherited
+    template_projects_live_test.go:166: generated template metadata task override 01a14590-c7c7-7573-bc7c-9190572c8046
+    template_projects_live_test.go:166: generated template metadata task override 01a14590-ef69-730c-b69a-4681b68abcd0
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified override
+    template_projects_live_test.go:166: generated template metadata task null-override-with-content-update 01a14591-2ca0-7230-a8d8-17b845e08b5e
+    template_projects_live_test.go:166: generated template metadata task null-override-with-content-update 01a14591-5435-7900-b2aa-b7c326032048
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified null-override-with-content-update
+    template_projects_live_test.go:166: generated template metadata task return-to-inherited 01a14591-91a4-758f-b1cd-be0311c49e0a
+    template_projects_live_test.go:166: generated template metadata task return-to-inherited 01a14591-b938-7de8-9383-e6e239a5860c
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified return-to-inherited
+    template_projects_live_test.go:166: generated template metadata task explicit-clear 01a14591-f6ff-7a4b-a0ab-e051f71d9c1c
+    template_projects_live_test.go:166: generated template metadata task explicit-clear 01a14592-1e7d-7eb0-8f2a-388dd2135c48
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified explicit-clear
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified empty-fallback
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified null-fallback
+    template_projects_live_test.go:166: native software-version fallback/readback/no-op verified omitted
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a14592-81a4-7bf1-8264-bc7235e386f2
+    template_commit_live_test.go:95: template fixture cleanup verified cfe00c9e-2ac2-4a4a-9265-b2fab4121af2
+    template_projects_live_test.go:112: isolated project cleanup verified a783bf3e-ae59-44bd-9399-704760414732
+--- PASS: TestLiveCatalystCenterTemplateProject (225.55s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	227.716s

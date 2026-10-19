@@ -1,0 +1,11 @@
+=== RUN   TestLiveCatalystCenterWiredBulkPlanning
+    wired_bulk_live_test.go:64: three live lab identities passed bulk planning and deliberate one-use dispatch refusal; provisioning state unchanged; no native writes
+--- PASS: TestLiveCatalystCenterWiredBulkPlanning (4.84s)
+=== RUN   TestLiveCatalystCenterWiredBulkSequencePlanning
+    wired_bulk_sequence_live_test.go:107: live grouped sequence batches=1 declared_members=3 passed all-batch preflight and one-use dispatch refusal; managed identities simulated
+    wired_bulk_sequence_live_test.go:107: live grouped sequence batches=1 declared_members=3 passed all-batch preflight and one-use dispatch refusal; managed identities simulated
+    wired_bulk_sequence_live_test.go:107: live grouped sequence batches=1 declared_members=3 passed all-batch preflight and one-use dispatch refusal; managed identities simulated
+    wired_bulk_sequence_live_test.go:124: all three lab identities/provisioning records unchanged; no native provisioning writes
+--- PASS: TestLiveCatalystCenterWiredBulkSequencePlanning (46.16s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	51.932s

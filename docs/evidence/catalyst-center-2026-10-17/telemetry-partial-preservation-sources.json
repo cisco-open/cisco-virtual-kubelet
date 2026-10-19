@@ -1,0 +1,43 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "upstream": [
+    {
+      "file": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    },
+    {
+      "file": "model_catalystcenter_telemetry_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/model_catalystcenter_telemetry_settings.go",
+      "sha256": "5812d7918554de263ff61b16150e8307ff9e5ac0110b6b0dadd0fd7efa2bdce4"
+    },
+    {
+      "file": "resource_catalystcenter_telemetry_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/resource_catalystcenter_telemetry_settings.go",
+      "sha256": "d81f9736287354040980a25344423cd6d9350795d4aea4bcfc5c302d6d26f09e"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/telemetry_settings.go": "2df9f1bf5c1e3599efe4235c721c99395cb0271a345379736c82e5d36797d5c4",
+    "internal/controlleradapter/catalystcenter/network_execution.go": "1cd1c09481d8bf38b5a7f01bef49c495db09c72d54be1daf1c5ab94eb2f4a2db",
+    "internal/controlleradapter/catalystcenter/network_settings.go": "297add38a32d592ec454ac70cbfc982d1550bca388804a0f7b664a563736c4b8",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "f2ef0dbe7a9982bafef551902f7771c5055d8dd7617da0ab625bf0b888f36c9b",
+    "internal/controlleradapter/catalystcenter/network_application.go": "27a020f0bf05990518d4632e1c90a63842059079c795e8771a3e6131d6f445b2",
+    "internal/controlleradapter/catalystcenter/network_task_recovery.go": "564c4423114172dce9b6589c176845ddd43fc242f6843ea1b34f14a3bcdcf39b",
+    "internal/controlleradapter/catalystcenter/config_report_plan.go": "b5f87adbfe2d53f539cd8c2bb384ba54bd63792842099d56288832a9e791e1b7",
+    "internal/controlleradapter/catalystcenter/network_submission_test.go": "f183b8b0f0ff69a79d7960b8f98dd1b5f2fad033c65405b0d341ee1884bf8f4e",
+    "internal/controlleradapter/catalystcenter/telemetry_settings_test.go": "a911271e8ca1f87a70606ba4bf40fd9f66b7d5115b3097af321779f5713cd420",
+    "internal/controlleradapter/catalystcenter/telemetry_partial_test.go": "1705001c333900873c6c53b3bbe0dda080a8f9b6c61326a1591feb676c43e812",
+    "internal/controlleradapter/catalystcenter/telemetry_partial_envtest_test.go": "69b55f7013dcb221be3c496aef80c8ed31966dd3fa638a7f921379ebf14fad09",
+    "internal/controlleradapter/catalystcenter/telemetry_partial_live_test.go": "6dd940ae61bbf930ce340b18052f7ff8aa107d8291ce1bd76f13dfd550c42dc1",
+    "internal/controlleradapter/catalystcenter/telemetry_partial_execution_live_test.go": "4bfc477942dd8f522badda2bf282a72e166b43f2465b3557ed2db5f97c22d13a",
+    "internal/controlleradapter/catalystcenter/network_application_cleanup_live_test.go": "deebd883b80245b9f4f0cd4c3f7f8be82e9211e5d313314513a5cc7aeefee085",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "9668050836ddd835be506c195ce7af95be9dfe0cabec8dc84fff78ad825de20a",
+    "examples/configs/catalyst-center/telemetry-partial-apply.yaml": "241eeeb296e2d3bbbf8557c1f582231109a77b0e2d40befcc8ba2e8c9361475f"
+  },
+  "scope": "Partial resolved telemetry masks, complete known-profile preserving submission, refusal on unknown native fields/missing companions, existing no-dispatch and source/owner/task/latest-receipt recovery. Actual private API and native preservation qualify known modeled fields. No permanent original native baseline, exact upstream default/nullable-collector expansion, source prune, ownership handoff, installed/external-collector/physical qualification or complete pinned-model parity claim."
+}

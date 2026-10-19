@@ -37,11 +37,12 @@ func (r *AggregatedReconciler) startNXOSWorker(dev *ciskov1.CiscoDevice, passwor
 	if leaseNs == "" {
 		leaseNs = dev.Namespace
 	}
-	notify := startSubscribeWatcher(r.rootCtx, dctx)
 	devCtx, cancel := context.WithCancel(r.rootCtx)
+	notify := startSubscribeWatcher(devCtx, dctx)
 	rec := &provider.NXOSConfigReconciler{
-		Client:     r.Client,
-		DeviceName: dev.Name,
+		Client:          r.Client,
+		AcquireMutation: r.bootstrapMutationGuard(dev),
+		DeviceName:      dev.Name,
 		// DeviceNamespace scopes reconciliation to this device's namespace.
 		// deviceRef is same-namespace by contract; without this the worker
 		// would reconcile NXOSConfig objects from any namespace whose
@@ -67,18 +68,14 @@ func (r *AggregatedReconciler) startNXOSWorker(dev *ciskov1.CiscoDevice, passwor
 		RuntimeID:               newWorkerRuntimeID(),
 	}
 
-	r.mu.Lock()
-	r.managed[devKey(dev)] = &deviceWorker{cancel: cancel, specHash: hash}
-	r.mu.Unlock()
-
-	go func() {
-		defer func() {
-			cancel()
-			if dctx.Transport != nil {
-				_ = dctx.Transport.Close()
+	return r.startWorkerLoop(dev, hash, devCtx, cancel, rec.Run, func() error {
+		if notify != nil {
+			for range notify {
 			}
-		}()
-		_ = rec.Run(devCtx)
-	}()
-	return nil
+		}
+		if dctx.Transport != nil {
+			return dctx.Transport.Close()
+		}
+		return nil
+	})
 }

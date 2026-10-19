@@ -1,0 +1,5 @@
+=== RUN   TestEnvtestTemplateVersionArchivePersistence
+    template_version_archive_envtest_test.go:135: two original strict version receipts survive real API archive/draft round trips without content disclosure
+--- PASS: TestEnvtestTemplateVersionArchivePersistence (6.27s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.651s

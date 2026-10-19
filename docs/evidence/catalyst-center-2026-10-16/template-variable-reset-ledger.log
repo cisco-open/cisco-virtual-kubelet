@@ -1,0 +1,6 @@
+Pinned module: NetAsCode Catalyst Center 0.5.0
+Scope: cc_*.tf resource types (module host-file outputs excluded)
+Distinct resource types: 93
+Unique ledger rows: 93
+Missing/extra types: none
+This scope audit does not prove complete execution parity.

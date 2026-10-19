@@ -1,0 +1,75 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "toolchain": "go1.26.9",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "07d2633d6a995ba0870d2a5093b9638fea554792e481134aaa4ac87f731a153a",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_test.go": "8ff98dc61d95ab6c3bac2d43df1998838b3353f9594680d07e1b58286668a5a7",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_envtest_test.go": "4d105f7f9093a009ff6f09230a5f3ff386bae050603929c09016bf4528a8e196",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_protocol_test.go": "0cd753a9f2b5d54a5bd3a0143c9fa7ec6dcf4b2a269b540f9ef7c4e5f5f4b4a6",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_example_test.go": "43ab89e35256bff806bb4673a3d081f91cd7e422c2c0ae3804d2415d29c34a19",
+    "internal/controlleradapter/catalystcenter/network_profile_configuration.go": "e40c642f2728ede9577fe15482fa4e5d58ef512f05adf2d3051b884931ac4f5f",
+    "internal/controlleradapter/catalystcenter/wireless_profile_tag_execution.go": "490c3dbe7848140058db65b82c6ebd9ad2b01bdaa20bf1ecffb07064e5418ab3",
+    "internal/controlleradapter/catalystcenter/network_profile_recovery.go": "33ab82fc700673ced1306046bb2d1d682c804d1f2d4958830ec621556c11bbda",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "33e595f6c1fb707c9f44c54151da9ed439a5f25e16efd46897702f3160a8c82a",
+    "internal/controlleradapter/catalystcenter/template_deployment_adapter_recovery.go": "3534b45daba35c4c91bd7ebca3f7931257bed96b37918428c5d10f03099fc149",
+    "internal/controlleradapter/catalystcenter/profile_site_prune.go": "2252621920c90a353410be4aef7e1fb3602447457c9b56039cd45f57abdafcbc",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "b2c7d55f1683f404cd8ac338c4d993ce5d015b9ebcc54cc3ef292410165748a2",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_test.go": "307cf636e7f5c19b0b90f8f00a2c1f4095d29948d188dd4cf1688c44e181e678",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "81ebce6c655e24f7feb7986a5cf619b175046e192196910dc6d12265fbcfd2dc",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "f147130fdab4e98699f8b659a048b024ddd2225a1bb408fc40e537e9686a9d9a",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "ab10db521a5ba4dd842362da4247a6aa43799874de4408ead7004b208e45d811",
+    "internal/controlleradapter/catalystcenter/wireless_profile_fixture_cleanup_live_test.go": "18939ece794b59d35c2466e990c5a502f6178b4353b349c6d1dc1f08b048c0b5",
+    "internal/controlleradapter/catalystcenter/template_input_comparison.go": "fd175047db6c3acc548bbb6f17174cac44f3cf845371b75b4410d87ba2a49767",
+    "internal/controlleradapter/catalystcenter/config_secrets.go": "ded98534a23909505c0e91311d72ea0b556e1b83ac96e037419ad147b8036e9c",
+    "internal/controlleradapter/catalystcenter/wireless_profile_tag_inventory.go": "41d1404d842c8fb36fa710443b34ae667eae69806b1dc2b1e6624b14e780ae9b",
+    "examples/configs/catalyst-center/wireless-tag-baselines-apply.yaml": "04805b2ccd60eb87b3544a57076283b0dadaf0f8d2e377a607f6336afef1597e",
+    "api/v1alpha1/networkcontroller_configuration_types.go": "d108fde7081cfebf219265c4d179efa4dab126de1a7930dd2f5bd27182083d02"
+  },
+  "upstream": [
+    {
+      "path": "cc_network_profiles.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_profiles.tf",
+      "sha256": "f49a96dfababdbcdbaebda90d5a8d50e424d3b0c64727baf8de442bb67e1c6c3"
+    },
+    {
+      "path": "cc_wireless.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_wireless.tf",
+      "sha256": "55956a619e460b28e3a57a797b981ed5d3601513e2968793e3b565afa12f3322"
+    }
+  ],
+  "qualification": {
+    "finalLocalReceiptCases": 44,
+    "finalAPIReceiptCases": 44,
+    "producerSetProtocolCases": 10,
+    "exampleScopeCases": 7,
+    "finalLocalAPISeconds": 166.062,
+    "broaderRaceAPISeconds": 591.841,
+    "broaderAPICases": 324,
+    "broaderPrivateReceiptCasesBeforeFinalDefensiveCases": 40,
+    "nativePublicMetadataTasks": 21,
+    "nativePrivateTagTasks": 9,
+    "nativeLatestPrivateRows": 9,
+    "nativeMemberProofsAcrossCreateAndUpdateRows": 10,
+    "nativeAssociationUnassignments": 4,
+    "nativeFinalInSyncWorkflows": 2,
+    "wirelessBaselineRestorations": 2,
+    "nativeSeconds": 904.904,
+    "nativeKubernetesActorsAndStorage": "simulated",
+    "installedQualification": false,
+    "nativeTaskToTagUUIDAttribution": false,
+    "tagDeleteOrMembershipRemovalAuthority": false,
+    "physicalDeviceActions": false,
+    "swimUnitTests": 47,
+    "swimUnitSeconds": 4.041
+  },
+  "nativeFlags": {
+    "CATC_WIRELESS_PROFILE_RECOVERY": "isolated-public",
+    "CATC_WIRELESS_TAG_RECEIPTS": "isolated-private",
+    "CATC_PROFILE_SITE_PRUNE": "isolated-public",
+    "CATC_WIRELESS_PROFILE_EXECUTION": "isolated-definitions",
+    "CATC_WIRELESS_PROFILE_TAG_EXECUTION": "isolated-empty-sites"
+  },
+  "scope": "Task-bound private Create/Update baselines through existing projected comparison keys and one atomic action row per operation/cohort, complete producer member binding and keyed native/dependency comparisons. Imported matches and legacy acknowledgements are not adopted. No exclusive native creator attribution, tag delete/member removal, automatic key migration, baseline retirement, ownership handoff, installed actor or physical authority. Native happy cycles and separate final defensive fixture/API checks qualify distinct scopes; final source fingerprints are not installed-binary attestations."
+}

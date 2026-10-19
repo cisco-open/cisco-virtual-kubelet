@@ -1,0 +1,40 @@
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/ready
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/active
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/tombstone
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/native-edit
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/native-race
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/owner-race
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/spec-race
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/source-race
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/foreign-alias
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/foreign-malformed
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/missing-owner
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/credential-custody
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/foreign-owned-section
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/pending-operation
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/missing-receipt
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/missing-native
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/wrong-policy
+=== RUN   TestEnvtestDiscoveryConfigCleanupObservation/mixed-source
+--- PASS: TestEnvtestDiscoveryConfigCleanupObservation (6.94s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/ready (2.68s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/active (0.06s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/tombstone (0.06s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/native-edit (0.05s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/native-race (0.06s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/owner-race (0.06s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/spec-race (0.06s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/source-race (0.07s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/foreign-alias (0.05s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/foreign-malformed (0.04s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/missing-owner (0.05s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/credential-custody (0.05s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/foreign-owned-section (0.04s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/pending-operation (0.05s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/missing-receipt (0.05s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/missing-native (0.06s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/wrong-policy (0.04s)
+    --- PASS: TestEnvtestDiscoveryConfigCleanupObservation/mixed-source (0.05s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.140s

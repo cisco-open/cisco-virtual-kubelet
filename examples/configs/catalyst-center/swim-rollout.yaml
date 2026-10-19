@@ -1,0 +1,76 @@
+# Managed Catalyst Center SWIM: edit placeholders, request identity/time,
+# exact target selector, canary cohort and imported-image digest before planning.
+# Requires the new CRDs, SWIM admission policy and matching worker binaries.
+apiVersion: ops.cisco.vk/v1alpha1
+kind: IOSXESoftwareRollout
+metadata:
+  name: cat9k-17-18-4
+  namespace: network-devices
+spec:
+  plan:
+    requestedBy: system:serviceaccount:network-devices:cvk-rollout-planner
+    requestedAt: "2026-01-01T00:00:00Z"
+    targets:
+      selector:
+        matchLabels:
+          topology.cisco.vk/managed: "true"
+          operations.cisco.vk/image-family: cat9k
+          # Use an administrator-approved label selecting this exact device.
+          operations.cisco.vk/demo-target: c9k-a
+      allowAll: false
+      maxTargets: 1
+    image:
+      # Lowercase SHA-256 of the exact image bytes; never reuse this placeholder.
+      sha256: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      imageFamily: cat9k
+      sources:
+        - name: catalyst-center
+          priority: 100
+          catalystCenter:
+            controllerName: catc
+            controllerUID: REPLACE_WITH_NETWORKCONTROLLER_UID
+            deviceID: REPLACE_WITH_CONTROLLER_DEVICE_UUID
+            imageID: REPLACE_WITH_IMPORTED_IMAGE_UUID
+            imageVersion: "17.18.04.0.759"
+            # For the separately qualified 3.2.3-75346.100 normal-reload
+            # profile (see docs/controllers/catalyst-center-remediation.md):
+            # standardReloadProfile: CatalystCenter323
+            # Optional automatic cleanup + inventory synchronization:
+            # create swim-preparation-policy.yaml first, then pin its identity.
+            # preparation:
+            #   name: swim-retired-archive-cleanup-v1
+            #   uid: REPLACE_WITH_CONFIGMAP_UID
+            #   sha256: REPLACE_WITH_SHA256_OF_EXACT_POLICY_JSON_BYTES
+            # Optional: qualify only the known positive HTTPS/SCP fallback
+            # readiness result for this exact appliance address.
+            # transferFallbackAddress: "192.0.2.254"
+    targetVersion: 17.18.04
+    strategy: Reload
+    rollbackOnFailure: false
+    installTimeoutSeconds: 7200
+    rebootTimeoutSeconds: 3600
+    canaries:
+      # c9k-a carries operations.cisco.vk/qualification-cohort=c9300 in
+      # devices-and-workload.yaml. Add one entry per distinct target cohort.
+      - name: c9300
+        devices: [c9k-a]
+    pauseAfterCanary: false
+    budgets:
+      maxConcurrentTransfers: 1
+      maxUnavailable: 1
+      domains:
+        - topologyKey: distribution.cisco.vk/cache-domain
+          maxConcurrentTransfers: 1
+        - topologyKey: operations.cisco.vk/redundancy-domain
+          maxUnavailable: 1
+    workloads:
+      # Default non-destructive policy. For the separately gated development
+      # drain path, start from iosxe-software-rollout-drain.yaml instead of
+      # editing an already planned campaign.
+      policy: BlockIfRunning
+    health:
+      maxObservationAgeSeconds: 300
+      canarySoakSeconds: 600
+      waveSoakSeconds: 300
+  control:
+    revision: 0

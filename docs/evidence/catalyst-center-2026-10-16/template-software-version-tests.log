@@ -1,0 +1,54 @@
+=== RUN   TestTemplateSoftwareVersionFallback
+=== RUN   TestTemplateSoftwareVersionFallback/inherit
+=== RUN   TestTemplateSoftwareVersionFallback/override
+=== RUN   TestTemplateSoftwareVersionFallback/null-override
+=== RUN   TestTemplateSoftwareVersionFallback/empty-override
+=== RUN   TestTemplateSoftwareVersionFallback/null-fallback
+=== RUN   TestTemplateSoftwareVersionFallback/empty-fallback
+=== RUN   TestTemplateSoftwareVersionFallback/omitted
+=== RUN   TestTemplateSoftwareVersionFallback/bad-fallback
+=== RUN   TestTemplateSoftwareVersionFallback/bad-overridden-fallback
+=== RUN   TestTemplateSoftwareVersionFallback/bad-override
+--- PASS: TestTemplateSoftwareVersionFallback (0.01s)
+    --- PASS: TestTemplateSoftwareVersionFallback/inherit (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/override (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/null-override (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/empty-override (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/null-fallback (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/empty-fallback (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/omitted (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/bad-fallback (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/bad-overridden-fallback (0.00s)
+    --- PASS: TestTemplateSoftwareVersionFallback/bad-override (0.00s)
+=== RUN   TestTemplateSoftwareVersionPublicNoOp
+=== RUN   TestTemplateSoftwareVersionPublicNoOp/inherited
+=== RUN   TestTemplateSoftwareVersionPublicNoOp/cleared
+=== RUN   TestTemplateSoftwareVersionPublicNoOp/invalid
+--- PASS: TestTemplateSoftwareVersionPublicNoOp (0.73s)
+    --- PASS: TestTemplateSoftwareVersionPublicNoOp/inherited (0.65s)
+    --- PASS: TestTemplateSoftwareVersionPublicNoOp/cleared (0.05s)
+    --- PASS: TestTemplateSoftwareVersionPublicNoOp/invalid (0.03s)
+=== RUN   TestTemplateSoftwareVersionClearComparison
+=== RUN   TestTemplateSoftwareVersionClearComparison/omitted
+=== RUN   TestTemplateSoftwareVersionClearComparison/null
+=== RUN   TestTemplateSoftwareVersionClearComparison/empty
+=== RUN   TestTemplateSoftwareVersionClearComparison/constrained
+=== RUN   TestTemplateSoftwareVersionClearComparison/malformed-number
+=== RUN   TestTemplateSoftwareVersionClearComparison/malformed-list
+--- PASS: TestTemplateSoftwareVersionClearComparison (0.00s)
+    --- PASS: TestTemplateSoftwareVersionClearComparison/omitted (0.00s)
+    --- PASS: TestTemplateSoftwareVersionClearComparison/null (0.00s)
+    --- PASS: TestTemplateSoftwareVersionClearComparison/empty (0.00s)
+    --- PASS: TestTemplateSoftwareVersionClearComparison/constrained (0.00s)
+    --- PASS: TestTemplateSoftwareVersionClearComparison/malformed-number (0.00s)
+    --- PASS: TestTemplateSoftwareVersionClearComparison/malformed-list (0.00s)
+=== RUN   TestTemplateSoftwareVersionReportAndApply
+=== RUN   TestTemplateSoftwareVersionReportAndApply/same
+=== RUN   TestTemplateSoftwareVersionReportAndApply/changed
+=== RUN   TestTemplateSoftwareVersionReportAndApply/cleared
+--- PASS: TestTemplateSoftwareVersionReportAndApply (0.05s)
+    --- PASS: TestTemplateSoftwareVersionReportAndApply/same (0.02s)
+    --- PASS: TestTemplateSoftwareVersionReportAndApply/changed (0.02s)
+    --- PASS: TestTemplateSoftwareVersionReportAndApply/cleared (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.163s

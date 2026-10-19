@@ -1,0 +1,27 @@
+[
+  {
+    "path": "/dna/intent/api/v1/networkProfilesForSites/8ff6a640-a557-48ad-8961-213ead0b5624/siteAssignments/b0b0f09a-5987-49f7-b867-bd6f25c8d2b3",
+    "taskId": "01a14020-7394-72eb-b758-4c1e1267e351",
+    "terminalSuccess": true
+  },
+  {
+    "path": "/api/v1/siteprofile/8ff6a640-a557-48ad-8961-213ead0b5624",
+    "taskId": "01a14020-7618-787d-baa2-98a8267f7030",
+    "terminalSuccess": true
+  },
+  {
+    "path": "/dna/intent/api/v1/template-programmer/template/acd88415-fff4-41f0-a4b7-9e90d0e9331f",
+    "taskId": "01a14020-8853-7f2a-89c8-027d36a23cb1",
+    "terminalSuccess": true
+  },
+  {
+    "path": "/dna/intent/api/v1/areas/b0b0f09a-5987-49f7-b867-bd6f25c8d2b3",
+    "taskId": "01a14020-8df6-7369-9733-dafd61597c5d",
+    "terminalSuccess": true
+  },
+  {
+    "path": "/dna/intent/api/v1/template-programmer/project/70443576-cdb9-47d1-b4bb-ac5c3b782fea",
+    "taskId": "01a14020-9631-7c9e-b482-a3de89266a3d",
+    "terminalSuccess": true
+  }
+]

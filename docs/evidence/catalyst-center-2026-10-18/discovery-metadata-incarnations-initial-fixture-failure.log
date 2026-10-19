@@ -1,0 +1,24 @@
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/legacy-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/continuation-zero
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/unknown-version
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/wrong-target
+=== RUN   TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change
+--- PASS: TestDiscoveryCredentialMetadataInputProtocol (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/legacy-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/continuation-zero (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/metadata-with-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/scope-with-dropped-versions (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/unknown-version (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/wrong-target (0.00s)
+    --- PASS: TestDiscoveryCredentialMetadataInputProtocol/queued-scope-change (0.00s)
+=== RUN   TestDiscoveryCredentialMetadataActionHistory
+    discovery_credential_metadata_protocol_test.go:101: metadata replacement lost ancestry controller section is owned by another config identity
+--- FAIL: TestDiscoveryCredentialMetadataActionHistory (0.00s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.430s
+FAIL

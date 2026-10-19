@@ -1,0 +1,46 @@
+=== RUN   TestEnvtestWirelessTagMembershipRemoval
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-failed
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-source
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-owner
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-failed
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-source
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-owner
+--- PASS: TestEnvtestWirelessTagMembershipRemoval (54.87s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack (6.91s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-failed (4.28s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing (4.35s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-source (4.18s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-owner (4.04s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack (4.95s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-failed (5.91s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing (6.76s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-source (5.13s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-owner (4.84s)
+=== RUN   TestWirelessTagMembershipRemoval
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-child-failed
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-source
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-owner
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-child-failed
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-source
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-owner
+--- PASS: TestWirelessTagMembershipRemoval (17.57s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-lost-ack (1.50s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-child-failed (1.57s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-tree-missing (1.56s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-source (1.50s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-owner (1.50s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-lost-ack (1.96s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-child-failed (2.02s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-tree-missing (2.05s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-source (1.97s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-owner (1.94s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	74.865s

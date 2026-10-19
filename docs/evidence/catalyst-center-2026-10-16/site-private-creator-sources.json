@@ -1,0 +1,28 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Optional singular private creator baselines: full target native object and ancestor identities; complete ancestor objects additionally bind the pre-dispatch guard. Private Update/latest-applied and deletion remain gated. Final focused/API/native/broad runs use these sources.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/site_native_comparison.go": "e9c15b58dfbeb553dddf99f4de48e0fa49f1ecfef7799d58b6e16a6d569003a2",
+    "internal/controlleradapter/catalystcenter/site_native_comparison_test.go": "2975bfa8fe9d851be0eca5f09d50c4167149b11b77bef12fb2ade3293798e045",
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "affa9b4a36a53745badc4b366d4a77e9b384ffd863b85bd91f57aa6e0213da72",
+    "internal/controlleradapter/catalystcenter/site_dispatch.go": "f5fd80ca763ef95d42be35b6554b5cb092119fc0a0efb48b340724ed6c07ae53",
+    "internal/controlleradapter/catalystcenter/site_dispatch_binding.go": "126697740956a4d4a21b96838dfe5ce02cb752d08e19f407b0d7579b3c9fd2cc",
+    "internal/controlleradapter/catalystcenter/site_task_recovery.go": "d5caab35ac7f3ae95496fa8b0f157ac613d3e44f8be7d159eab99094217018e7",
+    "internal/controlleradapter/catalystcenter/site_planned_ap_execution.go": "d3aa08927649f47c3f17d582797544eded58049487a707b160266d758fd9f843",
+    "internal/controlleradapter/catalystcenter/config_executor.go": "b9a4fa0bbbc2e13e63889dc6fdf79f0b167600445e88ff626d846d6a00840980",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "8e637d83a5ca685a0292ceb5c683e3687bbadfc38af3f127a1644fbe97579ebb",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "c57906f1721d6b52dfb6254a1a3e29067d918b457ee0da86f3d171dc7e9787fa",
+    "internal/controlleradapter/catalystcenter/site_dispatch_public_test.go": "25202c97f523363fb5574a16d042e4ceac5bf11073f9da45237559fe2634e000",
+    "internal/controlleradapter/catalystcenter/site_dispatch_envtest_test.go": "9d4134529ffd3a1e2c586c1bce9a59f5ee8cbf5d1bec5661264abd3d2fe308dc",
+    "internal/controlleradapter/catalystcenter/site_bulk_manifest_live_test.go": "2a18797406fb3e9fa91b688e5175575a063f782cccea9a2e02df17678df2ae2c",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "48d230cbb702188fc514f7cab9f9e1c3592310bc4bd55fa511123798a076fa4e",
+    "internal/controlleradapter/catalystcenter/template_input_comparison.go": "fd175047db6c3acc548bbb6f17174cac44f3cf845371b75b4410d87ba2a49767",
+    "internal/controlleradapter/catalystcenter/template_native_comparison.go": "aa946a036685533329776a6f7873dc8b5b15c431742b2e8d054f4531f34f75ab",
+    "internal/controlleradapter/catalystcenter/config_secrets.go": "ded98534a23909505c0e91311d72ea0b556e1b83ac96e037419ad147b8036e9c",
+    "examples/configs/catalyst-center/site-private-creator-execution.yaml": "3e42dbe43070f0da1b3e8bdcd460879a9b27d7a6b62baf9cd11086fe4b2795b6"
+  }
+}

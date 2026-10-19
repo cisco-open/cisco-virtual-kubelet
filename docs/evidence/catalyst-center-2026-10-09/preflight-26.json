@@ -1,0 +1,13 @@
+{
+  "path": "/dna/intent/api/v1/networkDeviceImages/70601ab8-5104-46bc-a061-1ffbaf108c16/readinessChecks",
+  "body": {},
+  "startedAt": "2026-10-09T02:43:01.503966+00:00",
+  "state": "Accepted",
+  "receipt": {
+    "response": {
+      "taskId": "01a11e8b-e021-778e-aa47-47c62168da0e",
+      "url": "/dna/intent/api/v1/tasks/01a11e8b-e021-778e-aa47-47c62168da0e"
+    },
+    "version": "1.0"
+  }
+}

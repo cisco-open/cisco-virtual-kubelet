@@ -1,0 +1,196 @@
+=== RUN   TestTemplateContentExamplesCompile
+--- PASS: TestTemplateContentExamplesCompile (0.03s)
+=== RUN   TestTemplateBindingParameters
+=== RUN   TestTemplateBindingParameters/omitted-runtime
+=== RUN   TestTemplateBindingParameters/explicit-value
+=== RUN   TestTemplateBindingParameters/explicit-empty
+=== RUN   TestTemplateBindingParameters/explicit-nil
+=== RUN   TestTemplateBindingParameters/binding-cleared
+=== RUN   TestTemplateBindingParameters/binding-null
+=== RUN   TestTemplateBindingParameters/binding-wrong-type
+=== RUN   TestTemplateBindingParameters/missing-choice-map
+=== RUN   TestTemplateBindingParameters/null-choice-map
+=== RUN   TestTemplateBindingParameters/static-choice
+=== RUN   TestTemplateBindingParameters/wrong-static-choice
+--- PASS: TestTemplateBindingParameters (0.00s)
+    --- PASS: TestTemplateBindingParameters/omitted-runtime (0.00s)
+    --- PASS: TestTemplateBindingParameters/explicit-value (0.00s)
+    --- PASS: TestTemplateBindingParameters/explicit-empty (0.00s)
+    --- PASS: TestTemplateBindingParameters/explicit-nil (0.00s)
+    --- PASS: TestTemplateBindingParameters/binding-cleared (0.00s)
+    --- PASS: TestTemplateBindingParameters/binding-null (0.00s)
+    --- PASS: TestTemplateBindingParameters/binding-wrong-type (0.00s)
+    --- PASS: TestTemplateBindingParameters/missing-choice-map (0.00s)
+    --- PASS: TestTemplateBindingParameters/null-choice-map (0.00s)
+    --- PASS: TestTemplateBindingParameters/static-choice (0.00s)
+    --- PASS: TestTemplateBindingParameters/wrong-static-choice (0.00s)
+=== RUN   TestRegularTemplateSubmission
+=== RUN   TestRegularTemplateSubmission/accepted
+=== RUN   TestRegularTemplateSubmission/accepted-empty-selection
+=== RUN   TestRegularTemplateSubmission/accepted-binding
+=== RUN   TestRegularTemplateSubmission/lost-receipt
+=== RUN   TestRegularTemplateSubmission/rejected
+=== RUN   TestRegularTemplateSubmission/caller-change
+=== RUN   TestRegularTemplateSubmission/late-version
+=== RUN   TestRegularTemplateSubmission/late-platform
+=== RUN   TestRegularTemplateSubmission/late-content
+=== RUN   TestRegularTemplateSubmission/late-empty-selection
+=== RUN   TestRegularTemplateSubmission/late-binding
+=== RUN   TestRegularTemplateSubmission/recover-success
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-same
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record-late-source
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-record-late-journal
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-no-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-duplicate-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-source
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-config-generation
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-controller-generation
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-wrong-operation
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-late-source
+=== RUN   TestRegularTemplateSubmission/recover-success/owned-late-journal
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-prepared
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-prepared-source
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-prepared-resource
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-owner
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-accepted
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-verifying
+=== RUN   TestRegularTemplateSubmission/recover-success/executor-unknown
+=== RUN   TestRegularTemplateSubmission/recover-success/compiler-prerequisites
+=== RUN   TestRegularTemplateSubmission/recover-empty-selection
+=== RUN   TestRegularTemplateSubmission/recover-binding
+=== RUN   TestRegularTemplateSubmission/recover-new-latest
+=== RUN   TestRegularTemplateSubmission/recover-pending
+=== RUN   TestRegularTemplateSubmission/recover-failed
+--- PASS: TestRegularTemplateSubmission (1.32s)
+    --- PASS: TestRegularTemplateSubmission/accepted (0.02s)
+    --- PASS: TestRegularTemplateSubmission/accepted-empty-selection (0.02s)
+    --- PASS: TestRegularTemplateSubmission/accepted-binding (0.02s)
+    --- PASS: TestRegularTemplateSubmission/lost-receipt (0.02s)
+    --- PASS: TestRegularTemplateSubmission/rejected (0.02s)
+    --- PASS: TestRegularTemplateSubmission/caller-change (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-version (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-platform (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-content (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-empty-selection (0.02s)
+    --- PASS: TestRegularTemplateSubmission/late-binding (0.02s)
+    --- PASS: TestRegularTemplateSubmission/recover-success (1.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-same (0.61s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record (0.03s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record-late-source (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-record-late-journal (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-no-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-duplicate-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-source (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-config-generation (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-controller-generation (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-wrong-operation (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-late-source (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/owned-late-journal (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-prepared (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-prepared-source (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-prepared-resource (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-owner (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-accepted (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-verifying (0.02s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/executor-unknown (0.01s)
+        --- PASS: TestRegularTemplateSubmission/recover-success/compiler-prerequisites (0.04s)
+    --- PASS: TestRegularTemplateSubmission/recover-empty-selection (0.02s)
+    --- PASS: TestRegularTemplateSubmission/recover-binding (0.03s)
+    --- PASS: TestRegularTemplateSubmission/recover-new-latest (0.02s)
+    --- PASS: TestRegularTemplateSubmission/recover-pending (0.02s)
+    --- PASS: TestRegularTemplateSubmission/recover-failed (0.02s)
+=== RUN   TestTemplateParameterOrderBaseline
+=== RUN   TestTemplateParameterOrderBaseline/unordered
+=== RUN   TestTemplateParameterOrderBaseline/custom
+=== RUN   TestTemplateParameterOrderBaseline/missing
+=== RUN   TestTemplateParameterOrderBaseline/null
+=== RUN   TestTemplateParameterOrderBaseline/value
+=== RUN   TestTemplateParameterOrderBaseline/opaque
+=== RUN   TestTemplateParameterOrderBaseline/id
+=== RUN   TestTemplateParameterOrderBaseline/large-number
+=== RUN   TestTemplateParameterOrderBaseline/flag-change
+=== RUN   TestTemplateParameterOrderBaseline/duplicate
+=== RUN   TestTemplateParameterOrderBaseline/missing-name
+=== RUN   TestTemplateParameterOrderBaseline/bad-record
+=== RUN   TestTemplateParameterOrderBaseline/bad-collection
+=== RUN   TestTemplateParameterOrderBaseline/bad-flag
+=== RUN   TestTemplateParameterOrderBaseline/binding-filter
+=== RUN   TestTemplateParameterOrderBaseline/binding-context
+=== RUN   TestTemplateParameterOrderBaseline/binding-format
+=== RUN   TestTemplateParameterOrderBaseline/binding-removed
+--- PASS: TestTemplateParameterOrderBaseline (0.01s)
+    --- PASS: TestTemplateParameterOrderBaseline/unordered (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/custom (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/missing (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/null (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/value (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/opaque (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/id (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/large-number (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/flag-change (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/duplicate (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/missing-name (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/bad-record (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/bad-collection (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/bad-flag (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/binding-filter (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/binding-context (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/binding-format (0.00s)
+    --- PASS: TestTemplateParameterOrderBaseline/binding-removed (0.00s)
+=== RUN   TestTemplateParameterOrderSubmission
+=== RUN   TestTemplateParameterOrderSubmission/unordered
+=== RUN   TestTemplateParameterOrderSubmission/custom-order
+=== RUN   TestTemplateParameterOrderSubmission/flag-missing
+=== RUN   TestTemplateParameterOrderSubmission/flag-null
+=== RUN   TestTemplateParameterOrderSubmission/value-changed
+=== RUN   TestTemplateParameterOrderSubmission/unknown-field
+=== RUN   TestTemplateParameterOrderSubmission/parameter-id
+=== RUN   TestTemplateParameterOrderSubmission/custom-flag
+=== RUN   TestTemplateParameterOrderSubmission/duplicate-name
+=== RUN   TestTemplateParameterOrderSubmission/malformed-row
+=== RUN   TestTemplateParameterOrderSubmission/large-native-number
+=== RUN   TestTemplateParameterOrderSubmission/binding-filter
+=== RUN   TestTemplateParameterOrderSubmission/binding-context
+=== RUN   TestTemplateParameterOrderSubmission/binding-format
+=== RUN   TestTemplateParameterOrderSubmission/binding-removed
+--- PASS: TestTemplateParameterOrderSubmission (0.23s)
+    --- PASS: TestTemplateParameterOrderSubmission/unordered (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/custom-order (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/flag-missing (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/flag-null (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/value-changed (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/unknown-field (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/parameter-id (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/custom-flag (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/duplicate-name (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/malformed-row (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/large-native-number (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/binding-filter (0.01s)
+    --- PASS: TestTemplateParameterOrderSubmission/binding-context (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/binding-format (0.02s)
+    --- PASS: TestTemplateParameterOrderSubmission/binding-removed (0.02s)
+=== RUN   TestTemplateVariableMetadataPublic
+=== RUN   TestTemplateVariableMetadataPublic/nullable-definition
+=== RUN   TestTemplateVariableMetadataPublic/nullable-variable
+=== RUN   TestTemplateVariableMetadataPublic/scalar-default
+=== RUN   TestTemplateVariableMetadataPublic/cleared-variable
+=== RUN   TestTemplateVariableMetadataPublic/parameter-types
+=== RUN   TestTemplateVariableMetadataPublic/runtime-binding
+=== RUN   TestTemplateVariableMetadataPublic/invalid-variable
+=== RUN   TestTemplateVariableMetadataPublic/invalid-selection
+--- PASS: TestTemplateVariableMetadataPublic (0.38s)
+    --- PASS: TestTemplateVariableMetadataPublic/nullable-definition (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/nullable-variable (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/scalar-default (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/cleared-variable (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/parameter-types (0.06s)
+    --- PASS: TestTemplateVariableMetadataPublic/runtime-binding (0.05s)
+    --- PASS: TestTemplateVariableMetadataPublic/invalid-variable (0.03s)
+    --- PASS: TestTemplateVariableMetadataPublic/invalid-selection (0.03s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.312s

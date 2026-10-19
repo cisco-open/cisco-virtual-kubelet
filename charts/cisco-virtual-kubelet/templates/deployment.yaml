@@ -15,6 +15,7 @@ limitations under the License.
 */}}
 {{- include "cisco-virtual-kubelet.validateLeaderElection" . -}}
 {{- include "cisco-virtual-kubelet.validateManagedTopology" . -}}
+{{- include "cisco-virtual-kubelet.validateConfigurationProtocol" . -}}
 {{- include "cisco-virtual-kubelet.validateTopologyRetirement" . -}}
 apiVersion: apps/v1
 kind: Deployment
@@ -74,6 +75,12 @@ spec:
             {{- end }}
             {{- if .Values.topology.enabled }}
             - --enable-managed-topology
+            {{- end }}
+            {{- if .Values.topology.controllerMetadataHandoff }}
+            - --enable-controller-metadata-handoff
+            {{- end }}
+            {{- if eq .Values.topology.configurationReservationProtocol "controller-configuration-group-v1" }}
+            - --configuration-reservation-protocol=controller-configuration-group-v1
             {{- end }}
             # Keep the exact split identities available during reverse
             # handoff as well as steady-state managed topology. The manager

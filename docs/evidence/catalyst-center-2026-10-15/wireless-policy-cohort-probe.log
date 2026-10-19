@@ -1,0 +1,9 @@
+=== RUN   TestLiveRetainedPolicyCohort
+    zz_policy_cohort_live_test.go:69: cohort fixture task DELETE 01a13e59-0b1d-7bd2-beb9-21332fd22471
+    zz_policy_cohort_live_test.go:82: cohort fixture task POST 01a13e59-1234-7687-ad67-4e600891183a
+    zz_policy_cohort_live_test.go:88: observed cohort tag CVK_N_0e29eeb0583fe81c_P1 mdi1q1zl-x05F-mguY-owvL-yJa1odnMztGXy19qmumWvJflmL8Z map[apZones:[CVK_N_0e29eeb0583fe81c_Z1] policyTagName:CVK_N_0e29eeb0583fe81c_P1 siteIds:[841159a0-3d4b-422c-b0f2-ecb6c6d2db8c]]
+    zz_policy_cohort_live_test.go:88: observed cohort tag CVK_N_0e29eeb0583fe81c_P2 mdi1q1zl-x05F-mguY-owvL-yJa1odnMztGXy19qmKmWvJflmL8Z map[apZones:[CVK_N_0e29eeb0583fe81c_Z2] policyTagName:CVK_N_0e29eeb0583fe81c_P2 siteIds:[841159a0-3d4b-422c-b0f2-ecb6c6d2db8c]]
+    zz_policy_cohort_live_test.go:93: two disjoint policies preserved by one native bulk create
+--- PASS: TestLiveRetainedPolicyCohort (4.40s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.609s

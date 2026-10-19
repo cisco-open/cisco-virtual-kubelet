@@ -154,8 +154,19 @@ func TestNetworkControllerReconcileCreatesIsolatedWorker(t *testing.T) {
 	if container.ImagePullPolicy != corev1.PullAlways {
 		t.Fatalf("worker imagePullPolicy=%q, want Always", container.ImagePullPolicy)
 	}
-	if len(container.Env) != 0 {
-		t.Fatalf("worker must not receive literal or Secret env vars: %+v", container.Env)
+	if len(container.Env) != 2 {
+		t.Fatalf("worker must receive only downward API identity: %+v", container.Env)
+	}
+	expectedIdentity := map[string]string{controlleradapter.EnvWorkerPodName: "metadata.name", controlleradapter.EnvWorkerPodUID: "metadata.uid"}
+	for _, env := range container.Env {
+		field, ok := expectedIdentity[env.Name]
+		if !ok || env.Value != "" || env.ValueFrom == nil || env.ValueFrom.SecretKeyRef != nil || env.ValueFrom.ConfigMapKeyRef != nil || env.ValueFrom.ResourceFieldRef != nil || env.ValueFrom.FieldRef == nil || env.ValueFrom.FieldRef.APIVersion != "v1" || env.ValueFrom.FieldRef.FieldPath != field {
+			t.Fatalf("worker identity is not the exact downward API binding: %+v", env)
+		}
+		delete(expectedIdentity, env.Name)
+	}
+	if len(expectedIdentity) != 0 {
+		t.Fatal("missing worker Pod identity")
 	}
 	if container.SecurityContext == nil || container.SecurityContext.AllowPrivilegeEscalation == nil || *container.SecurityContext.AllowPrivilegeEscalation || container.SecurityContext.ReadOnlyRootFilesystem == nil || !*container.SecurityContext.ReadOnlyRootFilesystem {
 		t.Fatalf("worker container security context=%+v", container.SecurityContext)
@@ -973,6 +984,41 @@ func validNetworkController(name, typeName string) *ciskov1.NetworkController {
 				Key:   "radius-password",
 			}},
 		},
+	}
+}
+
+func TestNetworkControllerDeletionRetainsConfigurationJournal(t *testing.T) {
+	ensureFoundationTestControllerRegistered()
+	controller := validNetworkController("configuration-journal", testNetworkControllerType)
+	now := metav1.Now()
+	controller.DeletionTimestamp = &now
+	controller.Finalizers = []string{networkControllerFinalizer}
+	controller.Status.Configuration = &ciskov1.NetworkControllerConfigurationStatus{
+		Operation: &ciskov1.NetworkControllerConfigurationOperation{ID: "pending", Phase: "Unknown"},
+	}
+	reconciler, kubeClient := newNetworkControllerReconciler(t, controller)
+	ctx := context.Background()
+	result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(controller)})
+	if err != nil || result.RequeueAfter <= 0 {
+		t.Fatalf("journal protection result=%+v err=%v", result, err)
+	}
+	var retained ciskov1.NetworkController
+	if err := kubeClient.Get(ctx, client.ObjectKeyFromObject(controller), &retained); err != nil {
+		t.Fatal(err)
+	}
+	if !controllerutil.ContainsFinalizer(&retained, networkControllerFinalizer) || retained.Status.Configuration.Operation == nil {
+		t.Fatal("controller deletion erased outstanding configuration operation")
+	}
+	// Once recovery clears the slot, the existing cleanup path is unchanged.
+	retained.Status.Configuration.Operation = nil
+	if err := kubeClient.Status().Update(ctx, &retained); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(controller)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := kubeClient.Get(ctx, client.ObjectKeyFromObject(controller), &retained); !apierrors.IsNotFound(err) {
+		t.Fatalf("recovered controller still retained: %v", err)
 	}
 }
 

@@ -35,6 +35,7 @@ import (
 	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topology"
 	"github.com/cisco/virtual-kubelet-cisco/internal/topologyhealth"
+	"github.com/cisco/virtual-kubelet-cisco/internal/workloaddrain"
 )
 
 const managedAdmissionPoll = 15 * time.Second
@@ -798,6 +799,19 @@ func (r *Reconciler) prepareManagedMutationClaim(
 	stage opsv1alpha1.UpgradeManagedMutationStage,
 	now time.Time,
 ) (bool, error) {
+	return r.prepareManagedMutation(ctx, up, current, stage, now, true)
+}
+
+// prepareManagedMutation reuses the same live gate when a delegated dispatcher
+// needs a fresh grant for an already durable claim. Existing direct callers
+// always append a new claim through prepareManagedMutationClaim.
+func (r *Reconciler) prepareManagedMutation(
+	ctx context.Context,
+	up, current *opsv1alpha1.IOSXESoftwareUpgrade,
+	stage opsv1alpha1.UpgradeManagedMutationStage,
+	now time.Time,
+	appendClaim bool,
+) (bool, error) {
 	decision := r.evaluateManagedLeaf(ctx, current)
 	if !decision.applies {
 		return true, nil
@@ -872,8 +886,25 @@ func (r *Reconciler) prepareManagedMutationClaim(
 		up.Status = *current.Status.DeepCopy()
 		return false, nil
 	}
-	if err := addManagedMutationClaim(current, stage, decision.policyEpoch, decision.controlRevision, now); err != nil {
-		return false, err
+	if appendClaim {
+		if err := addManagedMutationClaim(current, stage, decision.policyEpoch, decision.controlRevision, now); err != nil {
+			return false, err
+		}
+	} else {
+		// CC stage claims are historical at-most-once markers. A resumed
+		// dispatch gets fresh authority from ControllerHandoff, after all
+		// current gates above; never rewrite the original claim or replay a
+		// claimed remote request. Direct-device callers remain exact-revision.
+		found := false
+		for _, claim := range current.Status.ManagedMutationClaims {
+			if claim.Stage == stage && claim.PolicyEpoch == decision.policyEpoch && claim.ReservationID == current.Status.ManagerAdmission.ReservationID &&
+				(claim.ControlRevision == decision.controlRevision || (current.Spec.ImageSource.CatalystCenter != nil && claim.ControlRevision >= 0 && claim.ControlRevision < decision.controlRevision)) {
+				found = true
+			}
+		}
+		if !found {
+			return false, fmt.Errorf("delegated dispatch requires an existing claim for the stage, reservation and policy epoch")
+		}
 	}
 	decision.effectiveState = opsv1alpha1.UpgradeWorkerControlClaimed
 	decision.reason = "ManagedMutationClaimed"
@@ -1008,25 +1039,7 @@ func (r *Reconciler) ensureNoFailedCampaignPeer(
 }
 
 func (r *Reconciler) boundActiveWorkloads(ctx context.Context) ([]corev1.Pod, error) {
-	var pods corev1.PodList
-	if err := r.apiReader().List(ctx, &pods, client.MatchingFields{"spec.nodeName": r.NodeName}); err != nil {
-		return nil, err
-	}
-	active := make([]corev1.Pod, 0, len(pods.Items))
-	for i := range pods.Items {
-		pod := &pods.Items[i]
-		if pod.Spec.NodeName != r.NodeName {
-			continue
-		}
-		// Terminating Pods remain active until the device inventory proves that
-		// teardown finished. Retained terminal Pods do not block on their own.
-		if pod.DeletionTimestamp == nil &&
-			(pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed) {
-			continue
-		}
-		active = append(active, *pod.DeepCopy())
-	}
-	return active, nil
+	return workloaddrain.BoundActiveWorkloads(ctx, r.apiReader(), r.NodeName)
 }
 
 func nonNilPodCount(pods []*corev1.Pod) int {

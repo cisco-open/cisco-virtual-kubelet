@@ -1,0 +1,5 @@
+Exact owned fixture identity, empty physical scope, metadata and absence of foreign server references verified.
+Owned area deletion task and absence verified: 1950920b-b889-477f-ad00-79013e99dbaa 01a13fb8-f15b-7536-9f7b-83e0845d8788
+Exact owned registration deletion verified: cce3c88c-cec7-4267-9a5e-31a91adcb36e 01a13fb8-fa6f-7650-a1a6-7a5513fa95cc
+Exact owned registration deletion verified: 4e4eb572-1e96-4afe-9e6e-13ba01f30388 01a13fb8-ff21-7fb9-b8ba-ae97c700f707
+Empty registration baseline restored; rejected unset request was not replayed and no Kubernetes journal was cleared.

@@ -1,0 +1,212 @@
+=== RUN   TestWirelessTagBindingReadbackReplacement
+=== RUN   TestWirelessTagBindingReadbackReplacement/rf
+=== RUN   TestWirelessTagBindingReadbackReplacement/ssid
+=== RUN   TestWirelessTagBindingReadbackReplacement/unselected-rf
+=== RUN   TestWirelessTagBindingReadbackReplacement/unselected-ssid
+=== RUN   TestWirelessTagBindingReadbackReplacement/missing-rf
+=== RUN   TestWirelessTagBindingReadbackReplacement/missing-ssid
+=== RUN   TestWirelessTagBindingReadbackReplacement/order
+=== RUN   TestWirelessTagBindingReadbackReplacement/prune-rf
+=== RUN   TestWirelessTagBindingReadbackReplacement/prune-ssid
+=== RUN   TestWirelessTagBindingReadbackReplacement/prune-unselected-rf
+=== RUN   TestWirelessTagBindingReadbackReplacement/prune-unselected-ssid
+=== RUN   TestWirelessTagBindingReadbackReplacement/prune-order
+=== RUN   TestWirelessTagBindingReadbackReplacement/delete-rf
+=== RUN   TestWirelessTagBindingReadbackReplacement/delete-ssid
+=== RUN   TestWirelessTagBindingReadbackReplacement/delete-unselected-rf
+=== RUN   TestWirelessTagBindingReadbackReplacement/delete-unselected-ssid
+=== RUN   TestWirelessTagBindingReadbackReplacement/delete-order
+--- PASS: TestWirelessTagBindingReadbackReplacement (0.68s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/rf (0.03s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/ssid (0.03s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/unselected-rf (0.03s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/unselected-ssid (0.03s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/missing-rf (0.03s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/missing-ssid (0.03s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/order (0.03s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/prune-rf (0.04s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/prune-ssid (0.04s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/prune-unselected-rf (0.04s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/prune-unselected-ssid (0.04s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/prune-order (0.04s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/delete-rf (0.06s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/delete-ssid (0.06s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/delete-unselected-rf (0.06s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/delete-unselected-ssid (0.06s)
+    --- PASS: TestWirelessTagBindingReadbackReplacement/delete-order (0.07s)
+=== RUN   TestWirelessTagRecreationCohorts
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/complete
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/reordered
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/missing-creator
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/missing-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/partial-producer
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/extra-member
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/duplicate-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/malformed-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/foreign-owner
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/foreign-name
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/foreign-parent
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/controller-regression
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/unchanged-input
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/backward-generation-new-source
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/before-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/key-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/legacy-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/native-uuid-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/unrelated-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/digest-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/independent-copies
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/complete
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/reordered
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/missing-creator
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/missing-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/partial-producer
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/extra-member
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/duplicate-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/malformed-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/foreign-owner
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/foreign-name
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/foreign-parent
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/controller-regression
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/unchanged-input
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/backward-generation-new-source
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/before-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/key-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/legacy-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/native-uuid-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/unrelated-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/digest-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/independent-copies
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/complete
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/reordered
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/missing-creator
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/missing-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/partial-producer
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/extra-member
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/duplicate-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/malformed-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/foreign-owner
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/foreign-name
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/foreign-parent
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/controller-regression
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/unchanged-input
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/backward-generation-new-source
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/before-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/key-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/legacy-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/native-uuid-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/unrelated-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/digest-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/independent-copies
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/complete
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/reordered
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/missing-creator
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/missing-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/partial-producer
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/extra-member
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/duplicate-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/malformed-key
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/foreign-owner
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/foreign-name
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/foreign-parent
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/controller-regression
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/unchanged-input
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/backward-generation-new-source
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/before-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/key-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/legacy-deletion
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/native-uuid-change
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/unrelated-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/digest-history
+=== RUN   TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/independent-copies
+--- PASS: TestWirelessTagRecreationCohorts (6.14s)
+    --- PASS: TestWirelessTagRecreationCohorts/cohort-false (2.88s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/complete (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/reordered (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/missing-creator (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/missing-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/partial-producer (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/extra-member (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/duplicate-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/malformed-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/foreign-owner (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/foreign-name (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/foreign-parent (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/controller-regression (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/unchanged-input (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/before-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/key-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/legacy-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/native-uuid-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/unrelated-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/digest-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-site-tags/independent-copies (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/complete (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/reordered (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/missing-creator (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/missing-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/partial-producer (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/extra-member (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/duplicate-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/malformed-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/foreign-owner (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/foreign-name (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/foreign-parent (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/controller-regression (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/unchanged-input (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/before-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/key-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/legacy-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/native-uuid-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/unrelated-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/digest-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-false/wireless-policy-tags/independent-copies (0.00s)
+    --- PASS: TestWirelessTagRecreationCohorts/cohort-true (3.26s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/complete (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/reordered (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/missing-creator (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/missing-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/partial-producer (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/extra-member (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/duplicate-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/malformed-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/foreign-owner (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/foreign-name (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/foreign-parent (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/controller-regression (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/unchanged-input (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/before-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/key-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/legacy-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/native-uuid-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/unrelated-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/digest-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-site-tags/independent-copies (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/complete (0.01s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/reordered (0.01s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/missing-creator (0.01s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/missing-deletion (0.01s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/partial-producer (0.01s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/extra-member (0.01s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/duplicate-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/malformed-key (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/foreign-owner (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/foreign-name (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/foreign-parent (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/controller-regression (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/unchanged-input (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/backward-generation-new-source (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/before-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/key-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/legacy-deletion (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/native-uuid-change (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/unrelated-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/digest-history (0.00s)
+        --- PASS: TestWirelessTagRecreationCohorts/cohort-true/wireless-policy-tags/independent-copies (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.207s

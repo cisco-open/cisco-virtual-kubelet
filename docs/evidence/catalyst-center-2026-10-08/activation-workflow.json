@@ -1,0 +1,18 @@
+{
+  "response": [
+    {
+      "id": "01a11c68-57ae-7b99-8837-10680698cc76",
+      "parentId": "01a11c68-4e89-7db5-91e6-7828fc8de4e5",
+      "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+      "managementAddress": "198.51.100.101",
+      "hostName": "C9K-2",
+      "updateImageVersion": "17.18.04.0.759",
+      "type": "ACTIVATE",
+      "startTime": 1791477962901,
+      "endTime": 1791478597017,
+      "status": "SUCCESS",
+      "imageName": "cat9k_iosxe.17.18.04.SPA.bin"
+    }
+  ],
+  "version": "1.0"
+}

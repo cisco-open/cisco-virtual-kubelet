@@ -1,0 +1,8 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-160240 01a14573-8b4f-7948-9434-f6f9a2a6a498
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-160240 01a14573-9cdd-76a4-9595-ff2e6a85f217
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:112: isolated project cleanup verified 467f770a-5a49-443a-9bb6-0da9e50f9108
+--- PASS: TestLiveCatalystCenterTemplateProject (12.15s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.515s

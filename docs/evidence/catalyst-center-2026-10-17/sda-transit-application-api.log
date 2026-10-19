@@ -1,0 +1,5 @@
+=== RUN   TestEnvtestSDATransitApplicationEnvelope
+    fabric_sda_transit_application_envtest_test.go:75: actual API preserves generated Verified operation and complete task/source/group/claim receipt without raw device output; physical actors, native mutation and semantic proof remain simulated
+--- PASS: TestEnvtestSDATransitApplicationEnvelope (7.03s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.517s

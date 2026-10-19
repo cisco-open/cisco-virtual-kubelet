@@ -1,0 +1,84 @@
+{
+  "fullModelComplete": false,
+  "scope": "Monotonic immutable fence-reference contract and read-only exact-incarnation corroboration; no acquisition/publication writer or native dispatch",
+  "branch": "pr/johalley/catc-support",
+  "source": {
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "fbda52a7608bc41bd2f97e456a3f3e71518680ba5ef19e430bf5868e837dc89c"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "eb32904d69c5427ac7151f98f4bcaea237eff5eaa6fdf468f232cee2e0251887"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1695,
+      "sha256": "4291ce11414d64ef1eff577cef7697f1f9b19b69d8e1fa871e196e3165beb12d"
+    },
+    "internal/controllerconfiguration": {
+      "files": 150,
+      "sha256": "0572e7398dae0a565896e29df4bcec2724aaf60f20f88c88effae86d3e58200d"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "d5219d86e3bed19e7f0be7c39acd995529e69051b540de50dad692f4a94ca2b7"
+    },
+    "manifests": {
+      "config/crd/cisco.vk_networkcontrollers.yaml": "64bb4da9836cbd828959ee574b4828c7412d5538741ee1c405b0b63089d67ef7",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "64bb4da9836cbd828959ee574b4828c7412d5538741ee1c405b0b63089d67ef7",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "e81715c351e9f239cc8e7829b5879d0a47697b811c6c649248d4b302ec875709"
+    }
+  },
+  "gates": {
+    "realAPI": {
+      "result": "PASS",
+      "passingEvents": 74,
+      "testFailures": [],
+      "packages": 1,
+      "packageSeconds": 21.2,
+      "log": "/private/tmp/cvk-metadata-refs-monotonic-api.log"
+    },
+    "sharedFoundations": {
+      "result": "PASS",
+      "passingEvents": 3333,
+      "testFailures": [],
+      "packages": 7,
+      "packageSeconds": 18.795,
+      "log": "/private/tmp/cvk-metadata-refs-monotonic-foundation.log"
+    },
+    "repairedCompatibility": {
+      "result": "PASS",
+      "passingEvents": 68,
+      "testFailures": [],
+      "packages": 1,
+      "packageSeconds": 3.624,
+      "log": "/private/tmp/cvk-metadata-refs-final-repaired-regressions.log"
+    },
+    "broadCompatibilityInitial": {
+      "result": "FAIL, two obsolete test contracts repaired and rerun separately",
+      "passingEvents": 15112,
+      "testFailures": [
+        "TestInventoryTagRejectsUnimplementedFields",
+        "TestWirelessSSIDHistoryGeneratedSchemaAndOldSchemaPruning"
+      ],
+      "packages": 1,
+      "packageSeconds": 397.081,
+      "log": "/private/tmp/cvk-metadata-refs-compat.log"
+    }
+  },
+  "sourceAndFormat": "PASS",
+  "mainBuild": "PASS",
+  "chartRender": "PASS",
+  "uniquePinnedResourceRows": 93,
+  "labMutations": false,
+  "metadataProtectionDigest": "7e1e8100a1be33f53850de97a6496ba30216dd2c003e7c6ffaaefdeb439c7ba3",
+  "remaining": [
+    "Manager acquisition with per-original UID publication and uncertain-create recovery",
+    "Compatible runtime worker claim and dispatch with source/actor/consumer validation",
+    "Original native outcome verification and exact-UID settlement/restart recovery",
+    "Installed/native public lifecycle and full consumer protection",
+    "Configuration deletion/missing-source finalization and wider pinned model execution/hardware qualification"
+  ],
+  "strictDocumentation": "PASS",
+  "pinnedGeneratedHandoffSchemas": "PASS"
+}

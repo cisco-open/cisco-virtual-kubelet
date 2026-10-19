@@ -1,0 +1,5 @@
+=== RUN   TestLiveWirelessSSIDInventory
+    wireless_ssid_live_test.go:37: SSID metadata inventory count 0 Global site 8995b7da-5b82-40fd-a706-82150affe92d no configuration submitted
+--- PASS: TestLiveWirelessSSIDInventory (0.51s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.571s

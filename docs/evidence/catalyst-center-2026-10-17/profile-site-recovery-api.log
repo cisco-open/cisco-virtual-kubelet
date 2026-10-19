@@ -1,0 +1,72 @@
+=== RUN   TestEnvtestProfileSiteRecovery
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-complete
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-no-dispatch
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-lost-ack
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-child-failed
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-child-pending
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-tree-missing
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-foreign-root
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-removed
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-site-replaced
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-profile-replaced
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-mid-tree-site
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-source
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-owner
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-controller
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-accepted-partial
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-pending-peer
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-false-slash-name
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-complete
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-no-dispatch
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-lost-ack
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-child-failed
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-child-pending
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-tree-missing
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-foreign-root
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-removed
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-site-replaced
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-profile-replaced
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-mid-tree-site
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-source
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-owner
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-controller
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-accepted-partial
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-pending-peer
+=== RUN   TestEnvtestProfileSiteRecovery/wireless-true-slash-name
+--- PASS: TestEnvtestProfileSiteRecovery (13.63s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-complete (2.87s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-no-dispatch (0.29s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-lost-ack (0.17s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-child-failed (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-child-pending (0.23s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-tree-missing (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-foreign-root (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-removed (0.23s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-site-replaced (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-profile-replaced (0.25s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-mid-tree-site (0.23s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-source (0.20s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-owner (0.18s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-controller (0.12s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-accepted-partial (0.22s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-pending-peer (0.17s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-false-slash-name (0.24s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-complete (0.24s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-no-dispatch (0.29s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-lost-ack (0.18s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-child-failed (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-child-pending (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-tree-missing (0.22s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-foreign-root (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-removed (0.22s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-site-replaced (0.21s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-profile-replaced (0.22s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-mid-tree-site (0.22s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-source (0.19s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-owner (0.18s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-controller (0.12s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-accepted-partial (0.22s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-pending-peer (0.18s)
+    --- PASS: TestEnvtestProfileSiteRecovery/wireless-true-slash-name (0.25s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.036s

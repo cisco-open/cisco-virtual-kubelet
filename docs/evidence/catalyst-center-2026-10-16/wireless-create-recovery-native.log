@@ -1,0 +1,40 @@
+=== RUN   TestLiveWirelessDefinitionRecovery
+=== RUN   TestLiveWirelessDefinitionRecovery/anchor_groups
+    wireless_definition_recovery_live_test.go:144: fixture CVK_DR_350307913000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-2386520528
+    wireless_definition_recovery_live_test.go:256: acknowledged unowned Create retained Unknown; task-tree observation only 01a1447c-34a1-729b-b6f5-372340bb3adb
+    wireless_definition_recovery_live_test.go:279: retained acknowledged update Unknown mde5q1zl-x0rs-xZm1-mdmW-nZKXmZaWmemWvJflmL8Zrdrsnv82 01a1447c-55be-7274-8282-728c0287f489
+    wireless_definition_recovery_live_test.go:395: complete CVK_DR_350307913000 mde5q1zl-x0rs-xZm1-mdmW-nZKXmZaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a1447c-34a1-729b-b6f5-372340bb3adb Delete:01a1447c-70f0-7e10-80e3-fc7235de6f47 Update:01a1447c-55be-7274-8282-728c0287f489] mutations 3 baseline restored
+=== RUN   TestLiveWirelessDefinitionRecovery/interfaces
+    wireless_definition_recovery_live_test.go:144: fixture CVK_DR_370097795000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-2506266380
+    wireless_definition_recovery_live_test.go:256: acknowledged unowned Create retained Unknown; task-tree observation only 01a1447c-7d06-79f8-9dab-d791ca529b7d
+    wireless_definition_recovery_live_test.go:279: retained acknowledged update Unknown mde5q1zl-x0rs-xZm3-mda5-nZC5ntaWmemWvJflmL8Zrdrsnv82 01a1447c-9093-70ab-b6db-d1150a24e057
+    wireless_definition_recovery_live_test.go:395: complete CVK_DR_370097795000 mde5q1zl-x0rs-xZm3-mda5-nZC5ntaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a1447c-7d06-79f8-9dab-d791ca529b7d Delete:01a1447c-a21e-705b-883a-7196491e953c Update:01a1447c-9093-70ab-b6db-d1150a24e057] mutations 3 baseline restored
+=== RUN   TestLiveWirelessDefinitionRecovery/power_profiles
+    wireless_definition_recovery_live_test.go:144: fixture CVK_DR_382684213000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-2156064278
+    wireless_definition_recovery_live_test.go:256: acknowledged unowned Create retained Unknown; task-tree observation only 01a1447c-ae27-7a02-8784-4d505615c33b
+    wireless_definition_recovery_live_test.go:279: retained acknowledged update Unknown mde5q1zl-x0rs-xZm4-mJy4-ndiXmZaWmemWvJflmL8Zrdrsnv82 01a1447c-c1ac-74a1-bc4c-7033534ba91e
+    wireless_definition_recovery_live_test.go:395: complete CVK_DR_382684213000 mde5q1zl-x0rs-xZm4-mJy4-ndiXmZaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a1447c-ae27-7a02-8784-4d505615c33b Delete:01a1447c-d34c-7dfb-927a-0eb9083573b9 Update:01a1447c-c1ac-74a1-bc4c-7033534ba91e] mutations 3 baseline restored
+=== RUN   TestLiveWirelessDefinitionRecovery/dot11be_profiles
+    wireless_definition_recovery_live_test.go:144: fixture CVK_DR_395258958000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-676109245
+    wireless_definition_recovery_live_test.go:256: acknowledged unowned Create retained Unknown; task-tree observation only 01a1447c-df55-782a-a55f-957bc51b8860
+    wireless_definition_recovery_live_test.go:279: retained acknowledged update Unknown 3991370f-b479-3870-beca-c67a1bdaebd5 01a1447c-f2e6-7a60-b7ec-3185edf5338f
+    wireless_definition_recovery_live_test.go:395: complete CVK_DR_395258958000 3991370f-b479-3870-beca-c67a1bdaebd5 tasks map[Create:01a1447c-df55-782a-a55f-957bc51b8860 Delete:01a1447d-0480-7fca-909e-bdc76a9c30a6 Update:01a1447c-f2e6-7a60-b7ec-3185edf5338f] mutations 3 baseline restored
+=== RUN   TestLiveWirelessDefinitionRecovery/security_settings
+    wireless_definition_recovery_live_test.go:144: fixture CVK_DR_443_407841341000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-1998424941
+    wireless_definition_recovery_live_test.go:256: acknowledged unowned Create retained Unknown; task-tree observation only 01a1447d-1083-7db4-bc5d-71d0d391123f
+    wireless_definition_recovery_live_test.go:279: retained acknowledged update Unknown mdiZq1zl-x0rs-xZq0-m180-mdC4ndeZndeWmdbdmfyXsZjFm0q0 01a1447d-240b-791f-8bc2-98e693259bde
+    wireless_definition_recovery_live_test.go:395: complete CVK_DR_443_407841341000 mdiZq1zl-x0rs-xZq0-m180-mdC4ndeZndeWmdbdmfyXsZjFm0q0 tasks map[Create:01a1447d-1083-7db4-bc5d-71d0d391123f Delete:01a1447d-359b-7f5b-94b6-db7bbc75166a Update:01a1447d-240b-791f-8bc2-98e693259bde] mutations 3 baseline restored
+=== RUN   TestLiveWirelessDefinitionRecovery/rf_profiles
+    wireless_definition_recovery_live_test.go:144: fixture CVK_DR_100_420429486000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-906613917
+    wireless_definition_recovery_live_test.go:256: acknowledged unowned Create retained Unknown; task-tree observation only 01a1447d-419f-757f-abbb-031c5cf47a94
+    wireless_definition_recovery_live_test.go:279: retained acknowledged update Unknown mdiZq1zl-x0rs-xZeW-mf80-mJa0mJK0odyWmdbdmfyXsZjFm0q0 01a1447d-5532-751b-ad70-e7e12ba654c3
+    wireless_definition_recovery_live_test.go:395: complete CVK_DR_100_420429486000 mdiZq1zl-x0rs-xZeW-mf80-mJa0mJK0odyWmdbdmfyXsZjFm0q0 tasks map[Create:01a1447d-419f-757f-abbb-031c5cf47a94 Delete:01a1447d-66be-72e1-9c48-528571d758f5 Update:01a1447d-5532-751b-ad70-e7e12ba654c3] mutations 3 baseline restored
+--- PASS: TestLiveWirelessDefinitionRecovery (82.71s)
+    --- PASS: TestLiveWirelessDefinitionRecovery/anchor_groups (19.79s)
+    --- PASS: TestLiveWirelessDefinitionRecovery/interfaces (12.58s)
+    --- PASS: TestLiveWirelessDefinitionRecovery/power_profiles (12.59s)
+    --- PASS: TestLiveWirelessDefinitionRecovery/dot11be_profiles (12.58s)
+    --- PASS: TestLiveWirelessDefinitionRecovery/security_settings (12.58s)
+    --- PASS: TestLiveWirelessDefinitionRecovery/rf_profiles (12.59s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	85.048s

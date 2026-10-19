@@ -1,0 +1,34 @@
+# Follow-on revision of discovery-apply.yaml: keep the same config and job name.
+# Apply only after the first revision converges and publishes an ownership receipt.
+# The completed original job is verified, deleted by UUID, then recreated with
+# the changed protocol order. Imported or drifted jobs cannot authorize replacement.
+# Retain policies govern source removal; replacement changes a still-declared job.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH,TELNET
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]

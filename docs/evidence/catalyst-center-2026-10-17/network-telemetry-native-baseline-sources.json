@@ -1,0 +1,26 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/config_apply.go": "31a17cbe9ea2b4a64e995c61842ada8183388adc6834e243f9daee29cc057181",
+    "internal/controlleradapter/catalystcenter/network_native_comparison.go": "3b82665e37844321901b85197858a7305f7f845a20e22b2ea836691fb3982b4e",
+    "internal/controlleradapter/catalystcenter/network_execution.go": "fafb752b7529986418a63bfd1a702ddf777bac7093642f3bac37daeffd0eea86",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "4d93abf0fb55aabd821e1290378a0560a5fca64acc914e295fdbbe475ef70df4",
+    "internal/controlleradapter/catalystcenter/network_task_recovery.go": "a825402a319f4ead7483b3c238c0f5a1dd98807add348508e3ea4c020596d302",
+    "internal/controlleradapter/catalystcenter/network_application.go": "44dff2934a52c1e093fce77d47cec7311a1218dda012addfd96ff9941e7e78bf",
+    "internal/controlleradapter/catalystcenter/network_native_comparison_test.go": "c628af32c5433650d7ee2be6a526912863e42b6027b78b797228255d9025ab08",
+    "internal/controlleradapter/catalystcenter/network_native_comparison_envtest_test.go": "5212d8342a7de725e6adaf56cbe5934d743b6442acb48db550d149e88c2af30b",
+    "internal/controlleradapter/catalystcenter/network_native_comparison_live_test.go": "5ef3c31774a8a2c10580f7c9ce391606b148e72fb085f1300d313fd6cd79fda8",
+    "internal/controlleradapter/catalystcenter/telemetry_partial_execution_live_test.go": "1f984fd267913ca564cbf85c469906bf173d32b43cc51348be7027406ca3accc",
+    "examples/configs/catalyst-center/telemetry-native-baseline.yaml": "5171500bee19ca32adcae36a84436b1d63c3279276de901c20c0aa367f5bd000"
+  },
+  "upstream": [
+    {
+      "path": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    }
+  ],
+  "scope": "Opt-in retained private expected-state/ancestry proof for modeled telemetry; no key/native values in status. Seventeen unit/API lifecycle cases, eight MAC cases, example compiler and private-comparison regression. Three real native telemetry revisions with simulated Kubernetes storage/actors and key projection. Live cycle precedes final malformed-context validation and rename guard; these additions qualified locally/API. Legacy migration, scalar baselines, key rotation, handoff and installed qualification pending."
+}

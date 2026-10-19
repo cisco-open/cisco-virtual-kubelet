@@ -1,0 +1,24 @@
+{
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "scope": "Source-level and local-fake public refusal qualification; no native bulk dispatch, installed group actors or physical convergence is qualified. Existing implementation audited; no capability added by this ledger correction.",
+  "cases": {
+    "TestWiredBulkGroupingPinnedSelectionAndChunks": 14,
+    "TestWiredBulkPinnedSiteSelectionOptions": 11,
+    "TestWiredBulkModuleOptionsAndSourceGrouping": 15,
+    "TestWiredBulkPublicOptionsRefuseSingleDeviceFallback": 7
+  },
+  "goDurationSeconds": 3.279,
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wired_bulk_options.go": "2ee1b9f9d93d6c9faa50dd84e844dd4f82ef84d095c1ad75bb24471824916d3b",
+    "internal/controlleradapter/catalystcenter/wired_bulk_grouping.go": "79d2646088a64a8444d355a2be0140d821651751a5c7c9759aea194fa7fb038b",
+    "internal/controlleradapter/catalystcenter/wired_bulk_model.go": "cf1794abaee49a7d15e6512ff69088711c35961af0c7a7ed5a17f22e7fe7b05c",
+    "internal/controlleradapter/catalystcenter/wired_bulk_options_test.go": "b7f7c8d0146abd8651b5fec417599335ce75ce0deed979c1ed2146b25a138ec9",
+    "internal/controlleradapter/catalystcenter/wired_bulk_grouping_test.go": "b822cc25abdcc77df69a3b53732e3e77e90cab5f665b83e0d95ca61a6a8a11e8",
+    "internal/controlleradapter/catalystcenter/wired_bulk_model_test.go": "4fe6be2a5cfc95afe98786107c5609adacf8a509e3c462094a81128bfc0a2bea"
+  },
+  "upstream": {
+    "path": "cc_device_provision.tf",
+    "sha256": "4f2b3ee65efe0c023b61112229abb45e45109d4329ee3691bc0fdd010590d7e3"
+  }
+}

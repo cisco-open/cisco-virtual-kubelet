@@ -1,0 +1,9 @@
+=== RUN   TestLiveCatalystCenterAuthTemplatesReport
+    authentication_templates_live_test.go:56: PASS: global authentication templates=3; resolved model round trip and synthetic drift and native executor no-op; no writes
+--- PASS: TestLiveCatalystCenterAuthTemplatesReport (1.66s)
+=== RUN   TestLiveCatalystCenterFabricAuthenticationReadiness
+    fabric_authentication_live_test.go:94: native global templates 3 fabric sites 0 report additions 2 writes 0
+    fabric_authentication_live_test.go:95: public admission refusal and missing-fabric private readiness qualified; no accepted fabric update claimed
+--- PASS: TestLiveCatalystCenterFabricAuthenticationReadiness (1.64s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.193s

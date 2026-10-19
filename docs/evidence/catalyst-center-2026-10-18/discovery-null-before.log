@@ -1,0 +1,41 @@
+--- FAIL: TestDiscoveryOptionalNullProjection (0.00s)
+    --- FAIL: TestDiscoveryOptionalNullProjection/all (0.00s)
+        discovery_null_test.go:68: optional null differs from omission invalid AAA numeric field
+    --- FAIL: TestDiscoveryOptionalNullProjection/cdp_level (0.00s)
+        discovery_null_test.go:68: optional null differs from omission invalid AAA numeric field
+    --- FAIL: TestDiscoveryOptionalNullProjection/lldp_level (0.00s)
+        discovery_null_test.go:68: optional null differs from omission invalid AAA numeric field
+    --- FAIL: TestDiscoveryOptionalNullProjection/retry (0.00s)
+        discovery_null_test.go:68: optional null differs from omission invalid AAA numeric field
+    --- FAIL: TestDiscoveryOptionalNullProjection/time_out (0.00s)
+        discovery_null_test.go:68: optional null differs from omission invalid AAA numeric field
+    --- FAIL: TestDiscoveryOptionalNullProjection/netconf_port (0.00s)
+        discovery_null_test.go:68: optional null differs from omission netconf_port must be a resolved port string
+    --- FAIL: TestDiscoveryOptionalNullProjection/preferred_mgmt_ip_method (0.00s)
+        discovery_null_test.go:68: optional null differs from omission invalid preferred management IP method
+    --- FAIL: TestDiscoveryOptionalNullProjection/ip_filter_list (0.00s)
+        discovery_null_test.go:68: optional null differs from omission invalid discovery filter list
+--- FAIL: TestDiscoveryNullManifestLifecycle (0.94s)
+    --- FAIL: TestDiscoveryNullManifestLifecycle/false (0.77s)
+        discovery_test.go:217: discovery did not converge [{AdapterAvailable True 1 2026-10-18 06:23:47 +0200 CEST AdapterAvailable Catalyst Center configuration adapter is available} {IntentValid False 1 2026-10-18 06:23:47 +0200 CEST UnsupportedIntent Configuration intent contains invalid, unresolved or unimplemented execution fields} {Ready False 1 2026-10-18 06:23:47 +0200 CEST UnsupportedIntent Configuration intent contains invalid, unresolved or unimplemented execution fields}] 0
+    --- FAIL: TestDiscoveryNullManifestLifecycle/true (0.17s)
+        discovery_test.go:217: discovery did not converge [{AdapterAvailable True 1 2026-10-18 06:23:47 +0200 CEST AdapterAvailable Catalyst Center configuration adapter is available} {IntentValid False 1 2026-10-18 06:23:47 +0200 CEST UnsupportedIntent Configuration intent contains invalid, unresolved or unimplemented execution fields} {Ready False 1 2026-10-18 06:23:47 +0200 CEST UnsupportedIntent Configuration intent contains invalid, unresolved or unimplemented execution fields}] 0
+--- FAIL: TestDiscoveryNullDefaultsPreserveSelection (0.03s)
+    --- FAIL: TestDiscoveryNullDefaultsPreserveSelection/cdp_level (0.00s)
+        discovery_null_test.go:88: optional null override rejected unsupported or unresolved discovery defaults input
+    --- FAIL: TestDiscoveryNullDefaultsPreserveSelection/lldp_level (0.00s)
+        discovery_null_test.go:88: optional null override rejected unsupported or unresolved discovery defaults input
+    --- FAIL: TestDiscoveryNullDefaultsPreserveSelection/retry (0.00s)
+        discovery_null_test.go:88: optional null override rejected unsupported or unresolved discovery defaults input
+    --- FAIL: TestDiscoveryNullDefaultsPreserveSelection/time_out (0.00s)
+        discovery_null_test.go:88: optional null override rejected unsupported or unresolved discovery defaults input
+    --- FAIL: TestDiscoveryNullDefaultsPreserveSelection/netconf_port (0.00s)
+        discovery_null_test.go:88: optional null override rejected unsupported or unresolved discovery defaults input
+    --- FAIL: TestDiscoveryNullDefaultsPreserveSelection/preferred_mgmt_ip_method (0.00s)
+        discovery_null_test.go:88: optional null override rejected unsupported or unresolved discovery defaults input
+    --- FAIL: TestDiscoveryNullDefaultsPreserveSelection/ip_filter_list (0.00s)
+        discovery_null_test.go:88: optional null override rejected unsupported or unresolved discovery defaults input
+    discovery_null_test.go:101: explicit null used fallback unsupported or unresolved discovery defaults input
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.558s
+FAIL

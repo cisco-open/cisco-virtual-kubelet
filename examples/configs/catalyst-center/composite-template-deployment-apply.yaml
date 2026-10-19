@@ -1,0 +1,42 @@
+# Requires the existing physical-configuration admission/runtime setup and a
+# managed CiscoDevice with matching serial, address and Node identity.
+# Replace the example selectors; Global/Lab/Building must already exist.
+# Fixture-qualified only; this example is not lab-qualified.
+# Provisioning dependencies settle for ten seconds before template dispatch;
+# the journal preserves the interval through worker restarts.
+# Lab#Combined and all regular members must already be committed and applicable.
+# NEVER retains a successful deployment receipt across subsequent reconciliations.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-composite-deployment
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-composite-deployment-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          devices:
+            - name: edge
+              serial_number: FOC12345678
+              device_ip: 192.0.2.100
+              site: Global/Lab/Building
+              state: PROVISION
+              dayn_templates:
+                redeploy_template: NEVER
+                composite:
+                  - name: Lab#Combined
+                    copying_config: true
+                    force_push_template: true

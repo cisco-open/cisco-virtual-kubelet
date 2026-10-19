@@ -1,0 +1,79 @@
+{
+  "startTime": 1792071230000,
+  "endTime": 1792071720000,
+  "windowTaskCount": 11,
+  "pendingCount": 0,
+  "childTaskIDsMentionedInData": [
+    "01a13fc5-f7c0-70f3-88bc-42d28610c96a",
+    "01a13fc5-f812-710e-869b-262f154e85c6"
+  ],
+  "acknowledgedChildTaskID": "01a13fc6-0019-73bd-952d-7c390588efe2",
+  "terminalWindowTasks": [
+    {
+      "id": "01a13fc5-047d-71a3-8749-e1d81cae0db2",
+      "startTime": 1792071238781,
+      "endTime": 1792071239722,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-0b7b-7c3e-a771-f9751aff7a00",
+      "startTime": 1792071240572,
+      "endTime": 1792071240665,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-0bd8-749e-af2f-a132e9b40ed6",
+      "startTime": 1792071240664,
+      "endTime": 1792071240720,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-1763-76e8-b424-731ea1095148",
+      "startTime": 1792071243619,
+      "endTime": 1792071249070,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-4bb0-789c-afaa-a56ddf20285a",
+      "startTime": 1792071257008,
+      "endTime": 1792071264864,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-85fb-73c6-896b-1d737761aa14",
+      "startTime": 1792071271931,
+      "endTime": 1792071278180,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-ba87-70ef-8144-9afcea945522",
+      "startTime": 1792071285383,
+      "endTime": 1792071292071,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-f7c0-70f3-88bc-42d28610c96a",
+      "startTime": 1792071301056,
+      "endTime": 1792071301138,
+      "isError": false
+    },
+    {
+      "id": "01a13fc5-f812-710e-869b-262f154e85c6",
+      "startTime": 1792071301138,
+      "endTime": 1792071301224,
+      "isError": false
+    },
+    {
+      "id": "01a13fc6-0019-73bd-952d-7c390588efe2",
+      "startTime": 1792071303193,
+      "endTime": 1792071337882,
+      "isError": false
+    },
+    {
+      "id": "01a13fc6-ac1e-7065-b383-8bdd7b7a4c64",
+      "startTime": 1792071347231,
+      "endTime": 1792071353162,
+      "isError": false
+    }
+  ]
+}

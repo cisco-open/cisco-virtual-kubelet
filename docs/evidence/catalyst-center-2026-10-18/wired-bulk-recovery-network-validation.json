@@ -1,0 +1,76 @@
+{
+  "scope": "Public retained wired bulk network evidence collection and scoped semantic checks; full provisioning convergence/public new dispatch remain fenced",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/wired_bulk_recovery_evidence.go": "a54cd339f10b962aea94caa3c3f17570005ed33d0286240381ab70834c55448f",
+    "internal/controlleradapter/catalystcenter/config_group_acknowledged_recovery.go": "62c8927580e4c4b837d8a7a069b19a2cd2bc24c32e5a3bdf576d7d9f576c3740",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "f0f402ce8f6dd46c90324f18b0166113d135354fdc9a6b4b7dd9b4796d1dcb91",
+    "internal/controlleradapter/catalystcenter/wired_bulk_network_device_evidence_test.go": "693f43a718486cdb3d3d5857348bbc0794fa06081d2e14fdfafbe79508c77bcc",
+    "internal/controlleradapter/catalystcenter/fabric_group_authority_fixture_test.go": "34bb57222defd3c9b16030820d16c3164b0ca2e13413bb37c1a889c582f9d589",
+    "internal/controlleradapter/catalystcenter/wired_bulk_network_device_evidence.go": "3243941c667be9e63fa4efbf372bf8b34af19619a1a7a06384bba1f43351a652",
+    "internal/controlleradapter/catalystcenter/wired_bulk_device_evidence.go": "f8fb4eb26daa2ac08625e2d3f88863791757dc2e250472024365aa8041856edc",
+    "internal/controlleradapter/catalystcenter/wired_bulk_network_cli.go": "e543720af622145c89185a32eeb52c1b6692975c2003c0cb2b6907b6b7851850",
+    "internal/controlleradapter/catalystcenter/wired_bulk_network_scalar_cli.go": "30eabcc692e2008a78ff5c3854ab7090de88437b0e705cee20058273ff371b09",
+    "internal/controlleradapter/catalystcenter/config_group_device_evidence_batch.go": "35b6c0f03f639e322381f57aca8d875035c018c05b907704da564704117d0830"
+  },
+  "gates": {
+    "regression": {
+      "logSHA256": "482c744b4668c8683de7b9750937d6bee6d29788231cad7e19201b39a64c40ea",
+      "exitCode": 0,
+      "seconds": 30.61,
+      "families": 14,
+      "subcases": 159
+    },
+    "public": {
+      "logSHA256": "330227f1a60e689e9646a0d287937fc21a21833deb952eab8ee37c7330016a04",
+      "exitCode": 0,
+      "seconds": 11.594,
+      "families": 1,
+      "subcases": 10
+    },
+    "api": {
+      "logSHA256": "f879aa5d12902d41ed6c08237564f0b16f0ef8fd478f976d33f3614b02bfde31",
+      "exitCode": 0,
+      "seconds": 19.457,
+      "families": 3,
+      "subcases": 0
+    },
+    "native-readonly": {
+      "logSHA256": "9041d55c27871cbe16bbd8599a65740f8329e9615ae921d3ef04e0bd3791622f",
+      "exitCode": 0,
+      "seconds": 18.714,
+      "families": 1,
+      "subcases": 0
+    },
+    "nd": {
+      "logSHA256": "f851a56d97504c9b169a75a18df1414d73c3464d6f3532f7cf9a8c799662ace4",
+      "exitCode": 0,
+      "seconds": 4.952
+    },
+    "upgrades": {
+      "logSHA256": "e5596e2b9edbe15851d90c74f1380016c852d4c4a1fa0a26fc655af602ea77a4",
+      "exitCode": 0,
+      "seconds": 6.435
+    },
+    "build": {
+      "logSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exitCode": 0
+    },
+    "initial-public": {
+      "logSHA256": "8605c6b82ad82fc44ca0ed4cff03a85b54e2eb656ba3426fd911c8ab56c5edb8",
+      "exitCode": 1
+    }
+  },
+  "apiScope": "Actual private API DeviceOperation persistence and result/query/protected-envelope validation only; manager/device actor writes simulated. Full public batch semantic tests use a fake Kubernetes client and controlled HTTPS native fixture.",
+  "nativeScope": "Read-only current lab identities, scoped network context and query compilation; timezone context observed for three switch identities; zero native mutations, no device worker result or convergence proof.",
+  "labPrerequisites": {
+    "isolatedContext": "kind-cvk-catc-qualification-20261017",
+    "namespace": "cvk-catc-qualification",
+    "ciscoDevices": 0
+  },
+  "build": {
+    "binary": "/private/tmp/cvk-wired-bulk-network-recovery",
+    "binarySHA256": "e31f4dacfd0f2ead3c0a427ced85b93896943415512d8d796b2609014aab52a7",
+    "installed": false
+  },
+  "initialPublicFixtureFailure": "Authority fixture attempted to configure an already-configured reservation runtime; final fixture preserves the valid group protocol and lease namespace. Production one-time configuration guard unchanged."
+}

@@ -1,0 +1,68 @@
+=== RUN   TestPlannedAPFloorEffect
+=== RUN   TestPlannedAPFloorEffect/unchanged
+=== RUN   TestPlannedAPFloorEffect/width
+=== RUN   TestPlannedAPFloorEffect/length
+=== RUN   TestPlannedAPFloorEffect/both
+=== RUN   TestPlannedAPFloorEffect/shrink
+=== RUN   TestPlannedAPFloorEffect/height
+=== RUN   TestPlannedAPFloorEffect/units-equivalent
+=== RUN   TestPlannedAPFloorEffect/fractional
+=== RUN   TestPlannedAPFloorEffect/origin
+=== RUN   TestPlannedAPFloorEffect/target-ID
+=== RUN   TestPlannedAPFloorEffect/parent-ID
+=== RUN   TestPlannedAPFloorEffect/path
+=== RUN   TestPlannedAPFloorEffect/old-width
+=== RUN   TestPlannedAPFloorEffect/new-width
+=== RUN   TestPlannedAPFloorEffect/new-units
+=== RUN   TestPlannedAPFloorEffect/missing-position
+=== RUN   TestPlannedAPFloorEffect/outside-before
+=== RUN   TestPlannedAPFloorEffect/height-below-AP
+=== RUN   TestPlannedAPFloorEffect/raw-coordinate
+=== RUN   TestPlannedAPFloorEffect/raw-ID
+=== RUN   TestPlannedAPFloorEffect/unknown-fields
+=== RUN   TestPlannedAPFloorEffect/overflow
+--- PASS: TestPlannedAPFloorEffect (0.04s)
+    --- PASS: TestPlannedAPFloorEffect/unchanged (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/width (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/length (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/both (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/shrink (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/height (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/units-equivalent (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/fractional (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/origin (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/target-ID (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/parent-ID (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/path (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/old-width (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/new-width (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/new-units (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/missing-position (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/outside-before (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/height-below-AP (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/raw-coordinate (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/raw-ID (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/unknown-fields (0.00s)
+    --- PASS: TestPlannedAPFloorEffect/overflow (0.00s)
+=== RUN   TestPlannedAPFloorCoordinatePrecision
+=== RUN   TestPlannedAPFloorCoordinatePrecision/native-width-effect
+=== RUN   TestPlannedAPFloorCoordinatePrecision/exact-integer
+=== RUN   TestPlannedAPFloorCoordinatePrecision/exact-half
+=== RUN   TestPlannedAPFloorCoordinatePrecision/decimal
+=== RUN   TestPlannedAPFloorCoordinatePrecision/origin
+=== RUN   TestPlannedAPFloorCoordinatePrecision/negative
+=== RUN   TestPlannedAPFloorCoordinatePrecision/not-a-number
+=== RUN   TestPlannedAPFloorCoordinatePrecision/infinite
+=== RUN   TestPlannedAPFloorCoordinatePrecision/binary32-overflow
+--- PASS: TestPlannedAPFloorCoordinatePrecision (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/native-width-effect (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/exact-integer (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/exact-half (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/decimal (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/origin (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/negative (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/not-a-number (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/infinite (0.00s)
+    --- PASS: TestPlannedAPFloorCoordinatePrecision/binary32-overflow (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.391s

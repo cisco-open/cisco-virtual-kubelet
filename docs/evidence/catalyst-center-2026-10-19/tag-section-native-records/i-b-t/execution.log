@@ -1,0 +1,23 @@
+=== RUN   TestLiveTagPrunePublicCycle
+    tag_prune_live_test.go:341: retained original task Create 01a151d9-3cc9-76ee-b24d-007841474196
+    tag_prune_live_test.go:418: durable immutable creator and current latest-state rows 1 0
+    tag_prune_live_test.go:419: recovered native manifest revision without replay 3 2aaaee11-4e55-4e38-be34-084a59aaf848
+    tag_prune_live_test.go:341: retained original task Update 01a151d9-45b0-72e4-921f-76b8568c7d50
+    tag_prune_live_test.go:418: durable immutable creator and current latest-state rows 1 1
+    tag_prune_live_test.go:419: recovered native manifest revision without replay 3 2aaaee11-4e55-4e38-be34-084a59aaf848
+    tag_prune_live_test.go:455: retained original Delete task 01a151d9-5f02-7592-89a6-65b277c20c5c 2aaaee11-4e55-4e38-be34-084a59aaf848
+    tag_prune_live_test.go:498: manifest-driven prune and original-task recovery retained immutable creator, latest-state and absence tombstone 2aaaee11-4e55-4e38-be34-084a59aaf848
+    tag_prune_live_test.go:553: persisted tag retirement survives old config removal without changing ownership or receipts 9ebc32b7-5acd-4962-8ebc-d1ac77f27b46
+    tag_prune_live_test.go:616: recovering original successor task handoff-0-create 01a151d9-6f58-7994-bad9-eb1071554f7b
+    tag_prune_live_test.go:616: recovering original successor task handoff-0-update 01a151d9-7bdc-79aa-9ed4-d4e3b7e1f892
+    tag_prune_live_test.go:616: recovering original successor task handoff-0-delete 01a151d9-9748-70f1-9153-42c6fc6308e8
+    tag_prune_live_test.go:705: complete native successor epoch 0 1f0d54e7-de32-47d1-a3ff-e29375b74104
+    tag_prune_live_test.go:616: recovering original successor task handoff-1-create 01a151d9-a798-7321-841c-5a357b7ee53c
+    tag_prune_live_test.go:616: recovering original successor task handoff-1-update 01a151d9-b419-7793-9b6b-1a0625944361
+    tag_prune_live_test.go:616: recovering original successor task handoff-1-delete 01a151d9-cfec-7acc-81d3-92bed9b72a65
+    tag_prune_live_test.go:705: complete native successor epoch 1 740b4b5a-3daf-4c1e-a489-31e6de633200
+    tag_prune_live_test.go:725: qualified projected source epochs 3 model revisions 6 stale refusals 3
+    tag_prune_live_test.go:728: native CR deletion recovered original task; bound manager proof accepted; unrelated finalizer retained 740b4b5a-3daf-4c1e-a489-31e6de633200
+--- PASS: TestLiveTagPrunePublicCycle (47.48s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	49.770s

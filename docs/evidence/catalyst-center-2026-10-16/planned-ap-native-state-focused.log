@@ -1,0 +1,620 @@
+=== RUN   TestPlannedAPCatalogPreflight
+=== RUN   TestPlannedAPCatalogPreflight/valid
+=== RUN   TestPlannedAPCatalogPreflight/numbered-choice
+=== RUN   TestPlannedAPCatalogPreflight/raw-choice
+=== RUN   TestPlannedAPCatalogPreflight/duplicate-choice
+=== RUN   TestPlannedAPCatalogPreflight/unknown-model
+=== RUN   TestPlannedAPCatalogPreflight/unknown-band
+=== RUN   TestPlannedAPCatalogPreflight/unknown-antenna
+=== RUN   TestPlannedAPCatalogPreflight/antenna-without-band
+=== RUN   TestPlannedAPCatalogPreflight/band-without-antenna
+=== RUN   TestPlannedAPCatalogPreflight/default-radio
+=== RUN   TestPlannedAPCatalogPreflight/later-invalid
+=== RUN   TestPlannedAPCatalogPreflight/null
+=== RUN   TestPlannedAPCatalogPreflight/envelope
+=== RUN   TestPlannedAPCatalogPreflight/duplicate-model
+=== RUN   TestPlannedAPCatalogPreflight/duplicate-band
+=== RUN   TestPlannedAPCatalogPreflight/empty-names
+=== RUN   TestPlannedAPCatalogPreflight/partial
+=== RUN   TestPlannedAPCatalogPreflight/missing-patterns
+--- PASS: TestPlannedAPCatalogPreflight (0.20s)
+    --- PASS: TestPlannedAPCatalogPreflight/valid (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/numbered-choice (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/raw-choice (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/duplicate-choice (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/unknown-model (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/unknown-band (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/unknown-antenna (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/antenna-without-band (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/band-without-antenna (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/default-radio (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/later-invalid (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/null (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/envelope (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/duplicate-model (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/duplicate-band (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/empty-names (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/partial (0.01s)
+    --- PASS: TestPlannedAPCatalogPreflight/missing-patterns (0.01s)
+=== RUN   TestPlannedAPInvalidCatalogSelectionPrecedesGeometry
+--- PASS: TestPlannedAPInvalidCatalogSelectionPrecedesGeometry (0.01s)
+=== RUN   TestPlannedAPCatalogChangedBeforeSubmission
+--- PASS: TestPlannedAPCatalogChangedBeforeSubmission (0.01s)
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/stable
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/appeared
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/replaced
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/mac
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/unselected-z
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/unselected-radio
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/lost-response
+--- PASS: TestPlannedAPDispatchRechecksNativeObservation (0.11s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/stable (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/appeared (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/replaced (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/mac (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/unselected-z (0.01s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/unselected-radio (0.01s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/lost-response (0.02s)
+=== RUN   TestPlannedAPUpdatePreservesUnselected
+--- PASS: TestPlannedAPUpdatePreservesUnselected (0.00s)
+=== RUN   TestPlannedAPExecutorLifecycle
+=== RUN   TestPlannedAPExecutorLifecycle/create
+=== RUN   TestPlannedAPExecutorLifecycle/update
+=== RUN   TestPlannedAPExecutorLifecycle/incomplete-create
+=== RUN   TestPlannedAPExecutorLifecycle/bad-task
+=== RUN   TestPlannedAPExecutorLifecycle/radio-change
+=== RUN   TestPlannedAPExecutorLifecycle/optional-create
+--- PASS: TestPlannedAPExecutorLifecycle (0.10s)
+    --- PASS: TestPlannedAPExecutorLifecycle/create (0.02s)
+    --- PASS: TestPlannedAPExecutorLifecycle/update (0.02s)
+    --- PASS: TestPlannedAPExecutorLifecycle/incomplete-create (0.01s)
+    --- PASS: TestPlannedAPExecutorLifecycle/bad-task (0.01s)
+    --- PASS: TestPlannedAPExecutorLifecycle/radio-change (0.01s)
+    --- PASS: TestPlannedAPExecutorLifecycle/optional-create (0.02s)
+=== RUN   TestPlannedAPPositionBounds
+=== RUN   TestPlannedAPPositionBounds/feet/x/zero
+=== RUN   TestPlannedAPPositionBounds/feet/x/boundary
+=== RUN   TestPlannedAPPositionBounds/feet/x/negative
+=== RUN   TestPlannedAPPositionBounds/feet/x/above
+=== RUN   TestPlannedAPPositionBounds/feet/x/nan
+=== RUN   TestPlannedAPPositionBounds/feet/x/missing
+=== RUN   TestPlannedAPPositionBounds/feet/y/zero
+=== RUN   TestPlannedAPPositionBounds/feet/y/boundary
+=== RUN   TestPlannedAPPositionBounds/feet/y/negative
+=== RUN   TestPlannedAPPositionBounds/feet/y/above
+=== RUN   TestPlannedAPPositionBounds/feet/y/nan
+=== RUN   TestPlannedAPPositionBounds/feet/y/missing
+=== RUN   TestPlannedAPPositionBounds/feet/z/zero
+=== RUN   TestPlannedAPPositionBounds/feet/z/boundary
+=== RUN   TestPlannedAPPositionBounds/feet/z/negative
+=== RUN   TestPlannedAPPositionBounds/feet/z/above
+=== RUN   TestPlannedAPPositionBounds/feet/z/nan
+=== RUN   TestPlannedAPPositionBounds/feet/z/missing
+=== RUN   TestPlannedAPPositionBounds/meters/x/zero
+=== RUN   TestPlannedAPPositionBounds/meters/x/boundary
+=== RUN   TestPlannedAPPositionBounds/meters/x/negative
+=== RUN   TestPlannedAPPositionBounds/meters/x/above
+=== RUN   TestPlannedAPPositionBounds/meters/x/nan
+=== RUN   TestPlannedAPPositionBounds/meters/x/missing
+=== RUN   TestPlannedAPPositionBounds/meters/y/zero
+=== RUN   TestPlannedAPPositionBounds/meters/y/boundary
+=== RUN   TestPlannedAPPositionBounds/meters/y/negative
+=== RUN   TestPlannedAPPositionBounds/meters/y/above
+=== RUN   TestPlannedAPPositionBounds/meters/y/nan
+=== RUN   TestPlannedAPPositionBounds/meters/y/missing
+=== RUN   TestPlannedAPPositionBounds/meters/z/zero
+=== RUN   TestPlannedAPPositionBounds/meters/z/boundary
+=== RUN   TestPlannedAPPositionBounds/meters/z/negative
+=== RUN   TestPlannedAPPositionBounds/meters/z/above
+=== RUN   TestPlannedAPPositionBounds/meters/z/nan
+=== RUN   TestPlannedAPPositionBounds/meters/z/missing
+--- PASS: TestPlannedAPPositionBounds (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/x/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/y/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/feet/z/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/x/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/y/missing (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/zero (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/boundary (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/negative (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/above (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/nan (0.00s)
+    --- PASS: TestPlannedAPPositionBounds/meters/z/missing (0.00s)
+=== RUN   TestPlannedAPGeometryUsesSubmittedPrecision
+--- PASS: TestPlannedAPGeometryUsesSubmittedPrecision (0.00s)
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry/x
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry/y
+=== RUN   TestPlannedAPInvalidPositionPrecedesGeometry/z
+--- PASS: TestPlannedAPInvalidPositionPrecedesGeometry (0.04s)
+    --- PASS: TestPlannedAPInvalidPositionPrecedesGeometry/x (0.01s)
+    --- PASS: TestPlannedAPInvalidPositionPrecedesGeometry/y (0.01s)
+    --- PASS: TestPlannedAPInvalidPositionPrecedesGeometry/z (0.01s)
+=== RUN   TestPlannedAPFutureGeometryAllowsExpansion
+--- PASS: TestPlannedAPFutureGeometryAllowsExpansion (0.01s)
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/valid
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/selected-shrink
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/later-shrink
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/replaced-floor
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/missing-extent
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/frozen-position
+=== RUN   TestPlannedAPSubmissionRechecksAllNativeExtents/missing-receipt
+--- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents (0.11s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/valid (0.02s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/selected-shrink (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/later-shrink (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/replaced-floor (0.02s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/missing-extent (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/frozen-position (0.01s)
+    --- PASS: TestPlannedAPSubmissionRechecksAllNativeExtents/missing-receipt (0.02s)
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents/valid
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents/shrunk-floor
+=== RUN   TestPlannedAPVerificationRequiresCurrentExtents/retained-z-outside
+--- PASS: TestPlannedAPVerificationRequiresCurrentExtents (0.04s)
+    --- PASS: TestPlannedAPVerificationRequiresCurrentExtents/valid (0.01s)
+    --- PASS: TestPlannedAPVerificationRequiresCurrentExtents/shrunk-floor (0.01s)
+    --- PASS: TestPlannedAPVerificationRequiresCurrentExtents/retained-z-outside (0.01s)
+=== RUN   TestPlannedAPIdentityReceiptBoundaries
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/valid
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/configmap
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/source-pruned
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/result-pruned
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/task-pruned
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/no-time
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/no-verified-time
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/future
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/before-submission
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/wrong-section
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/wrong-floor
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/bad-UUID
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/wrong-resource
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/update
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/physical
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/prepared
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/duplicate
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/alias
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/same-UUID
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/generation
+=== RUN   TestPlannedAPIdentityReceiptBoundaries/missing-owner
+--- PASS: TestPlannedAPIdentityReceiptBoundaries (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/valid (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/configmap (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/source-pruned (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/result-pruned (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/task-pruned (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/no-time (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/no-verified-time (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/future (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/before-submission (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/wrong-section (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/wrong-floor (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/bad-UUID (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/wrong-resource (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/update (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/physical (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/prepared (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/duplicate (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/alias (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/same-UUID (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/generation (0.00s)
+    --- PASS: TestPlannedAPIdentityReceiptBoundaries/missing-owner (0.00s)
+=== RUN   TestPlannedAPIdentityCapacityAndSettlement
+--- PASS: TestPlannedAPIdentityCapacityAndSettlement (0.01s)
+=== RUN   TestPlannedAPObservedFloorIdentityFence
+=== RUN   TestPlannedAPObservedFloorIdentityFence/same
+=== RUN   TestPlannedAPObservedFloorIdentityFence/replaced
+=== RUN   TestPlannedAPObservedFloorIdentityFence/missing
+=== RUN   TestPlannedAPObservedFloorIdentityFence/wrong-kind
+=== RUN   TestPlannedAPObservedFloorIdentityFence/foreign-owner
+=== RUN   TestPlannedAPObservedFloorIdentityFence/legacy
+--- PASS: TestPlannedAPObservedFloorIdentityFence (0.01s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/same (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/replaced (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/missing (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/wrong-kind (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/foreign-owner (0.00s)
+    --- PASS: TestPlannedAPObservedFloorIdentityFence/legacy (0.00s)
+=== RUN   TestPlannedAPManifestFloorThenPlacement
+=== RUN   TestPlannedAPManifestFloorThenPlacement/normal
+=== RUN   TestPlannedAPManifestFloorThenPlacement/ambiguous
+=== RUN   TestPlannedAPManifestFloorThenPlacement/optional
+=== RUN   TestPlannedAPManifestFloorThenPlacement/image
+=== RUN   TestPlannedAPManifestFloorThenPlacement/image-ambiguous
+--- PASS: TestPlannedAPManifestFloorThenPlacement (2.01s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/normal (0.86s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/ambiguous (0.21s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/optional (0.25s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/image (0.46s)
+    --- PASS: TestPlannedAPManifestFloorThenPlacement/image-ambiguous (0.22s)
+=== RUN   TestPrivateSiteDesignManifestComposition
+=== RUN   TestPrivateSiteDesignManifestComposition/normal-private
+=== RUN   TestPrivateSiteDesignManifestComposition/optional-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-private
+=== RUN   TestPrivateSiteDesignManifestComposition/recover-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-recover-private
+=== RUN   TestPrivateSiteDesignManifestComposition/ambiguous-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-ambiguous-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-refuse-private
+=== RUN   TestPrivateSiteDesignManifestComposition/recover-refuse-private
+--- PASS: TestPrivateSiteDesignManifestComposition (4.30s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/normal-private (0.38s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/optional-private (0.38s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-private (0.70s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/recover-private (0.39s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-recover-private (0.71s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/ambiguous-private (0.29s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-ambiguous-private (0.29s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-refuse-private (0.74s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/recover-refuse-private (0.43s)
+=== RUN   TestPlannedAPObservedIdentityManifest
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-replaced
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-missing
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-floor
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-pruned
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-replaced-private
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-missing-private
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-floor-private
+=== RUN   TestPlannedAPObservedIdentityManifest/identity-pruned-private
+--- PASS: TestPlannedAPObservedIdentityManifest (1.73s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-replaced (0.18s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-missing (0.18s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-floor (0.18s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-pruned (0.18s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-replaced-private (0.26s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-missing-private (0.26s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-floor-private (0.25s)
+    --- PASS: TestPlannedAPObservedIdentityManifest/identity-pruned-private (0.24s)
+=== RUN   TestPlannedAPNativeStateManifest
+=== RUN   TestPlannedAPNativeStateManifest/native-unknown
+=== RUN   TestPlannedAPNativeStateManifest/native-late
+=== RUN   TestPlannedAPNativeStateManifest/native-sensor
+=== RUN   TestPlannedAPNativeStateManifest/native-publish-late
+=== RUN   TestPlannedAPNativeStateManifest/native-unknown-private
+=== RUN   TestPlannedAPNativeStateManifest/native-late-private
+=== RUN   TestPlannedAPNativeStateManifest/native-sensor-private
+=== RUN   TestPlannedAPNativeStateManifest/native-publish-late-private
+--- PASS: TestPlannedAPNativeStateManifest (2.37s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-unknown (0.23s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-late (0.24s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-sensor (0.27s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-publish-late (0.24s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-unknown-private (0.32s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-late-private (0.36s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-sensor-private (0.39s)
+    --- PASS: TestPlannedAPNativeStateManifest/native-publish-late-private (0.34s)
+=== RUN   TestPlannedAPIncompleteIntentBlocksSiteCreation
+--- PASS: TestPlannedAPIncompleteIntentBlocksSiteCreation (0.01s)
+=== RUN   TestPlannedAPModel
+--- PASS: TestPlannedAPModel (0.00s)
+=== RUN   TestPlannedAPModelRejectsInvalidInput
+--- PASS: TestPlannedAPModelRejectsInvalidInput (0.01s)
+=== RUN   TestPlannedAPDuplicateAndOrdering
+--- PASS: TestPlannedAPDuplicateAndOrdering (0.00s)
+=== RUN   TestPlannedAPCompleteNativeDispatchView
+=== RUN   TestPlannedAPCompleteNativeDispatchView/stable
+=== RUN   TestPlannedAPCompleteNativeDispatchView/unknown-added
+=== RUN   TestPlannedAPCompleteNativeDispatchView/unknown-number
+=== RUN   TestPlannedAPCompleteNativeDispatchView/unknown-removed
+=== RUN   TestPlannedAPCompleteNativeDispatchView/null-to-absent
+=== RUN   TestPlannedAPCompleteNativeDispatchView/array-order
+=== RUN   TestPlannedAPCompleteNativeDispatchView/sensor-flag
+=== RUN   TestPlannedAPCompleteNativeDispatchView/nested-radio
+=== RUN   TestPlannedAPCompleteNativeDispatchView/nested-position
+=== RUN   TestPlannedAPCompleteNativeDispatchView/nested-antenna
+=== RUN   TestPlannedAPCompleteNativeDispatchView/equivalent-key-order
+--- PASS: TestPlannedAPCompleteNativeDispatchView (0.19s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/stable (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/unknown-added (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/unknown-number (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/unknown-removed (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/null-to-absent (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/array-order (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/sensor-flag (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/nested-radio (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/nested-position (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/nested-antenna (0.02s)
+    --- PASS: TestPlannedAPCompleteNativeDispatchView/equivalent-key-order (0.02s)
+=== RUN   TestPlannedAPNativeSnapshotPrecision
+--- PASS: TestPlannedAPNativeSnapshotPrecision (0.00s)
+=== RUN   TestPlannedAPUnmappedUpdateFields
+=== RUN   TestPlannedAPUnmappedUpdateFields/known
+=== RUN   TestPlannedAPUnmappedUpdateFields/sensor
+=== RUN   TestPlannedAPUnmappedUpdateFields/bad-sensor
+=== RUN   TestPlannedAPUnmappedUpdateFields/top
+=== RUN   TestPlannedAPUnmappedUpdateFields/position
+=== RUN   TestPlannedAPUnmappedUpdateFields/radio
+=== RUN   TestPlannedAPUnmappedUpdateFields/antenna
+--- PASS: TestPlannedAPUnmappedUpdateFields (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/known (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/sensor (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/bad-sensor (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/top (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/position (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/radio (0.00s)
+    --- PASS: TestPlannedAPUnmappedUpdateFields/antenna (0.00s)
+=== RUN   TestPlannedAPObservation
+=== RUN   TestPlannedAPObservation/valid
+=== RUN   TestPlannedAPObservation/empty
+=== RUN   TestPlannedAPObservation/missing
+=== RUN   TestPlannedAPObservation/null
+=== RUN   TestPlannedAPObservation/partial
+=== RUN   TestPlannedAPObservation/duplicate-name
+=== RUN   TestPlannedAPObservation/duplicate-id
+=== RUN   TestPlannedAPObservation/missing-radio-id
+=== RUN   TestPlannedAPObservation/missing-position
+=== RUN   TestPlannedAPObservation/missing-channel
+=== RUN   TestPlannedAPObservation/bad-band
+=== RUN   TestPlannedAPObservation/duplicate-band
+=== RUN   TestPlannedAPObservation/bad-antenna
+=== RUN   TestPlannedAPObservation/bad-mac
+--- PASS: TestPlannedAPObservation (0.14s)
+    --- PASS: TestPlannedAPObservation/valid (0.01s)
+    --- PASS: TestPlannedAPObservation/empty (0.01s)
+    --- PASS: TestPlannedAPObservation/missing (0.01s)
+    --- PASS: TestPlannedAPObservation/null (0.01s)
+    --- PASS: TestPlannedAPObservation/partial (0.01s)
+    --- PASS: TestPlannedAPObservation/duplicate-name (0.01s)
+    --- PASS: TestPlannedAPObservation/duplicate-id (0.01s)
+    --- PASS: TestPlannedAPObservation/missing-radio-id (0.01s)
+    --- PASS: TestPlannedAPObservation/missing-position (0.01s)
+    --- PASS: TestPlannedAPObservation/missing-channel (0.01s)
+    --- PASS: TestPlannedAPObservation/bad-band (0.01s)
+    --- PASS: TestPlannedAPObservation/duplicate-band (0.01s)
+    --- PASS: TestPlannedAPObservation/bad-antenna (0.01s)
+    --- PASS: TestPlannedAPObservation/bad-mac (0.01s)
+=== RUN   TestPlannedAPObservationPagination
+=== RUN   TestPlannedAPObservationPagination/false
+=== RUN   TestPlannedAPObservationPagination/true
+--- PASS: TestPlannedAPObservationPagination (0.26s)
+    --- PASS: TestPlannedAPObservationPagination/false (0.13s)
+    --- PASS: TestPlannedAPObservationPagination/true (0.13s)
+=== RUN   TestPlannedAPRadioMatching
+=== RUN   TestPlannedAPRadioMatching/omitted-band
+=== RUN   TestPlannedAPRadioMatching/wildcard-before-specific
+=== RUN   TestPlannedAPRadioMatching/same-band-different-channel
+=== RUN   TestPlannedAPRadioMatching/cannot-reuse-one-radio
+=== RUN   TestPlannedAPRadioMatching/changed-radio
+=== RUN   TestPlannedAPRadioMatching/unknown-band
+=== RUN   TestPlannedAPRadioMatching/empty
+--- PASS: TestPlannedAPRadioMatching (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/omitted-band (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/wildcard-before-specific (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/same-band-different-channel (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/cannot-reuse-one-radio (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/changed-radio (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/unknown-band (0.00s)
+    --- PASS: TestPlannedAPRadioMatching/empty (0.00s)
+=== RUN   TestPlannedAPReport
+=== RUN   TestPlannedAPReport/match
+=== RUN   TestPlannedAPReport/missing-floor
+=== RUN   TestPlannedAPReport/missing-ap
+=== RUN   TestPlannedAPReport/position
+=== RUN   TestPlannedAPReport/radio
+=== RUN   TestPlannedAPReport/type
+=== RUN   TestPlannedAPReport/partial
+--- PASS: TestPlannedAPReport (0.09s)
+    --- PASS: TestPlannedAPReport/match (0.01s)
+    --- PASS: TestPlannedAPReport/missing-floor (0.00s)
+    --- PASS: TestPlannedAPReport/missing-ap (0.01s)
+    --- PASS: TestPlannedAPReport/position (0.01s)
+    --- PASS: TestPlannedAPReport/radio (0.01s)
+    --- PASS: TestPlannedAPReport/type (0.01s)
+    --- PASS: TestPlannedAPReport/partial (0.01s)
+=== RUN   TestSiteDesignNoDispatchScope
+=== RUN   TestSiteDesignNoDispatchScope/image/valid
+=== RUN   TestSiteDesignNoDispatchScope/image/delete
+=== RUN   TestSiteDesignNoDispatchScope/image/physical
+=== RUN   TestSiteDesignNoDispatchScope/image/task
+=== RUN   TestSiteDesignNoDispatchScope/image/created-id
+=== RUN   TestSiteDesignNoDispatchScope/image/prepared
+=== RUN   TestSiteDesignNoDispatchScope/image/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/image/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/image/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/image/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-create/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-update/legacy-image
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/valid
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/delete
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/physical
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/task
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/created-id
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/prepared
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/cancelled
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/wrong-section
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/bad-hash
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/bad-parent
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/bad-target
+=== RUN   TestSiteDesignNoDispatchScope/ap-observe/legacy-image
+--- PASS: TestSiteDesignNoDispatchScope (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/image/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-create/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-update/legacy-image (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/valid (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/delete (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/physical (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/task (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/created-id (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/prepared (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/cancelled (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/wrong-section (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/bad-hash (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/bad-parent (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/bad-target (0.00s)
+    --- PASS: TestSiteDesignNoDispatchScope/ap-observe/legacy-image (0.00s)
+=== RUN   TestTemplateNativeComparisonMAC
+=== RUN   TestTemplateNativeComparisonMAC/p
+=== RUN   TestTemplateNativeComparisonMAC/p/match
+=== RUN   TestTemplateNativeComparisonMAC/p/field-order
+=== RUN   TestTemplateNativeComparisonMAC/p/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/p/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/p/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/p/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/p/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/p/missing-operation-marker
+=== RUN   TestTemplateNativeComparisonMAC/r
+=== RUN   TestTemplateNativeComparisonMAC/r/match
+=== RUN   TestTemplateNativeComparisonMAC/r/field-order
+=== RUN   TestTemplateNativeComparisonMAC/r/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/r/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/r/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/r/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/r/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/r/missing-operation-marker
+=== RUN   TestTemplateNativeComparisonMAC/c
+=== RUN   TestTemplateNativeComparisonMAC/c/match
+=== RUN   TestTemplateNativeComparisonMAC/c/field-order
+=== RUN   TestTemplateNativeComparisonMAC/c/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/c/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/c/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/c/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/c/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/c/missing-operation-marker
+--- PASS: TestTemplateNativeComparisonMAC (0.01s)
+    --- PASS: TestTemplateNativeComparisonMAC/p (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/missing-operation-marker (0.00s)
+    --- PASS: TestTemplateNativeComparisonMAC/r (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/missing-operation-marker (0.00s)
+    --- PASS: TestTemplateNativeComparisonMAC/c (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/missing-operation-marker (0.00s)
+=== RUN   TestTemplateNativeComparisonCompiler
+=== RUN   TestTemplateNativeComparisonCompiler/value-use
+=== RUN   TestTemplateNativeComparisonCompiler/inventory-pointer
+=== RUN   TestTemplateNativeComparisonCompiler/wrong-section
+=== RUN   TestTemplateNativeComparisonCompiler/combined
+=== RUN   TestTemplateNativeComparisonCompiler/duplicate
+=== RUN   TestTemplateNativeComparisonCompiler/prune
+=== RUN   TestTemplateNativeComparisonCompiler/delete
+--- PASS: TestTemplateNativeComparisonCompiler (0.01s)
+    --- PASS: TestTemplateNativeComparisonCompiler/value-use (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/inventory-pointer (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/wrong-section (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/combined (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/duplicate (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/prune (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/delete (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.236s

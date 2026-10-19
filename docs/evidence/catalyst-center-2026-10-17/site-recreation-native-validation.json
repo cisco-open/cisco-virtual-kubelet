@@ -1,0 +1,52 @@
+{
+  "scope": "Native generated-area component lifecycle, simulated Kubernetes persistence/restarts; not installed-controller or public retirement routing",
+  "native": {
+    "archivedCohorts": 1,
+    "baselineRestored": true,
+    "deletes": 2,
+    "firstID": "75ba3d36-f6b6-4a49-a062-cd5ce1cadf26",
+    "installed": false,
+    "posts": 2,
+    "publicRetirementRouting": false,
+    "secondID": "07079ab8-6e70-4f29-baaa-91b1b0fade9e"
+  },
+  "qualified_tasks": [
+    "01a14b55-9356-7405-91db-70b8d2ec1636",
+    "01a14b55-bcc3-76cb-ad50-3eb627760c33",
+    "01a14b55-cddc-7ef3-9baf-26dfb56a593d",
+    "01a14b55-f934-777a-b59a-50a45c91fe53"
+  ],
+  "receipts": {
+    "total": 4,
+    "archived": 2,
+    "current": 2,
+    "owners": 1,
+    "active_operation": false
+  },
+  "duration_seconds": 30.74,
+  "go_test_seconds": 32.838,
+  "exit_code": 0,
+  "log_sha256": "b1b5df20bfd3901bfa247c28ca32cbf516ef7217b24043fc4898ffb44a105bfb",
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "c51949805968fe9af7a22ee72703feff45fd87570baae8f54ec338ba40667615",
+    "internal/controlleradapter/catalystcenter/site_recreation_execution.go": "b3e5cfe0efd67eb86e408b6eb5c718cf0cf7dd30ce7d6d8f34cba67f2dbcbd20",
+    "internal/controlleradapter/catalystcenter/site_recreation.go": "b64faf3a4b906731081a3d69f87e9071861ac67e27e9391f8f04d6a0ac5301f2",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "4a1390c8c5ae214059573b3e247281d81c4f85ebd6b2f7b35a135d4a3c59e28b",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch.go": "662ee674d14a66f5c5feaad834ab4d118d0435f0462b84c2b0ae563ac60e2c1b",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery.go": "f55a4655035eef789d1ddef70ffa5020344eaeb096a582ef2c2dbc5b4ea8a074",
+    "internal/controlleradapter/catalystcenter/site_retirement_receipt.go": "f9cc17bdc5198fd1b939136adce65646c850433208a52fd98a315b2d891f2043",
+    "internal/controlleradapter/catalystcenter/site_creation_publication.go": "a25b46022fc8f2681b518cc1777c5e32563b51350ec853e2103279805fa782d2",
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "ae5efdf035b4607942506f8ff233f8dd497d2beb9537392fe042370e169ba898",
+    "internal/controlleradapter/catalystcenter/site_bulk_manifest_live_test.go": "a528503214178d5526f16b53bc94c278493d91be66f301a7f964bf15a2bea70d"
+  },
+  "private_recovery_checkpoint": "/private/tmp/cvk-site-lifecycle-2891056653",
+  "private_projection": "Generated test-only comparison key retained privately; no lab API credential or installed Secret copied to evidence",
+  "remaining": [
+    "public policy/compiler routing",
+    "complete operational/settings consumer protection",
+    "parent/child retirement coordination",
+    "configuration deletion",
+    "building/floor native lifecycle",
+    "installed complete-cycle qualification"
+  ]
+}

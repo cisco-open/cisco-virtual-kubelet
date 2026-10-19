@@ -1,0 +1,4 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider	226.153s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	78.590s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/topologyrollout	4.375s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	12.775s

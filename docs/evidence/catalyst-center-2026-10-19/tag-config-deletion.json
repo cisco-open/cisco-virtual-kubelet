@@ -1,0 +1,154 @@
+{
+  "status": "Qualified within stated static-tag CR-deletion scope; full pinned model remains incomplete",
+  "source": {
+    "files": 1668,
+    "sha256": "b9c821191f56cdb4787a737d6991c7bf9e4845b3924181163bd2e8555a727424",
+    "productionSHA256": "119ed3908c35525cfa2652f2295ea3e98b78f8784d3cf75dcccdc84232d2106f",
+    "matchesFinalNativeGates": true
+  },
+  "native": [
+    {
+      "scope": "inventory",
+      "exitCode": 0,
+      "seconds": 63.467702865600586,
+      "log": "/private/tmp/cvk-tag-finalization-final-native-inventory.log",
+      "sourceSHA256": "b9c821191f56cdb4787a737d6991c7bf9e4845b3924181163bd2e8555a727424",
+      "unchanged": true,
+      "nativeID": "29ea7796-1d1e-439c-87a7-d15d14c6ca70",
+      "configUID": "47400d42-8867-4978-a05a-1c0ec4a069c6",
+      "posts": 1,
+      "puts": 1,
+      "deletes": 1,
+      "originalTasks": [
+        "01a15184-17d1-768f-9241-8f3a5133e5b1",
+        "01a15184-20e8-7d66-bc89-df1f94069c06",
+        "01a15184-3a02-7758-b162-736462e221bb"
+      ],
+      "baselineRestored": true,
+      "sourcePrunePolicy": "Retain",
+      "deletionPolicy": "Delete"
+    },
+    {
+      "scope": "combined",
+      "exitCode": 0,
+      "seconds": 24.72412896156311,
+      "log": "/private/tmp/cvk-tag-finalization-final-native-combined.log",
+      "sourceSHA256": "b9c821191f56cdb4787a737d6991c7bf9e4845b3924181163bd2e8555a727424",
+      "unchanged": true,
+      "nativeID": "653541bb-e0c8-4432-a8b0-cdd42894d513",
+      "configUID": "56c29a83-e088-4471-af41-eeb6ca1cf5db",
+      "posts": 1,
+      "puts": 1,
+      "deletes": 1,
+      "originalTasks": [
+        "01a15184-7a04-7e40-b38d-3bd99e6924b9",
+        "01a15184-8317-7a4c-9549-2987a1cdeee2",
+        "01a15184-9c19-784f-8179-f2df37d76285"
+      ],
+      "baselineRestored": true,
+      "sourcePrunePolicy": "Retain",
+      "deletionPolicy": "Delete"
+    },
+    {
+      "scope": "templates",
+      "exitCode": 0,
+      "seconds": 23.750396966934204,
+      "log": "/private/tmp/cvk-tag-finalization-final-native-templates.log",
+      "sourceSHA256": "b9c821191f56cdb4787a737d6991c7bf9e4845b3924181163bd2e8555a727424",
+      "unchanged": true,
+      "nativeID": "5770d29b-0fcd-43f3-a1d8-7b522e40ee5b",
+      "configUID": "e9d5e381-c234-4e8c-a950-a10157253f2f",
+      "posts": 1,
+      "puts": 1,
+      "deletes": 1,
+      "originalTasks": [
+        "01a15184-d757-741f-9258-8af86812ddd2",
+        "01a15184-e03a-736e-9118-e38a8c6e33d8",
+        "01a15184-f968-7c5f-8de4-d5fa0d06a528"
+      ],
+      "baselineRestored": true,
+      "sourcePrunePolicy": "Retain",
+      "deletionPolicy": "Delete"
+    }
+  ],
+  "scope": "Owned static inventory/templates/combined tags through public CR deletion; isolated API and status-only worker, then registered manager callback plus harness admin metadata patch. No installed actor claim.",
+  "limitations": [
+    "Native ConfigMap/installed actors not qualified.",
+    "No separate native CR-deletion-after-recreation qualification.",
+    "Inventory ConfigMap source lost before any tag receipt cannot establish family custody; finalizer remains held.",
+    "Original accepted operation whose original source is unavailable remains fenced.",
+    "Writable-only legacy receipts require explicit owned Update for complete baseline.",
+    "Owner/section handoff and owned dynamic native lifecycle remain pending.",
+    "Shared256-row/250KiB receipt ceilings and operation deadline remain.",
+    "Full pinned93-row model remains incomplete."
+  ],
+  "historicalRegression": "First broader run found edited/replaced discovery ConfigMap misrouting and was intentionally terminated after >2000 passing events to fix it; exit143 is incomplete, never PASS. Focused corrected real-API and controlled discovery deletion, selection and examples passed.",
+  "gates": {
+    "fixtures": {
+      "result": "PASS",
+      "passingEvents": 3615,
+      "packageSeconds": 546.431,
+      "log": "/private/tmp/cvk-tag-finalization-final-fixtures.log"
+    },
+    "realAPI": {
+      "result": "PASS",
+      "passingEvents": 265,
+      "packageSeconds": 304.482,
+      "log": "/private/tmp/cvk-tag-finalization-final-api.log"
+    },
+    "correctedRoutingAndExamples": {
+      "result": "PASS",
+      "passingEvents": 143,
+      "packageSeconds": 27.902,
+      "log": "/private/tmp/cvk-tag-finalization-routing-fix.log"
+    },
+    "foundation": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-tag-finalization-final-foundation.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "log": "/private/tmp/cvk-tag-finalization-final-build.log"
+    },
+    "swimReloadXFSUTransferFallback": {
+      "result": "PASS",
+      "log": "/private/tmp/cvk-tag-finalization-final-swim.log"
+    },
+    "finalPolicyRevisionExample": {
+      "result": "PASS",
+      "passingEvents": 85,
+      "packageSeconds": 3.275,
+      "log": "/private/tmp/cvk-tag-finalization-final-example.log"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.91,
+      "log": "/private/tmp/cvk-tag-finalization-docs.log"
+    },
+    "scopedFormattingWhitespaceFingerprint": {
+      "result": "PASS"
+    }
+  },
+  "fullModelComplete": false,
+  "ledger": {
+    "uniqueResources": 93,
+    "catalystcenterResources": 91,
+    "terraformExecutionHelpers": 2
+  },
+  "example": {
+    "path": "examples/configs/catalyst-center/tags-owned-deletion-apply.yaml",
+    "sha256": "7d1c60e1589de695cb5d916b7f26f3cc4578e4afff148d78ddf3c8db3d2cf868",
+    "sameObjectAs": "tags-owned-prune-apply.yaml",
+    "policies": {
+      "prunePolicy": "Retain",
+      "deletionPolicy": "Delete"
+    }
+  }
+}

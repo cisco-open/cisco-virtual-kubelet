@@ -1,0 +1,19 @@
+=== RUN   TestLiveWirelessAPCalendar
+    wireless_ap_calendar_live_test.go:42: isolated names CVK_C_0c28c07a9e186b3f CVK_P_db8e2e41553ee403
+    wireless_ap_calendar_live_test.go:177: definition task power-profile:CVK_P_db8e2e41553ee403 Create 01a13de1-d733-727d-8b8d-6083bbf3de19
+    wireless_ap_calendar_live_test.go:186: owned power UUID mdiYq1zl-x1bF-zgi4-ztjL-nde1ntnLztqWm0mWvJflmL8ZudrF
+    wireless_ap_calendar_live_test.go:194: definition task ap-profile:CVK_C_0c28c07a9e186b3f Create 01a13de1-ded4-76de-a0d9-d9795ce5715f
+    wireless_ap_calendar_live_test.go:203: owned AP UUID mdiYq1zl-x0nF-mgmY-ogmW-n2e5zte4nMiZzKmWvJflmL8ZqZrF
+    wireless_ap_calendar_live_test.go:223: qualified calendar DAILY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:211: definition task ap-profile:CVK_C_0c28c07a9e186b3f Update 01a13de1-ea20-7ad3-8604-7dd3e8475ff2
+    wireless_ap_calendar_live_test.go:223: qualified calendar WEEKLY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:211: definition task ap-profile:CVK_C_0c28c07a9e186b3f Update 01a13de1-f3cf-7332-9863-3d60780fc1e9
+    wireless_ap_calendar_live_test.go:223: qualified calendar MONTHLY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:211: definition task ap-profile:CVK_C_0c28c07a9e186b3f Update 01a13de1-fd18-76e1-bc5e-41a7ac912d09
+    wireless_ap_calendar_live_test.go:223: qualified calendar CLEAR same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:244: cleanup task AP mdiYq1zl-x0nF-mgmY-ogmW-n2e5zte4nMiZzKmWvJflmL8ZqZrF 01a13de2-0932-7310-b210-037dc12c4191
+    wireless_ap_calendar_live_test.go:246: cleanup task power mdiYq1zl-x1bF-zgi4-ztjL-nde1ntnLztqWm0mWvJflmL8ZudrF 01a13de2-102b-7aa9-9c51-dde35a1a0ea6
+    wireless_ap_calendar_live_test.go:249: baseline restored; no assignment, provisioning or device action submitted
+--- PASS: TestLiveWirelessAPCalendar (17.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	19.059s

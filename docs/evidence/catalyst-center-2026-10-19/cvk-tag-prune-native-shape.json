@@ -1,0 +1,19 @@
+{
+  "resourceTypes": [
+    "networkdevice",
+    "interface"
+  ],
+  "tagRowsReturned": 1,
+  "detailFields": [
+    "id",
+    "instanceTenantId",
+    "name",
+    "systemTag"
+  ],
+  "detailMatchesListIdentity": true,
+  "counts": {
+    "interface": 0,
+    "networkdevice": 0,
+    "template": 0
+  }
+}

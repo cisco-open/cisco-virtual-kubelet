@@ -1,0 +1,247 @@
+{
+  "scope": "public pure-discovery ConfigMap scope attested before mutation; deletion-only retained-source task/UUID recovery and exact cleanup; no new active intent from retained state",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/config_report.go": "ceb20b69109a6f44efd29c9d743e61850f6b2b13994f17c9974d3fa5b0068357",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "f702f5f83070c8ebc98a583d117cacfc273311c5d1646b3b7e143b6cf2a10ffe",
+    "internal/controlleradapter/catalystcenter/discovery_source_scope.go": "0b52ec49c627fcaa072a27e906b664e13a2b4ddb9d6031852083962169eacac3",
+    "internal/controlleradapter/catalystcenter/discovery_source_scope_test.go": "e1c897a6c9c8eb2f36756e4afe8167153f9d9a028534400cf6c0ca994c3681df",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation.go": "ea8247ebf54094dbc66a53bd094d934f32a3cfaee59fda43e740c742ef02a529",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_completion.go": "b3c5f50844cef13a59526ac0ec737ce888decb5c7a02217df7d05ba3c3b3a0a2",
+    "internal/controlleradapter/catalystcenter/discovery_owned.go": "44149456ee4c09683e130b91665a9e340cfe11e36187860d96444db34d493fe1",
+    "internal/controlleradapter/catalystcenter/discovery_fingerprint.go": "6686e79506af59e69d5fe0c7820f0a1f8f3503286978b00c4461548eaf563e0f",
+    "internal/controlleradapter/catalystcenter/discovery_ownership_binding.go": "983ba00ce298bdb25c8b83f1d5b13eff09b96a324202b71126dcf556ad7268c8",
+    "internal/controlleradapter/catalystcenter/discovery_config_deletion_drain.go": "3beb8682c393e9e7391d85292b45f53ad45504a597739719123c5f8411c18569",
+    "internal/controlleradapter/catalystcenter/discovery_config_deletion_test.go": "e8e40e3aa96f5d15eccd43a263a182b1cb0faa6a143f70ed0b02dfe10838e27b",
+    "internal/controlleradapter/catalystcenter/discovery_config_deletion_live_test.go": "02ad3cd1d512d9678c71daa2541f46635216522496abca85757ee2ca47fa687e",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "f3ae033031ec71149ce16571cbbbf4652d3213b02538fe546ed1ea087f28b802",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go": "6f0f2c16c3bcd42dacd0d130267b7d80870e418b8579813cf8349171dcd693b8",
+    "internal/controlleradapter/catalystcenter/site_bulk.go": "a23f5ce7e915c626430e0751dea257a356e5271f8ef560087c02cf42e2c159a6",
+    "internal/controlleradapter/catalystcenter/report_examples_test.go": "9759d920429d86045ef7c645c3859c0a3f2e1c4bc9353db7748522d609b467fa",
+    ".github/workflows/smoke.yml": "eb21ea09061ed5cbf6813b2e29c70f2d7843e1c4d041719c5fd9a8143c05eeb5",
+    ".github/workflows/tiers.yml": "56d11c02c46b963ede38d3e096e3d4252aa2887b2ac8453f36288d5e92d14fd9",
+    ".github/scripts/test_release_contract.py": "920db97a1af26d06f5b2b17574e3cc259d23c5fae85e2d975822c31c57724cd6"
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-discovery-owned-3952669930",
+    "start": {
+      "conditions": [
+        {
+          "type": "DiscoveryCleanupScope",
+          "status": "True",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T03:05:57Z",
+          "reason": "PureDiscoverySource",
+          "message": "{\"ControllerUID\":\"controller\",\"ConfigUID\":\"config\",\"SpecDigest\":\"275c458f43a67fd7388714d9346b0bd4f52f15418fc45b921aac4074a5a15e02\",\"SourceUID\":\"qualified-discovery-source\",\"SourceVersion\":\"1\",\"ModelDigest\":\"ed8829b9778d02558b33b6269301d51a36a286e2705a36dc25ce5ef453f4a854\",\"ControllerGeneration\":1,\"ConfigGeneration\":2}"
+        },
+        {
+          "type": "AdapterAvailable",
+          "status": "True",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T03:05:57Z",
+          "reason": "AdapterAvailable",
+          "message": "Catalyst Center configuration adapter is available"
+        },
+        {
+          "type": "IntentValid",
+          "status": "False",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T03:06:24Z",
+          "reason": "SourceUnavailable",
+          "message": "Cannot read controller intent source"
+        },
+        {
+          "type": "Ready",
+          "status": "False",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T03:06:24Z",
+          "reason": "SourceUnavailable",
+          "message": "Cannot read controller intent source"
+        }
+      ],
+      "originalTask": {
+        "id": "54e0d03defcdc22043db3159553d05bb",
+        "configName": "sites",
+        "configUID": "config",
+        "configGeneration": 2,
+        "controllerGeneration": 1,
+        "sourceUID": "qualified-discovery-source",
+        "sourceVersion": "1",
+        "section": "inventory",
+        "resource": "discovery-owned:ab01ee79ecf2791b6a022cfc62e5e3a8689141fab9a135d8865bbce90a21974a:1f:bb81d3cb13ca2acde33c06b8755a31b1c36ee4dbf3dc1718fba0506c083d868a",
+        "action": "Create",
+        "phase": "Unknown",
+        "submittedAt": "2026-10-18T03:05:59Z",
+        "taskID": "01a14cf9-27f2-77c3-b75d-4c9854ccf8b7"
+      },
+      "simulatedOutstandingOriginalCreate": true,
+      "sourceRemoved": true,
+      "sourceUID": "qualified-discovery-source",
+      "sourceVersion": "1"
+    },
+    "cleanup": {
+      "deleteTaskId": "01a14cf9-9d91-7abe-b18a-5b82b0859ad9",
+      "deleted": true,
+      "id": "198",
+      "injectedKnownTaskRecovery": true,
+      "installedClusterMutated": false,
+      "managerEnrolled": true,
+      "managerReleased": true,
+      "publicLifecycle": true
+    },
+    "completion": {
+      "cleaned": true,
+      "deletes": 1,
+      "installedClusterMutated": false,
+      "inventoryIdentityPreserved": true,
+      "managerEnrolled": true,
+      "managerReleased": true,
+      "posts": 1,
+      "publicLifecycle": true
+    },
+    "release": {
+      "configUID": "config",
+      "finalizers": [
+        "test.cisco.vk/public-qualification"
+      ],
+      "managerReleased": true,
+      "ownerRetained": true,
+      "receiptRetained": true
+    },
+    "journal": {
+      "actionApplications": [
+        {
+          "section": "inventory",
+          "resource": "discovery-record:ab01ee79ecf2791b6a022cfc62e5e3a8689141fab9a135d8865bbce90a21974a:198",
+          "operation": {
+            "id": "f43454161fe57624edd1f3fa4e8db50e",
+            "configName": "sites",
+            "configUID": "config",
+            "configGeneration": 2,
+            "controllerGeneration": 1,
+            "sourceUID": "qualified-discovery-source",
+            "sourceVersion": "1",
+            "section": "inventory",
+            "resource": "discovery-finalize:v1:6aa994c6a1a8b6b80bd499bad11060004cd84dfb0380e9a032d461081fc160aa:275c458f43a67fd7388714d9346b0bd4f52f15418fc45b921aac4074a5a15e02:c8d1c3973b4b7ddbcb20f8631d8b85748bc47f53188efc5d25092bd8bd7519f4:discovery-owned:ab01ee79ecf2791b6a022cfc62e5e3a8689141fab9a135d8865bbce90a21974a:1f:bb81d3cb13ca2acde33c06b8755a31b1c36ee4dbf3dc1718fba0506c083d868a:prune",
+            "targetID": "198",
+            "action": "Delete",
+            "phase": "Verified",
+            "submittedAt": "2026-10-18T03:06:29Z",
+            "taskID": "01a14cf9-9d91-7abe-b18a-5b82b0859ad9"
+          },
+          "verifiedAt": "2026-10-18T03:06:31Z"
+        }
+      ],
+      "owners": [
+        {
+          "section": "inventory",
+          "configName": "sites",
+          "configUID": "config"
+        }
+      ]
+    },
+    "scope": "ConfigMap removal and reconstruction of the original real create as Unknown are simulated in a separate API; original native tasks/catalogue and final delete are real. Sourceless drain/cleanup use public worker/manager entry points. Not installed process or natural-fault qualification.",
+    "qualifiedCoreInitialBoundary": {
+      "config_report.go": "fcbd60246e5c23b3948d35ccf91e1347b9735a30e8575a8d2e7e4b6073982353",
+      "config_journal.go": "8a1e98c2d36c793884588d21db926c6bf52df1ac72ab76b60021415d075823a8",
+      "discovery_source_scope.go": "2fd37b117902abf8c3ea96c5437939f80739d748c38d4a711a1ec8bcf97a8b63",
+      "discovery_owned.go": "44149456ee4c09683e130b91665a9e340cfe11e36187860d96444db34d493fe1",
+      "discovery_fingerprint.go": "6686e79506af59e69d5fe0c7820f0a1f8f3503286978b00c4461548eaf563e0f",
+      "discovery_ownership_binding.go": "983ba00ce298bdb25c8b83f1d5b13eff09b96a324202b71126dcf556ad7268c8",
+      "discovery_config_cleanup_completion.go": "b3c5f50844cef13a59526ac0ec737ce888decb5c7a02217df7d05ba3c3b3a0a2",
+      "discovery_config_cleanup_observation.go": "ea8247ebf54094dbc66a53bd094d934f32a3cfaee59fda43e740c742ef02a529",
+      "discovery_config_deletion_drain.go": "3beb8682c393e9e7391d85292b45f53ad45504a597739719123c5f8411c18569"
+    }
+  },
+  "gates": {
+    "initialPublicCases": "passed 7.543s; 23 scenarios",
+    "initialAPI": "passed 22.850s; 23 public cases",
+    "finalAPI": "passed 29.711s; 23 public cases plus source-scope publication/journal race",
+    "finalDiscoveryRegression": "passed 32.597s; all discovery/shared-journal/existing feature-finalizer selected tests",
+    "ND": "passed 4.433s full package",
+    "softwareUpgrade": "passed 14.564s full package",
+    "directGNOI": "passed 5.908s full package",
+    "SWIM": "passed 4.570s all 47 non-live functions",
+    "native": "passed 40.594s; job198, one create and one delete, finalizer released, inventory preserved",
+    "suiteRepairs": "passed 4.183s; Apply example compiler and all SiteBulk tests",
+    "workflowContract": "16 tests passed in 0.336s after updating the root-command ordering assertion",
+    "actionlint": "passed with pinned github.com/rhysd/actionlint v1.7.12"
+  },
+  "initialNativeBuildFailure": "Shared verifier extraction briefly had mismatched variable names. Build failed before lab mutation; corrected. The live fixture also handles the new pre-mutation status-only phase.",
+  "publicationRaceGuard": "Re-read unchanged idle controller after parsing source and bind its resourceVersion into the ordinary publication snapshot; refuse scope overwrite when a journal appears.",
+  "bulkRepair": {
+    "problem": "Site bulk create omitted action=Create before the common mutation validator; no batch request was sent.",
+    "fix": "Populate Create without weakening common mutation validation, guard or one-use closure.",
+    "qualification": "controlled only; no live bulk-site creation performed."
+  },
+  "exampleRepairs": "Exercise eligibility/enrollment before Delete-policy compilation, bind owned feature prune, and project comparison-key bytes through the dedicated private comparison compiler.",
+  "remaining": [
+    "unattested legacy/missing source recovery",
+    "scope/spec/controller changes without supported generation bridge",
+    "ownership retirement/handoff",
+    "installed manager/worker qualification",
+    "full-suite post-repair/current-source rerun and CI cumulative runtime budget",
+    "wider full 93-resource model parity"
+  ],
+  "baselineFullSuite": {
+    "sessionId": 1998,
+    "path": "/private/tmp/cvk-discovery-public-adapter-final.jsonl",
+    "sourceBoundary": "public-lifecycle stage before retained-source changes and suite repairs",
+    "state": "terminal failure",
+    "latestTime": "2026-10-18T05:14:24.597977+02:00",
+    "latestTest": null,
+    "failureEvents": [
+      "TestApplyExamplesCompile/discovery-delete-apply.yaml",
+      "TestApplyExamplesCompile/wireless-feature-prune-apply.yaml",
+      "TestApplyExamplesCompile/wireless-tag-baselines-apply.yaml",
+      "TestApplyExamplesCompile/wireless-tag-membership-apply.yaml",
+      "TestApplyExamplesCompile/wireless-tag-prune-apply.yaml",
+      "TestApplyExamplesCompile",
+      "TestSiteBulkManifestRestartAndUncertainFencing/complete",
+      "TestSiteBulkManifestRestartAndUncertainFencing/partial",
+      "TestSiteBulkManifestRestartAndUncertainFencing/task-failed",
+      "TestSiteBulkManifestRestartAndUncertainFencing/lost-receipt",
+      "TestSiteBulkManifestRestartAndUncertainFencing/source-changed",
+      "TestSiteBulkManifestRestartAndUncertainFencing",
+      "TestSiteBulkGuardSubmissionAndReplay/accepted",
+      "TestSiteBulkGuardSubmissionAndReplay/ambiguous",
+      "TestSiteBulkGuardSubmissionAndReplay",
+      "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+    ],
+    "terminal": {
+      "Time": "2026-10-18T05:14:24.597977+02:00",
+      "Action": "fail",
+      "Package": "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter",
+      "Elapsed": 1678.746
+    },
+    "knownRepairFamilies": [
+      "TestApplyExamplesCompile",
+      "TestSiteBulkManifestRestartAndUncertainFencing",
+      "TestSiteBulkGuardSubmissionAndReplay"
+    ],
+    "elapsedSeconds": 1678.746,
+    "passEvents": 13536,
+    "qualification": "public-stage source boundary; only example compiler and site-bulk families failed; repaired targeted gate passes; not a current-tree full pass"
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-discovery-retained-source-final",
+    "sha256": "68418faf604bcccd39f3687aab472d2b8688a10dfcaa7657e469ab6c6a23da3c",
+    "installed": false
+  },
+  "currentFullSuite": {
+    "state": "passed-pre-handoff",
+    "boundary": "Includes retained-source and site-bulk/example repairs; precedes subsequent discovery ownership handoff additions",
+    "command": "go test -race -json ./internal/controlleradapter/catalystcenter -count=1 -timeout=40m",
+    "elapsedSeconds": 1676.277,
+    "passedTestEvents": 13561,
+    "failEvents": 0,
+    "terminalEvidence": "discovery-pre-handoff-full-suite.json",
+    "rawLog": "/private/tmp/cvk-retained-source-full-final.jsonl"
+  },
+  "ciBudget": {
+    "rootGoPackageDeadline": "40m",
+    "smokeJobMinutes": 75,
+    "nestedTerraformJob": "unchanged 15m and original test command",
+    "basis": "Complete public-stage adapter race audit took 1678.746 seconds; default Go 10m and old 45m all-check smoke budget were insufficient for the measured package plus remaining checks.",
+    "validation": "16 release-contract tests passed; repository-pinned actionlint passed for modified workflows; hosted CI execution not yet qualified"
+  }
+}

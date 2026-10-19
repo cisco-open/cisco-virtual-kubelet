@@ -1,0 +1,32 @@
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-accepted-child-failed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-accepted-child-pending
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-unknown
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-partial
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-option-removed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-failed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-pending
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-tree-unavailable
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-source-changed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-parent-replaced
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-taskless
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-binding-changed
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-existing-replaced
+=== RUN   TestEnvtestAnycastBulkAcknowledgedRecovery/public-legacy-known
+--- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery (33.94s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-accepted-child-failed (4.07s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-accepted-child-pending (1.83s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-unknown (3.21s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-partial (3.04s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-option-removed (2.15s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-failed (1.97s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-child-pending (1.95s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-tree-unavailable (2.03s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-source-changed (1.33s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-parent-replaced (1.42s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-taskless (1.33s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-binding-changed (1.75s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-existing-replaced (1.72s)
+    --- PASS: TestEnvtestAnycastBulkAcknowledgedRecovery/public-legacy-known (2.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	34.977s

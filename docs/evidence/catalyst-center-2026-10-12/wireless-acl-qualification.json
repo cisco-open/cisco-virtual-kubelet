@@ -1,0 +1,23 @@
+{
+  "result": "PASS_WITH_EXPLICIT_PORT_OVERRIDE",
+  "scope": "Native isolated IPv4/TCP pre-auth ACL definition; no SSID or device deployment",
+  "fixture": "CVK_12204612",
+  "targetID": "mdeYq1zl-xZeY-mJa0-nJeY-qZbwmuSYxZmXndi1mJyWnZq4nJKX",
+  "createTask": "01a131de-d47f-7cdd-be9d-5ecbdfab952e",
+  "updateTask": "01a131de-d990-785b-810c-f8517683b6bf",
+  "deleteTask": "01a131de-de71-7690-b146-f9d114505a9e",
+  "sourcePorts": "1-65535",
+  "destinationPortChange": [
+    "443",
+    "8443"
+  ],
+  "uuidPreserved": true,
+  "noOpVerified": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "limits": [
+    "IPv6, URL set/clear and automatic-rule behavior not live-qualified",
+    "Manifest restart covered by fixture tests, not deployed worker",
+    "Pinned default 0-65535 rejected by appliance with NCND13014; first fixture absent, diagnostic repeat confirmed rejection"
+  ]
+}

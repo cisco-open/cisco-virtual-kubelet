@@ -1,0 +1,13 @@
+=== RUN   TestLiveWirelessFabricProfileExecution
+    wireless_profile_execution_live_test.go:116: isolated names CVK_N_ee1843f88e650b09 CVK_S_2e3091ba0445545a
+    wireless_profile_execution_live_test.go:262: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_2e3091ba0445545a Create 01a13eab-580a-7cfe-852f-384dbca4a747
+    wireless_profile_execution_live_test.go:271: owned SSID CVK_S_2e3091ba0445545a mdiYq1zl-x1nF-mMuZ-mdKX-yMeWndq1ntq1yumWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:339: task wireless/wireless-profile:CVK_N_ee1843f88e650b09:e7d35380ebbf066712d47d6e5a0184993a816f50f2a8e8ce3958d96c09158b19 Create 01a13eab-6205-734a-935b-8602ee3fbbeb
+    wireless_profile_execution_live_test.go:348: owned profile CVK_N_ee1843f88e650b09 88c3a873-3182-4d2d-9389-7ebe71f3af31
+    wireless_profile_execution_live_test.go:365: task wireless/wireless-profile:CVK_N_ee1843f88e650b09:e7d35380ebbf066712d47d6e5a0184993a816f50f2a8e8ce3958d96c09158b19 Update 01a13eab-7305-7d86-bdb8-b83552faca8e
+    wireless_profile_execution_live_test.go:558: cleanup 88c3a873-3182-4d2d-9389-7ebe71f3af31 01a13eab-7da3-7744-8325-35aef82efcab
+    wireless_profile_execution_live_test.go:564: cleanup mdiYq1zl-x1nF-mMuZ-mdKX-yMeWndq1ntq1yumWvJflmL8ZuZrF 01a13eab-8324-71ff-8245-f06d50cc58f1
+    wireless_profile_execution_live_test.go:574: baselines restored; no device assignment, provisioning or device operation submitted
+--- PASS: TestLiveWirelessFabricProfileExecution (13.52s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.626s

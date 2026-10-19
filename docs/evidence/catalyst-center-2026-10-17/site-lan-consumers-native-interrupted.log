@@ -1,0 +1,16 @@
+=== RUN   TestLiveCatalystCenterSiteRetirementRecreation
+    site_recreation_live_test.go:144: private generated-site recovery checkpoint: /private/tmp/cvk-site-lifecycle-2462464766
+    site_recreation_live_test.go:260: singular manifest create task 01a14b81-a504-742b-a336-491e591eb19b
+    site_recreation_live_test.go:260: singular manifest create task 01a14b81-ae14-7d2d-8a50-c8c8901db519
+    site_recreation_live_test.go:274: original area creator verified c415ef7c-2b24-4f93-a233-f3ba8a857e86 01a14b81-a504-742b-a336-491e591eb19b
+    site_recreation_live_test.go:304: retirement acknowledged; restarting observation of original task 01a14b81-f1cd-7da6-9008-2b8d7505e3f9
+    site_recreation_live_test.go:323: original retirement task and absence atomically verified 01a14b81-f1cd-7da6-9008-2b8d7505e3f9
+    site_recreation_live_test.go:304: retirement acknowledged; restarting observation of original task 01a14b82-3506-7247-bf97-769aa84f6ad2
+    site_recreation_live_test.go:323: original retirement task and absence atomically verified 01a14b82-3506-7247-bf97-769aa84f6ad2
+    site_recreation_live_test.go:370: recreation acknowledged; restarting observation of original task 01a14b82-437a-74ae-ba9c-282e717ca37d
+    site_recreation_live_test.go:370: recreation acknowledged; restarting observation of original task 01a14b82-51c8-7886-a0a9-ad2c780a9a1c
+    site_recreation_live_test.go:379: native recreation recovery refused; retain original task controller configuration input has changed
+--- FAIL: TestLiveCatalystCenterSiteRetirementRecreation (46.66s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	47.849s
+FAIL

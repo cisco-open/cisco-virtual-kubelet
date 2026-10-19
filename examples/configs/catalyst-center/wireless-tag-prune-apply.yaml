@@ -1,0 +1,42 @@
+# Revise the EXISTING owner/key after private tag baselines and association
+# application receipts exist. Omitting owned tags under Delete prunes their exact
+# UUIDs, then unassigns unused parent sites. Imports/legacy matches are retained.
+# A tag declared with sites: [] has the same pinned-module resource-omission
+# semantics; CVK deletes the resource rather than PUTting empty membership.
+# Parent profile and SSID definitions are retained. Consumer/unknown/custody
+# changes, taskless outcomes, reappearance and implicit recreation remain fenced.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-tag-baselines
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [network_profiles]
+  scope: global
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: network_profiles
+      path: /network_profiles
+      source: comparison
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-tag-prune-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_profiles:
+          wireless:
+            - name: CVK-Lab-Wireless
+              ssid_details:
+                - name: CVK-Lab-Disabled
+                  wlan_profile_name: CVK-Lab-WLAN
+              sites: []
+              site_tags: []
+              policy_tags: []

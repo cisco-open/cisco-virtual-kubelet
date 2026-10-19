@@ -1,0 +1,9 @@
+=== RUN   TestLiveWirelessSSIDManifestRetainedRetirement
+    wireless_ssid_manifest_live_test.go:172: isolated disabled SSID and private recovery directory CVK_PSK_1389ce7762319d8f /private/tmp/cvk-ssid-manifest-2057989226
+    wireless_ssid_manifest_live_test.go:556: disabled credential SSID created and accepted-task restart verified CVK_PSK_1389ce7762319d8f mdi0q1zl-x1bt-s18X-mZG5-y2u3nZyYmZe5zdHMqZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:567: multi-PSK priority reorder converged without native mutation
+    wireless_ssid_manifest_live_test.go:588: same-UUID credential rotation and stale-projection refusal verified mdi0q1zl-x1bt-s18X-mZG5-y2u3nZyYmZe5zdHMqZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:610: single-key retirement retained for exact task-bound cleanup qualification mdi0q1zl-x1bt-s18X-mZG5-y2u3nZyYmZe5zdHMqZbwmuSYxZnq /private/tmp/cvk-ssid-manifest-2057989226
+--- PASS: TestLiveWirelessSSIDManifestRetainedRetirement (19.11s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.208s

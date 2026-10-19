@@ -1,0 +1,30 @@
+# Apply this after tags-owned-prune-apply.yaml, preserving the same config UID.
+# Empty selections request owned tag pruning; unknown/edited/used tags remain fenced.
+# Reapply the declaration after verified pruning to start a fresh owned lifecycle.
+# CR-driven deletion remains unqualified; these examples retain state on CR deletion.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-owned-tags
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory, templates]
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-owned-tags-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          tags: []
+        templates:
+          tags: []

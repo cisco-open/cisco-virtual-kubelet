@@ -1,0 +1,69 @@
+
+[31m │  ⚠  Warning from the Material for MkDocs team[0m
+[31m │[0m
+[31m │[0m  MkDocs 2.0, the underlying framework of Material for MkDocs,
+[31m │[0m  will introduce backward-incompatible changes, including:
+[31m │[0m
+[31m │  × [0mAll plugins will stop working – the plugin system has been removed
+[31m │  × [0mAll theme overrides will break – the theming system has been rewritten
+[31m │  × [0mNo migration path exists – existing projects cannot be upgraded
+[31m │  × [0mClosed contribution model – community members can't report bugs
+[31m │  × [0mCurrently unlicensed – unsuitable for production use
+[31m │[0m
+[31m │[0m  Our full analysis:
+[31m │[0m
+[31m │[0m  [4mhttps://squidfunk.github.io/mkdocs-material/blog/2026/02/18/mkdocs-2.0/[0m
+[0m
+INFO    -  Cleaning site directory
+INFO    -  Building documentation to directory: /tmp/cvk-merge-docs-site
+INFO    -  The following pages exist in the docs directory, but are not included in the "nav" configuration:
+  - controllers/catalyst-center-remediation.md
+  - controllers/catalyst-center.md
+  - controllers/nexus-dashboard.md
+  - evidence/catalyst-center-2026-10-08/README.md
+  - evidence/catalyst-center-2026-10-08/preflight.md
+  - evidence/catalyst-center-2026-10-08/automatic-remediation/README.md
+  - evidence/catalyst-center-2026-10-09/README.md
+  - evidence/catalyst-center-2026-10-09/merge-cycle/README.md
+  - evidence/catalyst-center-2026-10-09/merge-readiness/README.md
+  - evidence/catalyst-center-2026-10-09/standard-reload/README.md
+  - evidence/topology-2026-10-01/README.md
+  - evidence/topology-2026-10-01/11ae6704-noreboot-boundary.md
+  - evidence/topology-2026-10-01/9e578131-observation-validation.md
+  - evidence/topology-2026-10-01/c0-103-activation-outcome-audit.md
+  - evidence/topology-2026-10-01/c2-manager-accepted-network-evidence.md
+  - evidence/topology-2026-10-01/c2-rate-provenance-followup.md
+  - evidence/topology-2026-10-01/c3-administrator-disruption-protections.md
+  - evidence/topology-2026-10-01/c3-claim-time-network-authority.md
+  - evidence/topology-2026-10-01/c3-continuous-network-recovery-soak.md
+  - evidence/topology-2026-10-01/c3-overlapping-risk-groups.md
+  - evidence/topology-2026-10-01/verification.md
+  - evidence/topology-2026-10-01/c3-physical-pacing/README.md
+  - evidence/topology-2026-10-01/e10-graph/README.md
+  - evidence/topology-2026-10-01/fix1-serial-downgrade/report.md
+  - evidence/topology-2026-10-01/fix1-serial-upgrade/report.md
+  - evidence/topology-2026-10-01/settled2-live-upgrade-clean/report.md
+  - evidence/topology-2026-10-01/settled4-live-downgrade/report.md
+  - evidence/topology-2026-10-01/settled5-lab101-downgrade/report.md
+  - evidence/topology-2026-10-02/README.md
+  - evidence/topology-2026-10-02/e06-separate-activation.md
+  - evidence/topology-2026-10-02/e08-native-tas-served-guard.md
+  - evidence/topology-2026-10-02/e09-transfer-measurement-and-cache-decision.md
+  - evidence/topology-2026-10-02/e10-isolated-link-change.md
+  - evidence/topology-2026-10-02/e12-synthetic-scale-and-handoff.md
+  - evidence/topology-2026-10-02/e13-final-candidate-physical-matrix.md
+  - evidence/topology-2026-10-02/merge-readiness-followup.md
+  - evidence/topology-2026-10-02/migration-and-diagnostic-followup.md
+  - evidence/topology-2026-10-02/preparation-recovery-followup.md
+  - evidence/topology-2026-10-05/README.md
+  - evidence/topology-2026-10-05/bed27185-physical-validation.md
+  - evidence/topology-2026-10-05/fleet-read-budget.md
+  - evidence/topology-2026-10-05/live-migration-and-recovery.md
+  - evidence/topology-2026-10-05/migration-startup-matrix.md
+  - evidence/topology-2026-10-05/planning-read-budget.md
+  - evidence/topology-2026-10-05/public-ca-and-policy-migration.md
+  - evidence/topology-2026-10-05/receipt-bound-retirement.md
+  - evidence/topology-2026-10-05/settled-drain-retirement.md
+INFO    -  Removed unused non-English lunr language assets
+INFO    -  Vendored exact Mermaid and ResizeObserver runtime assets
+INFO    -  Documentation built in 3.67 seconds

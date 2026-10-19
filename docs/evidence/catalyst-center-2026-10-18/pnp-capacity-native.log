@@ -1,0 +1,22 @@
+=== RUN   TestLivePnPRegistrationPublicExecution
+    pnp_registration_stage_live_test.go:93: private registration recovery directory /private/tmp/cvk-pnp-registration-3512047737
+    pnp_registration_stage_live_test.go:93: owned native registration 6ad416770bc0186771caf129 CVKDC4F0A50
+    pnp_registration_stage_live_test.go:93: public reconciler qualification true
+    pnp_registration_stage_live_test.go:93: registration, serialized journal stages, owned no-op and exact UUID cleanup verified; no claim/reset/device action submitted
+--- PASS: TestLivePnPRegistrationPublicExecution (6.92s)
+=== RUN   TestLivePnPRegistrationCapacityAdmission
+=== RUN   TestLivePnPRegistrationCapacityAdmission/capacity-count
+    pnp_registration_stage_live_test.go:122: private registration recovery directory /private/tmp/cvk-pnp-registration-305834995
+    pnp_registration_stage_live_test.go:122: native capacity gate preserved all synthetic receipts, original native baselines and zero POST/DELETE counts capacity-count
+=== RUN   TestLivePnPRegistrationCapacityAdmission/capacity-bytes
+    pnp_registration_stage_live_test.go:122: private registration recovery directory /private/tmp/cvk-pnp-registration-2494030214
+    pnp_registration_stage_live_test.go:122: native capacity gate preserved all synthetic receipts, original native baselines and zero POST/DELETE counts capacity-bytes
+=== RUN   TestLivePnPRegistrationCapacityAdmission/capacity-cohort
+    pnp_registration_stage_live_test.go:122: private registration recovery directory /private/tmp/cvk-pnp-registration-2088090353
+    pnp_registration_stage_live_test.go:122: native capacity gate preserved all synthetic receipts, original native baselines and zero POST/DELETE counts capacity-cohort
+--- PASS: TestLivePnPRegistrationCapacityAdmission (5.58s)
+    --- PASS: TestLivePnPRegistrationCapacityAdmission/capacity-count (1.84s)
+    --- PASS: TestLivePnPRegistrationCapacityAdmission/capacity-bytes (1.87s)
+    --- PASS: TestLivePnPRegistrationCapacityAdmission/capacity-cohort (1.88s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.705s

@@ -1,0 +1,14 @@
+{
+  "sourceSHA256": "5d36bf0dfde744b2b1e5894f6f736213134f628629a50abf4be784086b357ce2",
+  "boundary": "Discovery ownership handoff; includes retirement history/import preservation; predates optional-null parser changes",
+  "command": "go test -race -json ./internal/controlleradapter/catalystcenter -count=1 -timeout=40m",
+  "passedTestEvents": 13593,
+  "failEvents": 0,
+  "terminal": {
+    "Time": "2026-10-18T06:30:52.527548+02:00",
+    "Action": "pass",
+    "Package": "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter",
+    "Elapsed": 1688.248
+  },
+  "rawLog": "/private/tmp/cvk-discovery-handoff-full-final.jsonl"
+}

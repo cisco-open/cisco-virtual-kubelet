@@ -16,6 +16,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -267,6 +268,9 @@ func (r *ConfigReconciler) relinquishOwnedKeys(ctx context.Context, cr *configv1
 			}
 		}
 		return fmt.Errorf("relinquish reconcile failed: phase=%s", out.Phase)
+	}
+	if out.Phase != engine.PhaseInSync {
+		return errors.Join(fmt.Errorf("relinquish did not complete: phase=%s", out.Phase), out.Err)
 	}
 	if len(leaseBlocked) > 0 {
 		return fmt.Errorf("relinquish: %d/%d managed families relinquished; "+

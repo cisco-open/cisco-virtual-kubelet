@@ -1,0 +1,120 @@
+=== RUN   TestNetworkCredentialDependencyPreflight
+=== RUN   TestNetworkCredentialDependencyPreflight/declared-pending
+=== RUN   TestNetworkCredentialDependencyPreflight/undeclared-pending
+=== RUN   TestNetworkCredentialDependencyPreflight/missing-site
+=== RUN   TestNetworkCredentialDependencyPreflight/incomplete-site-read
+--- PASS: TestNetworkCredentialDependencyPreflight (0.05s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/declared-pending (0.02s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/undeclared-pending (0.01s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/missing-site (0.01s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/incomplete-site-read (0.01s)
+=== RUN   TestNetworkCredentialProjectionPreservesUnsupportedIntent
+--- PASS: TestNetworkCredentialProjectionPreservesUnsupportedIntent (0.00s)
+=== RUN   TestSiteCredentialParsing
+--- PASS: TestSiteCredentialParsing (0.00s)
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate/global=false
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate/global=true
+--- PASS: TestSiteCredentialManifestRestartAndRemovalGate (1.10s)
+    --- PASS: TestSiteCredentialManifestRestartAndRemovalGate/global=false (0.85s)
+    --- PASS: TestSiteCredentialManifestRestartAndRemovalGate/global=true (0.25s)
+=== RUN   TestSiteCredentialReadAndDependencyFailures
+=== RUN   TestSiteCredentialReadAndDependencyFailures/partial
+=== RUN   TestSiteCredentialReadAndDependencyFailures/disabled
+=== RUN   TestSiteCredentialReadAndDependencyFailures/inherited
+=== RUN   TestSiteCredentialReadAndDependencyFailures/wrong-type
+=== RUN   TestSiteCredentialReadAndDependencyFailures/replacement
+=== RUN   TestSiteCredentialReadAndDependencyFailures/missing-credential
+--- PASS: TestSiteCredentialReadAndDependencyFailures (0.06s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/partial (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/disabled (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/inherited (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/wrong-type (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/replacement (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/missing-credential (0.01s)
+=== RUN   TestSiteCredentialReportProjectionAndPreflight
+--- PASS: TestSiteCredentialReportProjectionAndPreflight (0.01s)
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/match
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind
+--- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/match (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6 (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind (0.00s)
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/inherited
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/nearest
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/per-kind
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/undefined
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/bad-profile
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/bad-geometry
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/missing-context
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/unknown-section
+=== RUN   TestWiredBulkNetworkContextUsesPinnedModel/credential-profile
+--- PASS: TestWiredBulkNetworkContextUsesPinnedModel (0.03s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/inherited (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/nearest (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/per-kind (0.01s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/undefined (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/bad-profile (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/bad-geometry (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/missing-context (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/unknown-section (0.00s)
+    --- PASS: TestWiredBulkNetworkContextUsesPinnedModel/credential-profile (0.00s)
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/matching
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-before-prepare
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-prepare
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-dispatch
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-acceptance
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-source
+=== RUN   TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-device-proof
+--- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery (1.47s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/matching (0.30s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-before-prepare (0.05s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-prepare (0.13s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-dispatch (0.20s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-after-acceptance (0.28s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-source (0.14s)
+    --- PASS: TestWiredBulkNetworkContextFencesPreparationAndRecovery/changed-during-device-proof (0.38s)
+=== RUN   TestWiredBulkNetworkQueriesUseExistingWorkerPolicy
+--- PASS: TestWiredBulkNetworkQueriesUseExistingWorkerPolicy (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.032s

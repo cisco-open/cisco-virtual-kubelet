@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "scope": "Native isolated 2.4 GHz CleanAir feature definition; no device deployment",
+  "fixture": "CVK_12210630",
+  "targetID": "fbafbf36-6e35-4fd3-9463-50ad484762e8",
+  "createTask": "01a131f1-6931-7c3c-b188-4f2036fa20b5",
+  "updateTask": "01a131f1-6e90-78e6-af7e-2e89536ddf5c",
+  "deleteTask": "01a131f1-734d-752b-a504-fea999ddaccf",
+  "update": "cleanAir false to true",
+  "uuidPreserved": true,
+  "noOpVerified": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "limits": [
+    "Other bands and individual interferer changes not live-qualified",
+    "Description/interferer preservation and combined preflight fixture-tested",
+    "Band changes require explicit replacement",
+    "Worker and radio behavior unqualified"
+  ]
+}

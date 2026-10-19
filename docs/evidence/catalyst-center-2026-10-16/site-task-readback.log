@@ -1,0 +1,14 @@
+=== RUN   TestSiteSingularPublicTaskRecovery
+=== RUN   TestSiteSingularPublicTaskRecovery/area-create/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/building-create/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-create/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/building-update/recover-readback
+=== RUN   TestSiteSingularPublicTaskRecovery/floor-update/recover-readback
+--- PASS: TestSiteSingularPublicTaskRecovery (1.93s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/area-create/recover-readback (0.86s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-create/recover-readback (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-create/recover-readback (0.27s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/building-update/recover-readback (0.26s)
+    --- PASS: TestSiteSingularPublicTaskRecovery/floor-update/recover-readback (0.28s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.288s

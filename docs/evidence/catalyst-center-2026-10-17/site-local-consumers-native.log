@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterSiteRetirementRecreation
+    site_recreation_live_test.go:144: private generated-site recovery checkpoint: /private/tmp/cvk-site-lifecycle-1406516110
+    site_recreation_live_test.go:260: singular manifest create task 01a14b75-499d-73fa-840d-e9ee1de59efb
+    site_recreation_live_test.go:260: singular manifest create task 01a14b75-52a5-7ccb-a690-53ef171db866
+    site_recreation_live_test.go:274: original area creator verified 4897fb58-a491-428f-af4e-41cb4a08a8cc 01a14b75-499d-73fa-840d-e9ee1de59efb
+    site_recreation_live_test.go:304: retirement acknowledged; restarting observation of original task 01a14b75-9524-7edd-a43f-b5182d5700e7
+    site_recreation_live_test.go:323: original retirement task and absence atomically verified 01a14b75-9524-7edd-a43f-b5182d5700e7
+    site_recreation_live_test.go:304: retirement acknowledged; restarting observation of original task 01a14b75-d26b-7c13-bc2a-3ca19b705723
+    site_recreation_live_test.go:323: original retirement task and absence atomically verified 01a14b75-d26b-7c13-bc2a-3ca19b705723
+    site_recreation_live_test.go:370: recreation acknowledged; restarting observation of original task 01a14b75-e1e9-7e5d-b32a-525b15a818ee
+    site_recreation_live_test.go:370: recreation acknowledged; restarting observation of original task 01a14b75-ef8b-7e4a-82bf-4804bf53d125
+    site_recreation_live_test.go:304: retirement acknowledged; restarting observation of original task 01a14b76-32d0-7dcb-8f43-59d25ebe09a2
+    site_recreation_live_test.go:323: original retirement task and absence atomically verified 01a14b76-32d0-7dcb-8f43-59d25ebe09a2
+    site_recreation_live_test.go:304: retirement acknowledged; restarting observation of original task 01a14b76-7013-7860-a878-2084897314be
+    site_recreation_live_test.go:323: original retirement task and absence atomically verified 01a14b76-7013-7860-a878-2084897314be
+    site_recreation_live_test.go:345: native generated-area lifecycle passed: 4 Creates, 4 Deletes; original tasks, retained history and typed baseline verified; parent/child=true; simulated Kubernetes journal
+--- PASS: TestLiveCatalystCenterSiteRetirementRecreation (80.20s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	82.448s

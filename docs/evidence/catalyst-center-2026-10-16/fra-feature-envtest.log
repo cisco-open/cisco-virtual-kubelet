@@ -1,0 +1,18 @@
+=== RUN   TestEnvtestWirelessCleanAirBandUpdates
+--- PASS: TestEnvtestWirelessCleanAirBandUpdates (8.00s)
+=== RUN   TestEnvtestWirelessCleanAirRecovery
+=== RUN   TestEnvtestWirelessCleanAirRecovery/known
+=== RUN   TestEnvtestWirelessCleanAirRecovery/missing-task
+=== RUN   TestEnvtestWirelessCleanAirRecovery/create
+=== RUN   TestEnvtestWirelessCleanAirRecovery/source
+=== RUN   TestEnvtestWirelessCleanAirRecovery/foreign-owner
+--- PASS: TestEnvtestWirelessCleanAirRecovery (8.34s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/known (3.42s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/missing-task (0.34s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/create (0.19s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/source (0.34s)
+    --- PASS: TestEnvtestWirelessCleanAirRecovery/foreign-owner (0.35s)
+=== RUN   TestEnvtestWirelessFRAFieldTransitions
+--- PASS: TestEnvtestWirelessFRAFieldTransitions (7.62s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	25.886s

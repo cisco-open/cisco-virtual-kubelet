@@ -1,0 +1,15 @@
+{
+  "catalyst_center": {
+    "inventory": {
+      "devices": [
+        {
+          "name": "cvk-q-registration-54332ea8",
+          "state": "PNP",
+          "serial_number": "CVK54332EA8",
+          "site": "Global/CVK-Q-20261015-120826-000000000",
+          "pid": "C9300-48P"
+        }
+      ]
+    }
+  }
+}

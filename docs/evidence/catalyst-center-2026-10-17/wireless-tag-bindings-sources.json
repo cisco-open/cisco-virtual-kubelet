@@ -1,0 +1,56 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "scope": "V4 network-profile private tag proofs implemented; 140 local and 140 actual temporary Kubernetes API cases qualified by terminal family results plus corrected receipt gates. Native two-workflow write/member/delete qualification passed with 31 distinct original tasks and restored baselines. Other providers and installed actors are not attested by these files. Previous evidence/source inventories remain historical qualification snapshots. Native compilation preceded explicit JSON tags preserving the exact existing field names/order; the references/empty-graph byte contract passes, and the prior source inventory is retained. No v4 wire format changed.",
+  "nativeStatus": "passed: single-tag 869.44s; custom-zone cohort 1703.20s; Go aggregate 2574.968s",
+  "nativeExpectedOriginalTasks": 31,
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings.go": "9c3fb018c76329edafdf3ec11b12119aa171e399606cd5d0a28a5a4db0dadff4",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings_protocol_test.go": "1cbec8e5012c4654064b99c711b032ee3a2184dcfd42c44f857177c37ea698f5",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings_readback_test.go": "0ecdec830bb65f2a638a9ecf75e13e577c31294ae4780f89472287b6c8ccc172",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "c04cab93078218c51b63b058cafad3fb7d54614e2202a59826ccf8cd4a8ab675",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_test.go": "e0cff4e831104b54717862835f4abc063c975d6f4c9eef4468670333f3c1bfed",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership.go": "9112b63a8485a5f0b666a65accd37bbb234e1c4d42ee040f5fb86738944b7aea",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune.go": "3bdd7672dd94e171a9c689dd765ce28648a865581cbf55254d3f9b3d09bf815d",
+    "internal/controlleradapter/catalystcenter/wireless_zone_bindings.go": "03afec2212f2ecc1b155e1c6cfdfbc67cb2d6a20f323d85bf798cf844d068c57",
+    "internal/controlleradapter/catalystcenter/wireless_zone_bindings_test.go": "953738720f2af48e0bf6837c16a5813d0384c7754c7ca82b2c788c0d2bf2e2b1",
+    "internal/controlleradapter/catalystcenter/network_profile_configuration.go": "b14801f4091dcdd1cc4df801955ed2c698eb852cbafa5daa4994ff44650c7ac7",
+    "internal/controlleradapter/catalystcenter/network_profile_recovery.go": "c4acda5a69e1fd70c581a2e78f60bbd163d5f6cfe498cd7ce5329e968853fd46",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "95ad921530fb1aec372ea80e46cdf78a1178521fa68b6fa9907d059d2e171840",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "37b6741e2a43785963d5fc56e8bcf7eeebae70546df641fd14e7a51db3cfb61b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_live_test.go": "57fd9bd8ad7b08e160bca4b7ba2764ec0b317b858c73ef651b0227be22c6c2b3",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_live_test.go": "0843445e986f94aec193bd8c1feca36d75f522247dc890033a6e3cc5176562d3"
+  },
+  "nativeCompletedWorkflows": [
+    {
+      "test": "TestLiveWirelessProfilePublicRecovery",
+      "seconds": 869.44,
+      "verifiedOriginalTasks": 14,
+      "membershipUpdates": 2,
+      "tagDeletes": 2,
+      "associationDeletes": 2,
+      "orderingVerified": true,
+      "producerGroupsVerified": true,
+      "affectedSiteIDsVerified": true,
+      "retainedPrivateRows": 4,
+      "retainedPrivateMemberProofs": 4,
+      "baselinesRestored": true
+    },
+    {
+      "test": "TestLiveWirelessPolicyCohortPublicRecovery",
+      "seconds": 1703.2,
+      "verifiedOriginalTasks": 17,
+      "membershipUpdates": 3,
+      "tagDeletes": 3,
+      "associationDeletes": 2,
+      "orderingVerified": true,
+      "producerGroupsVerified": true,
+      "affectedSiteIDsVerified": true,
+      "retainedPrivateRows": 5,
+      "retainedPrivateMemberProofs": 6,
+      "baselinesRestored": true
+    }
+  ],
+  "nativeDistinctOriginalTasks": 31
+}

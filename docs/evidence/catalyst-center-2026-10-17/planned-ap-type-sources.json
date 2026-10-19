@@ -1,0 +1,20 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Catalog-compatible AP type updates; complete retained-radio validation and frozen desired intent. Final native/focused/API/broad runs cover runtime changes. Operator example and descriptive catalog were checked separately after their addition. No radio replacement, destructive lifecycle or installed actor support claimed.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/planned_ap_execution.go": "494baa73aabfe26a89ba5bac3482b1307f72e41e61835e8f1892f1c4c4aafebf",
+    "internal/controlleradapter/catalystcenter/planned_ap_catalog.go": "59dbde4ccc02b96193a1177667382b4dfc5b117373d70eea9207f66766446d0f",
+    "internal/controlleradapter/catalystcenter/planned_ap_type_test.go": "3be27009b80cfdbaeeabadc215e0c1903ee942232e546fc36db815b0d4d14602",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "c08084ee0b76b70bc6a0166ba173a9cc67e8b391a762d8ffb7e4ac1da75ac3a2",
+    "internal/controlleradapter/catalystcenter/site_design_envtest_test.go": "3b02c51b747fe3d09db4d9b9184983f380b262c1411a6a7c27681fae8ab250b6",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "1af98ee2af86b50a3315e3d65121c08c3991a7e3d96e2648f579b0672ea2341d",
+    "internal/controlleradapter/catalystcenter/site_design_live_test.go": "3311dba5a59488fef6ed7033163c42f89ad4af616f8f57974744cd7670e60f02",
+    "internal/controlleradapter/catalystcenter/site_native_comparison_test.go": "607679f3a1e4143975799d921846b1804fb5e625576afeb2b140c06cf10a2e2a",
+    "internal/controlleradapter/catalystcenter/nacmodel/catalog.go": "38106b61ac88deb7de19b546e19c88939c80e34c32bfe852d6268c82df0cb5d5",
+    "examples/configs/catalyst-center/planned-ap-type-update.yaml": "00955fbbe7a7d3e2ffec1ac44d093414a2fa77d5276ff2588665183f780a965c"
+  }
+}

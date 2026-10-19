@@ -1,0 +1,20 @@
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/inline
+    discovery_credential_unsubmitted_live_test.go:283: inline: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/configmap
+    discovery_credential_unsubmitted_live_test.go:283: configmap: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-retirement-ack
+    discovery_credential_unsubmitted_live_test.go:283: lost-retirement-ack: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-completion-ack
+    discovery_credential_unsubmitted_live_test.go:283: lost-completion-ack: real Kubernetes API and native absence reads; original preparation retained, manager released, 1 native jobs/3 devices preserved; zero native mutation attempts and no credential delivery
+=== RUN   TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/proven-preflight-refusal
+    discovery_credential_unsubmitted_live_test.go:190: live read failure did not retire only the proven unsubmitted operation [{AdapterAvailable True 2 2026-10-18 22:18:16 +0200 CEST AdapterAvailable Catalyst Center configuration adapter is available} {IntentValid True 2 2026-10-18 22:18:16 +0200 CEST SubmissionRecoveryRequired Submission or journal outcome requires inspection; no automatic replay} {Ready False 2 2026-10-18 22:18:16 +0200 CEST SubmissionRecoveryRequired Submission or journal outcome requires inspection; no automatic replay} {DiscoveryCredentialSourceScope True 2 2026-10-18 22:18:16 +0200 CEST CredentialDiscoverySource {"ControllerUID":"cd327321-3a55-401c-8d00-5a3d633da203","ConfigUID":"d872fb38-3364-4353-830a-c9f452ae326c","SpecDigest":"9dc937ee8466cd4d410981380d00f2a3ce0ee5c4bc0263736085615318d13da1","SourceUID":"","SourceVersion":"","ModelDigest":"59eaed8645d233f82518113c30d00d0836acb214f2c1ce9472868ee3d049188f","ControllerGeneration":2,"ConfigGeneration":2}}]
+--- FAIL: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion (11.34s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/inline (3.51s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/configmap (0.95s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-retirement-ack (1.13s)
+    --- PASS: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/lost-completion-ack (1.03s)
+    --- FAIL: TestLiveDiscoveryInitialNoAuthUnsubmittedDeletion/proven-preflight-refusal (0.95s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.812s
+FAIL

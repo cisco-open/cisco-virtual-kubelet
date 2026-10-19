@@ -266,7 +266,7 @@ func (r *restconfTransport) DiagnosticExec(ctx context.Context, commands []strin
 	if r.cfg.CLIHost == "" {
 		return nil, fmt.Errorf("RESTCONF DiagnosticExec: CLIHost not configured (factory must set it)")
 	}
-	return runShowCommandsViaSSH(sshCLIConfig{
+	return runCommandsViaSSHContext(ctx, sshCLIConfig{
 		Address:  r.cfg.CLIHost,
 		CLIPort:  r.cfg.CLIPort,
 		Username: r.cfg.Username,

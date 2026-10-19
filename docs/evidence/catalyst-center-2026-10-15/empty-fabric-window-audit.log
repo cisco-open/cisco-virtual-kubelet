@@ -1,0 +1,11 @@
+task window complete 1 known area success True
+task 01a1406e-aa87-75b4-b24c-0b286d11fc03 status SUCCESS terminal True errorCode None mentions ['ise']
+fabrics response type list count 0
+zones response type list count 0
+assigned response type list count 0
+window 1792082351756 1792082416756
+audit window records 3 selected 1
+private audit evidence /private/tmp/cvk-empty-fabric-audit-_cr55jhr/records.json
+audit category INFO
+audit name AUDIT_LOG
+audit description Received a request to create a fabric site with site ID [uuid] through the SDA API.

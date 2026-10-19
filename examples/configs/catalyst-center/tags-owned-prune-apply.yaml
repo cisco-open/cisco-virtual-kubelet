@@ -1,0 +1,32 @@
+# Start with this manifest. Removing a tag from this same config UID triggers
+# owned pruning after original-task, complete-state and empty-consumer checks.
+# Imports are not adopted; CR deletion retains state (deletionPolicy: Retain).
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-owned-tags
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory, templates]
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-owned-tags-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          tags:
+            - name: CVK-Managed-Demo
+              description: Owned tag lifecycle demonstration
+              system_tag: false
+        templates:
+          tags: []

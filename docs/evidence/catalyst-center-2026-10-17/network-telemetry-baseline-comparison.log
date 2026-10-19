@@ -1,0 +1,374 @@
+=== RUN   TestConfigurationSecretProjectionAndInjection
+--- PASS: TestConfigurationSecretProjectionAndInjection (0.01s)
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/revoked
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/remapped_key
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/remapped_name
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/duplicate_alias
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/paused
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/controller_replaced
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/controller_generation
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/config_replaced
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/config_generation
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/namespace
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/config_name
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/controller_ref
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/changed_destination
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/unmanaged_section
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/duplicate_ref
+--- PASS: TestConfigurationSecretAuthorizationAndIdentity (0.02s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/revoked (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/remapped_key (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/remapped_name (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/duplicate_alias (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/paused (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/controller_replaced (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/controller_generation (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/config_replaced (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/config_generation (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/namespace (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/config_name (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/controller_ref (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/changed_destination (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/unmanaged_section (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/duplicate_ref (0.00s)
+=== RUN   TestConfigurationSecretAtomicProjectionRotation
+--- PASS: TestConfigurationSecretAtomicProjectionRotation (0.00s)
+=== RUN   TestConfigurationSecretProjectionRejectsInvalidMaterial
+=== RUN   TestConfigurationSecretProjectionRejectsInvalidMaterial/escaping_symlink
+--- PASS: TestConfigurationSecretProjectionRejectsInvalidMaterial (0.01s)
+    --- PASS: TestConfigurationSecretProjectionRejectsInvalidMaterial/escaping_symlink (0.00s)
+=== RUN   TestConfigurationSecretPointerAndLeafIsolation
+--- PASS: TestConfigurationSecretPointerAndLeafIsolation (0.00s)
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/missing
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/before-prepare
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Prepared
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Submitting
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/unchanged
+--- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit (0.66s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/missing (0.60s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/before-prepare (0.01s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Prepared (0.01s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Submitting (0.02s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/unchanged (0.02s)
+=== RUN   TestNetworkNativeComparisonPublic
+=== RUN   TestNetworkNativeComparisonPublic/complete
+=== RUN   TestNetworkNativeComparisonPublic/companion
+=== RUN   TestNetworkNativeComparisonPublic/restore-companion
+=== RUN   TestNetworkNativeComparisonPublic/key
+=== RUN   TestNetworkNativeComparisonPublic/restore-key
+=== RUN   TestNetworkNativeComparisonPublic/missing-key
+=== RUN   TestNetworkNativeComparisonPublic/proof
+=== RUN   TestNetworkNativeComparisonPublic/downgrade
+=== RUN   TestNetworkNativeComparisonPublic/lost-ack
+=== RUN   TestNetworkNativeComparisonPublic/noop
+=== RUN   TestNetworkNativeComparisonPublic/drift
+=== RUN   TestNetworkNativeComparisonPublic/drop-key
+=== RUN   TestNetworkNativeComparisonPublic/legacy
+=== RUN   TestNetworkNativeComparisonPublic/replace
+=== RUN   TestNetworkNativeComparisonPublic/retarget
+=== RUN   TestNetworkNativeComparisonPublic/missing-state
+=== RUN   TestNetworkNativeComparisonPublic/unapproved-key
+--- PASS: TestNetworkNativeComparisonPublic (2.70s)
+    --- PASS: TestNetworkNativeComparisonPublic/complete (0.17s)
+    --- PASS: TestNetworkNativeComparisonPublic/companion (0.15s)
+    --- PASS: TestNetworkNativeComparisonPublic/restore-companion (0.24s)
+    --- PASS: TestNetworkNativeComparisonPublic/key (0.14s)
+    --- PASS: TestNetworkNativeComparisonPublic/restore-key (0.23s)
+    --- PASS: TestNetworkNativeComparisonPublic/missing-key (0.08s)
+    --- PASS: TestNetworkNativeComparisonPublic/proof (0.15s)
+    --- PASS: TestNetworkNativeComparisonPublic/downgrade (0.14s)
+    --- PASS: TestNetworkNativeComparisonPublic/lost-ack (0.11s)
+    --- PASS: TestNetworkNativeComparisonPublic/noop (0.03s)
+    --- PASS: TestNetworkNativeComparisonPublic/drift (0.15s)
+    --- PASS: TestNetworkNativeComparisonPublic/drop-key (0.18s)
+    --- PASS: TestNetworkNativeComparisonPublic/legacy (0.24s)
+    --- PASS: TestNetworkNativeComparisonPublic/replace (0.32s)
+    --- PASS: TestNetworkNativeComparisonPublic/retarget (0.25s)
+    --- PASS: TestNetworkNativeComparisonPublic/missing-state (0.07s)
+    --- PASS: TestNetworkNativeComparisonPublic/unapproved-key (0.04s)
+=== RUN   TestNetworkNativeMACBindings
+=== RUN   TestNetworkNativeMACBindings/same
+=== RUN   TestNetworkNativeMACBindings/companion
+=== RUN   TestNetworkNativeMACBindings/target
+=== RUN   TestNetworkNativeMACBindings/ancestor
+=== RUN   TestNetworkNativeMACBindings/cohort
+=== RUN   TestNetworkNativeMACBindings/key
+=== RUN   TestNetworkNativeMACBindings/scope
+=== RUN   TestNetworkNativeMACBindings/invalid-key-id
+--- PASS: TestNetworkNativeMACBindings (0.01s)
+    --- PASS: TestNetworkNativeMACBindings/same (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/companion (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/target (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/ancestor (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/cohort (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/key (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/scope (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/invalid-key-id (0.00s)
+=== RUN   TestNetworkNativeComparisonExample
+--- PASS: TestNetworkNativeComparisonExample (0.02s)
+=== RUN   TestSitePrivateAppliedPublic
+=== RUN   TestSitePrivateAppliedPublic/building-create/complete
+=== RUN   TestSitePrivateAppliedPublic/building-create/recover
+=== RUN   TestSitePrivateAppliedPublic/building-create/pending-child
+=== RUN   TestSitePrivateAppliedPublic/building-create/failed-child
+=== RUN   TestSitePrivateAppliedPublic/building-create/foreign-child
+=== RUN   TestSitePrivateAppliedPublic/building-create/missing-result
+=== RUN   TestSitePrivateAppliedPublic/building-create/foreign-result
+=== RUN   TestSitePrivateAppliedPublic/building-create/lost-ack
+=== RUN   TestSitePrivateAppliedPublic/building-create/source-change
+=== RUN   TestSitePrivateAppliedPublic/building-create/owner-change
+=== RUN   TestSitePrivateAppliedPublic/building-create/preflight-native
+=== RUN   TestSitePrivateAppliedPublic/building-create/post-applied-drift
+=== RUN   TestSitePrivateAppliedPublic/floor-create/complete
+=== RUN   TestSitePrivateAppliedPublic/floor-create/recover
+=== RUN   TestSitePrivateAppliedPublic/floor-create/pending-child
+=== RUN   TestSitePrivateAppliedPublic/floor-create/failed-child
+=== RUN   TestSitePrivateAppliedPublic/floor-create/foreign-child
+=== RUN   TestSitePrivateAppliedPublic/floor-create/missing-result
+=== RUN   TestSitePrivateAppliedPublic/floor-create/foreign-result
+=== RUN   TestSitePrivateAppliedPublic/floor-create/lost-ack
+=== RUN   TestSitePrivateAppliedPublic/floor-create/source-change
+=== RUN   TestSitePrivateAppliedPublic/floor-create/owner-change
+=== RUN   TestSitePrivateAppliedPublic/floor-create/preflight-native
+=== RUN   TestSitePrivateAppliedPublic/floor-create/post-applied-drift
+--- PASS: TestSitePrivateAppliedPublic (16.96s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/complete (1.13s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/recover (1.13s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/pending-child (0.46s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/failed-child (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/foreign-child (0.45s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/missing-result (0.56s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/foreign-result (0.56s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/lost-ack (0.42s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/source-change (0.42s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/owner-change (0.40s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/preflight-native (1.15s)
+    --- PASS: TestSitePrivateAppliedPublic/building-create/post-applied-drift (1.19s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/complete (1.17s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/recover (1.18s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/pending-child (0.47s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/failed-child (0.46s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/foreign-child (0.46s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/missing-result (0.59s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/foreign-result (0.60s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/lost-ack (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/source-change (0.44s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/owner-change (0.43s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/preflight-native (1.18s)
+    --- PASS: TestSitePrivateAppliedPublic/floor-create/post-applied-drift (1.21s)
+=== RUN   TestSitePrivateBaselineReusesNativeInventory
+--- PASS: TestSitePrivateBaselineReusesNativeInventory (0.02s)
+=== RUN   TestSitePrivateNativeMAC
+=== RUN   TestSitePrivateNativeMAC/same
+=== RUN   TestSitePrivateNativeMAC/order
+=== RUN   TestSitePrivateNativeMAC/unknown-edit
+=== RUN   TestSitePrivateNativeMAC/number-edit
+=== RUN   TestSitePrivateNativeMAC/null-absent
+=== RUN   TestSitePrivateNativeMAC/other-object
+=== RUN   TestSitePrivateNativeMAC/other-key
+=== RUN   TestSitePrivateNativeMAC/same-key-other-scope
+--- PASS: TestSitePrivateNativeMAC (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/same (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/order (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/unknown-edit (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/number-edit (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/null-absent (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/other-object (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/other-key (0.00s)
+    --- PASS: TestSitePrivateNativeMAC/same-key-other-scope (0.00s)
+=== RUN   TestSitePrivateCreatorReceiptBoundaries
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/valid
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/missing-baseline
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/bad-baseline
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/wrong-key
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/lost-producer
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/lost-source
+=== RUN   TestSitePrivateCreatorReceiptBoundaries/alias-legacy
+--- PASS: TestSitePrivateCreatorReceiptBoundaries (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/valid (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/missing-baseline (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/bad-baseline (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/wrong-key (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/lost-producer (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/lost-source (0.00s)
+    --- PASS: TestSitePrivateCreatorReceiptBoundaries/alias-legacy (0.00s)
+=== RUN   TestSitePrivatePublicCreatorBaseline
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/area-create/recover-private
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/building-create/recover-private
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-known
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-native-edit
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-key-change
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/private-option-loss
+=== RUN   TestSitePrivatePublicCreatorBaseline/floor-create/recover-private
+--- PASS: TestSitePrivatePublicCreatorBaseline (7.89s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-known (0.52s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-native-edit (0.53s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-key-change (0.60s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/private-option-loss (0.51s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/area-create/recover-private (0.49s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-known (0.50s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-native-edit (0.54s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-key-change (0.53s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/private-option-loss (0.51s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/building-create/recover-private (0.50s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-known (0.51s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-native-edit (0.56s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-key-change (0.55s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/private-option-loss (0.53s)
+    --- PASS: TestSitePrivatePublicCreatorBaseline/floor-create/recover-private (0.52s)
+=== RUN   TestSitePrivateDispatchFootprint
+=== RUN   TestSitePrivateDispatchFootprint/area-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/area-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/area-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/area-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/area-create/uncertain
+=== RUN   TestSitePrivateDispatchFootprint/building-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/building-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/building-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/building-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/building-create/uncertain
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/stable
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/unknown-edit
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/number-edit
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/partial-raw
+=== RUN   TestSitePrivateDispatchFootprint/floor-create/uncertain
+--- PASS: TestSitePrivateDispatchFootprint (0.23s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/unknown-edit (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/number-edit (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/area-create/uncertain (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/number-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/building-create/uncertain (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/stable (0.02s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/unknown-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/number-edit (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/partial-raw (0.01s)
+    --- PASS: TestSitePrivateDispatchFootprint/floor-create/uncertain (0.02s)
+=== RUN   TestSitePrivateDoesNotBackfillOwnership
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/legacy-creator
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/imported
+=== RUN   TestSitePrivateDoesNotBackfillOwnership/new-absent
+--- PASS: TestSitePrivateDoesNotBackfillOwnership (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/legacy-creator (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/imported (0.00s)
+    --- PASS: TestSitePrivateDoesNotBackfillOwnership/new-absent (0.00s)
+=== RUN   TestSitePrivateUpdateRequiresOwnedProtocol
+--- PASS: TestSitePrivateUpdateRequiresOwnedProtocol (0.00s)
+=== RUN   TestSitePrivateExampleContract
+=== RUN   TestSitePrivateExampleContract/site-private-creator-execution.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-private-state.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-type-update.yaml
+=== RUN   TestSitePrivateExampleContract/planned-ap-floor-handoff.yaml
+--- PASS: TestSitePrivateExampleContract (0.02s)
+    --- PASS: TestSitePrivateExampleContract/site-private-creator-execution.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-private-state.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-type-update.yaml (0.00s)
+    --- PASS: TestSitePrivateExampleContract/planned-ap-floor-handoff.yaml (0.00s)
+=== RUN   TestSitePrivateFootprintSeparatesParentSettings
+--- PASS: TestSitePrivateFootprintSeparatesParentSettings (0.02s)
+=== RUN   TestTemplateNativeComparisonMAC
+=== RUN   TestTemplateNativeComparisonMAC/p
+=== RUN   TestTemplateNativeComparisonMAC/p/match
+=== RUN   TestTemplateNativeComparisonMAC/p/field-order
+=== RUN   TestTemplateNativeComparisonMAC/p/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/p/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/p/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/p/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/p/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/p/missing-operation-marker
+=== RUN   TestTemplateNativeComparisonMAC/r
+=== RUN   TestTemplateNativeComparisonMAC/r/match
+=== RUN   TestTemplateNativeComparisonMAC/r/field-order
+=== RUN   TestTemplateNativeComparisonMAC/r/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/r/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/r/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/r/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/r/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/r/missing-operation-marker
+=== RUN   TestTemplateNativeComparisonMAC/c
+=== RUN   TestTemplateNativeComparisonMAC/c/match
+=== RUN   TestTemplateNativeComparisonMAC/c/field-order
+=== RUN   TestTemplateNativeComparisonMAC/c/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/c/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/c/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/c/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/c/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/c/missing-operation-marker
+--- PASS: TestTemplateNativeComparisonMAC (0.01s)
+    --- PASS: TestTemplateNativeComparisonMAC/p (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/missing-operation-marker (0.00s)
+    --- PASS: TestTemplateNativeComparisonMAC/r (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/missing-operation-marker (0.00s)
+    --- PASS: TestTemplateNativeComparisonMAC/c (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/missing-operation-marker (0.00s)
+=== RUN   TestTemplateNativeComparisonCompiler
+=== RUN   TestTemplateNativeComparisonCompiler/value-use
+=== RUN   TestTemplateNativeComparisonCompiler/inventory-pointer
+=== RUN   TestTemplateNativeComparisonCompiler/wrong-section
+=== RUN   TestTemplateNativeComparisonCompiler/combined
+=== RUN   TestTemplateNativeComparisonCompiler/duplicate
+=== RUN   TestTemplateNativeComparisonCompiler/prune
+=== RUN   TestTemplateNativeComparisonCompiler/delete
+--- PASS: TestTemplateNativeComparisonCompiler (0.01s)
+    --- PASS: TestTemplateNativeComparisonCompiler/value-use (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/inventory-pointer (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/wrong-section (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/combined (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/duplicate (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/prune (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/delete (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	30.777s

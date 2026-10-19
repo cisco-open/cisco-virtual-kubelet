@@ -1,0 +1,10 @@
+exact fixture cleanup /dna/intent/api/v1/wirelessProfiles/d161c8e2-0cbc-4afb-bee5-8ae1ffb7e712/policyTags/mdi1q1zl-x05F-mJm2-ngrK-mJDImZnKyJa0y19qmumWvJflmL8Z 01a13e73-d5b4-7d79-ba85-5266c3246c37
+exact fixture cleanup /dna/intent/api/v1/wirelessProfiles/d161c8e2-0cbc-4afb-bee5-8ae1ffb7e712/policyTags/mdi1q1zl-x05F-mJm2-ngrK-mJDImZnKyJa0y19qmKmWvJflmL8Z 01a13e73-e3dc-702a-9ba4-512ba0f7eb61
+exact fixture cleanup /dna/intent/api/v1/wirelessProfiles/d161c8e2-0cbc-4afb-bee5-8ae1ffb7e712/siteTags/mdi0q1zl-x05F-mJm2-ngrK-mJDImZnKyJa0y19tqZbwmuSYxZno 01a13e73-f240-748b-aa8f-b663e0dc7efb
+exact fixture cleanup /dna/intent/api/v1/networkProfilesForSites/d161c8e2-0cbc-4afb-bee5-8ae1ffb7e712/siteAssignments/4d8ce5fc-c9b5-4ac5-aa9f-0c7bbd7f7d16 01a13e74-0097-7e29-acf0-6d3355d0f386
+exact fixture cleanup /dna/intent/api/v1/networkProfilesForSites/d161c8e2-0cbc-4afb-bee5-8ae1ffb7e712/siteAssignments/0b397ed5-c310-4c0f-837e-5619f5efc4df 01a13e74-1016-790b-a178-5dbf25edaaa3
+exact fixture cleanup /dna/intent/api/v1/wirelessProfiles/d161c8e2-0cbc-4afb-bee5-8ae1ffb7e712 01a13e74-1aa2-7a52-9c03-426244824441
+exact fixture cleanup /dna/intent/api/v1/sites/8995b7da-5b82-40fd-a706-82150affe92d/wirelessSettings/ssids/mdiYq1zl-x1nF-owfK-mwi3-ztDLnJq0ztHHzemWvJflmL8ZuZrF 01a13e74-2522-7c7f-b06e-5342bca51d62
+exact fixture cleanup /dna/intent/api/v1/areas/4d8ce5fc-c9b5-4ac5-aa9f-0c7bbd7f7d16 01a13e74-2b85-790e-b194-9348530f8425
+exact fixture cleanup /dna/intent/api/v1/areas/0b397ed5-c310-4c0f-837e-5619f5efc4df 01a13e74-3441-7130-be58-0110b2dc168d
+all retained custom-zone fixture baselines restored; no device operation submitted

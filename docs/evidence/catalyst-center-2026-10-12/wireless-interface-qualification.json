@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "scope": "Native isolated global wireless interface create/update/readback/no-op/cleanup; no device deployment",
+  "fixture": "CVK_12204015",
+  "interfaceID": "mdeYq1zl-xZeY-mJa0-mde1-qZbwmuSYxZmXndi1mJyWnZq4mdKX",
+  "createTask": "01a131d9-5f16-709a-a255-b092cc65e196",
+  "updateTask": "01a131d9-64a7-79c9-9a48-f53d46370fa9",
+  "deleteTask": "01a131d9-6988-71d2-9a30-8ee7f1939686",
+  "initialVlan": 3998,
+  "updatedVlan": 3999,
+  "updateIdentityPreserved": true,
+  "baselineRestored": true,
+  "workerRollout": false,
+  "manifestRestartQualification": "fixture only",
+  "applianceObservation": "Built-in management interface reports VLAN 0; reader supports this exception, manifests cannot modify its reserved name."
+}

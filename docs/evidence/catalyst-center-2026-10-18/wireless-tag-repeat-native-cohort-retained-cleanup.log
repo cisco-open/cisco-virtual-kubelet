@@ -1,0 +1,14 @@
+=== RUN   TestLiveWirelessTagRetainedFixtureCleanup
+    wireless_tag_retained_cleanup_live_test.go:260: exact retained cleanup task /dna/intent/api/v1/wirelessProfiles/f1535510-5eef-43fa-bc8a-0a7d171ba023/policyTags/mdi1q1zl-x05F-n2zJ-zwnL-odyWyZuXmtm4y19qmumWvJflmL8Z 01a1507e-48ae-770c-b98b-594d773215b4
+    wireless_tag_retained_cleanup_live_test.go:260: exact retained cleanup task /dna/intent/api/v1/wirelessProfiles/f1535510-5eef-43fa-bc8a-0a7d171ba023/policyTags/mdi1q1zl-x05F-n2zJ-zwnL-odyWyZuXmtm4y19qmKmWvJflmL8Z 01a1507e-519c-7e49-a758-5c7b03c10b53
+    wireless_tag_retained_cleanup_live_test.go:260: exact retained cleanup task /dna/intent/api/v1/wirelessProfiles/f1535510-5eef-43fa-bc8a-0a7d171ba023/siteTags/mdi0q1zl-x05F-n2zJ-zwnL-odyWyZuXmtm4y19tqZbwmuSYxZno 01a1507e-5bc9-7e73-87b8-3af1eed39e51
+    wireless_tag_retained_cleanup_live_test.go:266: exact retained cleanup task /dna/intent/api/v1/networkProfilesForSites/f1535510-5eef-43fa-bc8a-0a7d171ba023/siteAssignments/3562773d-e84b-4581-a494-fc87821c1a52 01a1507e-65fd-7a8f-9041-05c5f40c74f1
+    wireless_tag_retained_cleanup_live_test.go:266: exact retained cleanup task /dna/intent/api/v1/networkProfilesForSites/f1535510-5eef-43fa-bc8a-0a7d171ba023/siteAssignments/7b62d348-0e57-457a-a2d9-11dd42b46a3c 01a1507e-6f47-7579-95ff-b0ef5173923f
+    wireless_tag_retained_cleanup_live_test.go:269: exact retained cleanup task /dna/intent/api/v1/wirelessProfiles/f1535510-5eef-43fa-bc8a-0a7d171ba023 01a1507e-78dd-7971-9387-21913ced6c42
+    wireless_tag_retained_cleanup_live_test.go:271: exact retained cleanup task /dna/intent/api/v1/sites/8995b7da-5b82-40fd-a706-82150affe92d/wirelessSettings/ssids/mdiYq1zl-x1nF-ndaZ-yMuZ-mwu0ndm2yMiWnumWvJflmL8ZuZrF 01a1507e-809b-7f32-b773-f7643aa2f7ed
+    wireless_tag_retained_cleanup_live_test.go:274: exact retained cleanup task /dna/intent/api/v1/areas/7b62d348-0e57-457a-a2d9-11dd42b46a3c 01a1507e-886f-79e4-ac15-f6fb339dd475
+    wireless_tag_retained_cleanup_live_test.go:274: exact retained cleanup task /dna/intent/api/v1/areas/3562773d-e84b-4581-a494-fc87821c1a52 01a1507e-9070-7f0d-ae77-79389f10f4dc
+    wireless_tag_retained_cleanup_live_test.go:280: retained generated fixture removed; unrelated site/profile/SSID baselines preserved; no physical operation submitted
+--- PASS: TestLiveWirelessTagRetainedFixtureCleanup (21.41s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	23.888s

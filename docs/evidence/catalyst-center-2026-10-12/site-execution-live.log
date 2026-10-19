@@ -1,0 +1,14 @@
+=== RUN   TestLiveCatalystCenterSiteExecution
+    site_execution_live_test.go:28: isolated qualification hierarchy: Global/CVK-Q-20261012-120711-000000000
+    site_execution_live_test.go:167: submitted task=01a13003-a137-762b-9128-9c8676869467 at=2026-10-12T12:07:11.449950746Z
+    site_execution_live_test.go:185: verified Create area
+    site_execution_live_test.go:167: submitted task=01a13003-a633-7a42-8e58-281cdc1c97cf at=2026-10-12T12:07:12.721178045Z
+    site_execution_live_test.go:185: verified Create building
+    site_execution_live_test.go:167: submitted task=01a13003-ab6f-739a-8bf3-5e86934e6487 at=2026-10-12T12:07:14.006439045Z
+    site_execution_live_test.go:185: verified Create floor
+    site_execution_live_test.go:167: submitted task=01a13003-b0d7-7e7e-b6d5-1e8c5d6466de at=2026-10-12T12:07:15.285766532Z
+    site_execution_live_test.go:185: verified Update floor
+    site_execution_live_test.go:194: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:139: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSiteExecution (9.95s)
+PASS

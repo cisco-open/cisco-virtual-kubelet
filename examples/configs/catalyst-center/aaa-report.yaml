@@ -1,0 +1,41 @@
+# Metadata reporting only: no shared secrets, configuration writes or credential verification.
+# Requires matching manager/worker builds of this branch.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-aaa-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 5m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-aaa-metadata-report-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          global:
+            network_settings:
+              aaa_servers: lab-aaa
+        network_settings:
+          aaa_servers:
+            - name: lab-aaa
+              network_aaa:
+                server_type: AAA
+                protocol: TACACS
+                primary_ip: 192.0.2.10
+                secondary_ip: 192.0.2.11
+              client_and_endpoint_aaa:
+                server_type: ISE
+                protocol: RADIUS
+                primary_ip: 192.0.2.20
+                pan: 192.0.2.30

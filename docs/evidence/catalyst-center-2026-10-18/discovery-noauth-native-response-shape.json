@@ -1,0 +1,34 @@
+[
+  {
+    "id": "243",
+    "name": "CVK-NoAuth-Q-1792359609697758000",
+    "publicKeys": [
+      "deviceIds",
+      "discoveryCondition",
+      "discoveryStatus",
+      "discoveryType",
+      "enablePasswordList",
+      "id",
+      "ipAddressList",
+      "ipFilterList",
+      "isAutoCdp",
+      "name",
+      "numDevices",
+      "passwordList",
+      "preferredMgmtIPMethod",
+      "protocolOrder",
+      "retryCount",
+      "snmpMode",
+      "snmpUserName",
+      "snmpV3Desc",
+      "timeOut"
+    ],
+    "type": "Single",
+    "ipAddressList": "198.51.100.101",
+    "condition": "Complete",
+    "status": "Inactive",
+    "snmpVersion": null,
+    "modeMatchesNoAuth": true,
+    "usernameMatchesFixture": true
+  }
+]

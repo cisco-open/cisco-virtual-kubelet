@@ -1,0 +1,50 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "upstream": [
+    {
+      "file": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    },
+    {
+      "file": "model_catalystcenter_ntp_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/model_catalystcenter_ntp_settings.go",
+      "sha256": "2c50d3760f554632e0898e839c91471b900c34b33980cc52543506d8826d334a"
+    },
+    {
+      "file": "resource_catalystcenter_ntp_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/resource_catalystcenter_ntp_settings.go",
+      "sha256": "b2913a233d273f7b74bd59b06ebbd41a2f5eece8ad8afe43617e24628589550b"
+    },
+    {
+      "file": "model_catalystcenter_dhcp_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/model_catalystcenter_dhcp_settings.go",
+      "sha256": "499d64de4a7da0d30514df7e744258fa8fa50a6162d491c7a33ff9a9a14868c1"
+    },
+    {
+      "file": "resource_catalystcenter_dhcp_settings.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/resource_catalystcenter_dhcp_settings.go",
+      "sha256": "8d9272ee4edb052d07d7a878d1818425838bc6939cee97cb188a97a3d96ed8b3"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/network_execution.go": "9560337624041bd616c1121098ffcca9986e0e55cd5e54a486ae5662214086f4",
+    "internal/controlleradapter/catalystcenter/network_settings.go": "297add38a32d592ec454ac70cbfc982d1550bca388804a0f7b664a563736c4b8",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "f2ef0dbe7a9982bafef551902f7771c5055d8dd7617da0ab625bf0b888f36c9b",
+    "internal/controlleradapter/catalystcenter/network_application.go": "27a020f0bf05990518d4632e1c90a63842059079c795e8771a3e6131d6f445b2",
+    "internal/controlleradapter/catalystcenter/network_task_recovery.go": "564c4423114172dce9b6589c176845ddd43fc242f6843ea1b34f14a3bcdcf39b",
+    "internal/controlleradapter/catalystcenter/network_submission_test.go": "4601ad69b8b20f0d07eee6b1ffe0376ecb610b26c503720856fe117e0b34e2d5",
+    "internal/controlleradapter/catalystcenter/network_execution_test.go": "c4b6eb2bd8a79ed7452e218717fa7de702df927d53887f8c41eaade9e046fb4f",
+    "internal/controlleradapter/catalystcenter/network_empty_test.go": "851f7c9c5dcb352a7688b2e23ec1ffad53b4f28691992558258c5799e46c2acd",
+    "internal/controlleradapter/catalystcenter/network_empty_envtest_test.go": "7609047e5e805eca0028dc3e574fb564c2e31d13f878e317a659f230d01b857d",
+    "internal/controlleradapter/catalystcenter/network_empty_live_test.go": "75f4050030a94ed4a9f9b1ae57474568e32535305fac6c0cd4b86da11ca123a4",
+    "internal/controlleradapter/catalystcenter/network_empty_execution_live_test.go": "0cdf4a4e835c16b11ff13fd49965dcf7db8d02ffe401162641033ed081cdb0be",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "31df85aa3cecc6e3317dbf3590b9094c62d387dff9c95ce45ea0fabda192d8bf",
+    "examples/configs/catalyst-center/network-settings-reset-apply.yaml": "275bb43cb71cb7d21e365bb6e247220edac5997289c99d458b8d619d88e82fca"
+  },
+  "scope": "Explicit NTP/DHCP empty-model-list reset encoding and native empty-group convergence; existing no-dispatch, task/receipt/owner/source recovery contracts; zero-effect imported empty groups and ambiguous read/ack fences. Actual API persistence and area/child-parent native cycles distinguish fixture actors/storage from real API effects. No source prune, group Delete, ownership handoff, installed actors, physical rollout or full pinned-model parity claim."
+}

@@ -1,0 +1,90 @@
+{
+  "scope": "Acknowledged bulk anycast original-task recovery and ordinary Accepted complete-tree completion",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "creatorOwnershipAdded": false,
+  "destructionAuthorityAdded": false,
+  "installedQualification": false,
+  "acceptedNativeMutationQualified": false,
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "642f27855a8c88fab34474927182a6f0e3a3d7c8e83c503ddaefe8729444e430",
+    "internal/controlleradapter/catalystcenter/nacmodel": "1827e09b755df6480bf7d80a78e51ed4ccd8ef02a4bf923ac460e7262dd96b82",
+    "tools/cvk-netascode-migrate": "49e5e6ea5ef31b4c3204a5fec1714a6a2e410f36046031692dc0905e4e046ed4"
+  },
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "log": "anycast-bulk-task-recovery-focusedRace.log",
+      "sha256": "88e9e660ecd42cd1d3172a8f5c8da596651353cb90274c631b6b8ec5da0707d5",
+      "passingTestEvents": 264,
+      "skippedTestEvents": 0
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "log": "anycast-bulk-task-recovery-temporaryAPI.log",
+      "sha256": "ee1e5e649a84417384679a7a0f40d9767de88b9da4bafa893f00f9719734c6d0",
+      "passingTestEvents": 15,
+      "skippedTestEvents": 0
+    },
+    "nativePrerequisites": {
+      "exitCode": 0,
+      "log": "anycast-bulk-task-recovery-nativePrerequisites.log",
+      "sha256": "a1d810422774995c1e3674bcbf6befabc6129574c323bbb1ed702c645b03f161",
+      "passingTestEvents": 0,
+      "skippedTestEvents": 1,
+      "acceptedExecutionQualified": false
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-anycast-recovery-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-anycast-recovery-docs.log",
+      "sha256": "1b1f85beac8d450515ada97ab59223604f0ad5f63038b41e144d3d0827d34ee2"
+    },
+    "diffCheck": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-anycast-recovery-diffcheck.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19705,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "log": "/private/tmp/cvk-anycast-recovery-regression.jsonl",
+      "sha256": "2059a6d209f2b444f6edfd3aa3e5a040511224f364b0ef662c92ea44019de9cd"
+    }
+  },
+  "nativeLimitation": "Authenticated read-only fabric inventory has zero sites; accepted execution explicitly skips. No native mutation performed.",
+  "resourceChecklistDistinctRows": 93,
+  "regressionScopeNote": "Broad suite began before the final test-only Accepted-child fixture additions; production sources were unchanged. The final focused race and temporary-API gates include those additions.",
+  "remaining": [
+    "Accepted native fabric request-size/partial/task-recovery qualification: lab has zero fabric sites",
+    "Installed mutation actors and source/worker recovery",
+    "Broader anchored/zone chunk transitions",
+    "Creator ownership/adoption/prune/update/delete for this resource",
+    "Other outstanding execution/ownership/recovery and schema/default/catalogue gaps across the 93-resource model",
+    "Partial PnP acquisition cancellation original-manager quiescence proof"
+  ]
+}

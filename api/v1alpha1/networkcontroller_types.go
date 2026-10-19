@@ -357,6 +357,11 @@ type NetworkControllerStatus struct {
 	// +optional
 	Worker *NetworkControllerWorkerStatus `json:"worker,omitempty"`
 
+	// Configuration holds durable configuration ownership and the outstanding
+	// controller mutation. Adapters which only observe inventory leave it nil.
+	// +optional
+	Configuration *NetworkControllerConfigurationStatus `json:"configuration,omitempty"`
+
 	// Conditions follows the standard Kubernetes conditions shape.
 	// +kubebuilder:validation:MaxItems=32
 	// +patchMergeKey=type
@@ -377,6 +382,7 @@ type NetworkControllerStatus struct {
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=`.status.controllerVersion`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:validation:XValidation:rule="!(has(oldSelf.status) && has(oldSelf.status.configuration) && has(oldSelf.status.configuration.metadataHandoff)) || has(oldSelf.status.configuration.metadataHandoff.releasedAt) || (has(self.status) && has(self.status.configuration) && has(self.status.configuration.metadataHandoff))",message="status replacement cannot discard unreleased metadata custody"
 type NetworkController struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

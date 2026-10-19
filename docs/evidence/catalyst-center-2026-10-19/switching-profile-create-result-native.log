@@ -1,0 +1,42 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:141: submitted Create CVK-Q-Project-20261019-135242 01a1546f-9ec3-70bf-a2ca-bff46a248ce3
+    template_projects_live_test.go:141: submitted Update CVK-Q-Project-20261019-135242 01a1546f-a3f6-7332-865a-6119f4a52484
+    template_projects_live_test.go:167: project create and description update verified
+    template_projects_live_test.go:169: native template operation Create draft:CVK-Q-Project-20261019-135242#CVK-Commit-Qualification 01a1546f-af83-72d7-b2bd-dfa618b9e318
+    template_projects_live_test.go:169: native template operation Update commit:CVK-Q-Project-20261019-135242#CVK-Commit-Qualification 01a1546f-cd0d-746d-b20c-ae34401859c6
+    template_projects_live_test.go:169: native template operation Update draft:CVK-Q-Project-20261019-135242#CVK-Commit-Qualification 01a1546f-e6a4-795e-825d-e5f13f1e9778
+    template_projects_live_test.go:169: native template operation Update commit:CVK-Q-Project-20261019-135242#CVK-Commit-Qualification 01a1546f-fe9b-72e7-b1f5-1bf8853f7fc4
+    template_projects_live_test.go:169: native draft create/update and two committed versions verified d7a17b13-edc2-43d2-8908-970825359cef
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: public profile operation Create profiles/CVK-Q-Profile-20261019-135312 01a15470-1e29-7d23-af13-6dd4ee0ec0aa
+    template_projects_live_test.go:169: retained original switching definition task for read-only Unknown recovery 01a15470-1e29-7d23-af13-6dd4ee0ec0aa
+    template_projects_live_test.go:169: strict original Create task UUID and stable declared native profile/project/template result verified 5e2c83d9-428a-4292-96af-34735477b2de 01a15470-1e29-7d23-af13-6dd4ee0ec0aa
+    template_projects_live_test.go:169: switching definition original task recovered, journal released and generation InSync
+    template_projects_live_test.go:169: public profile source generation converged 2
+    template_projects_live_test.go:169: profile qualification operation sites Create Global/CVK-Q-Profile-20261019-135312-Site 01a15470-5034-794f-9391-d651c97d25fc
+    template_projects_live_test.go:169: public profile operation Update sites/profile-site-add:v1:657e3cd9147cc6876e84e31363b9afd53c434eef58da546a8959f1877aa47dd0:ef35de5a054a7b534b9ee4b380587998a78937a58b06c3819d9a28bc3bfc5bbb 01a15470-5de2-7bd6-b53b-f92cdb61f35c
+    template_projects_live_test.go:169: public profile source generation converged 3
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261019-135312 01a15470-89bb-7ec3-8d19-31d1e1862986
+    template_projects_live_test.go:169: retained original switching definition task for read-only Unknown recovery 01a15470-89bb-7ec3-8d19-31d1e1862986
+    template_projects_live_test.go:169: switching definition original task recovered, journal released and generation InSync
+    template_projects_live_test.go:169: public profile source generation converged 4
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: switching preflight refused before mutation; exact journal retired with owner and receipts preserved
+    template_projects_live_test.go:169: public profile operation Update profiles/CVK-Q-Profile-20261019-135312 01a15470-b83c-7704-8eb1-a6d080e834f4
+    template_projects_live_test.go:169: retained original switching definition task for read-only Unknown recovery 01a15470-b83c-7704-8eb1-a6d080e834f4
+    template_projects_live_test.go:169: switching definition original task recovered, journal released and generation InSync
+    template_projects_live_test.go:169: public profile source generation converged 5
+    template_projects_live_test.go:169: native switching profile create, template update, isolated site assignment and restart readback verified 5e2c83d9-428a-4292-96af-34735477b2de 7909d981-a37a-40d7-86f4-d01ea1aa0297
+    network_profiles_live_test.go:248: template mutation receipt DELETE 01a15470-e738-793f-8227-2431c3fc3678
+    network_profiles_live_test.go:255: template mutation receipt DELETE 01a15470-ec15-7386-a117-4e153ddd1975
+    network_profiles_live_test.go:295: template mutation receipt DELETE 01a15470-f1bd-7c26-8e99-6bb6f0010df3
+    network_profiles_live_test.go:310: profile, site assignment and isolated site cleanup verified 5e2c83d9-428a-4292-96af-34735477b2de 7909d981-a37a-40d7-86f4-d01ea1aa0297
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a15470-f7f1-7a0b-91e4-ed49b3e8d379
+    template_commit_live_test.go:95: template fixture cleanup verified d7a17b13-edc2-43d2-8908-970825359cef
+    template_projects_live_test.go:115: isolated project cleanup verified b2107343-9b19-4b8d-8fd4-e29cb45acae0
+--- PASS: TestLiveCatalystCenterTemplateProject (91.62s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	92.544s

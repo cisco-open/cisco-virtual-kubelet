@@ -1,0 +1,26 @@
+{
+  "source": "https://raw.githubusercontent.com/cisco-en-programmability/catalystcentersdk/main/catalystcentersdk/api/v2_3_7_9/configuration_templates.py",
+  "retrieved": "2026-10-16",
+  "sourceSHA256": "177ee0490b2d7b40efafa50f75a0e728f045f544b9211b77a4c0f505ce9ebe08",
+  "deploymentMethods": [
+    {
+      "method": "deploy_template",
+      "routes": [
+        "/dna/intent/api/v1/template-programmer/template/deploy"
+      ]
+    },
+    {
+      "method": "get_template_deployment_status",
+      "routes": [
+        "/dna/intent/api/v1/template-programmer/template/deploy/status/{deploymentId}"
+      ]
+    },
+    {
+      "method": "deploy_template_v2",
+      "routes": [
+        "/dna/intent/api/v2/template-programmer/template/deploy"
+      ]
+    }
+  ],
+  "scope": "Inspection of this official versioned SDK module, not proof that no other appliance API exists. Its status operation requires an existing deployment UUID; no complete deployment enumeration contract was identified here. Empty CVK state must not be interpreted as native deployment absence."
+}

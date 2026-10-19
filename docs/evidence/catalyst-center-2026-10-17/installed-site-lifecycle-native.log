@@ -1,0 +1,11 @@
+=== RUN   TestLiveInstalledSiteLifecycle
+    installed_site_lifecycle_live_test.go:95: private installed lifecycle evidence: /private/tmp/cvk-installed-site-lifecycle-4076392614
+    installed_site_lifecycle_live_test.go:240: installed lifecycle settled created retained rows 3
+    installed_site_lifecycle_live_test.go:310: installed lifecycle settled retired retained rows 6
+    installed_site_lifecycle_live_test.go:320: installed worker recovered original acknowledged floor retirement 01a14bb7-00c5-70d7-83ef-af10bd8cece4
+    installed_site_lifecycle_live_test.go:322: installed lifecycle settled recreated retained rows 9
+    installed_site_lifecycle_live_test.go:341: installed lifecycle settled cleaned retained rows 12
+    installed_site_lifecycle_live_test.go:399: installed three-kind lifecycle passed: six Creates/six Deletes, original retirement task recovered after worker interruption, replacement parent handoffs, retained history, terminal restart no replay and typed baseline restored
+--- PASS: TestLiveInstalledSiteLifecycle (355.21s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	357.629s

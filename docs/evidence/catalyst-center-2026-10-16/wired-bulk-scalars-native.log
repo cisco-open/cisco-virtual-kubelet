@@ -1,0 +1,6 @@
+=== RUN   TestLiveCatalystCenterWiredBulkNetworkContext
+    wired_bulk_network_context_live_test.go:161: source-derived worker query plans supported=3 unsupported=0; no worker results read and no device timezone/banner proof claimed
+    wired_bulk_network_context_live_test.go:162: three live switch identities: scoped original context matched, changed source refused, original context rechecked; setting kinds=map[timezone:true] site scopes=1 batches=1 native configuration writes=0; no device convergence claimed
+--- PASS: TestLiveCatalystCenterWiredBulkNetworkContext (40.07s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	42.444s

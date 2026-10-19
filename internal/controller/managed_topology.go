@@ -297,6 +297,11 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 		return r.failManagedTopology(ctx, device, result,
 			ciskov1.CiscoDeviceConditionTopologyConflict, "TopologyStatusFailed", err.Error())
 	}
+	if maintenanceDecision.err == nil && !maintenanceDecision.guard && r.ManageConfigurationReservations {
+		if err := r.settleUnacknowledgedConfigurationCancellations(ctx, device); err != nil {
+			return result, err
+		}
+	}
 	if maintenanceDecision.err != nil {
 		recoveryAllowed, recoveryErr := r.managedCancellationWorkerRecoveryReady(ctx, device, node)
 		if recoveryErr != nil || !recoveryAllowed {
@@ -310,7 +315,8 @@ func (r *CiscoDeviceReconciler) reconcileManagedTopology(
 		// A replacement worker may be the only actor able to acknowledge a
 		// cancellation and retire an unused mutation Lease. Keep every scheduling
 		// and maintenance fence fail-closed. This path is reachable only for an
-		// exact, manager-cancelled, pre-mutation drain recovery; distinguish the
+		// exact manager-cancelled pre-mutation drain recovery or a verified SWIM
+		// preparation cancellation. Distinguish the
 		// successfully persisted failure so Reconcile can repair only the
 		// manager-authored worker substrate and its exact revision proof.
 		guardErr := r.guardBoundNode(ctx, device)

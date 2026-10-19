@@ -1,0 +1,18 @@
+=== RUN   TestEnvtestTemplateVariableMetadataPublic
+=== RUN   TestEnvtestTemplateVariableMetadataPublic/nullable-definition
+=== RUN   TestEnvtestTemplateVariableMetadataPublic/nullable-variable
+=== RUN   TestEnvtestTemplateVariableMetadataPublic/scalar-default
+=== RUN   TestEnvtestTemplateVariableMetadataPublic/cleared-variable
+=== RUN   TestEnvtestTemplateVariableMetadataPublic/parameter-types
+=== RUN   TestEnvtestTemplateVariableMetadataPublic/invalid-variable
+=== RUN   TestEnvtestTemplateVariableMetadataPublic/invalid-selection
+--- PASS: TestEnvtestTemplateVariableMetadataPublic (7.38s)
+    --- PASS: TestEnvtestTemplateVariableMetadataPublic/nullable-definition (2.74s)
+    --- PASS: TestEnvtestTemplateVariableMetadataPublic/nullable-variable (0.11s)
+    --- PASS: TestEnvtestTemplateVariableMetadataPublic/scalar-default (0.11s)
+    --- PASS: TestEnvtestTemplateVariableMetadataPublic/cleared-variable (0.11s)
+    --- PASS: TestEnvtestTemplateVariableMetadataPublic/parameter-types (0.12s)
+    --- PASS: TestEnvtestTemplateVariableMetadataPublic/invalid-variable (0.06s)
+    --- PASS: TestEnvtestTemplateVariableMetadataPublic/invalid-selection (0.07s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.526s

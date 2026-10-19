@@ -1,0 +1,7 @@
+--- FAIL: TestFloorHandoffPredictsObservableDimensions (0.00s)
+    site_floor_handoff_test.go:47: observable dimension projection differs from measured native shape <nil>
+--- FAIL: TestFloorHandoffPreservesUnchangedWidthDuringLengthEdit (0.00s)
+    site_floor_handoff_test.go:81: native conversion changed an unchanged extent <nil>
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.946s
+FAIL

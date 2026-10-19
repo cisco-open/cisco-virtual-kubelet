@@ -1,0 +1,11 @@
+=== RUN   TestLiveSDATransitPrerequisites
+    fabric_sda_transits_live_test.go:57: lab prerequisite readback 198.51.100.100 provisionedRecord false assignedToProvisionedSite false readError false
+    fabric_sda_transits_live_test.go:64: lab SDA native prerequisites unavailable 198.51.100.100 pendingProvisionOrAssignment true identityOrPlatformRefusal false HTTP 0
+    fabric_sda_transits_live_test.go:57: lab prerequisite readback 198.51.100.101 provisionedRecord false assignedToProvisionedSite false readError false
+    fabric_sda_transits_live_test.go:64: lab SDA native prerequisites unavailable 198.51.100.101 pendingProvisionOrAssignment true identityOrPlatformRefusal false HTTP 0
+    fabric_sda_transits_live_test.go:57: lab prerequisite readback 198.51.100.103 provisionedRecord false assignedToProvisionedSite false readError false
+    fabric_sda_transits_live_test.go:64: lab SDA native prerequisites unavailable 198.51.100.103 pendingProvisionOrAssignment true identityOrPlatformRefusal false HTTP 0
+    fabric_sda_transits_live_test.go:78: read-only prerequisite assessment complete; zero product mutations; no SDA execution/convergence claim
+--- PASS: TestLiveSDATransitPrerequisites (6.57s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.747s

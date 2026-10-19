@@ -1,0 +1,50 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "upstream": [
+    {
+      "file": "module/cc_fabric.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_fabric.tf",
+      "sha256": "2452e397e64d686bbe38f261bf7daba2787ba80268e94c2ff72a9c2af60d0b88"
+    },
+    {
+      "file": "module/cc_device_provision.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_device_provision.tf",
+      "sha256": "4f2b3ee65efe0c023b61112229abb45e45109d4329ee3691bc0fdd010590d7e3"
+    },
+    {
+      "file": "provider/resource_catalystcenter_transit_network.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/resource_catalystcenter_transit_network.go",
+      "sha256": "baaf3d4d69a58293f6ae5e43dfcbbbba0c4ddbd58f38352e1ca8a009a62c49db"
+    },
+    {
+      "file": "provider/model_catalystcenter_transit_network.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/model_catalystcenter_transit_network.go",
+      "sha256": "dfb36643bb8e494d3cf918b76968dc02d965d3bb94d576b00f9ec61456022074"
+    }
+  ],
+  "scope": "Source-bound SDA journal preparation, actual shared group permit submission and public acknowledged recovery to Verifying. Native HTTP responses, actor/workload admission and grants are fixture-driven; private Kubernetes API source/group persistence is real. Live lab qualification is read-only prerequisites with zero product writes. No new-intent compiler activation, automatic Prepared dispatch, device convergence, final receipt/release, installed actor or accepted native SDA creation claim.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits.go": "fc1767a9d48629b1a400f391edc614a6b06163408c5612eddfebee431919befa",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_test.go": "d01c1d315218416c380fa989539ce763558cedf984d94b1c1925f4090c1d2f33",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_envtest_test.go": "800cd6c81f70c9865017a4a64bf1e5db5b93920c3ee9820962b69f1e6c772c9d",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_live_test.go": "337795d06cf812cb57ca5774af47433916c0fdc77883ed23cb5361bfa4ec9c7b",
+    "internal/controlleradapter/catalystcenter/config_group_resources.go": "fe6ddb963ad83eb03b42464eb58f92dbd16e0713e045d780f1859005bb42357c",
+    "internal/controlleradapter/catalystcenter/fabric_transits.go": "c90a489d9223b69cf266493f9cb6adacab014d1460dd7f08ea4defda2e9531a5",
+    "internal/controlleradapter/catalystcenter/config_managed_observation.go": "8d325d8c88ecd0248e9d8df6b5ff2741309d9dc2daaec0c9d4d4193ce1844e0d",
+    "internal/controlleradapter/catalystcenter/config_managed_bindings.go": "414d8b1abf2dc55b6f112bff65c5902f30938ac96d9dd4f7ca522518f0cf4fd6",
+    "internal/controlleradapter/catalystcenter/config_device_identity.go": "262e4a61f695216f237045c322aef05f8d3f3353812bcb1c67830b8a643a594c",
+    "internal/controlleradapter/catalystcenter/wired_device_provision.go": "9cf629eca5c2463e59236376948e386ba095fa6f319aa3c81703d59a1ed205f7",
+    "internal/controlleradapter/catalystcenter/config_task_tree.go": "2fa7f32e0e84c8e97342e824c2bf05a7a49a75feedeed77f64fd87443de935c1",
+    "internal/controlleradapter/catalystcenter/client.go": "11226032ad970e09d818d4d988790854f8c29eef51f6e5b515428ff7973933e2",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_journal.go": "fd0e7a3f0c4f49b71e5195e2f7c18f7d0149b8587074312ac2b6208d522641ae",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_journal_test.go": "a8389439aba80be2228bca41615297c6265043347df5836ed13d9b3fdadb7682",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transit_journal_envtest_test.go": "a199ec5852326637f601dff5154d6858655b2af89e2be58cd409ade7e2abdca5",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "6cb45055bc6402032d4f5f610f5a63f1b01961de47a9d3df5b9bfadf9c77c3f7",
+    "internal/controlleradapter/catalystcenter/config_group_acknowledged_recovery.go": "9b2a40674195ca2a7594d842fc4618dff82e94050be1829673bcbc9cb296ed06",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "ad91ed7b7b9d3b533149ffef417a899b2026cafb2df5f72c36864663a20b404f"
+  }
+}

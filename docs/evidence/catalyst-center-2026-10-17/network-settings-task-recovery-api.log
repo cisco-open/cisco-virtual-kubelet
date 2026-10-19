@@ -1,0 +1,172 @@
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/complete
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/root-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/child-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/child-failed
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/disconnected
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/missing-task
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/wrong-target
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/propagation
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/native-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/source-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/owner-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/journal-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/configmap
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/configmap-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/complete
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/root-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/child-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/child-failed
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/disconnected
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/missing-task
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/wrong-target
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/propagation
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/native-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/source-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/owner-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/journal-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/configmap
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/configmap-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/complete
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/root-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/child-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/child-failed
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/disconnected
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/missing-task
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/wrong-target
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/propagation
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/native-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/source-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/owner-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/journal-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/configmap
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/dns/configmap-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/complete
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/root-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/child-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/child-failed
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/disconnected
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/missing-task
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/wrong-target
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/propagation
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/native-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/source-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/owner-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/journal-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/configmap
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/configmap-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/complete
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/root-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/child-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/child-failed
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/disconnected
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/missing-task
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/wrong-target
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/propagation
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/native-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/source-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/owner-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/journal-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/configmap
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/banner/configmap-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/complete
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/root-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/child-running
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/child-failed
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/disconnected
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/missing-task
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/wrong-target
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/propagation
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/native-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/source-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/owner-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/journal-race
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/configmap
+=== RUN   TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/configmap-race
+--- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery (19.00s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/complete (2.87s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/root-running (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/child-running (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/child-failed (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/disconnected (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/missing-task (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/wrong-target (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/propagation (0.27s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/native-race (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/source-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/owner-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/journal-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/configmap (0.28s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/ntp/configmap-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/complete (0.23s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/root-running (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/child-running (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/child-failed (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/disconnected (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/missing-task (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/wrong-target (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/propagation (0.28s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/native-race (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/source-race (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/owner-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/journal-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/configmap (0.26s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dhcp/configmap-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/complete (0.23s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/root-running (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/child-running (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/child-failed (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/disconnected (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/missing-task (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/wrong-target (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/propagation (0.27s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/native-race (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/source-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/owner-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/journal-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/configmap (0.26s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/dns/configmap-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/complete (0.23s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/root-running (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/child-running (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/child-failed (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/disconnected (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/missing-task (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/wrong-target (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/propagation (0.26s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/native-race (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/source-race (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/owner-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/journal-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/configmap (0.25s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/timezone/configmap-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/complete (0.23s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/root-running (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/child-running (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/child-failed (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/disconnected (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/missing-task (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/wrong-target (0.11s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/propagation (0.26s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/native-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/source-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/owner-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/journal-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/configmap (0.25s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/banner/configmap-race (0.14s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/complete (0.24s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/root-running (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/child-running (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/child-failed (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/disconnected (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/missing-task (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/wrong-target (0.14s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/propagation (0.30s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/native-race (0.12s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/source-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/owner-race (0.13s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/journal-race (0.15s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/configmap (0.30s)
+    --- PASS: TestEnvtestNetworkAcknowledgedTaskRecovery/telemetry/configmap-race (0.13s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.199s

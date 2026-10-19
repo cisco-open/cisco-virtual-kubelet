@@ -1,0 +1,123 @@
+{
+  "status": "PASS read-only manager scope prerequisite; production actor admission and public dispatch incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "controllerconfiguration": {
+      "files": 137,
+      "sha256": "b1806f844160f6d71b8b9cfe48ba37e75d8c9466c2d5f2a3382b2ce786894d39",
+      "productionSHA256": "9339923af5529b267e7d79de48a89a64499ea457353ee5daa8c1caefdd5839ce"
+    },
+    "controlleradapter/catalystcenter": {
+      "files": 1691,
+      "sha256": "9e93a4ea705e06a662887b238ce45766bb0b9943e0cc5f350644f56ed58f95be",
+      "productionSHA256": "d193bdbbf785783ae66ba878e63870e5ec9857aed8046ab7640913205bca2efa"
+    }
+  },
+  "gates": {
+    "realAPIAndBootstrapAdmission": {
+      "result": "PASS",
+      "passingEvents": 18,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration": 15.373
+      },
+      "log": "/private/tmp/cvk-metadata-scope-qualified-api.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "passingEvents": 3127,
+      "packages": 6,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter": 2.9290000000000003,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard": 5.425,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance": 6.897,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade": 15.164,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller": 34.433,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration": 35.07
+      },
+      "log": "/private/tmp/cvk-metadata-scope-foundations.log",
+      "scopeCases": 31
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1032,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter": 61.091
+      },
+      "log": "/private/tmp/cvk-metadata-scope-compat.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-metadata-scope-cisco-vk"
+    },
+    "formatSourceBranchLedger": {
+      "result": "PASS",
+      "sourceUnchanged": true,
+      "branch": "pr/johalley/catc-support",
+      "uniquePinnedResourceRows": 93
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.68,
+      "log": "/private/tmp/cvk-metadata-scope-docs.log"
+    }
+  },
+  "implementation": {
+    "entryPoint": "internal/controllerconfiguration/metadata_scope.go:CheckUnmanagedMetadataScope",
+    "managerUncachedReaderRequired": true,
+    "preparedMetadataDeleteOnly": true,
+    "physicalTargetSerialManufactured": false,
+    "clusterCensuses": 2,
+    "batchListScope": "global/unfiltered",
+    "sourceOwnerControllerBrackets": true,
+    "retainedReservationsChecked": true,
+    "existingBootstrapFenceReaderReused": true,
+    "newProtocol": false,
+    "newStatusFields": false,
+    "newRBAC": false,
+    "newDispatchPermit": false,
+    "productionWiring": false
+  },
+  "apiQualification": {
+    "persistentSourceAndController": true,
+    "persistentGlobalNodeAliases": true,
+    "persistentOrphanReservations": true,
+    "persistentMalformedBootstrapLease": true,
+    "changedSourceGeneration": true,
+    "installedManager": false,
+    "nativeApplianceMutation": false
+  },
+  "labHealth": {
+    "authentication": "PASS",
+    "devices": [
+      {
+        "ip": "198.51.100.100",
+        "hostname": "C9K-1",
+        "reachability": "Reachable",
+        "version": "17.18.3"
+      },
+      {
+        "ip": "198.51.100.101",
+        "hostname": "C9K-2",
+        "reachability": "Reachable",
+        "version": "26.02.1"
+      },
+      {
+        "ip": "198.51.100.103",
+        "hostname": "C9K-4.dmz.cisco.com",
+        "reachability": "Reachable",
+        "version": "17.18.3"
+      }
+    ],
+    "nativeWrites": 0,
+    "note": "Read-only health check; not native qualification of uninstalled manager admission."
+  },
+  "remaining": [
+    "Bind validated PnP creator cohort and exact selected preparation into production manager request/actor admission",
+    "Serialize manager scope and worker dispatch using existing lifecycle, without broad worker list access or duplicate device locks",
+    "Complete native consumer protection and missing-source/CR deletion manager finalization",
+    "Qualify installed manager/worker and native full public cleanup lifecycle",
+    "Complete all remaining pinned 93-resource model execution/hardware qualification"
+  ]
+}

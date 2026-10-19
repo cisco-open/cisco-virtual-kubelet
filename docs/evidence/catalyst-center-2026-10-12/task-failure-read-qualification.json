@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-10-12T20:28:52.513012+00:00",
+  "test": "TestLiveConfigurationFailedTaskRead",
+  "result": "PASS",
+  "taskID": "01a131c8-d578-7032-a183-3dc6223368a3",
+  "machineCode": "NCSP11000",
+  "binarySHA256": "d078eaf5a6c7099f2359f0ec6c1dfa0e7d950e48a79a95e8255f81caf5e80056",
+  "mutations": false,
+  "limitations": [
+    "Native read-only failure parser qualification",
+    "Failed status and retained operation across reconciler restarts covered with fixtures",
+    "No worker rollout or retry of the failed fabric operation"
+  ]
+}

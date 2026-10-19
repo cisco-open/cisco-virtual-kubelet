@@ -1,0 +1,158 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "scope": "Corrected same-logical-key native identifier reuse with authenticated distinct incarnations and distinct acknowledged tasks. Cross-key aliases, stale effects, missing history and task reuse remain refused.",
+  "gates": [
+    {
+      "name": "local",
+      "log": "wireless-tag-stable-identity-local.log",
+      "goSeconds": 87.591,
+      "recreationCases": 19,
+      "archiveCases": 89,
+      "originalHistoryCases": 84
+    },
+    {
+      "name": "api",
+      "log": "wireless-tag-stable-identity-api.log",
+      "goSeconds": 227.693,
+      "recreationCases": 19,
+      "archiveCases": 89,
+      "originalHistoryCases": 84
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_execution.go": "80c9b7ab8eaa53554991213c38a26384927613ec99bc3e516e1a8df694fdc9ed",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate.go": "dc204be5f9db83b2c93104570998ab3128a08d832c988ba58adc4474b2533967",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_execution_test.go": "b86ab6c9b26763a854a6c065fbdce61ecaba2afcc19fcbc45271c8d898bb1513",
+    "internal/controlleradapter/catalystcenter/wireless_tag_retired_test.go": "e58125c35e363af84298bacddf1cf56aa022d2446e4ff01091ab21475ce77c88",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "0e899fa2eaecc5f9188769b3c6525d688d8b0fadbd4a52c9f223e81c80348174",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "d5c34d7612895f3fbe78a9d4a7fd3a673ae417cf31be2daf3d84a46550ae580c",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune.go": "484b8829b434212640d528390e0e97faed524c0de51cd6d2aad6b71184ecb5a8",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings.go": "1dc3723659642478904533c930bab8e4dc1a6b328071105614e4ac4a0720efa7",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership.go": "435735a47426fa927b2b3adffc87f8683f9dcc7bcee4de82bc8581bdce8fc93b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_envtest_test.go": "754daf7cf113d73fecbcf9d407836e93c6bd627bf3aadc4e37878951ea42330e",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_live_test.go": "99063a0cfa59971ecb39b6205c3b95684a23b88db545ad29b1ed411338307072",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "8f9b3fbd7d62d731e1099dda93065158151e42e07f24e580ffeb23fe1f2bcdfb",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_live_test.go": "b62f8f1d084b67948a15cdd07eaef4e8ad4affbe4c3eece9d2ec1f8d594788f1",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "ff7f42282551515a5fd8611792507e3aaea0251c4a8e95bc2c6c42e30638e8ff",
+    "internal/controlleradapter/catalystcenter/wireless_profile_diagnostic_live_test.go": "8d24b815c0fdab7032b3e24fa192b378aef69079ccf7c8db6baf65c416feede5",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_probe_live_test.go": "218d7743719d07817226dbba6c67191aa79b33ed7f4d4f12f096732e88316cfb",
+    "internal/controlleradapter/catalystcenter/wireless_tag_retained_cleanup_live_test.go": "19ba444a3b1a163ab83360bde3db42b266f6e55e6cb9261e78cdd23efcae014c"
+  },
+  "labDiagnosis": {
+    "failedNativeWorkflowSeconds": 972.85,
+    "verifiedPriorTasks": 13,
+    "originalRecreateTaskSucceeded": true,
+    "independentPublicReadbackAndTaskTreePassed": true,
+    "supervisedSeparateDeleteCreateTasks": 2,
+    "nativeSiteTagIDReused": true,
+    "exactRetainedCleanupPassed": true,
+    "unrelatedBaselinesPreserved": true
+  },
+  "nativeStatus": {
+    "status": "passed",
+    "distinctOriginalTasks": 40,
+    "workflows": [
+      {
+        "test": "TestLiveWirelessTagRecreationPublicRecovery",
+        "seconds": 1142.66,
+        "distinctOriginalTasks": 18,
+        "membershipReductions": 2,
+        "predecessorTagDeletes": 2,
+        "recreateProducerTasks": 2,
+        "newIncarnationTagDeletes": 2,
+        "associationDeletes": 2,
+        "archivedCompleteCohorts": 2,
+        "authenticatedNewIncarnations": true,
+        "stableNativeIDs": 2,
+        "producerDigestsScopesEpochContinuityAndOrderingVerified": true,
+        "finalPrivateRows": 4,
+        "finalPrivateMemberProofs": 4,
+        "baselinesRestored": true
+      },
+      {
+        "test": "TestLiveWirelessTagCohortRecreationPublicRecovery",
+        "seconds": 2293.52,
+        "distinctOriginalTasks": 22,
+        "membershipReductions": 3,
+        "predecessorTagDeletes": 3,
+        "recreateProducerTasks": 2,
+        "newIncarnationTagDeletes": 3,
+        "associationDeletes": 2,
+        "archivedCompleteCohorts": 2,
+        "authenticatedNewIncarnations": true,
+        "stableNativeIDs": 3,
+        "producerDigestsScopesEpochContinuityAndOrderingVerified": true,
+        "finalPrivateRows": 5,
+        "finalPrivateMemberProofs": 6,
+        "baselinesRestored": true
+      }
+    ]
+  },
+  "activeJobs": {},
+  "remaining": [
+    "Native repeated v5 ordinary-update/member cycles; local and temporary-API repeated cycles passed separately",
+    "Larger/mixed scopes, owner/key/archive handoff and retirement, parent/config deletion",
+    "Installed mutation/private ownership/physical qualification; read-only worker separately passed",
+    "Full 93-resource model parity"
+  ],
+  "legacyLifecycleAudit": [
+    {
+      "surface": "local",
+      "status": "passed",
+      "goSeconds": 272.154,
+      "families": [
+        {
+          "test": "TestWirelessTagMembershipRemoval",
+          "status": "pass",
+          "passingLifecycleCases": 34,
+          "expectedLifecycleCases": 34,
+          "seconds": 66.01
+        },
+        {
+          "test": "TestWirelessTagPrune",
+          "status": "pass",
+          "passingLifecycleCases": 60,
+          "expectedLifecycleCases": 60,
+          "seconds": 155.7
+        },
+        {
+          "test": "TestWirelessTagReceipts",
+          "status": "pass",
+          "passingLifecycleCases": 46,
+          "expectedLifecycleCases": 46,
+          "seconds": 48.04
+        }
+      ]
+    },
+    {
+      "surface": "api",
+      "status": "passed",
+      "goSeconds": 710.132,
+      "families": [
+        {
+          "test": "TestEnvtestWirelessTagMembershipRemoval",
+          "status": "pass",
+          "passingLifecycleCases": 34,
+          "expectedLifecycleCases": 34,
+          "seconds": 174.26
+        },
+        {
+          "test": "TestEnvtestWirelessTagPrune",
+          "status": "pass",
+          "passingLifecycleCases": 60,
+          "expectedLifecycleCases": 60,
+          "seconds": 405.33
+        },
+        {
+          "test": "TestEnvtestWirelessTagReceipts",
+          "status": "pass",
+          "passingLifecycleCases": 46,
+          "expectedLifecycleCases": 46,
+          "seconds": 128.36
+        }
+      ]
+    }
+  ],
+  "legacyAuditScript": "/private/tmp/cvk-tag-stable-legacy-audit.py",
+  "verifiedNativeMilestone": "Singleton native workflow passed in 1142.66s: 18 distinct original tasks, two authenticated stable-identifier incarnations, private pruning, association removal, no-op and exact baseline restoration. Cohort remains running."
+}

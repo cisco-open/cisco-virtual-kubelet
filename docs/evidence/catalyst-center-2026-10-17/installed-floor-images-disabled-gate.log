@@ -1,0 +1,5 @@
+=== RUN   TestLiveInstalledPrivateSiteExecution
+    installed_site_execution_live_test.go:34: explicit installed private-site qualification disabled
+--- SKIP: TestLiveInstalledPrivateSiteExecution (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	1.206s

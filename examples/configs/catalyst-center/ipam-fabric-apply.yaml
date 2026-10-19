@@ -1,0 +1,66 @@
+# Global/Lab must already exist in Catalyst Center's site hierarchy.
+# Resolved NetAsCode 0.5.0 intent. This creates a global pool, a site reservation,
+# a fabric site, a VN association and an anycast gateway, in dependency order.
+# Use mode: report to inspect drift without mutations. No pruning is requested.
+# Fixture-qualified; this combined flow has not yet been lab-qualified.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-ipam-fabric
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings, fabric]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-ipam-fabric-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: Lab
+              parent_name: Global
+              ip_pools_reservations: [access]
+        network_settings:
+          ip_pools:
+            - name: parent
+              type: Generic
+              ip_address_space: IPv4
+              ip_pool_cidr: 192.0.2.0/24
+              gateway: 192.0.2.1
+              dhcp_servers: []
+              dns_servers: [192.0.2.53]
+              ip_pools_reservations:
+                - name: access
+                  type: LAN
+                  subnet: 192.0.2.128
+                  prefix_length: 25
+                  gateway: 192.0.2.129
+        fabric:
+          l3_virtual_networks:
+            - name: Corp
+          fabric_sites:
+            - name: Global/Lab
+              authentication_template:
+                name: Closed Authentication
+              pub_sub_enabled: false
+              l3_virtual_networks: [Corp]
+              anycast_gateways:
+                - ip_pool_name: access
+                  l3_virtual_network: Corp
+                  traffic_type: DATA
+                  auto_generate_vlan_name: true
+                  critical_pool: false
+                  layer2_flooding: false
+                  wireless_pool: false
+                  ip_directed_broadcast: false
+                  intra_subnet_routing_enabled: false
+                  multiple_ip_to_mac_addresses: false

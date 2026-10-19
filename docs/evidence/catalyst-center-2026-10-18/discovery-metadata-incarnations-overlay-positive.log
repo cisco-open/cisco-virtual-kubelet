@@ -1,0 +1,65 @@
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-inline
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-configmap
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 4081 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc000640b80, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x106a46388, 0x107b9ae00}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc0003f65b0, {0x106a46388, 0x107b9ae00}, {{{0xc001434c90, 0x23}, {0xc000a8ea0c, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialCustodyCleanup(0xc000248b48, 0xc000780370, 0xc000efa008, {0x103faf4b6, 0x6}, 0x0, {0x106a69660, 0xc0007321b0}, {0xc000ce7bd1, 0xf}, ...)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_custody_cleanup_test.go:353 +0x33c8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialCustodyExecution(0xc000248b48, 0xc000780370, 0xc000efa008, {0x103faf4ae, 0xe}, 0x0, {0x106a69660, 0xc0007321b0}, 0x1)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_custody_execution_test.go:269 +0x30fc
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialPublicHandoff(0xc000248b48, 0xc000780370, 0xc000efa008, {0x103ff895f, 0xe}, 0x0, {0xc000843bc0, 0xb4}, {0x106a69660, 0xc0007321b0}, ...)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_public_handoff_test.go:237 +0x1dc0
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialHandoffObservation(0xc000248b48, 0xc000780370, 0xc0007c8f08, {0x103ff8950, 0x1d}, 0x1, {0xc000a4f518, 0x1, 0xc0007c8f08?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_handoff_observation_test.go:322 +0x3410
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialRevision(0xc000248b48, 0xc000780370, 0xc0007c8f08, {0xc000ca63a8, 0xf}, 0x0, {0x106a69660, 0xc0007321b0}, 0x1, {0xc000015d11, ...})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_revision_test.go:556 +0x4890
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialCustodyExecution(0xc000248b48, 0xc000780370, 0xc0007c8f08, {0xc000ca639f, 0x18}, 0x0, {0x106a69660, 0xc0007321b0}, 0x1)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_custody_execution_test.go:265 +0x3094
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialPublicHandoff(0xc000248b48, 0xc000780370, 0xc0007c8f08, {0xc000ca639f, 0x18}, 0x0, {0xc000333810, 0xaf}, {0x106a69660, 0xc0007321b0}, ...)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_public_handoff_test.go:237 +0x1dc0
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryCredentialHandoffObservation(0xc000248b48, 0xc000780370, 0xc001cfa608, {0xc000ca6390, 0x27}, 0x1, {0x0, 0x0, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_handoff_observation_test.go:322 +0x3410
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.discoveryCredentialCleanupObservationScenario(0xc000248b48, {0xc000ca6380, 0x37}, 0xc000779e88)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_config_cleanup_observation_test.go:648 +0x6304
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestDiscoveryCredentialCustodyRevision.func1(0xc000248b48)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_credential_revision_envtest_test.go:13 +0xfc
+	>  testing.tRunner(0xc000248b48, 0xc0003b65d0)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 183
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestDiscoveryCredentialCustodyRevision/metadata-reintroduce
+--- PASS: TestEnvtestDiscoveryCredentialCustodyRevision (40.39s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap (9.14s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-inline (6.34s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-global-configmap (6.52s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-noauth (6.32s)
+    --- PASS: TestEnvtestDiscoveryCredentialCustodyRevision/metadata-reintroduce (8.41s)
+=== RUN   TestDiscoveryCredentialCustodyRevision
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-global-inline
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-global-configmap
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-noauth
+=== RUN   TestDiscoveryCredentialCustodyRevision/metadata-reintroduce
+--- PASS: TestDiscoveryCredentialCustodyRevision (16.50s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-noauth-configmap (3.12s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-global-inline (3.07s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-global-configmap (3.11s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-noauth (3.08s)
+    --- PASS: TestDiscoveryCredentialCustodyRevision/metadata-reintroduce (4.10s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	59.393s

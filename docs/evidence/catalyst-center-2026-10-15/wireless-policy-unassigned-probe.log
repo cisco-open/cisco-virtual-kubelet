@@ -1,0 +1,5 @@
+=== RUN   TestLiveRetainedUnassignedPolicyProbe
+    zz_policy_stage_probe_live_test.go:63: unassigned policy native validation REST POST /dna/intent/api/v1/wirelessProfiles/d161c8e2-0cbc-4afb-bee5-8ae1ffb7e712/policyTags/bulk failed with status 400 Bad Request: {"response":{"errorCode":"NCND11150","message":"Invalid request. Please check the request parameters and resubmit","detail":"The 'siteIds' property cannot be null or empty."},"version":"1.0"}
+--- PASS: TestLiveRetainedUnassignedPolicyProbe (0.89s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.030s

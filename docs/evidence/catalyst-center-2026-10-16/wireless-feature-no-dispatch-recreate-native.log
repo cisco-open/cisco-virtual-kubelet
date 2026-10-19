@@ -1,0 +1,51 @@
+=== RUN   TestLiveWirelessCleanAirManifestBands
+    wireless_cleanair_manifest_live_test.go:86: private journal evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-cleanair-manifest-3287912854 generated definition CVK_MB_16075345
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Create  01a143b3-fdeb-7776-94a4-46e28359acb5
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Create  01a143b4-29be-7383-9c9b-ee868254b655
+    wireless_cleanair_manifest_live_test.go:306: manifest InSync 2.4GHz 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6
+    wireless_cleanair_manifest_live_test.go:335: joint FRA InSync {2_4GHZ_5GHZ false false 3 Medium} faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:354: both task-returned create UUIDs match original receipts, selected kinds and manifest fields 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update faa2c13a-f6d7-4286-ad2a-172538c51edb 01a143b4-8540-7c41-b6dc-079842320fd1
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 01a143b4-b03b-7820-8e3b-ab6f8e389814
+    wireless_cleanair_manifest_live_test.go:306: manifest InSync 5GHz 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6
+    wireless_cleanair_manifest_live_test.go:335: joint FRA InSync {2_4GHZ_5GHZ true true 1 Low} faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update faa2c13a-f6d7-4286-ad2a-172538c51edb 01a143b5-0091-7b43-9176-4add701daa76
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 01a143b5-2b7f-755f-ba44-8e7d1aae8dc4
+    wireless_cleanair_manifest_live_test.go:306: manifest InSync 6GHz 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6
+    wireless_cleanair_manifest_live_test.go:335: joint FRA InSync {5GHZ_6GHZ false true 24 } faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update faa2c13a-f6d7-4286-ad2a-172538c51edb 01a143b5-7b41-7939-9c38-7f0be4f26f36
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 01a143b5-a636-76c1-b2fc-6a8e2d654ca8
+    wireless_cleanair_manifest_live_test.go:306: manifest InSync 2.4GHz 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6
+    wireless_cleanair_manifest_live_test.go:335: joint FRA InSync {2_4GHZ_5GHZ false false 6 Medium} faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update faa2c13a-f6d7-4286-ad2a-172538c51edb 01a143b5-f611-7f12-a242-b6cb4dcb18ae
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 01a143b6-2110-793e-a190-0d446548be3a
+    wireless_cleanair_manifest_live_test.go:306: manifest InSync 6GHz 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6
+    wireless_cleanair_manifest_live_test.go:335: joint FRA InSync {5GHZ_6GHZ false true 24 } faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update faa2c13a-f6d7-4286-ad2a-172538c51edb 01a143b6-7215-7108-821d-1070abe7773f
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 01a143b6-9d12-7b3f-a733-9bbeafeb9757
+    wireless_cleanair_manifest_live_test.go:306: manifest InSync 5GHz 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6
+    wireless_cleanair_manifest_live_test.go:335: joint FRA InSync {2_4GHZ_5GHZ false false 6 Super High} faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update faa2c13a-f6d7-4286-ad2a-172538c51edb 01a143b6-e763-7978-ab2f-bc577f26783d
+    wireless_cleanair_manifest_live_test.go:255: serialized acknowledged operation retained Unknown Update 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 01a143b7-1244-7919-98e3-0c1a8f7e22f2
+    wireless_cleanair_manifest_live_test.go:306: manifest InSync 2.4GHz 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6
+    wireless_cleanair_manifest_live_test.go:335: joint FRA InSync {2_4GHZ_5GHZ false false 3 Medium} faa2c13a-f6d7-4286-ad2a-172538c51edb
+    wireless_cleanair_manifest_live_test.go:426: serialized acknowledged Delete retained Unknown 7af3d29d-1f4a-423b-9ac6-4d5c5e073fd6 01a143b7-6251-7fcd-9821-6773149240e4
+    wireless_cleanair_manifest_live_test.go:426: serialized acknowledged Delete retained Unknown faa2c13a-f6d7-4286-ad2a-172538c51edb 01a143b7-8d43-7840-9abd-b91be2d3d44c
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Create  01a143b7-d973-7a0d-bea7-a843974689a2
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Create  01a143b8-046c-7ab2-ac76-892987c8c84f
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Update 73d2b6ea-1738-49b6-9b3d-e5d41a51bafe 01a143b8-42f5-79e6-99d4-d3247c7b8b3d
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Update 4c357547-aec0-4634-96b9-d80d88a682c1 01a143b8-6df2-74ea-a2f0-b75f20a15bb4
+    wireless_cleanair_manifest_live_test.go:449: serialized acknowledged Delete retained Unknown 4c357547-aec0-4634-96b9-d80d88a682c1 01a143b8-b247-700f-9edd-dd311009c49a
+    wireless_cleanair_manifest_live_test.go:449: serialized acknowledged Delete retained Unknown 73d2b6ea-1738-49b6-9b3d-e5d41a51bafe 01a143b8-dd31-75c4-b947-671c7e2c4ede
+    wireless_cleanair_manifest_live_test.go:449: recreated source lifecycle and retained cleanup complete 1 4c357547-aec0-4634-96b9-d80d88a682c1 73d2b6ea-1738-49b6-9b3d-e5d41a51bafe
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Create  01a143b9-2efe-7ebe-8f9b-c4e8632623f3
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Create  01a143b9-59ec-79dd-9dd9-c938a0641b11
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Update 81efb47e-814c-419f-a92a-50aa06dda820 01a143b9-9be5-7077-8af1-d033d53529e4
+    wireless_cleanair_manifest_live_test.go:449: serialized recreated operation retained Unknown Update 42f8ff77-8c7f-416c-aa97-64f5a4955c9e 01a143b9-c6d7-7f9e-801d-468f429aa6ac
+    wireless_cleanair_manifest_live_test.go:449: serialized acknowledged Delete retained Unknown 42f8ff77-8c7f-416c-aa97-64f5a4955c9e 01a143ba-110e-7e8e-94d4-0b9810f54159
+    wireless_cleanair_manifest_live_test.go:449: serialized acknowledged Delete retained Unknown 81efb47e-814c-419f-a92a-50aa06dda820 01a143ba-3c28-7eb4-9c88-fbab649b80bd
+    wireless_cleanair_manifest_live_test.go:449: recreated source lifecycle and retained cleanup complete 2 42f8ff77-8c7f-416c-aa97-64f5a4955c9e 81efb47e-814c-419f-a92a-50aa06dda820
+    wireless_feature_no_dispatch_live_test.go:89: feature preflight refusals automatically retired before fresh dispatch; ownership/history retained 28 map[Create:6 Delete:6 Update:16] native mutations 28
+--- PASS: TestLiveWirelessCleanAirManifestBands (427.88s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	430.250s

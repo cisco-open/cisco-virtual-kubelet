@@ -1,0 +1,14 @@
+{
+  "controllerUID": "7c0e92f3-ac7a-4155-b841-56fe4140039d",
+  "phase": "Ready",
+  "conditions": {
+    "EndpointUnique": "True",
+    "AdapterAvailable": "True",
+    "WorkerAvailable": "True",
+    "Ready": "True",
+    "Authenticated": "True",
+    "APICompatible": "True"
+  },
+  "deviceAdoptionEnabled": false,
+  "ciscoDeviceCount": 0
+}

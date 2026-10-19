@@ -1,0 +1,197 @@
+{
+  "health": {
+    "image": "cvk-catc-nac:20261012-43741637f05c",
+    "deployments": [
+      {
+        "namespace": "cisco-vk-system",
+        "name": "cisco-vk-cisco-virtual-kubelet-controller",
+        "image": "cvk-catc-nac:20261012-43741637f05c",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-101-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-103-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-live-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "catc-controller-worker",
+        "image": "cvk-catc-nac:20261012-43741637f05c",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      }
+    ],
+    "nodes": [
+      {
+        "name": "cat9k-lab-101",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-lab-103",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-live",
+        "ready": "True"
+      }
+    ],
+    "configuration": {
+      "name": "catc-nac-journal-qualification",
+      "uid": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+      "generation": 3,
+      "phase": "InSync",
+      "owners": [
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "inventory"
+        },
+        {
+          "configName": "catc-aaa-qualification",
+          "configUID": "4510b61d-d0e3-41a9-a7b5-72f104d51c4d",
+          "section": "system_settings"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "templates"
+        }
+      ]
+    }
+  },
+  "qualification": {
+    "stage": "cleaned",
+    "events": [
+      {
+        "phase": null,
+        "operation": null,
+        "operationPhase": null,
+        "task": null
+      },
+      {
+        "phase": "Waiting",
+        "operation": "0766d2076e1ba3389e29ae4343b24c21",
+        "operationPhase": "Accepted",
+        "task": "01a130ea-d4ae-78a1-bc62-58098bc01caa"
+      },
+      {
+        "phase": "Waiting",
+        "operation": "0766d2076e1ba3389e29ae4343b24c21",
+        "operationPhase": "Verifying",
+        "task": "01a130ea-d4ae-78a1-bc62-58098bc01caa"
+      },
+      {
+        "phase": "Verifying",
+        "operation": "0766d2076e1ba3389e29ae4343b24c21",
+        "operationPhase": "Verified",
+        "task": "01a130ea-d4ae-78a1-bc62-58098bc01caa"
+      },
+      {
+        "phase": "Waiting",
+        "operation": null,
+        "operationPhase": null,
+        "task": null
+      },
+      {
+        "phase": "InSync",
+        "operation": null,
+        "operationPhase": null,
+        "task": null
+      },
+      {
+        "phase": "Failed",
+        "operation": null,
+        "operationPhase": null,
+        "task": null
+      },
+      {
+        "phase": "Waiting",
+        "operation": "cc0cc505b81fab697289e1011c21053a",
+        "operationPhase": "Accepted",
+        "task": "01a130ec-1539-74a1-a726-d97413db7eaa"
+      },
+      {
+        "phase": "Waiting",
+        "operation": "cc0cc505b81fab697289e1011c21053a",
+        "operationPhase": "Verifying",
+        "task": "01a130ec-1539-74a1-a726-d97413db7eaa"
+      },
+      {
+        "phase": "Verifying",
+        "operation": "cc0cc505b81fab697289e1011c21053a",
+        "operationPhase": "Verified",
+        "task": "01a130ec-1539-74a1-a726-d97413db7eaa"
+      },
+      {
+        "phase": "Waiting",
+        "operation": null,
+        "operationPhase": null,
+        "task": null
+      },
+      {
+        "phase": "InSync",
+        "operation": null,
+        "operationPhase": null,
+        "task": null
+      }
+    ],
+    "tasks": [
+      "01a130ea-d4ae-78a1-bc62-58098bc01caa",
+      "01a130ec-1539-74a1-a726-d97413db7eaa"
+    ],
+    "restarted": true,
+    "uid": "4510b61d-d0e3-41a9-a7b5-72f104d51c4d",
+    "oldPodUID": "14a3a00c-8612-46b1-8633-03f686f8ac6f",
+    "application": {
+      "configUID": "4510b61d-d0e3-41a9-a7b5-72f104d51c4d",
+      "operationID": "cc0cc505b81fab697289e1011c21053a",
+      "resource": "192.0.2.43",
+      "section": "system_settings",
+      "targetID": "d835b7c8-53eb-4b63-a2cb-5e03697655e3",
+      "versions": [
+        {
+          "path": "/authentication_and_policy_servers/aaa/0/shared_secret",
+          "secretKey": "shared-secret",
+          "secretName": "catc-aaa-qualification",
+          "sourceAlias": "aaa-qualification",
+          "version": 2
+        }
+      ]
+    },
+    "cleanupTask": "01a130ec-7560-7539-965b-ff553248c276",
+    "newPodUIDs": [
+      "34f52342-7693-4133-879e-25d90657d1fa"
+    ],
+    "retainedConfigMode": "report"
+  }
+}

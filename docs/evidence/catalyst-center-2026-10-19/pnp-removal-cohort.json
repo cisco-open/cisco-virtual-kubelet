@@ -1,0 +1,96 @@
+{
+  "status": "PASS private whole-cohort preflight, ordered cleanup and recovery; new public dispatch incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1691,
+    "sha256": "9e93a4ea705e06a662887b238ce45766bb0b9943e0cc5f350644f56ed58f95be",
+    "productionSHA256": "d193bdbbf785783ae66ba878e63870e5ec9857aed8046ab7640913205bca2efa"
+  },
+  "native": {
+    "result": "PASS",
+    "runnerSeconds": 58.81267809867859,
+    "testSeconds": 22.06,
+    "source": {
+      "files": 1691,
+      "sha256": "08e5ea45dc29aef2d8552e2851e5dfe27c008338343417116e1ca9673dfa02bd",
+      "productionSHA256": "d193bdbbf785783ae66ba878e63870e5ec9857aed8046ab7640913205bca2efa"
+    },
+    "ids": [
+      "6ad58e9b0bc0186771cb11cb",
+      "6ad58e9d0bc0186771cb11cc"
+    ],
+    "POST": 2,
+    "DELETE": 2,
+    "zeroDeleteAtPreHTTPRefusal": true,
+    "freshPlanRequired": true,
+    "orderedCleanup": true,
+    "creatorRows": 2,
+    "absenceRows": 2,
+    "baselineRestored": true,
+    "physicalActions": 0,
+    "kubernetesPersistence": "simulated JSON; real API qualification separate",
+    "note": "Only the cohort fixture test changed after native qualification, to correct a CRD-invalid tombstone and add managed-sibling/final-read cases. Production and live-test sources are unchanged."
+  },
+  "gates": {
+    "controlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 95,
+      "seconds": 32.848,
+      "log": "/private/tmp/cvk-pnp-cohort-final-api.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1032,
+      "seconds": 61.169,
+      "log": "/private/tmp/cvk-pnp-cohort-final-compat.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "packages": 6,
+      "log": "/private/tmp/cvk-pnp-cohort-foundation.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-pnp-cohort-cisco-vk"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.41,
+      "log": "/private/tmp/cvk-pnp-cohort-final-docs.log"
+    },
+    "formatSourceAndLedger": {
+      "result": "PASS",
+      "sourceUnchanged": true,
+      "uniquePinnedResourceRows": 93
+    }
+  },
+  "proof": {
+    "reuse": [
+      "existing source/owner checks",
+      "existing synchronous journal and atomic absence receipts",
+      "existing guard-bound no-dispatch proof",
+      "existing native eligibility and managed-serial checks",
+      "existing bounded action ledger"
+    ],
+    "cohortChecks": [
+      "complete pinned PnP-only intent including explicit empty list",
+      "canonical original creator evidence; no legacy cleanup adoption",
+      "exact valid tombstones; no inference from native absence",
+      "remaining count and byte capacity without history eviction",
+      "deterministic UUID order; fresh plan after each receipt-gated completion",
+      "all pending native identities and baselines at planning and final authority brackets"
+    ],
+    "atomicBatch": false
+  },
+  "remaining": [
+    "new public dispatch requires existing manager-owned identity/reservation admission and actor access",
+    "complete native consumer census beyond known protected fields",
+    "missing-source and CR deletion context; manager finalization; installed actors",
+    "full pinned 93-resource model execution and hardware qualification"
+  ],
+  "records": {
+    "execution.log": "c7281107c706e509465c940148e122f00949a85ec230cb5369fa941f8eaca026",
+    "intent.json": "dd7f6338a56e9c4780b1372a822930a02dee0595934c65e62182543cd50d6485",
+    "journal.json": "cf8e32a8d2139fc02527cef29e37cb9e4a6ed03aed04ece1e43aebc72980b08a"
+  }
+}

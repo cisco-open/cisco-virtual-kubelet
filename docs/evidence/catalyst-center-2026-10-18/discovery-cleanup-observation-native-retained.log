@@ -1,0 +1,6 @@
+=== RUN   TestLiveRetainedOwnedDiscoveryCleanup
+    discovery_owned_recovery_live_test.go:116: read-only deletion-bound cleanup candidate verified; no finalizer grant, dispatch or installed API mutation 153
+    discovery_owned_recovery_live_test.go:164: verified retained discovery exact cleanup/absence; original baseline restored CVK_DISC_8bf34412ea21a234 153 01a14ca8-1caa-7057-8466-036c92518edb read-only-resume false
+--- PASS: TestLiveRetainedOwnedDiscoveryCleanup (2.94s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.446s

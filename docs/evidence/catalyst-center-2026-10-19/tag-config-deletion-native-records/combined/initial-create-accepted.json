@@ -1,0 +1,44 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configDeletionTimestamp": null,
+  "configFinalizers": [
+    "config.cisco.vk/catalyst-center-tag-cleanup",
+    "example.com/other"
+  ],
+  "configStatus": {},
+  "configUID": "56c29a83-e088-4471-af41-eeb6ca1cf5db",
+  "configuration": {
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "sites",
+        "configUID": "56c29a83-e088-4471-af41-eeb6ca1cf5db"
+      },
+      {
+        "section": "templates",
+        "configName": "sites",
+        "configUID": "56c29a83-e088-4471-af41-eeb6ca1cf5db"
+      }
+    ],
+    "operation": {
+      "id": "cf67526210be7789c79f44f98da7ffc5",
+      "configName": "sites",
+      "configUID": "56c29a83-e088-4471-af41-eeb6ca1cf5db",
+      "configGeneration": 2,
+      "controllerGeneration": 1,
+      "section": "templates",
+      "resource": "tag-owned:v1:c:ff67ac0da403f76e0e0dfbac6c191e14eb6ffab459c2b225c1bb13a1afb0e42f:c74e8962980969b9832d565b559ceccb15d731b6537c344477bd16627de88a0f:i",
+      "action": "Create",
+      "phase": "Accepted",
+      "submittedAt": "2026-10-19T00:16:38Z",
+      "taskID": "01a15184-7a04-7e40-b38d-3bd99e6924b9"
+    }
+  },
+  "deletes": 0,
+  "generation": 2,
+  "nativeID": "",
+  "phase": "initial-create-accepted",
+  "posts": 1,
+  "puts": 0,
+  "tagName": "CVK-Q-Tag-Prune-1792368992695898000"
+}

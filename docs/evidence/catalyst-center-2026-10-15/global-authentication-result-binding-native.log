@@ -1,0 +1,11 @@
+=== RUN   TestLiveCatalystCenterAuthTemplatesExecution
+    authentication_execution_live_test.go:206: private recovery baseline saved /private/tmp/cvk-auth-template-baseline-207510912/baseline.json
+    authentication_execution_live_test.go:221: unused global profile baseline 0ddb440b-e867-409c-9902-bc7a8c2ceec8 original wakeOnLan false
+    authentication_execution_live_test.go:277: global auth operation 0ddb440b-e867-409c-9902-bc7a8c2ceec8 01a14098-4a4d-7895-96f8-fdf88b421fa4
+    authentication_execution_live_test.go:327: global auth phase verified 0 unmanaged descriptions and other profiles unchanged
+    authentication_execution_live_test.go:277: global auth operation 0ddb440b-e867-409c-9902-bc7a8c2ceec8 01a14098-6892-729f-b629-477d54920eab
+    authentication_execution_live_test.go:327: global auth phase verified 1 unmanaged descriptions and other profiles unchanged
+    authentication_execution_live_test.go:334: original complete global authentication baseline restored; no fabric or device operation submitted
+--- PASS: TestLiveCatalystCenterAuthTemplatesExecution (19.70s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.583s

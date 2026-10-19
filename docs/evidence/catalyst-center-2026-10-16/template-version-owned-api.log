@@ -1,0 +1,249 @@
+=== RUN   TestEnvtestTemplateAppliedState
+=== RUN   TestEnvtestTemplateAppliedState/project-update/known
+=== RUN   TestEnvtestTemplateAppliedState/project-update/key-change-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/project-update/key-change-restore
+=== RUN   TestEnvtestTemplateAppliedState/project-update/native-state-race
+=== RUN   TestEnvtestTemplateAppliedState/project-update/wrong-declared-body
+=== RUN   TestEnvtestTemplateAppliedState/project-update/source-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/project-update/owner-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/project-update/receipt-conflict
+=== RUN   TestEnvtestTemplateAppliedState/project-update/receipt-lost-ack
+=== RUN   TestEnvtestTemplateAppliedState/project-update/receipt-pruned
+=== RUN   TestEnvtestTemplateAppliedState/project-update/source-fields-pruned
+=== RUN   TestEnvtestTemplateAppliedState/project-update/baseline-pruned
+=== RUN   TestEnvtestTemplateAppliedState/project-update/baseline-wrong-key
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/known
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/key-change-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/key-change-restore
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/native-state-race
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/wrong-declared-body
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/source-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/owner-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/receipt-conflict
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/receipt-lost-ack
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/receipt-pruned
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/source-fields-pruned
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/baseline-pruned
+=== RUN   TestEnvtestTemplateAppliedState/draft-update/baseline-wrong-key
+=== RUN   TestEnvtestTemplateAppliedState/commit/known
+=== RUN   TestEnvtestTemplateAppliedState/commit/key-change-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/commit/key-change-restore
+=== RUN   TestEnvtestTemplateAppliedState/commit/native-state-race
+=== RUN   TestEnvtestTemplateAppliedState/commit/wrong-declared-body
+=== RUN   TestEnvtestTemplateAppliedState/commit/source-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/commit/owner-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/commit/receipt-conflict
+=== RUN   TestEnvtestTemplateAppliedState/commit/receipt-lost-ack
+=== RUN   TestEnvtestTemplateAppliedState/commit/receipt-pruned
+=== RUN   TestEnvtestTemplateAppliedState/commit/source-fields-pruned
+=== RUN   TestEnvtestTemplateAppliedState/commit/baseline-pruned
+=== RUN   TestEnvtestTemplateAppliedState/commit/baseline-wrong-key
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/known
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/key-change-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/key-change-restore
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/native-state-race
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/wrong-declared-body
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/source-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/owner-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/receipt-conflict
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/receipt-lost-ack
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/receipt-pruned
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/source-fields-pruned
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/baseline-pruned
+=== RUN   TestEnvtestTemplateAppliedState/composite-draft/baseline-wrong-key
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/known
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/key-change-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/key-change-restore
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/native-state-race
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/wrong-declared-body
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/source-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/owner-during-proof
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/receipt-conflict
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/receipt-lost-ack
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/receipt-pruned
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/source-fields-pruned
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/baseline-pruned
+=== RUN   TestEnvtestTemplateAppliedState/composite-commit/baseline-wrong-key
+--- PASS: TestEnvtestTemplateAppliedState (134.66s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/known (3.03s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/key-change-during-proof (1.87s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/key-change-restore (0.47s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/native-state-race (3.36s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/wrong-declared-body (2.90s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/source-during-proof (1.72s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/owner-during-proof (1.70s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/receipt-conflict (0.49s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/receipt-lost-ack (0.40s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/receipt-pruned (1.86s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/source-fields-pruned (1.36s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/baseline-pruned (1.35s)
+    --- PASS: TestEnvtestTemplateAppliedState/project-update/baseline-wrong-key (1.43s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/known (0.95s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/key-change-during-proof (1.89s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/key-change-restore (1.03s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/native-state-race (4.29s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/wrong-declared-body (3.15s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/source-during-proof (1.78s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/owner-during-proof (1.66s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/receipt-conflict (1.09s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/receipt-lost-ack (0.97s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/receipt-pruned (1.95s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/source-fields-pruned (1.50s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/baseline-pruned (1.44s)
+    --- PASS: TestEnvtestTemplateAppliedState/draft-update/baseline-wrong-key (1.47s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/known (0.58s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/key-change-during-proof (1.92s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/key-change-restore (0.65s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/native-state-race (5.56s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/wrong-declared-body (3.18s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/source-during-proof (1.76s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/owner-during-proof (1.76s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/receipt-conflict (0.76s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/receipt-lost-ack (0.57s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/receipt-pruned (1.97s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/source-fields-pruned (1.50s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/baseline-pruned (1.50s)
+    --- PASS: TestEnvtestTemplateAppliedState/commit/baseline-wrong-key (1.51s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/known (1.49s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/key-change-during-proof (2.08s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/key-change-restore (1.58s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/native-state-race (6.66s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/wrong-declared-body (3.77s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/source-during-proof (1.95s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/owner-during-proof (1.94s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/receipt-conflict (1.72s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/receipt-lost-ack (2.02s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/receipt-pruned (2.36s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/source-fields-pruned (1.75s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/baseline-pruned (1.68s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-draft/baseline-wrong-key (1.75s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/known (0.88s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/key-change-during-proof (2.14s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/key-change-restore (0.96s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/native-state-race (9.63s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/wrong-declared-body (3.92s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/source-during-proof (2.01s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/owner-during-proof (2.09s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/receipt-conflict (1.14s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/receipt-lost-ack (0.86s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/receipt-pruned (2.35s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/source-fields-pruned (1.88s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/baseline-pruned (1.85s)
+    --- PASS: TestEnvtestTemplateAppliedState/composite-commit/baseline-wrong-key (1.85s)
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 66394 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc000976080, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x106209cc8?, 0xc000976080?}, 0xc0006e75d8?}, {0x103a3c270, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000b0e008)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc001076248, {0xc0008f0e50, 0x1, 0x100994110?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestTemplateCreatorPrivateBaseline(0xc001076248)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/template_native_comparison_envtest_test.go:10 +0x58
+	>  testing.tRunner(0xc001076248, 0x1061b22a8)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/known
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/missing-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/malformed-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-during-proof
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-restore
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/native-state-race
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/wrong-declared-body
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-pruned
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-wrong-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/known
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/missing-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/malformed-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-during-proof
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-restore
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/native-state-race
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/wrong-declared-body
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-pruned
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-wrong-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/known
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/missing-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/malformed-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-during-proof
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-restore
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/native-state-race
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/wrong-declared-body
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-pruned
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-wrong-key
+--- PASS: TestEnvtestTemplateCreatorPrivateBaseline (49.12s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/known (2.37s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/missing-key (0.88s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/malformed-key (1.01s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-during-proof (1.65s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-restore (0.39s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/native-state-race (2.77s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/wrong-declared-body (2.51s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-pruned (1.23s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-wrong-key (1.23s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/known (0.85s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/missing-key (0.96s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/malformed-key (1.02s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-during-proof (1.71s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-restore (0.91s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/native-state-race (3.31s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/wrong-declared-body (2.50s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-pruned (1.34s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-wrong-key (1.38s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/known (1.33s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/missing-key (0.91s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/malformed-key (1.05s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-during-proof (1.78s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-restore (1.36s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/native-state-race (5.42s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/wrong-declared-body (2.96s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-pruned (1.46s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-wrong-key (1.48s)
+=== RUN   TestEnvtestTemplateVersionOwnership
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/known
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/version-missing-nonce
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/version-wrong-nonce
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/version-noncanonical
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/version-duplicate-nonce
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/receipt-version-pruned
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/receipt-version-noncanonical
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/version-body-comment-omitted
+=== RUN   TestEnvtestTemplateVersionOwnership/commit/version-meta-missing
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/known
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/version-missing-nonce
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/version-wrong-nonce
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/version-noncanonical
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/version-duplicate-nonce
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/receipt-version-pruned
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/receipt-version-noncanonical
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/version-body-comment-omitted
+=== RUN   TestEnvtestTemplateVersionOwnership/composite-commit/version-meta-missing
+--- PASS: TestEnvtestTemplateVersionOwnership (58.22s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/known (2.63s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/version-missing-nonce (3.93s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/version-wrong-nonce (3.92s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/version-noncanonical (3.98s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/version-duplicate-nonce (4.30s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/receipt-version-pruned (1.59s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/receipt-version-noncanonical (1.56s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/version-body-comment-omitted (0.60s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/commit/version-meta-missing (3.97s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/known (0.86s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/version-missing-nonce (4.51s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/version-wrong-nonce (4.45s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/version-noncanonical (4.66s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/version-duplicate-nonce (4.83s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/receipt-version-pruned (1.81s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/receipt-version-noncanonical (1.83s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/version-body-comment-omitted (0.88s)
+    --- PASS: TestEnvtestTemplateVersionOwnership/composite-commit/version-meta-missing (4.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	244.481s

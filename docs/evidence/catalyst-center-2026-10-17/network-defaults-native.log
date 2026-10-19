@@ -1,0 +1,45 @@
+=== RUN   TestLiveCatalystCenterNetworkDefaultExport
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-044817-000000000
+    site_execution_live_test.go:452: submitted task=01a14830-78a1-7789-89ee-6b3fa8e1d127 at=2026-10-17T04:48:18.486841Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a14830-7f53-7122-851a-a14626e49a03 at=2026-10-17T04:48:20.196223Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a14830-81f0-7892-a9d7-064b87c1a3c0 at=2026-10-17T04:48:20.821288Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a14830-84eb-7951-a54f-5cbb016f95d2 at=2026-10-17T04:48:21.579766Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:528: offline exporter materialized pinned telemetry defaults, preserved explicit false and passed the existing network compiler; no schema/parity inference
+    site_execution_live_test.go:528: public isolated setting accepted ntp 01a14830-ae72-73bb-ae15-c5d0ee7af871
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14830-ae72-73bb-ae15-c5d0ee7af871
+    site_execution_live_test.go:528: public isolated setting accepted dhcp 01a14830-dcc6-7c5a-b428-2ac496469578
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14830-dcc6-7c5a-b428-2ac496469578
+    site_execution_live_test.go:528: public isolated setting accepted dns 01a14831-148a-716d-bb8c-39cc8d37ccff
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14831-148a-716d-bb8c-39cc8d37ccff
+    site_execution_live_test.go:528: public isolated setting accepted timezone 01a14831-4286-77d2-bd7d-ca8b8edd28bb
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14831-4286-77d2-bd7d-ca8b8edd28bb
+    site_execution_live_test.go:528: public isolated setting accepted banner 01a14831-6e6c-7ec6-a46f-6aa52d4a740c
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14831-6e6c-7ec6-a46f-6aa52d4a740c
+    site_execution_live_test.go:528: public isolated setting accepted telemetry 01a14831-a43f-75ed-8e76-ff56b64e5a73
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14831-a43f-75ed-8e76-ff56b64e5a73
+    site_execution_live_test.go:528: all six original Unknown tasks recovered through full task trees and unchanged native/source/owner/journal evidence; no resubmission
+    site_execution_live_test.go:528: first six applications retained; applying a second source revision to replace the latest records
+    site_execution_live_test.go:528: public isolated setting accepted ntp 01a14831-e36e-72c2-8f29-baf7a868bbd9
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14831-e36e-72c2-8f29-baf7a868bbd9
+    site_execution_live_test.go:528: public isolated setting accepted dhcp 01a14832-1082-7f3c-9a8d-874667d05031
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14832-1082-7f3c-9a8d-874667d05031
+    site_execution_live_test.go:528: public isolated setting accepted dns 01a14832-3c28-7ec7-8ad9-c4b5e5f2de74
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14832-3c28-7ec7-8ad9-c4b5e5f2de74
+    site_execution_live_test.go:528: public isolated setting accepted timezone 01a14832-695f-7e74-9d11-f151114eb2c9
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14832-695f-7e74-9d11-f151114eb2c9
+    site_execution_live_test.go:528: public isolated setting accepted banner 01a14832-95b1-7031-9a6f-3d5b66323bb5
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14832-95b1-7031-9a6f-3d5b66323bb5
+    site_execution_live_test.go:528: public isolated setting accepted telemetry 01a14832-c29c-7f41-889d-99171643d7f4
+    site_execution_live_test.go:528: retained original network task as Unknown for restarted observation 01a14832-c29c-7f41-889d-99171643d7f4
+    site_execution_live_test.go:528: all six original Unknown tasks recovered through full task trees and unchanged native/source/owner/journal evidence; no resubmission
+    site_execution_live_test.go:528: twelve original tasks recovered; two source revisions retain exactly six latest application records with stable targets, atomic receipts, no raw native values and no replay
+    site_execution_live_test.go:528: six public setting updates reached InSync after six original no-dispatch refusals and automatic retire/replan; six native tasks, no replay; simulated storage/actors only
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterNetworkDefaultExport (165.79s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	168.344s

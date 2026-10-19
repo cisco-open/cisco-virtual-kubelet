@@ -1,0 +1,89 @@
+{
+  "fullModelComplete": false,
+  "branch": "pr/johalley/catc-support",
+  "scope": "Optional manager canonical metadata fence acquisition and incremental original UID status CAS; no worker/native dispatch or release",
+  "source": {
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "fbda52a7608bc41bd2f97e456a3f3e71518680ba5ef19e430bf5868e837dc89c"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "eb32904d69c5427ac7151f98f4bcaea237eff5eaa6fdf468f232cee2e0251887"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1695,
+      "sha256": "4291ce11414d64ef1eff577cef7697f1f9b19b69d8e1fa871e196e3165beb12d"
+    },
+    "internal/controllerconfiguration": {
+      "files": 153,
+      "sha256": "66ca84976a748aecfbae59586a746e97583523a2976c2a897d2043ff936be302"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "8ffa14352644c314420221e7660422148c13901a50306ae636293d219327f412"
+    },
+    "manifests": {
+      "config/crd/cisco.vk_networkcontrollers.yaml": "64bb4da9836cbd828959ee574b4828c7412d5538741ee1c405b0b63089d67ef7",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "64bb4da9836cbd828959ee574b4828c7412d5538741ee1c405b0b63089d67ef7",
+      "charts/cisco-virtual-kubelet/templates/bootstrap-fence-admission.yaml": "13dbecf38c1d7de5c293fd1b06e056465d89006e20f672f47b85245de0dde19c",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "e81715c351e9f239cc8e7829b5879d0a47697b811c6c649248d4b302ec875709"
+    }
+  },
+  "gates": {
+    "controlledAcquisition": {
+      "result": "PASS",
+      "passingEvents": 24,
+      "packages": 1,
+      "packageSeconds": 3.473,
+      "log": "/private/tmp/cvk-metadata-acquire-qualified-unit.log"
+    },
+    "realAPI": {
+      "result": "PASS",
+      "passingEvents": 74,
+      "packages": 1,
+      "packageSeconds": 22.61,
+      "log": "/private/tmp/cvk-metadata-acquire-qualified-api.log"
+    },
+    "sharedFoundations": {
+      "result": "PASS",
+      "passingEvents": 3358,
+      "packages": 7,
+      "packageSeconds": 24.564999999999998,
+      "log": "/private/tmp/cvk-metadata-acquire-final-foundation.log"
+    },
+    "managerRoute": {
+      "result": "PASS",
+      "passingEvents": 22,
+      "packages": 1,
+      "packageSeconds": 1.375,
+      "log": "/private/tmp/cvk-metadata-acquire-route.log"
+    },
+    "PnPAndSWIMCompatibility": {
+      "result": "PASS",
+      "passingEvents": 1193,
+      "packages": 1,
+      "packageSeconds": 18.386,
+      "log": "/private/tmp/cvk-metadata-acquire-compat.log"
+    }
+  },
+  "mainBuild": "PASS",
+  "sourceAndFormat": "PASS",
+  "uniquePinnedResourceRows": 93,
+  "compositionRootActivation": false,
+  "labMutations": false,
+  "qualificationLimits": [
+    "Real isolated API admission and server-assigned UIDs; manager impersonation has broad test RBAC",
+    "Worker readiness, background compiler status and remaining deployed runtime compatibility explicitly staged",
+    "Private known-fence exception; public absence observer and enrollment holds unchanged",
+    "First pending original is identified by exact immutable operation/source/actor/protection binding before UID publication; arbitrary external deletion/recreation/admission bypass is not qualified",
+    "No installed worker or native PnP removal/settlement qualified"
+  ],
+  "remaining": [
+    "Compatible worker claim/dispatch with full source/actor/consumer and custody checks",
+    "Original native outcome verification and exact UID settlement/restart/lost-response recovery",
+    "Manager release acknowledgement, public new pruning and installed/native complete lifecycle",
+    "Complete consumer protection, deletion/missing-source finalization and wider pinned model execution/hardware qualification"
+  ],
+  "strictDocumentation": "PASS"
+}

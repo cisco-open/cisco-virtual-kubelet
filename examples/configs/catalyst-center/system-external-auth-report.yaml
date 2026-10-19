@@ -1,0 +1,25 @@
+# Example desired policy: external authentication disabled. Review before applying.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-system-external-auth
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [system_settings]
+  scope: global
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-system-example-v1
+  source:
+    inline:
+      catalyst_center:
+        system_settings:
+          external_authentication:
+            enabled: false

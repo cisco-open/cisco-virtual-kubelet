@@ -1,0 +1,18 @@
+# Already-selected site geometry only. Parent names and floor_number remain
+# explicit for singular execution. No image, planned AP or operational binding
+# is included in this example.
+catalyst_center:
+  sites:
+    areas:
+      - name: CVK-Defaults-Lab
+        parent_name: Global
+    buildings:
+      - name: Building
+        parent_name: Global/CVK-Defaults-Lab
+        country: United States
+        latitude: 37.33812
+        longitude: -121.88612
+    floors:
+      - name: Floor
+        parent_name: Global/CVK-Defaults-Lab/Building
+        floor_number: 1

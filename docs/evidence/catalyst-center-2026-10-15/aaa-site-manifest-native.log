@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterAAASettingsManifest
+    aaa_settings_manifest_live_test.go:86: isolated dual-protocol registration verified 0b9a4486-6b2e-48d4-ac00-0ad254438389
+    aaa_settings_manifest_live_test.go:86: isolated dual-protocol registration verified 79d12c47-4ddc-46ae-80fe-4e70b07fc086
+    aaa_settings_manifest_live_test.go:87: assignment fixture area task Global/CVK-Cred-20261015-124525-000000000 01a13f98-913d-7e19-b5c5-0b5cfd69724f
+    aaa_settings_manifest_live_test.go:72: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:289: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 1 credentialVersion 1 secondaryServers false
+    aaa_settings_manifest_live_test.go:257: AAA version projection lag refused without a native write
+    aaa_settings_manifest_live_test.go:72: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:289: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 2 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:72: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:289: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 3 credentialVersion 2 secondaryServers true
+    aaa_settings_manifest_live_test.go:72: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:289: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 4 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:310: AAA create/rotation completed only on the empty area; global AAA metadata unchanged; generated credentials not logged
+    site_credentials_live_test.go:145: empty credential assignment fixture removed f9ab030b-d186-4d65-8a77-8f7f5928b793 01a13f99-8543-76cf-aefe-2206573d9b9f
+    aaa_settings_registration_live_test.go:126: both isolated registration UUIDs deleted; original empty baseline restored
+--- PASS: TestLiveCatalystCenterAAASettingsManifest (71.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	73.972s

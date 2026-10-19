@@ -1,0 +1,12 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "sourceScope": "Current group-first run; earlier probe logs precede bounded no-dispatch replanning and/or candidate reorder",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/template_divider_contract_live_test.go": "f273f0dda6efec1ec32f41e521d2fe78dcf12ba13c0c1537cbd695b730120871",
+    "internal/controlleradapter/catalystcenter/template_metadata_transition_live_test.go": "73355f6e916595735a6de177d0d0850163194c80f76996ea073a89df40724d64",
+    "internal/controlleradapter/catalystcenter/template_commit_live_test.go": "9841f57e0c60bf0a2bd8f58d77b4bd4b899051c1cc324336ea15dd134ac10dc9",
+    "internal/controlleradapter/catalystcenter/template_projects_live_test.go": "60df24477fbff8b835d6b15843e191430bdd6e2de878da9500afa49918eaba10"
+  }
+}

@@ -1,0 +1,52 @@
+# Apply compatible authentication-policy registrations before aaa-apply.yaml.
+# If system_settings already has an owner, add these entries to that config;
+# do not create a competing owner. Site AAA preflight requires the registrations.
+# Uses the same administrator-authorized network-aaa/client-aaa aliases and
+# versioned Secret keys documented in aaa-apply.yaml. No credentials go in Git.
+# Registration does not provide an authentication service or enable external login.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-aaa-registrations
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [system_settings]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-aaa-prerequisites-example-v1
+  secretRefs:
+    - section: system_settings
+      path: /authentication_and_policy_servers/aaa/0/shared_secret
+      source: network-aaa
+    - section: system_settings
+      path: /authentication_and_policy_servers/aaa/1/shared_secret
+      source: client-aaa
+  source:
+    inline:
+      catalyst_center:
+        system_settings:
+          authentication_and_policy_servers:
+            aaa:
+              - ip_address: 192.0.2.10
+                protocols:
+                  tacacs:
+                    port: 49
+                retries: 1
+                timeout: 5
+                shared_secret_version: 1
+              - ip_address: 192.0.2.20
+                protocols:
+                  radius:
+                    authentication_port: 1812
+                    accounting_port: 1813
+                retries: 1
+                timeout: 5
+                shared_secret_version: 1

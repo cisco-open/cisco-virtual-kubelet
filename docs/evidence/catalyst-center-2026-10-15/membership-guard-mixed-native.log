@@ -1,0 +1,21 @@
+=== RUN   TestLiveCatalystCenterTags
+    template_tags_live_test.go:286: tag operation 0 Create 01a13f60-7c8d-78b5-aa59-14865ed1c737
+    template_tags_live_test.go:345: evaluated dynamic membership 0 1
+    template_tags_live_test.go:355: association class verified DYNAMIC map[:1 DYNAMIC:1 MIXED:0 STATIC:0]
+    template_tags_live_test.go:355: association class verified MIXED map[:1 DYNAMIC:0 MIXED:1 STATIC:0]
+    template_tags_live_test.go:355: association class verified STATIC map[:1 DYNAMIC:0 MIXED:0 STATIC:1]
+    template_tags_live_test.go:355: association class verified MIXED map[:1 DYNAMIC:0 MIXED:1 STATIC:0]
+    template_tags_live_test.go:355: association class verified DYNAMIC map[:1 DYNAMIC:1 MIXED:0 STATIC:0]
+    template_tags_live_test.go:355: explicit membership survived dynamic rule changes; manual fixture removed with dynamic membership preserved
+    template_tags_live_test.go:286: tag operation 1 Update 01a13f60-b38e-754e-a8db-dc393c5d6541
+    template_tags_live_test.go:345: evaluated dynamic membership 1 1
+    template_tags_live_test.go:286: tag operation 2 Update 01a13f60-c08e-7639-bca1-06a13c1d3242
+    template_tags_live_test.go:345: evaluated dynamic membership 2 0
+    template_tags_live_test.go:286: tag operation 3 Update 01a13f60-ccce-74ed-906a-0fce6e7bb608
+    template_tags_live_test.go:345: evaluated dynamic membership 3 0
+    template_tags_live_test.go:379: combined inventory/template tag precedence verified against one live tag
+    template_tags_live_test.go:384: positive dynamic first-to-second-to-empty evaluation, provenance and cleanup preparation verified
+    template_tags_live_test.go:209: tag cleanup verified 5c95b446-dade-4877-aa50-b992ac291ffc
+--- PASS: TestLiveCatalystCenterTags (24.52s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	26.411s

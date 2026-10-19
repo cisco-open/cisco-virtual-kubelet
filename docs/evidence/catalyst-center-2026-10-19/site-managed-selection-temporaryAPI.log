@@ -1,0 +1,34 @@
+=== RUN   TestEnvtestFloorImageOmissionReintroduction
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/omit
+    floor_image_omission_envtest_test.go:13: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/null
+    floor_image_omission_envtest_test.go:13: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/legacy
+    floor_image_omission_envtest_test.go:13: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/selected-omit
+    floor_image_omission_envtest_test.go:13: two source-only omit/reintroduce cycles retained original proof while omitted and replaced the same receipt slot with one new upload per declaration
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/pending-operation
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/foreign-owner
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/stale-source
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/replaced-floor
+=== RUN   TestEnvtestFloorImageOmissionReintroduction/cas-conflict
+--- PASS: TestEnvtestFloorImageOmissionReintroduction (7.84s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/omit (2.50s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/null (0.43s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/legacy (0.42s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/selected-omit (0.42s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/pending-operation (0.23s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/foreign-owner (0.10s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/stale-source (0.10s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/replaced-floor (0.11s)
+    --- PASS: TestEnvtestFloorImageOmissionReintroduction/cas-conflict (0.11s)
+=== RUN   TestEnvtestSiteSelectionRetainedOwnership
+--- PASS: TestEnvtestSiteSelectionRetainedOwnership (7.89s)
+=== RUN   TestEnvtestSiteSelectionDesign
+=== RUN   TestEnvtestSiteSelectionDesign/selected-recover-private
+=== RUN   TestEnvtestSiteSelectionDesign/image-selected-keyed-recover-private
+--- PASS: TestEnvtestSiteSelectionDesign (8.32s)
+    --- PASS: TestEnvtestSiteSelectionDesign/selected-recover-private (2.92s)
+    --- PASS: TestEnvtestSiteSelectionDesign/image-selected-keyed-recover-private (2.10s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	25.075s

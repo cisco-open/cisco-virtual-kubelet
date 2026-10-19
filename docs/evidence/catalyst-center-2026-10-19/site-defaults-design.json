@@ -1,0 +1,130 @@
+{
+  "scope": "explicit default-resolved site/image/planned-AP composition",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "750744f1514966161b361cb9b75ca9bc3a9e4d41040844b8bccb5bfd13de5a12",
+    "internal/controlleradapter/catalystcenter/nacmodel": "64c0051a113acd605d7f38f71a1bf9ebcbd7fe806cba2e104be9e7d1db5913f5",
+    "tools/cvk-netascode-migrate": "2a95ac422b2e7a4e4b307b6b6473ef078cc6459ee3a4d7fb3bdfa1f6014f11f0"
+  },
+  "fullModelComplete": false,
+  "installedCompositionQualified": false,
+  "remoteImageBytesReadBack": false,
+  "nativePersistence": "simulated Kubernetes; temporary real API gate is separate",
+  "native": {
+    "activeOperation": false,
+    "baselineRestored": true,
+    "generatedPath": "Global/CVK-Q-20261019-104653-000000000",
+    "installed": false,
+    "modelAndAssetSnapshot": true,
+    "originalTaskRecoveries": 8,
+    "retainedActionRows": 6,
+    "sourceDefaultsExport": true
+  },
+  "originalTaskIDs": [
+    "01a153c5-842a-7c73-94f7-be2554fdcaf1",
+    "01a153c5-8ddd-74d2-bbf0-2a1df09bc995",
+    "01a153c5-9a84-7ed1-ba5f-1a8350ee0297",
+    "01a153c5-b08e-7fb7-978c-b5191e33ac72",
+    "01a153c5-e330-7e5d-b950-9c6950945387",
+    "01a153c6-18e7-7fa9-8cc4-cb7a48b38f30",
+    "01a153c6-2e34-7580-9263-bd4a65a6ba37",
+    "01a153c6-4963-7406-9fe1-601129ea2d49"
+  ],
+  "remainingGeneratedFixtures": [],
+  "nativeDesignMutations": 6,
+  "synchronousImageUploads": 2,
+  "siteSetupMutations": 4,
+  "cleanup": "exact generated AP identity first, then generated floor/building/area; typed site baseline restored",
+  "exampleProvenance": {
+    "exporter": "cvk-site-defaults-v1:policy-sha256:860dfa850b9bd2db349b5310a8faed6625bb07ea6b59b66b7c580e13fc5bb8d9",
+    "executionSyntaxValidated": true,
+    "leafSchemaValidated": false,
+    "format": "netascode-catalyst-center",
+    "modelVersion": "0.5.0",
+    "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "policySHA256": "860dfa850b9bd2db349b5310a8faed6625bb07ea6b59b66b7c580e13fc5bb8d9",
+    "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+    "inputSHA256": "375d98081cc71bb092d0a2cc214a3dcbd09146ea0a1b241114da7eed4169cb21",
+    "outputSHA256": "d4918e3ea7e1b9494ca20a33f16b551d8d2e16029dd9deae919fd35e77f327dc",
+    "resolutionScope": "sites-design-snapshot",
+    "configurationParity": false,
+    "limitations": [
+      "One already-selected sites-only model; no file merging, managed-site filtering or other sections. Images require an explicit same-ConfigMap model/index/BinaryData snapshot; no model path is opened.",
+      "Pinned site defaults and supported overrides only; numeric null fallback follows upstream try expressions, while unsupported unresolved values refuse.",
+      "Singular area parents stay explicit; bulk omitted parent uses literal Global, matching the pinned resource map.",
+      "No nested schema/parity attestation, native AP/antenna catalogue validation, API request, ownership transfer or change to runtime defaulting. Runtime revalidates source assets and native state independently."
+    ],
+    "siteExpressionsSHA256": "8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9",
+    "useBulkAPI": false,
+    "resources": 3,
+    "defaultedFields": 4,
+    "plannedAccessPoints": 1,
+    "floorImages": 1,
+    "assetsValidated": true,
+    "imageAssets": 1,
+    "assetSnapshotSHA256": "1a29d87e0cdf7efd5b0bdf47d702dd78dfb6f24f8cda02444fc4c39a151b14e3",
+    "sourceSnapshotSHA256": "9457b2fa511eb6246e157af83733075efe0a93f997379e0ddffbd46288c1f2e6"
+  },
+  "remaining": [
+    "multi-file and managed-site selection/default composition",
+    "installed actor/projection/source composition",
+    "complete native schema/catalogue capability coverage",
+    "remote image byte readback and destructive image/AP lifecycle",
+    "physical/bulk and other remaining 93-row execution/recovery gaps"
+  ],
+  "gates": {
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19447,
+      "passingPackages": 16,
+      "log": "/private/tmp/cvk-site-design-defaults-regression.log",
+      "sha256": "7d708503f2d6ee191803176cb99dc7af045cd2a6e470ae09d0e04926780e277b",
+      "scope": "api, all controlleradapter packages, shared controllerconfiguration/controller/aggregator/managedprotocol, maintenance/softwareupgrade/softwarelifecycle, cisco-vk and complete migration tool"
+    },
+    "focusedRace": {
+      "exitCode": 0,
+      "passingTestEvents": 66,
+      "log": "site-defaults-design-race.log"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 4,
+      "log": "site-defaults-design-api.log"
+    },
+    "native": {
+      "exitCode": 0,
+      "originalTaskRecoveries": 8,
+      "synchronousImageUploads": 2,
+      "baselineRestored": true,
+      "log": "site-defaults-design-native.log"
+    },
+    "migrationBuild": {
+      "exitCode": 0,
+      "binary": "/private/tmp/cvk-site-design-defaults-migrate"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "binary": "/private/tmp/cvk-site-design-defaults-cisco-vk"
+    },
+    "strictDocumentation": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-site-design-defaults-docs-final.log"
+    },
+    "example": {
+      "compiledCLIValidated": true,
+      "privateFileMode": "0600",
+      "siteResources": 3,
+      "plannedAccessPoints": 1,
+      "floorImages": 1,
+      "defaultedFields": 4
+    },
+    "coverage": {
+      "uniquePinnedResourceRows": 93,
+      "fullModelComplete": false
+    }
+  },
+  "priorGoalTurnClassification": "progress",
+  "currentGoalTurnClassification": "progress"
+}

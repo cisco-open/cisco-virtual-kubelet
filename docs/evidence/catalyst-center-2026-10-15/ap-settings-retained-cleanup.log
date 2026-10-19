@@ -1,0 +1,8 @@
+=== RUN   TestLiveRetainedAPSettingsCleanup
+    zz_ap_settings_probe_live_test.go:223: owned cleanup task CVK_C_fb550c17f8fa12b3 mdiYq1zl-x0nF-zMi1-ntbJ-mtDMogzHmtjIm0mWvJflmL8ZqZrF 01a13df6-30db-76d3-9f82-d396da366cd2
+    zz_ap_settings_probe_live_test.go:226: owned cleanup task CVK_P_a2b62cb9b098922d mdiYq1zl-x1bF-ytjI-nJjJ-yJLImdK4otiYzemWvJflmL8ZudrF 01a13df6-36f9-7e82-aa1b-f2307a4f9877
+    zz_ap_settings_probe_live_test.go:226: owned cleanup task CVK_Q_ca06101ebdf9ad2a mdiYq1zl-x1fF-y2eW-nJeW-mwvIzgy5ywqYyumWvJflmL8ZutrF 01a13df6-3d01-755e-8266-9db96fc2636c
+    zz_ap_settings_probe_live_test.go:230: retained test definitions removed; other public baselines unchanged
+--- PASS: TestLiveRetainedAPSettingsCleanup (5.38s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.263s

@@ -1,0 +1,99 @@
+{
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "applied": true,
+  "nativeBaseSource": {
+    "files": 1650,
+    "sha256": "5ca51fd4b78f8033434453391049bd6b306383a6142821050a478fe6a18e2dbd"
+  },
+  "productionSource": {
+    "sha256": "b943075fda1a744dcc140ad683475f5bb4717544b5d44f1bc22509beffbbfda3",
+    "nativeBaseReconstructionMatches": true
+  },
+  "core": {
+    "passed": true,
+    "passingEvents": 709,
+    "durationSeconds": 24.863,
+    "log": "cvk-tag-ownership-guards.log"
+  },
+  "native": {
+    "passed": true,
+    "durationSeconds": 14.854,
+    "creates": 1,
+    "updates": 1,
+    "originalTaskRecoveries": 2,
+    "immutableCreators": 1,
+    "latestStateRows": 1,
+    "cleanupSupervised": true,
+    "manifestDrivenCleanup": false,
+    "baselineRestored": true,
+    "installedActors": false,
+    "log": "cvk-tag-ownership-native-public-recovery.log"
+  },
+  "earlierComposition": {
+    "passed": false,
+    "durationSeconds": 164.847,
+    "reason": "Fixtures assumed discovery was the only receipt family and indexed the shared slice. Native tag creation now independently retains a creator. The corrected fixture validates both families and immutable tag lineage instead of counting/filtering blindly.",
+    "log": "cvk-tag-ownership-composition.log"
+  },
+  "correctedMixedDiscovery": {
+    "passed": true,
+    "durationSeconds": 16.099,
+    "log": "cvk-tag-ownership-composition-corrected.log"
+  },
+  "finalAffectedRegression": {
+    "passed": true,
+    "exitCode": 0,
+    "passingEvents": 755,
+    "durationSeconds": 40.047,
+    "log": "cvk-tag-ownership-final-regression.log"
+  },
+  "newCRDTransportStateMachineOrCredentialStore": false,
+  "newSubmissionPermit": false,
+  "reusesSharedActionApplicationsAndAtomicStatusWriter": true,
+  "sourceModeDiscriminator": true,
+  "importsAcquireCreatorAuthority": false,
+  "fullNativeUnknownFieldFingerprint": false,
+  "pruneDeleteImplemented": false,
+  "installedMutationQualified": false,
+  "fullPinnedModelParity": false,
+  "remaining": [
+    "public tag pruning/deletion and recreation lineage",
+    "full native metadata/reference coverage before cleanup authority",
+    "native dynamic-rule ownership lifecycle beyond static qualification",
+    "installed actors and cross-owner handoff",
+    "broader pinned 93-resource parity"
+  ],
+  "foundation": {
+    "passed": true,
+    "log": "cvk-tag-ownership-foundation.log"
+  },
+  "swim": {
+    "passed": true,
+    "log": "cvk-tag-ownership-swim.log"
+  },
+  "build": {
+    "passed": true,
+    "binarySHA256": "a8e65b560088ee9da42ee8174ca91d053405f6e8e12a9604960a2558cf352845"
+  },
+  "configMapFixtureSetupFailure": {
+    "passed": false,
+    "runtimeFailure": false,
+    "durationSeconds": 37.968,
+    "reason": "Fake ConfigMap fixture incorrectly set resourceVersion on Create. The real Kubernetes API cases all passed. Removed preset resourceVersion so both clients assign it.",
+    "log": "cvk-tag-ownership-final-regression-configmap-fixture-failure.log"
+  },
+  "finalSource": {
+    "files": 1650,
+    "sha256": "40b2a750a009d56794f9d522e8166d9a1badb4ed1c86a22a802cb1a61c2097fa",
+    "productionSHA256": "b943075fda1a744dcc140ad683475f5bb4717544b5d44f1bc22509beffbbfda3"
+  },
+  "realKubernetesConfigMapCasesPassed": 6,
+  "controlledConfigMapCasesPassed": 6,
+  "receiptCapacity": "Existing shared 256-row/byte ceilings; whole missing selection reserves creator plus future latest-state rows before first effect. This remains a bounded scale limitation.",
+  "strictDocs": {
+    "passed": true,
+    "log": "cvk-tag-ownership-docs.log"
+  },
+  "scopedWhitespacePassed": true
+}

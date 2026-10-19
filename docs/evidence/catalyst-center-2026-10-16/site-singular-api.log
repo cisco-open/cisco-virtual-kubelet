@@ -1,0 +1,44 @@
+=== RUN   TestEnvtestSiteSingularDispatch
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/lost-ack
+--- PASS: TestEnvtestSiteSingularDispatch (25.22s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/native-edit (3.64s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/source-edit (0.99s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/owner-edit (0.85s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/lost-ack (0.90s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/native-edit (0.99s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/source-edit (1.01s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/owner-edit (0.85s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/lost-ack (0.93s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/native-edit (1.02s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/source-edit (1.02s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/owner-edit (0.87s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/lost-ack (0.93s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/native-edit (0.99s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/source-edit (0.99s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/owner-edit (0.86s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/lost-ack (0.91s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/native-edit (1.02s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/source-edit (1.01s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/owner-edit (0.89s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/lost-ack (0.93s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	27.628s

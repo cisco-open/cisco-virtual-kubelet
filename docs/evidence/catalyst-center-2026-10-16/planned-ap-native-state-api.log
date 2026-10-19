@@ -1,0 +1,79 @@
+=== RUN   TestEnvtestPrivateSiteDesignComposition
+=== RUN   TestEnvtestPrivateSiteDesignComposition/normal-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/optional-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-refuse-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-refuse-private
+--- PASS: TestEnvtestPrivateSiteDesignComposition (19.64s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/normal-private (3.73s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/optional-private (1.09s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-private (2.08s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-private (1.11s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-recover-private (2.12s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/ambiguous-private (0.87s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private (0.95s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-refuse-private (2.19s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-refuse-private (1.24s)
+=== RUN   TestEnvtestPlannedAPObservedIdentity
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-replaced
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-missing
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-floor
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-pruned
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-replaced-private
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-missing-private
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-floor-private
+=== RUN   TestEnvtestPlannedAPObservedIdentity/identity-pruned-private
+--- PASS: TestEnvtestPlannedAPObservedIdentity (11.08s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-replaced (2.53s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-missing (0.48s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-floor (0.49s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-pruned (0.48s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-replaced-private (0.76s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-missing-private (0.77s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-floor-private (0.71s)
+    --- PASS: TestEnvtestPlannedAPObservedIdentity/identity-pruned-private (0.69s)
+=== RUN   TestEnvtestPlannedAPNativeState
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 8588 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc000a0af00, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x109dea888?, 0xc000a0af00?}, 0xc0003d15a8?}, {0x1075c7068, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000c80008)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc000da0488, {0xc000f9ce18, 0x1, 0x104482634?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestPlannedAPNativeState(0xc000da0488)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/site_design_envtest_test.go:28 +0x5c
+	>  testing.tRunner(0xc000da0488, 0x109d91838)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestPlannedAPNativeState/native-unknown
+=== RUN   TestEnvtestPlannedAPNativeState/native-late
+=== RUN   TestEnvtestPlannedAPNativeState/native-sensor
+=== RUN   TestEnvtestPlannedAPNativeState/native-publish-late
+=== RUN   TestEnvtestPlannedAPNativeState/native-unknown-private
+=== RUN   TestEnvtestPlannedAPNativeState/native-late-private
+=== RUN   TestEnvtestPlannedAPNativeState/native-sensor-private
+=== RUN   TestEnvtestPlannedAPNativeState/native-publish-late-private
+--- PASS: TestEnvtestPlannedAPNativeState (12.49s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-unknown (2.67s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-late (0.67s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-sensor (0.73s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-publish-late (0.66s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-unknown-private (0.89s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-late-private (1.03s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-sensor-private (1.15s)
+    --- PASS: TestEnvtestPlannedAPNativeState/native-publish-late-private (0.97s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	45.623s

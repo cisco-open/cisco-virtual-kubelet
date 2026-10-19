@@ -1,0 +1,52 @@
+=== RUN   TestEnvtestNetworkSubmissionRecovery
+=== RUN   TestEnvtestNetworkSubmissionRecovery/ntp/complete
+=== RUN   TestEnvtestNetworkSubmissionRecovery/ntp/read-error
+=== RUN   TestEnvtestNetworkSubmissionRecovery/ntp/stale
+=== RUN   TestEnvtestNetworkSubmissionRecovery/ntp/lost-ack
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dhcp/complete
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dhcp/read-error
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dhcp/stale
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dhcp/lost-ack
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dns/complete
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dns/read-error
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dns/stale
+=== RUN   TestEnvtestNetworkSubmissionRecovery/dns/lost-ack
+=== RUN   TestEnvtestNetworkSubmissionRecovery/timezone/complete
+=== RUN   TestEnvtestNetworkSubmissionRecovery/timezone/read-error
+=== RUN   TestEnvtestNetworkSubmissionRecovery/timezone/stale
+=== RUN   TestEnvtestNetworkSubmissionRecovery/timezone/lost-ack
+=== RUN   TestEnvtestNetworkSubmissionRecovery/banner/complete
+=== RUN   TestEnvtestNetworkSubmissionRecovery/banner/read-error
+=== RUN   TestEnvtestNetworkSubmissionRecovery/banner/stale
+=== RUN   TestEnvtestNetworkSubmissionRecovery/banner/lost-ack
+=== RUN   TestEnvtestNetworkSubmissionRecovery/telemetry/complete
+=== RUN   TestEnvtestNetworkSubmissionRecovery/telemetry/read-error
+=== RUN   TestEnvtestNetworkSubmissionRecovery/telemetry/stale
+=== RUN   TestEnvtestNetworkSubmissionRecovery/telemetry/lost-ack
+--- PASS: TestEnvtestNetworkSubmissionRecovery (14.45s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/ntp/complete (2.99s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/ntp/read-error (0.34s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/ntp/stale (0.30s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/ntp/lost-ack (0.31s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dhcp/complete (0.32s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dhcp/read-error (0.35s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dhcp/stale (0.30s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dhcp/lost-ack (0.31s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dns/complete (0.33s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dns/read-error (0.36s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dns/stale (0.30s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/dns/lost-ack (0.30s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/timezone/complete (0.32s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/timezone/read-error (0.34s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/timezone/stale (0.32s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/timezone/lost-ack (0.30s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/banner/complete (0.34s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/banner/read-error (0.38s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/banner/stale (0.31s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/banner/lost-ack (0.31s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/telemetry/complete (0.35s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/telemetry/read-error (0.36s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/telemetry/stale (0.34s)
+    --- PASS: TestEnvtestNetworkSubmissionRecovery/telemetry/lost-ack (0.32s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.621s

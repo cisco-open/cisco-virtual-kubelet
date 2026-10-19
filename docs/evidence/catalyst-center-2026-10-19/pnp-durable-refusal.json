@@ -1,0 +1,119 @@
+{
+  "status": "PASS staged atomic certified-refusal custody; protected runtime/fence lifecycle incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "3e989947d003ba392377e64428942bd52b80a00e33071e3401eed80ee2f37e58",
+      "productionSHA256": "884f08d84d0de2885cf22948a8806a4819d0b75e3f40c346c6a36839c67b8e5b"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "eb32904d69c5427ac7151f98f4bcaea237eff5eaa6fdf468f232cee2e0251887",
+      "productionSHA256": "1b48d6df0e70225e71110709c8f7046da6527283fa5b94aa8aeca987f94ffda8"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1695,
+      "sha256": "d858c172e58fae1e4b4b19b3b0b678d237f433ada5b30afa55038ab76bc982aa",
+      "productionSHA256": "8fa742ad26d74340aa70e35431b7a1ba2840cf0e98a3d188f0f56c292e13af10"
+    },
+    "internal/controllerconfiguration": {
+      "files": 139,
+      "sha256": "7ef5e6612b8926b14f1b53e972548e190ab0db70bcad6b5651bd3d7f05db0730",
+      "productionSHA256": "a493007c6df4230dccd7b5cc6a7c234eddae3579b0083c84778841ba73feebfe"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "cb36a5389a78a01c68722739bb7c61a7768f17f1925486dcae99cb2f7f8aa5df",
+      "productionSHA256": "c6cc39578fcf1527eb3f8398ca77950492e5ef4078dbb9e917ff092ca6dafa88"
+    },
+    "crds": {
+      "config/crd/cisco.vk_networkcontrollers.yaml": "002995e939eb9fd1a9d6e97c52c3c15f16d36b3dfca9da14216513aee46d641c",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "002995e939eb9fd1a9d6e97c52c3c15f16d36b3dfca9da14216513aee46d641c"
+    }
+  },
+  "gates": {
+    "providerAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 129,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter": 41.371
+      },
+      "log": "/private/tmp/cvk-metadata-handoff-full-api.log"
+    },
+    "apiAndFoundations": {
+      "result": "PASS",
+      "passingEvents": 3289,
+      "packages": 7,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1": 2.544,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter": 2.283,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard": 4.781,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance": 6.499,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade": 14.725,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller": 34.799,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration": 34.952
+      },
+      "log": "/private/tmp/cvk-metadata-handoff-final-foundation.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1049,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter": 63.027
+      },
+      "log": "/private/tmp/cvk-metadata-handoff-compat.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-metadata-handoff-cisco-vk"
+    },
+    "generatedSchemaAndSource": {
+      "result": "PASS",
+      "generator": "repository pinned controller-gen v0.19.0",
+      "newPropertyAndCustodyRulesMatchGeneration": true,
+      "configAndChartCRDsMatch": true,
+      "productionAndCRDsFrozen": true,
+      "note": "The API schema-preservation test count was updated from three to four operation copies after initial foundation failure; production and CRDs remained unchanged."
+    },
+    "strictDocumentationAndLedger": {
+      "result": "PASS",
+      "seconds": 7.94,
+      "uniquePinnedResourceRows": 93,
+      "branch": "pr/johalley/catc-support",
+      "log": "/private/tmp/cvk-metadata-handoff-docs.log"
+    }
+  },
+  "implementation": {
+    "optionalField": "NetworkController.status.configuration.metadataHandoff",
+    "protocol": "controller-metadata-handoff-v1",
+    "originalPreparationImmutable": true,
+    "refusalPairImmutable": true,
+    "custodyCannotDisappearBeforeReleaseAcknowledgement": true,
+    "certifiedRefusalAndSlotClearSingleCAS": true,
+    "originalGuardProofRequired": true,
+    "noSuccessReceiptCreated": true,
+    "retainedCustodyBlocksNewPrepareStartFinish": true,
+    "scopeDigestExcludesHandoffItself": true,
+    "legacyAbsentFieldPathUnchanged": true,
+    "managerSealWriterInstalled": false,
+    "actorAdmissionInstalled": false,
+    "fenceClaimReleaseInstalled": false,
+    "publicNewDispatch": false
+  },
+  "qualification": {
+    "handoffFixtures": "staged pre-existing custody injected into a controlled submitting operation to exercise original pre-HTTP proof composition; not an installed manager seal/claim flow",
+    "nativeMutationPerformed": false,
+    "realAPI": "actual schema persistence, immutable binding/refusal, field-drop and whole-configuration replacement denial",
+    "admissionLimit": "CRD transition checks do not establish authenticated manager/worker actor authorization"
+  },
+  "remaining": [
+    "Protected manager seal and compatible metadata runtime/version admission",
+    "Canonical bootstrap fence acquisition and exact worker claim",
+    "Manager fence release for original verified absence and certified no-dispatch, including lost-response/restart recovery",
+    "CR/missing-source cleanup and complete native consumers",
+    "Installed/native public lifecycle plus all other pinned 93-resource execution/hardware gaps"
+  ]
+}

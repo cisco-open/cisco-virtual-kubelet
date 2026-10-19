@@ -1,0 +1,150 @@
+=== RUN   TestTemplateNativeComparisonMAC
+=== RUN   TestTemplateNativeComparisonMAC/p
+=== RUN   TestTemplateNativeComparisonMAC/p/match
+=== RUN   TestTemplateNativeComparisonMAC/p/field-order
+=== RUN   TestTemplateNativeComparisonMAC/p/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/p/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/p/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/p/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/p/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/p/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/p/missing-operation-marker
+=== RUN   TestTemplateNativeComparisonMAC/r
+=== RUN   TestTemplateNativeComparisonMAC/r/match
+=== RUN   TestTemplateNativeComparisonMAC/r/field-order
+=== RUN   TestTemplateNativeComparisonMAC/r/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/r/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/r/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/r/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/r/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/r/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/r/missing-operation-marker
+=== RUN   TestTemplateNativeComparisonMAC/c
+=== RUN   TestTemplateNativeComparisonMAC/c/match
+=== RUN   TestTemplateNativeComparisonMAC/c/field-order
+=== RUN   TestTemplateNativeComparisonMAC/c/private-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/unknown-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/reference-edit
+=== RUN   TestTemplateNativeComparisonMAC/c/key-rotation
+=== RUN   TestTemplateNativeComparisonMAC/c/wrong-object
+=== RUN   TestTemplateNativeComparisonMAC/c/corrupt-mac
+=== RUN   TestTemplateNativeComparisonMAC/c/missing-mac
+=== RUN   TestTemplateNativeComparisonMAC/c/wrong-key-marker
+=== RUN   TestTemplateNativeComparisonMAC/c/missing-operation-marker
+--- PASS: TestTemplateNativeComparisonMAC (0.01s)
+    --- PASS: TestTemplateNativeComparisonMAC/p (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/p/missing-operation-marker (0.00s)
+    --- PASS: TestTemplateNativeComparisonMAC/r (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/r/missing-operation-marker (0.00s)
+    --- PASS: TestTemplateNativeComparisonMAC/c (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/match (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/field-order (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/private-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/unknown-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/reference-edit (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/key-rotation (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/wrong-object (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/corrupt-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/missing-mac (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/wrong-key-marker (0.00s)
+        --- PASS: TestTemplateNativeComparisonMAC/c/missing-operation-marker (0.00s)
+=== RUN   TestTemplateCreatorPrivateBaseline
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/known
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/missing-key
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/malformed-key
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/key-change-during-proof
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/key-change-restore
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/native-state-race
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/wrong-declared-body
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/baseline-pruned
+=== RUN   TestTemplateCreatorPrivateBaseline/project-create/baseline-wrong-key
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/known
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/missing-key
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/malformed-key
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/key-change-during-proof
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/key-change-restore
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/native-state-race
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/wrong-declared-body
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/baseline-pruned
+=== RUN   TestTemplateCreatorPrivateBaseline/draft-create/baseline-wrong-key
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/known
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/missing-key
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/malformed-key
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/key-change-during-proof
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/key-change-restore
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/native-state-race
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/wrong-declared-body
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/baseline-pruned
+=== RUN   TestTemplateCreatorPrivateBaseline/composite-draft/baseline-wrong-key
+--- PASS: TestTemplateCreatorPrivateBaseline (12.43s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/known (0.72s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/missing-key (0.20s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/malformed-key (0.25s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/key-change-during-proof (0.39s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/key-change-restore (0.12s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/native-state-race (0.73s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/wrong-declared-body (0.66s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/baseline-pruned (0.35s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/project-create/baseline-wrong-key (0.35s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/known (0.22s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/missing-key (0.19s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/malformed-key (0.28s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/key-change-during-proof (0.42s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/key-change-restore (0.25s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/native-state-race (0.92s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/wrong-declared-body (0.67s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/baseline-pruned (0.38s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/draft-create/baseline-wrong-key (0.38s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/known (0.32s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/missing-key (0.19s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/malformed-key (0.31s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/key-change-during-proof (0.48s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/key-change-restore (0.34s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/native-state-race (1.55s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/wrong-declared-body (0.84s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/baseline-pruned (0.47s)
+    --- PASS: TestTemplateCreatorPrivateBaseline/composite-draft/baseline-wrong-key (0.45s)
+=== RUN   TestTemplateNativeComparisonCompiler
+=== RUN   TestTemplateNativeComparisonCompiler/value-use
+=== RUN   TestTemplateNativeComparisonCompiler/inventory-pointer
+=== RUN   TestTemplateNativeComparisonCompiler/wrong-section
+=== RUN   TestTemplateNativeComparisonCompiler/combined
+=== RUN   TestTemplateNativeComparisonCompiler/duplicate
+=== RUN   TestTemplateNativeComparisonCompiler/prune
+=== RUN   TestTemplateNativeComparisonCompiler/delete
+--- PASS: TestTemplateNativeComparisonCompiler (0.01s)
+    --- PASS: TestTemplateNativeComparisonCompiler/value-use (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/inventory-pointer (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/wrong-section (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/combined (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/duplicate (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/prune (0.00s)
+    --- PASS: TestTemplateNativeComparisonCompiler/delete (0.00s)
+=== RUN   TestTemplateEmptyRetainIntent
+--- PASS: TestTemplateEmptyRetainIntent (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.831s

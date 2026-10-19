@@ -1,0 +1,82 @@
+# Alternative exclusive sites owner; start with a new hierarchy and AP.
+# Requires the existing worker projection for the site-state-key alias.
+# Keep a stable operator-managed random 64-hex key in the referenced Secret.
+# Explicit floor/AP handoff opt-in; Retain only. No adoption or public Delete.
+# After initial InSync, change only floor width 12.654 -> 14 -> 16.
+# Keep the AP coordinates unchanged: a floor update publishes verified effects,
+# then the existing AP task path corrects the same UUID to its declared position.
+# Unexpected effects or unknown task outcomes remain fenced without replay.
+# Coordinates are feet; requested floor dimensions are meters.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-planned-ap-floor-handoff
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      sites:
+        areas:
+          - name: CVK-Lab-Floor-Handoff
+            parent_name: Global
+        buildings:
+          - name: LabBuilding
+            parent_name: Global/CVK-Lab-Floor-Handoff
+            country: United States
+            latitude: 37.33812
+            longitude: -121.88612
+        floors:
+          - name: LabFloor
+            parent_name: Global/CVK-Lab-Floor-Handoff/LabBuilding
+            floor_number: 1
+            rf_model: Free Space
+            width: 12.654
+            length: 15
+            height: 3
+            units_of_measure: meters
+            planned_access_points:
+              - name: CVK-Handoff-Planned-AP
+                ap_type: AP9130I
+                position_x: 5.5
+                position_y: 6
+                position_z: 4
+                mac_address: "02:00:00:00:00:01"
+                radios:
+                  - band: 5
+                    channel: 36
+                    tx_power: 12
+                    antenna_name: Internal-9130-5GHz
+                    antenna_azimuth: 90
+                    antenna_elevation: -10
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-planned-ap-floor-handoff-apply
+  namespace: cvk-live
+  annotations:
+    cisco.vk/catalyst-center-bulk-sites: "false"
+    cisco.vk/catalyst-center-private-planned-aps: "true"
+    cisco.vk/catalyst-center-floor-ap-handoff: "true"
+spec:
+  controllerRef:
+    name: catc
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: sites
+      path: /sites
+      source: site-state-key
+  managedSections: [sites]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-floor-ap-handoff-example-v1
+  source:
+    configMapRef:
+      name: catc-planned-ap-floor-handoff
+      key: model.yaml

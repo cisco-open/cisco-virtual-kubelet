@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterPlannedAPManifest
+    site_execution_live_test.go:75: isolated qualification hierarchy: Global/CVK-Q-20261015-121016-000000000
+    site_execution_live_test.go:209: public manifest step=0 status=Waiting operation=Accepted task=01a13f78-6921-77de-9931-72548ef7748f reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:209: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:221: bulk create task=01a13f78-6921-77de-9931-72548ef7748f
+    site_execution_live_test.go:247: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:276: public manifest step=0 status=Waiting operation=Accepted task=01a13f78-85ac-77ca-8ecd-1219e7835133 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:276: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:283: submitted task=01a13f78-85ac-77ca-8ecd-1219e7835133 at=2026-10-15T12:10:25Z
+    site_execution_live_test.go:301: verified Update floor
+    site_execution_live_test.go:310: three creates, one floor update, and full hierarchy read-back verified
+    planned_ap_live_test.go:33: planned AP native response POST HTTP 202 transportError false
+    site_execution_live_test.go:315: public manifest step=0 status=Waiting operation=Accepted task=01a13f78-9cc5-7593-b22b-4e523907a4f6 reasons=[AdapterAvailable TaskAccepted TaskAccepted]
+    site_execution_live_test.go:315: public manifest failed; retain fixture
+    site_execution_live_test.go:119: retained uncertain hierarchy for inspection: Global/CVK-Q-20261015-121016-000000000
+--- FAIL: TestLiveCatalystCenterPlannedAPManifest (15.89s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.056s
+FAIL

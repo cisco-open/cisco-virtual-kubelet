@@ -1,0 +1,52 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configDeletionTimestamp": null,
+  "configFinalizers": [
+    "config.cisco.vk/catalyst-center-discovery-cleanup",
+    "example.com/other"
+  ],
+  "configGone": false,
+  "configStatus": {},
+  "configUID": "ab007d40-3f9c-430d-941b-40dc1d4dfa8d",
+  "configuration": {
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "sites",
+        "configUID": "ab007d40-3f9c-430d-941b-40dc1d4dfa8d"
+      }
+    ],
+    "operation": {
+      "id": "06ca5cc72d9e7443d74005fcf409fad1",
+      "configName": "sites",
+      "configUID": "ab007d40-3f9c-430d-941b-40dc1d4dfa8d",
+      "configGeneration": 3,
+      "controllerGeneration": 1,
+      "sourceUID": "f3fe0703-b941-41b3-818d-54ecbd146c1f",
+      "sourceVersion": "214",
+      "section": "inventory",
+      "resource": "tag-owned:v1:c:d3ecea71f1654b2e2e36ccc550bce24fbd518b4d908e723be4592ef1fc7e1864:86345ac8a9a20cc31f9b0b37d317e019d1877743729e70dad863d6618aca3330:c",
+      "action": "Create",
+      "phase": "Accepted",
+      "submittedAt": "2026-10-19T01:33:47Z",
+      "taskID": "01a151cb-19a7-7fe6-a2b0-b59e59c47807"
+    }
+  },
+  "controllerConditions": null,
+  "deletes": 0,
+  "generation": 3,
+  "nativeID": "",
+  "phase": "initial-create-accepted",
+  "posts": 1,
+  "projectedEpochs": [
+    {
+      "digest": "7e2bf8a99efadae7c2a86a635eea4f5b4b45399bcbfa9b50f7853144feef3f29",
+      "uid": "f3fe0703-b941-41b3-818d-54ecbd146c1f",
+      "version": "214"
+    }
+  ],
+  "projectedSource": true,
+  "puts": 0,
+  "staleSourceRefusals": 0,
+  "tagName": "CVK-Q-Tag-Prune-1792373621636217000"
+}

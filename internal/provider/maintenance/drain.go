@@ -412,6 +412,22 @@ func (c *Coordinator) authorizeReleasedDrainCompletion(
 			candidate := &leaf.Status.ManagerDrain.Pods[i]
 			if candidate.Namespace == pod.Namespace && candidate.Name == pod.Name &&
 				candidate.UID == string(pod.UID) {
+				// Cancellation can release a selected Pod without ever evicting
+				// it. A later ordinary deletion must still perform native teardown;
+				// it is not a device-clean completion acknowledgement. Returning
+				// false grants no write authority: AcquireWrite retains every
+				// session, worker and canonical Lease check.
+				if string(leaf.UID) == session.Operation.UID &&
+					(session.Phase == ciskov1.DeviceMaintenanceSessionRecovering || session.Phase == ciskov1.DeviceMaintenanceSessionSettled) &&
+					candidate.Phase == opsv1alpha1.UpgradeDrainPodComplete &&
+					candidate.EvictionRequestedAt == nil && candidate.DeletionObservedAt == nil &&
+					candidate.DeviceCleanAt == nil && candidate.DeviceCleanInventoryRevision == 0 &&
+					candidate.DeletionObservedInventoryRevision == 0 &&
+					candidate.ReleasedAt != nil && !candidate.ReleasedAt.IsZero() &&
+					pod.DeletionTimestamp != nil && candidate.ReleasedAt.Before(pod.DeletionTimestamp) &&
+					!hasDrainPodMarker(pod) {
+					return false, nil
+				}
 				selected = true
 				break
 			}

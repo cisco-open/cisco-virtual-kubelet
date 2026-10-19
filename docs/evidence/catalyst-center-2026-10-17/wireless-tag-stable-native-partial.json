@@ -1,0 +1,25 @@
+{
+  "status": "pending",
+  "test": "TestLiveWirelessTagCohortRecreationPublicRecovery",
+  "completedWorkflows": [
+    {
+      "test": "TestLiveWirelessTagRecreationPublicRecovery",
+      "seconds": 1142.66,
+      "distinctOriginalTasks": 18,
+      "membershipReductions": 2,
+      "predecessorTagDeletes": 2,
+      "recreateProducerTasks": 2,
+      "newIncarnationTagDeletes": 2,
+      "associationDeletes": 2,
+      "archivedCompleteCohorts": 2,
+      "authenticatedNewIncarnations": true,
+      "stableNativeIDs": 2,
+      "producerDigestsScopesEpochContinuityAndOrderingVerified": true,
+      "finalPrivateRows": 4,
+      "finalPrivateMemberProofs": 4,
+      "baselinesRestored": true
+    }
+  ],
+  "verifiedTasksInActiveLog": 14,
+  "distinctCompletedTasks": 18
+}

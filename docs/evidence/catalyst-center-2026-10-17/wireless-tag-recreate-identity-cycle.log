@@ -1,0 +1,11 @@
+=== RUN   TestLiveWirelessTagRecreationReadOnlyProbe
+    wireless_tag_recreate_probe_live_test.go:59: public native tag mdi0q1zl-x05F-ndLM-ngq0-mdbHndbLmtmXn19tqZbwmuSYxZno selector matches true
+    wireless_tag_recreate_probe_live_test.go:63: public native readback true <nil>
+    wireless_tag_recreate_probe_live_test.go:65: original task complete true <nil>
+    wireless_tag_recreate_probe_live_test.go:67: original task tree complete true <nil>
+    wireless_tag_recreate_probe_live_test.go:125: supervised identity experiment task DELETE 01a14a31-bc7c-78f6-a0e5-a3f5fa9c9782
+    wireless_tag_recreate_probe_live_test.go:133: supervised identity experiment task POST 01a14a31-c29c-7326-a202-942db33692c0
+    wireless_tag_recreate_probe_live_test.go:139: native tag identifier reused after proven delete/create true
+--- PASS: TestLiveWirelessTagRecreationReadOnlyProbe (5.09s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.521s

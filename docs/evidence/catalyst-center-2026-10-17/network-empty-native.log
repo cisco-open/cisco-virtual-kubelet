@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterNetworkEmptyExecution
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-040741-000000000
+    site_execution_live_test.go:452: submitted task=01a1480b-49fc-7424-a915-a53afe3ec8c9 at=2026-10-17T04:07:41.715736Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a1480b-4c6d-77c5-bedf-855d4aa3ee9b at=2026-10-17T04:07:42.328281Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a1480b-4fe9-757f-bdce-6a27e90cc40c at=2026-10-17T04:07:43.188477Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a1480b-56a5-7580-a34f-365c7b2a2431 at=2026-10-17T04:07:44.902188Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:519: public NTP/DHCP phase=0 empty=true: two original Unknown tasks recovered, two latest receipts, native readback and repeated no-op verified
+    site_execution_live_test.go:519: public NTP/DHCP phase=1 empty=false: two original Unknown tasks recovered, two latest receipts, native readback and repeated no-op verified
+    site_execution_live_test.go:519: public NTP/DHCP phase=2 empty=true: two original Unknown tasks recovered, two latest receipts, native readback and repeated no-op verified
+    site_execution_live_test.go:519: six public reset/refill/reset mutations and original task trees, six no-dispatch retirements, exactly two latest applications; actual native API, simulated Kubernetes storage/actors
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterNetworkEmptyExecution (70.99s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	73.455s

@@ -1,0 +1,10 @@
+=== RUN   TestLiveCatalystCenterAuthTemplateRestoreWake
+    authentication_execution_live_test.go:357: private recovery baseline saved /private/tmp/cvk-auth-template-baseline-797602085/baseline.json
+    authentication_execution_live_test.go:393: owned wake restoration accepted 0ddb440b-e867-409c-9902-bc7a8c2ceec8 01a14040-cd93-79b8-84d9-b067eb66a0b6
+    authentication_execution_live_test.go:424: restoration additional field paths a73a51dc-a01f-41d1-a288-be23d13ee229 []
+    authentication_execution_live_test.go:424: restoration additional field paths 0ddb440b-e867-409c-9902-bc7a8c2ceec8 []
+    authentication_execution_live_test.go:424: restoration additional field paths 176c10f1-fdc0-4587-968c-5a6a656d1d04 []
+    authentication_execution_live_test.go:426: original owned Wake-on-LAN value restored 0ddb440b-e867-409c-9902-bc7a8c2ceec8 false native writes 1
+--- PASS: TestLiveCatalystCenterAuthTemplateRestoreWake (4.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.935s

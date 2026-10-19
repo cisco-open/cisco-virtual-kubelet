@@ -1,0 +1,31 @@
+{
+  "Cisco-IOS-XE-platform-software-oper:partitions": [
+    {
+      "name": "flash:",
+      "total-size": "11087104",
+      "used-size": "7882188",
+      "used-percent": 71,
+      "disk-status": "warning",
+      "thresholds": {
+        "warning-threshold-percent": 70,
+        "critical-threshold-percent": 90
+      },
+      "is-primary": true,
+      "is-writable": true,
+      "partition-content": [
+        {
+          "full-path": "/mnt/sd3/user/packages.conf",
+          "size": "7584",
+          "type": "file",
+          "modified-time": "2026-10-08T16:41:49+00:00"
+        },
+        {
+          "full-path": "/mnt/sd3/user/cat9k_iosxe.17.18.04.SPA.bin",
+          "size": "1249489705",
+          "type": "file",
+          "modified-time": "2026-10-08T15:37:49+00:00"
+        }
+      ]
+    }
+  ]
+}

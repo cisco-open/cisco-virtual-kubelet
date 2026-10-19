@@ -1,0 +1,36 @@
+=== RUN   TestEnvtestNetworkEmpty
+=== RUN   TestEnvtestNetworkEmpty/ntp/complete
+=== RUN   TestEnvtestNetworkEmpty/ntp/parent-nonempty
+=== RUN   TestEnvtestNetworkEmpty/ntp/inherited
+=== RUN   TestEnvtestNetworkEmpty/ntp/preflight-race
+=== RUN   TestEnvtestNetworkEmpty/ntp/lost-ack
+=== RUN   TestEnvtestNetworkEmpty/ntp/native-race
+=== RUN   TestEnvtestNetworkEmpty/ntp/malformed-read
+=== RUN   TestEnvtestNetworkEmpty/ntp/already-clear
+=== RUN   TestEnvtestNetworkEmpty/dhcp/complete
+=== RUN   TestEnvtestNetworkEmpty/dhcp/parent-nonempty
+=== RUN   TestEnvtestNetworkEmpty/dhcp/inherited
+=== RUN   TestEnvtestNetworkEmpty/dhcp/preflight-race
+=== RUN   TestEnvtestNetworkEmpty/dhcp/lost-ack
+=== RUN   TestEnvtestNetworkEmpty/dhcp/native-race
+=== RUN   TestEnvtestNetworkEmpty/dhcp/malformed-read
+=== RUN   TestEnvtestNetworkEmpty/dhcp/already-clear
+--- PASS: TestEnvtestNetworkEmpty (16.12s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/complete (3.64s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/parent-nonempty (0.93s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/inherited (1.04s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/preflight-race (1.12s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/lost-ack (0.29s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/native-race (0.34s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/malformed-read (0.33s)
+    --- PASS: TestEnvtestNetworkEmpty/ntp/already-clear (0.08s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/complete (0.97s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/parent-nonempty (0.98s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/inherited (0.91s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/preflight-race (1.00s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/lost-ack (0.28s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/native-race (0.35s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/malformed-read (0.32s)
+    --- PASS: TestEnvtestNetworkEmpty/dhcp/already-clear (0.06s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	18.537s

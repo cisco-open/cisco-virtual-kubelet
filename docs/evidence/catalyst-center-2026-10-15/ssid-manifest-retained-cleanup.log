@@ -1,0 +1,5 @@
+=== RUN   TestLiveRetainedSSIDManifestCleanup
+    wireless_ssid_manifest_recovery_live_test.go:126: retained acknowledged update task completed; exact disabled unassociated SSID removed without replay CVK_PSK_3b202f4b08882ac8 mdi0q1zl-x1bt-s18Z-yJiW-mMy0yJa4odGYywm4qZbwmuSYxZnq 01a14130-7e53-71dd-b185-3e2ec6ef6dde 01a14133-2d42-79e5-b514-9906e186983e
+--- PASS: TestLiveRetainedSSIDManifestCleanup (2.56s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.679s

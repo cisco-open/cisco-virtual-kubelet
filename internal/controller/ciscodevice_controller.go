@@ -59,6 +59,7 @@ import (
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	configengine "github.com/cisco/virtual-kubelet-cisco/internal/configengine/engine"
+	configurationcontract "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
 	"github.com/cisco/virtual-kubelet-cisco/internal/devicecoordination"
 	"github.com/cisco/virtual-kubelet-cisco/internal/drivers"
 	iosxegnoi "github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi"
@@ -219,6 +220,8 @@ func (realClock) Now() time.Time {
 // It creates (or updates) a ConfigMap containing the device spec and
 // a Deployment that runs the cisco-vk binary with that configuration.
 type CiscoDeviceReconciler struct {
+	ManageConfigurationReservations bool
+	ConfigurationAdmissionBinding   *configurationcontract.RuntimeAdmissionBinding
 	client.Client
 	Scheme    *runtime.Scheme
 	APIReader client.Reader
@@ -259,8 +262,14 @@ type CiscoDeviceReconciler struct {
 	TopologyPolicyNamespace string
 	TopologyPolicyName      string
 	LeaseNamespace          string
-	Recorder                record.EventRecorder
-	clock                   clock
+	// BootstrapFenceNamespace is manager-configured and shared across tenants;
+	// empty leaves older/non-bootstrap deployments unchanged. It grants no claim authority.
+	BootstrapFenceNamespace string
+	// Group maintenance requires the same installed-protocol manager authority
+	// as reservation creation and retirement. Nil permits retention, not new work.
+	AuthorizeConfigurationReservation func(context.Context, *opsv1alpha1.ControllerConfigurationReservation) error
+	Recorder                          record.EventRecorder
+	clock                             clock
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=ciscodevices,verbs=get;list;watch;update;patch
@@ -337,6 +346,10 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}()
 
 	logger := log.FromContext(ctx)
+
+	if err := r.ensureBootstrapEnrollmentClear(ctx, &device); err != nil {
+		return ctrl.Result{RequeueAfter: topologyRequeueInterval}, err
+	}
 
 	// ── 2. Handle deletion (finalizer) ───────────────────────────────────
 	if !device.DeletionTimestamp.IsZero() {
@@ -1109,6 +1122,9 @@ func (r *CiscoDeviceReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 				corev1.EnvVar{Name: managedprotocol.EnvGNOITLSSecretRevision, Value: gnoiTLSState.resourceVersion},
 				corev1.EnvVar{Name: managedprotocol.EnvGNOIProvisioningRevision, Value: provisioningSecretRV},
 			)
+			if _, err := injectConfigurationAdmissionBinding(networkTemplate, r.ConfigurationAdmissionBinding, networkAccess == managedprotocol.WorkerAccessReadWrite && device.Spec.Driver == ciskov1.DeviceDriverXE); err != nil {
+				return err
+			}
 			// Normalize after splitting: the network account and probes differ from
 			// the copied app template and must match API-server defaults before apply.
 			applyVKPodTemplateDefaults(&deploy.Spec.Template)
@@ -2356,6 +2372,9 @@ func (r *CiscoDeviceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			Watches(&rbacv1.Role{}, handler.EnqueueRequestsFromMapFunc(r.mapNamespacedRBACToCiscoDevices)).
 			Watches(&rbacv1.ClusterRole{}, handler.EnqueueRequestsFromMapFunc(r.mapClusterRoleToCiscoDevices)).
 			Watches(&rbacv1.ClusterRoleBinding{}, handler.EnqueueRequestsFromMapFunc(r.mapClusterRoleBindingToCiscoDevices))
+	}
+	if r.ManageConfigurationReservations {
+		builder = builder.Watches(&opsv1alpha1.ControllerConfigurationReservation{}, handler.EnqueueRequestsFromMapFunc(configurationReservationDeviceRequests))
 	}
 	return builder.Complete(r)
 }

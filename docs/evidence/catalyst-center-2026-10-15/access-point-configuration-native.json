@@ -1,0 +1,7 @@
+{
+  "qualification": "read-only AP configuration prerequisites; no mutation",
+  "http_status": 200,
+  "native_devices": 3,
+  "access_points": 0,
+  "isolated_fixture_selected": false
+}

@@ -1,0 +1,46 @@
+=== RUN   TestEnvtestTemplateNoDispatchReplan
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-create/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-create/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-create/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-update/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-update/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/project-update/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-create/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-create/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-create/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-update/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-update/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/draft-update/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/commit/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/commit/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/commit/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-draft/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-draft/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-draft/lost-ack
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-commit/field-edit
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-commit/read-error
+=== RUN   TestEnvtestTemplateNoDispatchReplan/composite-commit/lost-ack
+--- PASS: TestEnvtestTemplateNoDispatchReplan (14.69s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-create/field-edit (2.99s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-create/read-error (0.30s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-create/lost-ack (0.17s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-update/field-edit (0.33s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-update/read-error (0.29s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/project-update/lost-ack (0.16s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-create/field-edit (0.56s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-create/read-error (0.52s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-create/lost-ack (0.16s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-update/field-edit (0.56s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-update/read-error (0.54s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/draft-update/lost-ack (0.17s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/commit/field-edit (0.37s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/commit/read-error (0.35s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/commit/lost-ack (0.18s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-draft/field-edit (0.80s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-draft/read-error (0.80s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-draft/lost-ack (0.25s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-commit/field-edit (0.56s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-commit/read-error (0.55s)
+    --- PASS: TestEnvtestTemplateNoDispatchReplan/composite-commit/lost-ack (0.26s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.073s

@@ -1,0 +1,29 @@
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-fabric-transits-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [fabric]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-fabric-transits-example-v1
+  source:
+    inline:
+      catalyst_center:
+        fabric:
+          transits:
+            - name: CVK_IP
+              type: IP_BASED_TRANSIT
+              routing_protocol_name: BGP
+              autonomous_system_number: 65001

@@ -1,0 +1,49 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "upstream": [
+    {
+      "file": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/network_execution.go": "67fc387d2a5c91b01f8828dec5a25177deefb410e3692d3cde8d05edd8f67d69",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "e2fcc1925d8a982dd3b76d5abb043058511587a09c7d1b54652836ab698a8f58",
+    "internal/controlleradapter/catalystcenter/network_settings.go": "236aaf0faf64970c162c3ad1492ef079fc3a42d2192d2f8c52eec8cd5c5ba5b5",
+    "internal/controlleradapter/catalystcenter/network_submission_test.go": "025e6a2baf5d81cd01238a7d9dabd986f78e98f9b8cc3f3cbf9af2d4464213dd",
+    "internal/controlleradapter/catalystcenter/network_submission_recovery_test.go": "2779c551bbc5afdc20fcfd09d8afb4430498741fc7d9dbb13eb442d8e24f2839",
+    "internal/controlleradapter/catalystcenter/network_submission_envtest_test.go": "b0e48c63f4e711d8b3c121d3413d7fdc150ea185dbba6aed09ed8038c12f8868",
+    "internal/controlleradapter/catalystcenter/network_execution_live_test.go": "2362ca5f55e252a288ab1e1bae15073062c945a215e2051d9b8466c288be5a6d",
+    "internal/controlleradapter/catalystcenter/network_execution_test.go": "4cea96c5870ba2b9d35b51ae53a97118a231087a78f9f0f3a5619d7d5c765425",
+    "internal/controlleradapter/catalystcenter/network_credential_configuration.go": "698ec4ccf72eee8eb01e0629896eef11900e0649c9bb9cbf6ceaf1148f65f7fc",
+    "internal/controlleradapter/catalystcenter/telemetry_settings.go": "35e986948bea38b9331d3387f4bd1ba60433f864dbe6aac269fcb61d02a44ffe",
+    "internal/controlleradapter/catalystcenter/ipam_execution.go": "c2995558f640885581906ed27a3cf6bb48cdf1c2116e9e5dc8b11c3d9835cce5",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "aa8bb03e712b91c24edb09b83222b3865848940586d4c6a11def5622381c626b",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch_test.go": "37cfda62325e4fb2c667336ae247f6a50e4122fd1bc61431ff6621f1451c2945",
+    "internal/controlleradapter/catalystcenter/config_dispatch.go": "fd798ca12493dac7ff996d963b610d0076e1c1e68f9d5756661f98bd78a85f09",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "4ce957efcfd270402a3c8cc318cf59daa682296aafca843833220b0e0f1a0300",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "82528dfb8f9a35fa4a3b430409bfd6a5666501a82e864f8fdac9fe66b812b558",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "18d717fca13b92f3656b5e15dd6c562a48c560148f3529c870eacd3006886ecd",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "977e08f13e577a825f903e9e18f48f3bb5af7e7d5936ead6e7754c031181e7c8",
+    "internal/controlleradapter/catalystcenter/network_task_recovery.go": "564c4423114172dce9b6589c176845ddd43fc242f6843ea1b34f14a3bcdcf39b",
+    "internal/controlleradapter/catalystcenter/network_task_recovery_test.go": "11cebf8fc60dffaf0f8d22b3f95f9c51f7a03d856ad903e4a10c12cee0096201",
+    "internal/controlleradapter/catalystcenter/network_task_recovery_envtest_test.go": "4353f036a1d7c6c13cd7e9b4e6a8d92e5f5e853ba7e9883a58494b6e87af4098",
+    "internal/controlleradapter/catalystcenter/template_deployment_adapter_recovery.go": "8a6c64c2595d600b3de5cde9187a25ec8e8d75bd443d788e47d203c74e86b266",
+    "internal/controlleradapter/catalystcenter/config_completion.go": "9078f39218be187ade87e7f2236901b4972e77c2a1d82ae639caedd6685d2001",
+    "internal/controlleradapter/catalystcenter/config_task_tree.go": "2fa7f32e0e84c8e97342e824c2bf05a7a49a75feedeed77f64fd87443de935c1",
+    "internal/controlleradapter/catalystcenter/wireless_definition_recovery.go": "04dcf3c61f82c2b052e67524d145c8a60f33c3d93fe3dbcfdea5340fd12f59e4",
+    "internal/controlleradapter/catalystcenter/network_application.go": "53d52330b415670967583309cc7d7ab335b25e203646ec5f3af9438b7c45019c",
+    "internal/controlleradapter/catalystcenter/network_application_test.go": "72c69a5e1bc58c0bcf90a6e0c8675b6c27411798272ed3cff4a962ded55d4c4f",
+    "internal/controlleradapter/catalystcenter/network_application_envtest_test.go": "26eaf45fc7183fa3caf5e9319065048e6a24beeb09cdfea5da43a80214750868",
+    "internal/controlleradapter/catalystcenter/network_application_cleanup_live_test.go": "e855dee415cea69b9620837f7b0107f187ae73a0ba8afab474cbbb852a69ac4d",
+    "api/v1alpha1/networkcontroller_configuration_types.go": "d108fde7081cfebf219265c4d179efa4dab126de1a7930dd2f5bd27182083d02",
+    "config/crd/cisco.vk_networkcontrollers.yaml": "04930f56edac0666167479ce10fa6735992dd32e9de203ffae16f845d6cc9f48",
+    "internal/controlleradapter/catalystcenter/aaa_settings_manifest_test.go": "9fe2f8969b5e0077de5bc03c764d6ef197dd52ab1d468a04488631b3ef10d2a2",
+    "internal/controlleradapter/catalystcenter/aaa_network_configuration.go": "9f9cf788c69681723be7c8a2004f702f62899b4fe9e160ca3cc28e2fd1fb5f00",
+    "internal/controlleradapter/catalystcenter/aaa_settings_execution.go": "d9db1ec08a26134e4f72d43c28fc79f347b2f0393be782ff3a5242131e909b1b"
+  },
+  "scope": "Versioned public network-setting mutations bind predecessor public bookkeeping and require one replaceable atomic task/source/owner/site-bound application receipt. Commit seal is in the adapter-specific result identity; shared EffectReceipts semantics and schemas are unchanged. Covers all six setting types, logical/schema duplicates, quota, pruning, legacy tasks and no-op imports. Final actual API and two-revision lab qualification logs distinguish native APIs from simulated storage/actors. No native-value baseline, creator/adoption/delete authority, physical rollout or full pinned-model parity claim."
+}

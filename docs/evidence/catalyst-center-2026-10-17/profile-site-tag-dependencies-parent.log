@@ -1,0 +1,14 @@
+=== RUN   TestEnvtestProfileSiteTagDependencies
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change
+--- PASS: TestEnvtestProfileSiteTagDependencies (17.37s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change (7.34s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change (5.93s)
+=== RUN   TestProfileSiteTagDependencies
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change
+--- PASS: TestProfileSiteTagDependencies (4.25s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change (1.83s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change (2.41s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	24.028s

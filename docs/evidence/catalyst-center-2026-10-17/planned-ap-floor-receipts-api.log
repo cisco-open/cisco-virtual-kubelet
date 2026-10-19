@@ -1,0 +1,30 @@
+=== RUN   TestEnvtestSiteFloorEffectReceipts
+=== RUN   TestEnvtestSiteFloorEffectReceipts/complete
+=== RUN   TestEnvtestSiteFloorEffectReceipts/multiple
+=== RUN   TestEnvtestSiteFloorEffectReceipts/reordered
+=== RUN   TestEnvtestSiteFloorEffectReceipts/missing-member
+=== RUN   TestEnvtestSiteFloorEffectReceipts/missing
+=== RUN   TestEnvtestSiteFloorEffectReceipts/changed
+=== RUN   TestEnvtestSiteFloorEffectReceipts/pruned-result
+=== RUN   TestEnvtestSiteFloorEffectReceipts/pruned-producer
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-empty
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-long
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-count
+=== RUN   TestEnvtestSiteFloorEffectReceipts/schema-duplicate
+--- PASS: TestEnvtestSiteFloorEffectReceipts (6.49s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/complete (2.68s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/multiple (0.06s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/reordered (0.06s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/missing-member (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/missing (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/changed (0.06s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/pruned-result (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/pruned-producer (0.05s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-empty (0.04s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-long (0.04s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-count (0.04s)
+    --- PASS: TestEnvtestSiteFloorEffectReceipts/schema-duplicate (0.04s)
+=== RUN   TestEnvtestSiteFloorEffectOldSchemaRefusesPublication
+--- PASS: TestEnvtestSiteFloorEffectOldSchemaRefusesPublication (6.03s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.696s

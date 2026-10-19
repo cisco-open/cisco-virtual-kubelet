@@ -1,0 +1,8 @@
+=== RUN   TestLiveWirelessTagRecreationReadOnlyProbe
+    wireless_tag_recreate_probe_live_test.go:55: public native tag mdi0q1zl-x05F-ndLM-ngq0-mdbHndbLmtmXn19tqZbwmuSYxZno selector matches true
+    wireless_tag_recreate_probe_live_test.go:59: public native readback true <nil>
+    wireless_tag_recreate_probe_live_test.go:61: original task complete true <nil>
+    wireless_tag_recreate_probe_live_test.go:63: original task tree complete true <nil>
+--- PASS: TestLiveWirelessTagRecreationReadOnlyProbe (1.26s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.675s

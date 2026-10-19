@@ -1,0 +1,4 @@
+=== RUN   TestEnvtestDiscoveryInitialNoAuthStagedExample
+--- PASS: TestEnvtestDiscoveryInitialNoAuthStagedExample (6.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.448s

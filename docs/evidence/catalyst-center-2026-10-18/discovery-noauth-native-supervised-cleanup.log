@@ -1,0 +1,5 @@
+=== RUN   TestLiveCleanupGeneratedNoAuthJob
+    discovery_noauth_native_execution_staged_test.go:360: exact original-task-bound generated job removed; one-job/three-device baseline restored; no product completion receipt invented
+--- PASS: TestLiveCleanupGeneratedNoAuthJob (2.32s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.798s

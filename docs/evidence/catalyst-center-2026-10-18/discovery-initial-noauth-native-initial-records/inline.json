@@ -1,0 +1,96 @@
+{
+  "configStatus": {
+    "phase": "Waiting",
+    "observedGeneration": 3,
+    "lastControllerCheck": "2026-10-18T20:18:12Z",
+    "controllerAPIVersion": "v1/v2",
+    "sectionStatus": [
+      {
+        "name": "inventory",
+        "state": "Applying",
+        "resourceCount": 1
+      }
+    ],
+    "conditions": [
+      {
+        "type": "AdapterAvailable",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T20:18:12Z",
+        "reason": "AdapterAvailable",
+        "message": "Catalyst Center configuration adapter is available"
+      },
+      {
+        "type": "IntentValid",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T20:18:12Z",
+        "reason": "SubmissionRecoveryRequired",
+        "message": "Submission or journal outcome requires inspection; no automatic replay"
+      },
+      {
+        "type": "Ready",
+        "status": "False",
+        "observedGeneration": 3,
+        "lastTransitionTime": "2026-10-18T20:18:12Z",
+        "reason": "DiscoveryConfigFinalized",
+        "message": "Deleting config awaits manager finalization"
+      },
+      {
+        "type": "DiscoveryCredentialSourceScope",
+        "status": "True",
+        "observedGeneration": 2,
+        "lastTransitionTime": "2026-10-18T20:18:12Z",
+        "reason": "CredentialDiscoverySource",
+        "message": "{\"ControllerUID\":\"5cab90f8-d59d-45e7-811c-95257b7f4ea5\",\"ConfigUID\":\"5be38b4f-dce3-427f-b995-3b44547fe5ac\",\"SpecDigest\":\"9cf856d1885ae75fcd0928a63190a789ba4c1fdfc9857d7f48de9f2bf02cecad\",\"SourceUID\":\"\",\"SourceVersion\":\"\",\"ModelDigest\":\"cb83d6dade644c836305ed6185a59b627130c03b21fa2e588c1f0085696b854b\",\"ControllerGeneration\":2,\"ConfigGeneration\":2}"
+      },
+      {
+        "type": "ControllerCleanupComplete",
+        "status": "True",
+        "observedGeneration": 3,
+        "lastTransitionTime": "2026-10-18T20:18:13Z",
+        "reason": "DiscoveryConfigFinalized",
+        "message": "{\"ControllerUID\":\"5cab90f8-d59d-45e7-811c-95257b7f4ea5\",\"ConfigUID\":\"5be38b4f-dce3-427f-b995-3b44547fe5ac\",\"SpecDigest\":\"9cf856d1885ae75fcd0928a63190a789ba4c1fdfc9857d7f48de9f2bf02cecad\",\"DeletionDigest\":\"49de991024ad5c31960eadb4d9018c4423d93a23bcb2faa42a3f422386c6cfb8\",\"EvidenceDigest\":\"32c023f769ac4728db9a4c93c96fa9e6617942f8e7dc920ac483378806c3e0aa\",\"SourceUID\":\"\",\"SourceVersion\":\"\",\"ModelDigest\":\"cb83d6dade644c836305ed6185a59b627130c03b21fa2e588c1f0085696b854b\",\"ControllerGeneration\":2,\"ConfigGeneration\":3,\"ScopeDigest\":\"24334d9a8e9fff683da6574ed327ad8045a8e1b199b95d5e60fdcbf007b83e4c\",\"CredentialDigest\":\"credential-discovery-unsubmitted:v1:cab1a973a524d52810ed990b48db2a1a4bc433ac468fb316676ad57eb607ee1c\"}"
+      }
+    ]
+  },
+  "credentialDelivery": false,
+  "installedActors": false,
+  "managerReleased": true,
+  "mode": "inline",
+  "nativeDevices": 3,
+  "nativeDiscoveryJobs": 1,
+  "nativeMutationAttempts": 0,
+  "realIsolatedKubernetesAPI": true,
+  "retained": {
+    "ConfigName": "sites",
+    "Completion": {
+      "ControllerUID": "5cab90f8-d59d-45e7-811c-95257b7f4ea5",
+      "ConfigUID": "5be38b4f-dce3-427f-b995-3b44547fe5ac",
+      "SpecDigest": "9cf856d1885ae75fcd0928a63190a789ba4c1fdfc9857d7f48de9f2bf02cecad",
+      "DeletionDigest": "49de991024ad5c31960eadb4d9018c4423d93a23bcb2faa42a3f422386c6cfb8",
+      "EvidenceDigest": "32c023f769ac4728db9a4c93c96fa9e6617942f8e7dc920ac483378806c3e0aa",
+      "SourceUID": "",
+      "SourceVersion": "",
+      "ModelDigest": "cb83d6dade644c836305ed6185a59b627130c03b21fa2e588c1f0085696b854b",
+      "ControllerGeneration": 2,
+      "ConfigGeneration": 3,
+      "ScopeDigest": "24334d9a8e9fff683da6574ed327ad8045a8e1b199b95d5e60fdcbf007b83e4c",
+      "CredentialDigest": "credential-discovery-unsubmitted:v1:cab1a973a524d52810ed990b48db2a1a4bc433ac468fb316676ad57eb607ee1c"
+    },
+    "RetainedDigest": "cab1a973a524d52810ed990b48db2a1a4bc433ac468fb316676ad57eb607ee1c",
+    "RetiredDigest": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+    "CredentialHistoryDigest": "credential-discovery-history:v1:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "UnsubmittedOperation": {
+      "id": "f327a517814b5a6ca51417e8b96e6893",
+      "configName": "sites",
+      "configUID": "5be38b4f-dce3-427f-b995-3b44547fe5ac",
+      "configGeneration": 2,
+      "controllerGeneration": 2,
+      "section": "inventory",
+      "resource": "discovery-credential-input:v4:3d2ea00340713a5476b29caab918252b46214fae7c7e9ee925ea50c35ff2fddf:8166c0e8237b03381e9581817e0504eb18b7605f3439000259155f3ac0863fe4:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945:e00f:7afc9e11e55a74cde17083008527247296a1a85ad68da2247f56e83fc4d73d26:-",
+      "action": "Create",
+      "phase": "Prepared"
+    }
+  }
+}

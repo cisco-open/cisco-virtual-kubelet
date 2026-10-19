@@ -1,0 +1,42 @@
+=== RUN   TestEnvtestPrivateSiteDesignComposition
+=== RUN   TestEnvtestPrivateSiteDesignComposition/normal-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/optional-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-recover-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/image-refuse-private
+=== RUN   TestEnvtestPrivateSiteDesignComposition/recover-refuse-private
+--- PASS: TestEnvtestPrivateSiteDesignComposition (19.62s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/normal-private (3.72s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/optional-private (1.09s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-private (2.03s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-private (1.12s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-recover-private (2.15s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/ambiguous-private (0.88s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-ambiguous-private (1.10s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/image-refuse-private (2.27s)
+    --- PASS: TestEnvtestPrivateSiteDesignComposition/recover-refuse-private (1.53s)
+=== RUN   TestEnvtestPlannedAPFloorHandoff
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-recover-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/image-keyed-handoff-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-multiple-recover-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-unowned-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-disable-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-result-drift-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-ignored-private
+=== RUN   TestEnvtestPlannedAPFloorHandoff/keyed-handoff-missing-task-private
+--- PASS: TestEnvtestPlannedAPFloorHandoff (31.57s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-private (5.41s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-recover-private (3.37s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/image-keyed-handoff-private (4.13s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-multiple-recover-private (6.27s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-unowned-private (1.91s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-disable-private (1.68s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-result-drift-private (1.77s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-ignored-private (1.73s)
+    --- PASS: TestEnvtestPlannedAPFloorHandoff/keyed-handoff-missing-task-private (1.30s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	53.375s

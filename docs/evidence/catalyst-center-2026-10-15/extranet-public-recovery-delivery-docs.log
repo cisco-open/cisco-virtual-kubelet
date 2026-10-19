@@ -1,0 +1,141 @@
+
+[31m │  ⚠  Warning from the Material for MkDocs team[0m
+[31m │[0m
+[31m │[0m  MkDocs 2.0, the underlying framework of Material for MkDocs,
+[31m │[0m  will introduce backward-incompatible changes, including:
+[31m │[0m
+[31m │  × [0mAll plugins will stop working – the plugin system has been removed
+[31m │  × [0mAll theme overrides will break – the theming system has been rewritten
+[31m │  × [0mNo migration path exists – existing projects cannot be upgraded
+[31m │  × [0mClosed contribution model – community members can't report bugs
+[31m │  × [0mCurrently unlicensed – unsuitable for production use
+[31m │[0m
+[31m │[0m  Our full analysis:
+[31m │[0m
+[31m │[0m  [4mhttps://squidfunk.github.io/mkdocs-material/blog/2026/02/18/mkdocs-2.0/[0m
+[0m
+INFO    -  Cleaning site directory
+INFO    -  Building documentation to directory: /tmp/cvk-catc-parity-site
+INFO    -  The following pages exist in the docs directory, but are not included in the "nav" configuration:
+  - controllers/catalyst-center-parity.md
+  - controllers/catalyst-center-remediation.md
+  - controllers/catalyst-center-resource-parity.md
+  - controllers/catalyst-center.md
+  - controllers/nexus-dashboard.md
+  - evidence/catalyst-center-2026-10-08/README.md
+  - evidence/catalyst-center-2026-10-08/preflight.md
+  - evidence/catalyst-center-2026-10-08/automatic-remediation/README.md
+  - evidence/catalyst-center-2026-10-09/README.md
+  - evidence/catalyst-center-2026-10-09/merge-cycle/README.md
+  - evidence/catalyst-center-2026-10-09/merge-readiness/README.md
+  - evidence/catalyst-center-2026-10-09/standard-reload/README.md
+  - evidence/catalyst-center-2026-10-12/README.md
+  - evidence/catalyst-center-2026-10-14/anycast-gateway-bulk-chunks.md
+  - evidence/catalyst-center-2026-10-14/anycast-gateway-bulk-manifest.md
+  - evidence/catalyst-center-2026-10-14/anycast-gateway-bulk.md
+  - evidence/catalyst-center-2026-10-14/api-access.md
+  - evidence/catalyst-center-2026-10-14/fabric-devices-bulk.md
+  - evidence/catalyst-center-2026-10-14/fabric-devices-managed-footprint.md
+  - evidence/catalyst-center-2026-10-14/fabric-devices-prepare-dispatch.md
+  - evidence/catalyst-center-2026-10-14/fabric-devices-public-recovery.md
+  - evidence/catalyst-center-2026-10-14/intent-compliance-evidence.md
+  - evidence/catalyst-center-2026-10-14/management-address-claim-retention.md
+  - evidence/catalyst-center-2026-10-14/management-address-declaration-apply.md
+  - evidence/catalyst-center-2026-10-14/management-address-managed-stage.md
+  - evidence/catalyst-center-2026-10-14/management-address-native.md
+  - evidence/catalyst-center-2026-10-14/management-address-owned-recovery.md
+  - evidence/catalyst-center-2026-10-14/management-address-plan.md
+  - evidence/catalyst-center-2026-10-14/management-address-read-races.md
+  - evidence/catalyst-center-2026-10-14/management-address-retained.md
+  - evidence/catalyst-center-2026-10-14/management-address-rollout-plan.md
+  - evidence/catalyst-center-2026-10-14/model-preconditions.md
+  - evidence/catalyst-center-2026-10-14/site-bulk-binding.md
+  - evidence/catalyst-center-2026-10-14/site-bulk-manifest.md
+  - evidence/catalyst-center-2026-10-14/site-bulk-public-update.md
+  - evidence/catalyst-center-2026-10-14/site-bulk.md
+  - evidence/catalyst-center-2026-10-14/site-execution.md
+  - evidence/catalyst-center-2026-10-14/task-completion-boundary.md
+  - evidence/catalyst-center-2026-10-14/template-pacing.md
+  - evidence/catalyst-center-2026-10-14/wired-bulk-dispatch.md
+  - evidence/catalyst-center-2026-10-14/wired-bulk-options.md
+  - evidence/catalyst-center-2026-10-14/wired-bulk-owned-receipts.md
+  - evidence/catalyst-center-2026-10-14/wired-bulk-preparation.md
+  - evidence/catalyst-center-2026-10-14/wired-bulk-public-recovery.md
+  - evidence/catalyst-center-2026-10-14/wired-bulk-sequence.md
+  - evidence/catalyst-center-2026-10-14/wired-bulk.md
+  - evidence/catalyst-center-2026-10-15/ap-calendar-live.md
+  - evidence/catalyst-center-2026-10-15/ap-settings-live.md
+  - evidence/catalyst-center-2026-10-15/cluster-recovery-backup.md
+  - evidence/catalyst-center-2026-10-15/extranet-managed-planning.md
+  - evidence/catalyst-center-2026-10-15/extranet-preparation-dispatch.md
+  - evidence/catalyst-center-2026-10-15/extranet-public-recovery.md
+  - evidence/catalyst-center-2026-10-15/fabric-devices-bulk-application.md
+  - evidence/catalyst-center-2026-10-15/fabric-devices-groups.md
+  - evidence/catalyst-center-2026-10-15/fabric-devices-parent-preflight.md
+  - evidence/catalyst-center-2026-10-15/floor-image-manifest.md
+  - evidence/catalyst-center-2026-10-15/lan-link-add.md
+  - evidence/catalyst-center-2026-10-15/lan-link-composition.md
+  - evidence/catalyst-center-2026-10-15/lan-link-delete-journal.md
+  - evidence/catalyst-center-2026-10-15/lan-link-delete-preflight.md
+  - evidence/catalyst-center-2026-10-15/lan-link-delete-proof.md
+  - evidence/catalyst-center-2026-10-15/lan-link-delete-public.md
+  - evidence/catalyst-center-2026-10-15/lan-link-delete-replanning.md
+  - evidence/catalyst-center-2026-10-15/lan-link-dependencies.md
+  - evidence/catalyst-center-2026-10-15/lan-link-device-proof.md
+  - evidence/catalyst-center-2026-10-15/lan-link-owned.md
+  - evidence/catalyst-center-2026-10-15/lan-link-public-apply.md
+  - evidence/catalyst-center-2026-10-15/lan-link-recovery.md
+  - evidence/catalyst-center-2026-10-15/lan-link-replan.md
+  - evidence/catalyst-center-2026-10-15/lan-session-operation.md
+  - evidence/catalyst-center-2026-10-15/lan-session-start.md
+  - evidence/catalyst-center-2026-10-15/power-rules-native.md
+  - evidence/catalyst-center-2026-10-15/template-private-inputs.md
+  - evidence/catalyst-center-2026-10-15/template-provision-pacing.md
+  - evidence/catalyst-center-2026-10-15/wireless-custom-zones-cohort.md
+  - evidence/catalyst-center-2026-10-15/wireless-policy-extension.md
+  - evidence/catalyst-center-2026-10-15/wireless-profile-modes-native.md
+  - evidence/catalyst-center-2026-10-15/wireless-profile-native.md
+  - evidence/catalyst-center-2026-10-15/wireless-switching-modes.md
+  - evidence/catalyst-center-2026-10-15/wireless-tag-scope.md
+  - evidence/catalyst-center-2026-10-15/wireless-tags-native.md
+  - evidence/catalyst-center-2026-10-15/wireless-vlan-selector.md
+  - evidence/topology-2026-10-01/README.md
+  - evidence/topology-2026-10-01/11ae6704-noreboot-boundary.md
+  - evidence/topology-2026-10-01/9e578131-observation-validation.md
+  - evidence/topology-2026-10-01/c0-103-activation-outcome-audit.md
+  - evidence/topology-2026-10-01/c2-manager-accepted-network-evidence.md
+  - evidence/topology-2026-10-01/c2-rate-provenance-followup.md
+  - evidence/topology-2026-10-01/c3-administrator-disruption-protections.md
+  - evidence/topology-2026-10-01/c3-claim-time-network-authority.md
+  - evidence/topology-2026-10-01/c3-continuous-network-recovery-soak.md
+  - evidence/topology-2026-10-01/c3-overlapping-risk-groups.md
+  - evidence/topology-2026-10-01/verification.md
+  - evidence/topology-2026-10-01/c3-physical-pacing/README.md
+  - evidence/topology-2026-10-01/e10-graph/README.md
+  - evidence/topology-2026-10-01/fix1-serial-downgrade/report.md
+  - evidence/topology-2026-10-01/fix1-serial-upgrade/report.md
+  - evidence/topology-2026-10-01/settled2-live-upgrade-clean/report.md
+  - evidence/topology-2026-10-01/settled4-live-downgrade/report.md
+  - evidence/topology-2026-10-01/settled5-lab101-downgrade/report.md
+  - evidence/topology-2026-10-02/README.md
+  - evidence/topology-2026-10-02/e06-separate-activation.md
+  - evidence/topology-2026-10-02/e08-native-tas-served-guard.md
+  - evidence/topology-2026-10-02/e09-transfer-measurement-and-cache-decision.md
+  - evidence/topology-2026-10-02/e10-isolated-link-change.md
+  - evidence/topology-2026-10-02/e12-synthetic-scale-and-handoff.md
+  - evidence/topology-2026-10-02/e13-final-candidate-physical-matrix.md
+  - evidence/topology-2026-10-02/merge-readiness-followup.md
+  - evidence/topology-2026-10-02/migration-and-diagnostic-followup.md
+  - evidence/topology-2026-10-02/preparation-recovery-followup.md
+  - evidence/topology-2026-10-05/README.md
+  - evidence/topology-2026-10-05/bed27185-physical-validation.md
+  - evidence/topology-2026-10-05/fleet-read-budget.md
+  - evidence/topology-2026-10-05/live-migration-and-recovery.md
+  - evidence/topology-2026-10-05/migration-startup-matrix.md
+  - evidence/topology-2026-10-05/planning-read-budget.md
+  - evidence/topology-2026-10-05/public-ca-and-policy-migration.md
+  - evidence/topology-2026-10-05/receipt-bound-retirement.md
+  - evidence/topology-2026-10-05/settled-drain-retirement.md
+INFO    -  Removed unused non-English lunr language assets
+INFO    -  Vendored exact Mermaid and ResizeObserver runtime assets
+INFO    -  Documentation built in 4.86 seconds

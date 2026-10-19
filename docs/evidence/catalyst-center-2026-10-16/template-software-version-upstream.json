@@ -1,0 +1,17 @@
+{
+  "moduleVersion": "0.5.0",
+  "pinnedCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "file": "cc_templates.tf",
+  "fileSHA256": "047e093c259910e1ea6d3c769d1838fc91d0967c6e39d728d09a74fe266c2f36",
+  "regularAndCompositeMappings": [
+    {
+      "line": 388,
+      "expression": "try(each.value.software_version, local.catalyst_center.templates.software_version, null)"
+    },
+    {
+      "line": 426,
+      "expression": "try(each.value.software_version, local.catalyst_center.templates.software_version, null)"
+    }
+  ],
+  "semantics": "A definition property takes precedence, including explicit null or empty; the templates-level property is used only when the definition property is absent. CVK keeps other defaults resolution upstream."
+}

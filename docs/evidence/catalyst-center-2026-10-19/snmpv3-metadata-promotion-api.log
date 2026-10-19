@@ -1,0 +1,4 @@
+=== RUN   TestEnvtestGlobalCredentialMetadataPromotion
+--- PASS: TestEnvtestGlobalCredentialMetadataPromotion (6.60s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.799s

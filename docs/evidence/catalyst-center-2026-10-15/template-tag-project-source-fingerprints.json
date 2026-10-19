@@ -1,0 +1,10 @@
+{
+  "scope": "Final focused and native qualification source files",
+  "sha256": {
+    "internal/controlleradapter/catalystcenter/template_membership.go": "fa7b8889e9bfed1dcbf2593d1409b04e5e79e36c85ba78def24fc7f7e03481d1",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "296b6dfce6e6f075bb2b7141b9d62f16e8e6525c1823444f8d1423bfa2e7cf7d",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "9078ed342ce5c7db3f1b17fbe48bb5c4ba4b67d32e61a145cfe47486eec35e47",
+    "internal/controlleradapter/catalystcenter/template_membership_binding_test.go": "55d0ec2472b1099f5a670114d731cccbe843f8a7b3d3d99471dca43732b6ab71",
+    "internal/controlleradapter/catalystcenter/template_membership_live_test.go": "d440535726e306d9c6a26d54b39eec0ca4fe9d18a61cfbd2d030ba66f2a85a3e"
+  }
+}

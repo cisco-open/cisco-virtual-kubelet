@@ -1,0 +1,7 @@
+# Non-secret defaults; input job identities and credential references stay explicit.
+defaults:
+  catalyst_center:
+    inventory:
+      discovery:
+        type: SINGLE
+        protocol_order: SSH

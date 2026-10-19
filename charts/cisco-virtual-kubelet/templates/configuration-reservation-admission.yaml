@@ -1,0 +1,173 @@
+{{- if .Values.topology.enabled }}
+{{- $fullname := include "cisco-virtual-kubelet.fullname" . }}
+{{- $manager := include "cisco-virtual-kubelet.managerUsername" . }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-configuration-reservation
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["ops.cisco.vk"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["controllerconfigurationreservations", "controllerconfigurationreservations/status"]
+        scope: Namespaced
+  variables:
+    - name: journal
+      expression: "request.operation == 'DELETE' ? oldObject : object"
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: podBound
+      expression: >-
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-uid'].size() == 1
+    - name: deviceWorker
+      expression: >-
+        variables.podBound && request.userInfo.username == variables.journal.spec.deviceWorkerUsername &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-uid'][0] == variables.journal.spec.deviceWorkerPod.uid
+    - name: controllerWorker
+      expression: >-
+        variables.podBound && request.userInfo.username == variables.journal.spec.controllerUsername &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-uid'][0] == variables.journal.spec.controllerWorkerPod.uid
+    - name: oldClaim
+      expression: "oldObject != null && has(oldObject.status) && has(oldObject.status.claim)"
+    - name: oldGrant
+      expression: "oldObject != null && has(oldObject.status) && has(oldObject.status.grant)"
+    - name: claim
+      expression: "has(variables.journal.status) && has(variables.journal.status.claim)"
+    - name: grant
+      expression: "has(variables.journal.status) && has(variables.journal.status.grant)"
+    - name: oldCompletion
+      expression: "oldObject != null && has(oldObject.status) && has(oldObject.status.completion)"
+    - name: completion
+      expression: "has(variables.journal.status) && has(variables.journal.status.completion)"
+    - name: sameClaim
+      expression: "variables.claim == variables.oldClaim && (!variables.claim || object.status.claim == oldObject.status.claim)"
+    - name: sameCompletion
+      expression: "variables.completion == variables.oldCompletion && (!variables.completion || object.status.completion == oldObject.status.completion)"
+    - name: sameGrantIdentity
+      expression: >-
+        variables.oldGrant && variables.grant &&
+        object.status.grant.leaseNamespace == oldObject.status.grant.leaseNamespace &&
+        object.status.grant.lease == oldObject.status.grant.lease &&
+        object.status.grant.holder == oldObject.status.grant.holder &&
+        object.status.grant.leaseTransitions == oldObject.status.grant.leaseTransitions &&
+        object.status.grant.grantedAt == oldObject.status.grant.grantedAt
+    - name: oldSettled
+      expression: "oldObject != null && has(oldObject.status) && has(oldObject.status.managerSettledAt)"
+    - name: settled
+      expression: "has(variables.journal.status) && has(variables.journal.status.managerSettledAt)"
+    - name: sameSettlement
+      expression: "variables.settled == variables.oldSettled && (!variables.settled || object.status.managerSettledAt == oldObject.status.managerSettledAt)"
+    - name: oldCancelled
+      expression: "oldObject != null && has(oldObject.status) && has(oldObject.status.preparationCancelledAt)"
+    - name: cancelled
+      expression: "has(variables.journal.status) && has(variables.journal.status.preparationCancelledAt)"
+    - name: sameCancellation
+      expression: "variables.cancelled == variables.oldCancelled && (!variables.cancelled || object.status.preparationCancelledAt == oldObject.status.preparationCancelledAt)"
+    - name: group
+      expression: "variables.journal.spec.protocol == 'controller-configuration-group-v1'"
+    - name: oldGroupCancelled
+      expression: "oldObject != null && has(oldObject.status) && has(oldObject.status.groupCancellation)"
+    - name: groupCancelled
+      expression: "has(variables.journal.status) && has(variables.journal.status.groupCancellation)"
+    - name: sameGroupCancellation
+      expression: "variables.groupCancelled == variables.oldGroupCancelled && (!variables.groupCancelled || object.status.groupCancellation == oldObject.status.groupCancellation)"
+    - name: sameGrant
+      expression: "variables.grant == variables.oldGrant && (!variables.grant || object.status.grant == oldObject.status.grant)"
+    - name: safeRemoval
+      expression: >-
+        (!variables.oldClaim && !variables.oldGrant && (!variables.oldCancelled || variables.oldSettled) &&
+         (!variables.group || variables.oldSettled)) ||
+        (variables.oldGrant && variables.oldSettled && oldObject.status.grant.phase == 'Released' &&
+         (!variables.oldClaim || variables.oldCompletion || (variables.group && variables.oldGroupCancelled)))
+  validations:
+    - expression: >-
+        request.operation != 'CREATE' ||
+        (variables.manager && !variables.claim && !variables.grant && !variables.settled && !variables.cancelled && !variables.groupCancelled &&
+         (!has(object.status) || !has(object.status.completion)) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences.size() == 0) &&
+         has(object.metadata.finalizers) && object.metadata.finalizers == ['ops.cisco.vk/configuration-reservation-evidence'])
+      message: "Only the manager may create an empty, retained configuration reservation"
+    - expression: >-
+        request.operation != 'DELETE' || (variables.manager && variables.safeRemoval)
+      message: "Configuration evidence cannot be deleted while granted or claimed"
+    - expression: >-
+        request.operation != 'UPDATE' ||
+        (object.spec == oldObject.spec &&
+         (has(object.metadata.labels) == has(oldObject.metadata.labels)) &&
+         (!has(object.metadata.labels) || object.metadata.labels == oldObject.metadata.labels) &&
+         (has(object.metadata.annotations) == has(oldObject.metadata.annotations)) &&
+         (!has(object.metadata.annotations) || object.metadata.annotations == oldObject.metadata.annotations) &&
+         (!has(object.metadata.ownerReferences) || object.metadata.ownerReferences.size() == 0))
+      message: "Configuration reservation binding and metadata are immutable"
+    - expression: >-
+        request.operation != 'UPDATE' ||
+        ((has(request.subResource) && request.subResource == 'status') ?
+          (has(object.metadata.finalizers) && has(oldObject.metadata.finalizers) &&
+           object.metadata.finalizers == oldObject.metadata.finalizers &&
+           ((variables.sameGroupCancellation && !variables.groupCancelled && ((variables.manager && variables.sameCancellation && !variables.oldSettled && variables.settled &&
+             variables.sameClaim && variables.sameCompletion &&
+             ((variables.oldCancelled && !variables.oldGrant && !variables.grant && !variables.claim && !variables.completion &&
+               timestamp(object.status.managerSettledAt) >= timestamp(object.status.preparationCancelledAt)) ||
+              (variables.oldGrant && variables.grant && object.status.grant == oldObject.status.grant && oldObject.status.grant.phase == 'Released' &&
+             (!variables.claim || variables.completion) &&
+             timestamp(object.status.managerSettledAt) >= timestamp(object.status.grant.grantedAt) &&
+             (!variables.completion || timestamp(object.status.managerSettledAt) >= timestamp(object.status.completion.verifiedAt))))) ||
+            (variables.controllerWorker && variables.sameCancellation && !variables.cancelled && variables.sameSettlement && variables.oldGrant && variables.grant &&
+             object.status.grant == oldObject.status.grant && oldObject.status.grant.phase == 'Held' &&
+             ((!variables.oldClaim && variables.claim && !variables.completion && !has(object.metadata.deletionTimestamp) &&
+               object.status.claim.operationID == object.spec.operationID &&
+               object.status.claim.operationDigest == object.spec.operationDigest &&
+               timestamp(object.status.claim.claimedAt) >= timestamp(object.status.grant.grantedAt)) ||
+              (variables.oldClaim && variables.sameClaim && !variables.oldCompletion && variables.completion &&
+               object.status.completion.operationID == object.spec.operationID &&
+               object.status.completion.operationDigest == object.spec.operationDigest &&
+               timestamp(object.status.completion.submittedAt) >= timestamp(object.status.claim.claimedAt) &&
+               timestamp(object.status.completion.verifiedAt) >= timestamp(object.status.completion.submittedAt)))) ||
+            (variables.deviceWorker && !variables.group && variables.sameSettlement && variables.sameClaim && variables.sameCompletion &&
+             !variables.oldCancelled && variables.cancelled && !variables.oldGrant && !variables.grant && !variables.claim && !variables.completion) ||
+            (variables.deviceWorker && variables.sameCancellation && !variables.cancelled && variables.sameSettlement && variables.sameClaim && variables.sameCompletion && variables.grant &&
+             ((!variables.oldGrant && !variables.claim && !variables.completion &&
+               object.status.grant.phase == 'Held' && !has(object.metadata.deletionTimestamp)) ||
+              (variables.sameGrantIdentity &&
+               ((!variables.claim && !variables.completion &&
+                 ((oldObject.status.grant.phase == 'Held' && object.status.grant.phase == 'Revoked') ||
+                  (!variables.group && oldObject.status.grant.phase == 'Revoked' && object.status.grant.phase == 'Released'))) ||
+                (variables.claim && variables.oldCompletion && oldObject.status.grant.phase == 'Held' &&
+                 object.status.grant.phase == 'Released'))))))) ||
+            (variables.group && !variables.cancelled && !variables.completion && variables.sameCancellation &&
+             ((variables.deviceWorker && variables.sameSettlement && variables.sameClaim && variables.sameCompletion &&
+               ((!variables.oldGroupCancelled && variables.groupCancelled && variables.sameGrant && !variables.settled &&
+                 object.status.groupCancellation.operationID == object.spec.operationID &&
+                 object.status.groupCancellation.operationDigest == object.spec.operationDigest &&
+                 timestamp(object.status.groupCancellation.acknowledgedAt) >= timestamp(object.status.groupCancellation.requestedAt)) ||
+                (variables.oldGroupCancelled && variables.sameGroupCancellation && !variables.settled &&
+                 variables.sameGrantIdentity && object.status.grant.phase == 'Released' &&
+                 oldObject.status.grant.phase in ['Held', 'Revoked']))) ||
+              (variables.manager && variables.oldGroupCancelled && variables.sameGroupCancellation &&
+               variables.sameGrant && variables.sameClaim && variables.sameCompletion && !variables.oldSettled && variables.settled &&
+               ((!variables.grant && !variables.claim) || (variables.grant && object.status.grant.phase == 'Released')) &&
+               timestamp(object.status.managerSettledAt) >= timestamp(object.status.groupCancellation.acknowledgedAt) &&
+               (!variables.grant || timestamp(object.status.managerSettledAt) >= timestamp(object.status.grant.grantedAt))))))) :
+          (variables.manager &&
+           (has(object.status) == has(oldObject.status)) && (!has(object.status) || object.status == oldObject.status) &&
+           ((has(object.metadata.finalizers) && has(oldObject.metadata.finalizers) &&
+             object.metadata.finalizers == oldObject.metadata.finalizers) || variables.safeRemoval)))
+      message: "Workers own separate one-shot grant/claim transitions; claimed work requires verified recovery"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-configuration-reservation
+  annotations:
+    {{- include "cisco-virtual-kubelet.topologyAdmissionResourceAnnotations" . | nindent 4 }}
+spec:
+  policyName: {{ $fullname }}-configuration-reservation
+  validationActions: [Deny]
+{{- end }}

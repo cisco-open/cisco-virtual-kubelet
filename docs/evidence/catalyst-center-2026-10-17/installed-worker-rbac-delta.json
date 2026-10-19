@@ -1,0 +1,17 @@
+{
+  "added": [
+    [
+      "ops.cisco.vk",
+      "controllerconfigurationreservations",
+      "get",
+      []
+    ],
+    [
+      "ops.cisco.vk",
+      "controllerconfigurationreservations",
+      "list",
+      []
+    ]
+  ],
+  "removed": []
+}

@@ -1,0 +1,17 @@
+=== RUN   TestLiveSwitchingProfileRetainedReadOnlyDiagnostic
+    network_profile_diagnostic_live_test.go:85: retained profile membership counts 1 0
+    network_profile_diagnostic_live_test.go:91: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:103: private keyed attribute ordering normalized equal true actual known template groups equal true
+    network_profile_diagnostic_live_test.go:91: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:103: private keyed attribute ordering normalized equal true actual known template groups equal true
+    network_profile_diagnostic_live_test.go:91: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:103: private keyed attribute ordering normalized equal true actual known template groups equal true
+    network_profile_diagnostic_live_test.go:91: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:103: private keyed attribute ordering normalized equal true actual known template groups equal true
+    network_profile_diagnostic_live_test.go:91: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:103: private keyed attribute ordering normalized equal true actual known template groups equal true
+    network_profile_diagnostic_live_test.go:91: consecutive private observations equal false selected payload equal true binding equal true
+    network_profile_diagnostic_live_test.go:103: private keyed attribute ordering normalized equal true actual known template groups equal true
+--- PASS: TestLiveSwitchingProfileRetainedReadOnlyDiagnostic (2.39s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.507s

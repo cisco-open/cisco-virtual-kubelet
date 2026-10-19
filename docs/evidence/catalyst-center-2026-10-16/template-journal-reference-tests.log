@@ -1,0 +1,134 @@
+=== RUN   TestTemplateJournalReferences
+=== RUN   TestTemplateJournalReferences/unknown-receipt
+=== RUN   TestTemplateJournalReferences/submitting-receipt
+=== RUN   TestTemplateJournalReferences/prepared-receipt
+=== RUN   TestTemplateJournalReferences/reversed-preparation
+=== RUN   TestTemplateJournalReferences/credential-history
+=== RUN   TestTemplateJournalReferences/composite-private
+=== RUN   TestTemplateJournalReferences/composite-version-alias
+=== RUN   TestTemplateJournalReferences/empty
+=== RUN   TestTemplateJournalReferences/unrelated
+=== RUN   TestTemplateJournalReferences/prepared
+=== RUN   TestTemplateJournalReferences/submitting
+=== RUN   TestTemplateJournalReferences/unknown-taskless
+=== RUN   TestTemplateJournalReferences/accepted
+=== RUN   TestTemplateJournalReferences/verifying
+=== RUN   TestTemplateJournalReferences/verified
+=== RUN   TestTemplateJournalReferences/application
+=== RUN   TestTemplateJournalReferences/atomic-application
+=== RUN   TestTemplateJournalReferences/legacy-application
+=== RUN   TestTemplateJournalReferences/composite-parent
+=== RUN   TestTemplateJournalReferences/composite-member
+=== RUN   TestTemplateJournalReferences/version-alias
+=== RUN   TestTemplateJournalReferences/private-inputs
+=== RUN   TestTemplateJournalReferences/removed-source-owner
+=== RUN   TestTemplateJournalReferences/bad-resource
+=== RUN   TestTemplateJournalReferences/bad-operation
+=== RUN   TestTemplateJournalReferences/bad-phase
+=== RUN   TestTemplateJournalReferences/missing-receipt
+=== RUN   TestTemplateJournalReferences/bad-receipt
+=== RUN   TestTemplateJournalReferences/missing-time
+=== RUN   TestTemplateJournalReferences/future-time
+=== RUN   TestTemplateJournalReferences/unpaired-source
+=== RUN   TestTemplateJournalReferences/created-result
+=== RUN   TestTemplateJournalReferences/wrong-section
+=== RUN   TestTemplateJournalReferences/wrong-action
+=== RUN   TestTemplateJournalReferences/bad-target
+=== RUN   TestTemplateJournalReferences/bad-parent
+=== RUN   TestTemplateJournalReferences/regular-graph
+=== RUN   TestTemplateJournalReferences/missing-graph
+=== RUN   TestTemplateJournalReferences/duplicate-graph
+=== RUN   TestTemplateJournalReferences/foreign-graph-resource
+=== RUN   TestTemplateJournalReferences/bad-application-key
+=== RUN   TestTemplateJournalReferences/bad-application-section
+=== RUN   TestTemplateJournalReferences/unverified-application
+=== RUN   TestTemplateJournalReferences/future-application
+=== RUN   TestTemplateJournalReferences/early-application
+=== RUN   TestTemplateJournalReferences/duplicate-application
+=== RUN   TestTemplateJournalReferences/duplicate-resource
+=== RUN   TestTemplateJournalReferences/conflicting-operation
+=== RUN   TestTemplateJournalReferences/duplicate-deployment
+=== RUN   TestTemplateJournalReferences/uppercase-deployment-collision
+=== RUN   TestTemplateJournalReferences/malformed-unrelated
+=== RUN   TestTemplateJournalReferences/too-many-receipts
+--- PASS: TestTemplateJournalReferences (0.03s)
+    --- PASS: TestTemplateJournalReferences/unknown-receipt (0.00s)
+    --- PASS: TestTemplateJournalReferences/submitting-receipt (0.00s)
+    --- PASS: TestTemplateJournalReferences/prepared-receipt (0.00s)
+    --- PASS: TestTemplateJournalReferences/reversed-preparation (0.00s)
+    --- PASS: TestTemplateJournalReferences/credential-history (0.00s)
+    --- PASS: TestTemplateJournalReferences/composite-private (0.00s)
+    --- PASS: TestTemplateJournalReferences/composite-version-alias (0.00s)
+    --- PASS: TestTemplateJournalReferences/empty (0.00s)
+    --- PASS: TestTemplateJournalReferences/unrelated (0.00s)
+    --- PASS: TestTemplateJournalReferences/prepared (0.00s)
+    --- PASS: TestTemplateJournalReferences/submitting (0.00s)
+    --- PASS: TestTemplateJournalReferences/unknown-taskless (0.00s)
+    --- PASS: TestTemplateJournalReferences/accepted (0.00s)
+    --- PASS: TestTemplateJournalReferences/verifying (0.00s)
+    --- PASS: TestTemplateJournalReferences/verified (0.00s)
+    --- PASS: TestTemplateJournalReferences/application (0.00s)
+    --- PASS: TestTemplateJournalReferences/atomic-application (0.00s)
+    --- PASS: TestTemplateJournalReferences/legacy-application (0.00s)
+    --- PASS: TestTemplateJournalReferences/composite-parent (0.00s)
+    --- PASS: TestTemplateJournalReferences/composite-member (0.00s)
+    --- PASS: TestTemplateJournalReferences/version-alias (0.00s)
+    --- PASS: TestTemplateJournalReferences/private-inputs (0.00s)
+    --- PASS: TestTemplateJournalReferences/removed-source-owner (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-resource (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-operation (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-phase (0.00s)
+    --- PASS: TestTemplateJournalReferences/missing-receipt (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-receipt (0.00s)
+    --- PASS: TestTemplateJournalReferences/missing-time (0.00s)
+    --- PASS: TestTemplateJournalReferences/future-time (0.00s)
+    --- PASS: TestTemplateJournalReferences/unpaired-source (0.00s)
+    --- PASS: TestTemplateJournalReferences/created-result (0.00s)
+    --- PASS: TestTemplateJournalReferences/wrong-section (0.00s)
+    --- PASS: TestTemplateJournalReferences/wrong-action (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-target (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-parent (0.00s)
+    --- PASS: TestTemplateJournalReferences/regular-graph (0.00s)
+    --- PASS: TestTemplateJournalReferences/missing-graph (0.00s)
+    --- PASS: TestTemplateJournalReferences/duplicate-graph (0.00s)
+    --- PASS: TestTemplateJournalReferences/foreign-graph-resource (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-application-key (0.00s)
+    --- PASS: TestTemplateJournalReferences/bad-application-section (0.00s)
+    --- PASS: TestTemplateJournalReferences/unverified-application (0.00s)
+    --- PASS: TestTemplateJournalReferences/future-application (0.00s)
+    --- PASS: TestTemplateJournalReferences/early-application (0.00s)
+    --- PASS: TestTemplateJournalReferences/duplicate-application (0.00s)
+    --- PASS: TestTemplateJournalReferences/duplicate-resource (0.00s)
+    --- PASS: TestTemplateJournalReferences/conflicting-operation (0.00s)
+    --- PASS: TestTemplateJournalReferences/duplicate-deployment (0.00s)
+    --- PASS: TestTemplateJournalReferences/uppercase-deployment-collision (0.00s)
+    --- PASS: TestTemplateJournalReferences/malformed-unrelated (0.00s)
+    --- PASS: TestTemplateJournalReferences/too-many-receipts (0.01s)
+=== RUN   TestRetainedTemplateDeploymentReferences
+=== RUN   TestRetainedTemplateDeploymentReferences/composite-member
+=== RUN   TestRetainedTemplateDeploymentReferences/same
+=== RUN   TestRetainedTemplateDeploymentReferences/empty
+=== RUN   TestRetainedTemplateDeploymentReferences/deleted-source
+=== RUN   TestRetainedTemplateDeploymentReferences/source-edited
+=== RUN   TestRetainedTemplateDeploymentReferences/owner-removed
+=== RUN   TestRetainedTemplateDeploymentReferences/late-journal
+=== RUN   TestRetainedTemplateDeploymentReferences/journal-cleared
+=== RUN   TestRetainedTemplateDeploymentReferences/late-version-alias
+=== RUN   TestRetainedTemplateDeploymentReferences/target-replaced
+=== RUN   TestRetainedTemplateDeploymentReferences/unavailable-history
+=== RUN   TestRetainedTemplateDeploymentReferences/controller-paused
+--- PASS: TestRetainedTemplateDeploymentReferences (0.88s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/composite-member (0.63s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/same (0.03s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/empty (0.03s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/deleted-source (0.02s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/source-edited (0.02s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/owner-removed (0.02s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/late-journal (0.03s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/journal-cleared (0.02s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/late-version-alias (0.02s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/target-replaced (0.02s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/unavailable-history (0.02s)
+    --- PASS: TestRetainedTemplateDeploymentReferences/controller-paused (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.295s

@@ -129,6 +129,19 @@ test-envtest: ## Run envtest real-apiserver smoke tests (requires setup-envtest 
 			./internal/controlleradapter/nexusdashboard/ \
 			-run TestEnvtest_
 
+.PHONY: test-controller-envtest
+test-controller-envtest: ## Qualify alpha controller config/admission against a disposable Kubernetes API
+	@command -v setup-envtest >/dev/null 2>&1 || { \
+		echo "setup-envtest is required; see make test-envtest"; \
+		exit 1; \
+	}
+	@KUBEBUILDER_ASSETS="$$(setup-envtest use 1.35.0 -p path)" \
+		$(GO_BIN) test -tags envtest -count=1 -timeout=60m -v \
+			./internal/controlleradapter/catalystcenter/ \
+			./internal/controllerconfiguration/ \
+			./cmd/cisco-vk/ \
+			-run '^(TestEnvtest|TestMetadataHandoffActorAdmission|TestBootstrapFenceAdmission|TestReservationAdmission|TestConfigurationLeaseAdmission)'
+
 lint: ## Run linter
 	@if command -v golangci-lint >/dev/null 2>&1; then \
 		golangci-lint run ./...; \

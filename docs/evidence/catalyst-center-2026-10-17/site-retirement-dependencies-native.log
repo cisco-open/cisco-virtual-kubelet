@@ -1,0 +1,20 @@
+=== RUN   TestLiveInstalledPrivateSiteExecution
+    installed_site_execution_live_test.go:168: installed private-site baseline absent Global/CVK_INST_961a3abda34e
+    installed_site_execution_live_test.go:217: installed verified original task Create 01a14af9-594f-7323-9ab8-02edad41c96b
+    installed_site_execution_live_test.go:217: installed verified original task Create 01a14af9-afed-7d0d-9510-60bd4b357714
+    installed_site_execution_live_test.go:217: installed verified original task Create 01a14afa-06c5-7a64-b896-59eb3537f8a2
+    installed_site_execution_live_test.go:307: installed worker process restarted with original acknowledged update still retained 01a14afa-6325-76a5-837e-ae8c421ac2c8
+    installed_site_execution_live_test.go:309: installed verified original task Create 01a14af9-594f-7323-9ab8-02edad41c96b
+    installed_site_execution_live_test.go:309: installed verified original task Create 01a14af9-afed-7d0d-9510-60bd4b357714
+    installed_site_execution_live_test.go:309: installed verified original task Create 01a14afa-06c5-7a64-b896-59eb3537f8a2
+    installed_site_execution_live_test.go:309: installed verified original task Update 01a14afa-6325-76a5-837e-ae8c421ac2c8
+    installed_site_execution_live_test.go:322: real restarted worker recovered original acknowledged update through full task tree and private latest-applied publication 01a14afa-6325-76a5-837e-ae8c421ac2c8
+    installed_site_execution_live_test.go:342: two complete independent empty-floor retirement dependency/native observations passed; this is not public deletion authority
+    installed_site_execution_live_test.go:367: real worker replacement retained 3 private creators and one latest-applied receipt; source/native readback and refreshed InSync verified
+    installed_site_execution_live_test.go:385: supervised generated-site cleanup verified floor 01a14afa-d1d1-75b6-b040-dbef331e2127
+    installed_site_execution_live_test.go:385: supervised generated-site cleanup verified building 01a14afa-d8d8-71f2-9593-bbf4d3d5d07c
+    installed_site_execution_live_test.go:385: supervised generated-site cleanup verified area 01a14afa-dff6-7728-9470-b6bb2ce9080f
+    installed_site_execution_live_test.go:390: installed private Create/Update, real Pod replacement, Retain intent retirement and supervised exact cleanup passed; all site baselines restored; no physical operation
+--- PASS: TestLiveInstalledPrivateSiteExecution (102.91s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	105.392s

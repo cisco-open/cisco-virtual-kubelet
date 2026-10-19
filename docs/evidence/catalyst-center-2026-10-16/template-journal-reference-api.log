@@ -1,0 +1,28 @@
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/composite-member
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/same
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/empty
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/deleted-source
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/source-edited
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/owner-removed
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/late-journal
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/journal-cleared
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/late-version-alias
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/target-replaced
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/unavailable-history
+=== RUN   TestEnvtestRetainedTemplateDeploymentReferences/controller-paused
+--- PASS: TestEnvtestRetainedTemplateDeploymentReferences (7.08s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/composite-member (2.67s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/same (0.04s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/empty (0.03s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/deleted-source (0.04s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/source-edited (0.04s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/owner-removed (0.04s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/late-journal (0.04s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/journal-cleared (0.04s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/late-version-alias (0.03s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/target-replaced (0.03s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/unavailable-history (0.03s)
+    --- PASS: TestEnvtestRetainedTemplateDeploymentReferences/controller-paused (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.260s

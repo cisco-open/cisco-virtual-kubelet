@@ -1,0 +1,19 @@
+{
+  "result": "PASS_READ_ONLY",
+  "test": "TestLiveWirelessAPMetadata",
+  "profileCount": 2,
+  "scope": "Native public AP-profile inventory through paginated shared transport",
+  "mutations": 0,
+  "observedCompatibility": [
+    "countryCode=unconfigured",
+    "timeZone=NOT CONFIGURED",
+    "empty optional usernames",
+    "empty calendarPowerProfiles list"
+  ],
+  "credentialValuesRetained": false,
+  "limits": [
+    "No AP profile create/update executed",
+    "Manifest compilation, versioned credential execution, power dependencies and worker deployment remain pending",
+    "No AP provisioning or physical wireless behavior tested"
+  ]
+}

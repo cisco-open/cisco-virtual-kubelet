@@ -80,7 +80,7 @@ func TestVKRBACStrictMaintenanceReadsBothKindsWithoutEnablingWrites(t *testing.T
 				t.Fatalf("helm template: %v\n%s", err, raw)
 			}
 			text := string(raw)
-			sharedRead := `resources: ["iosxesoftwareupgrades", "iosxeoperationalactions"]
+			sharedRead := `resources: ["iosxesoftwareupgrades", "iosxeoperationalactions", "controllerconfigurationreservations"]
     verbs: ["list"]`
 			if !strings.Contains(text, sharedRead) {
 				t.Fatalf("strict RBAC is missing the gate-independent maintenance safety read:\n%s", text)
@@ -123,8 +123,6 @@ func TestNetworkControllerWorkerRBACStaysSecretlessAndStatusOnly(t *testing.T) {
 		`resources: ["secrets"]`,
 		`resources: ["pods"]`,
 		`resources: ["deployments"]`,
-		`"leases"`,
-		`"coordination.k8s.io"`,
 		`verbs: ["*"]`,
 	} {
 		if strings.Contains(text, forbidden) {
@@ -212,5 +210,111 @@ func TestManagerBindMarkerCoversEveryAuditedWorkerRole(t *testing.T) {
 		if !strings.Contains(marker, role) {
 			t.Errorf("manager bind marker does not cover %q: %s", role, marker)
 		}
+	}
+}
+
+func TestSWIMWorkerCannotOwnDeviceMutation(t *testing.T) {
+	roles := workerClusterRoles(t)
+	base := roles[controlleradapter.DefaultWorkerClusterRole]
+	swim, ok := roles[controlleradapter.CatalystCenterWorkerClusterRole]
+	if !ok {
+		t.Fatal("SWIM role missing")
+	}
+	// Catalyst Center shares the physical-configuration handoff contract.
+	// Audit the exact additional rules rather than silently accepting a larger
+	// count or assuming the base rules begin at the first position.
+	want := []rbacv1.PolicyRule{
+		{APIGroups: []string{"apps"}, Resources: []string{"deployments", "replicasets"}, Verbs: []string{"get"}},
+		{APIGroups: []string{"rbac.authorization.k8s.io"}, Resources: []string{"rolebindings"}, Verbs: []string{"get"}},
+		{APIGroups: []string{"ops.cisco.vk"}, Resources: []string{"controllerconfigurationreservations"}, Verbs: []string{"get", "list"}},
+		{APIGroups: []string{"ops.cisco.vk"}, Resources: []string{"controllerconfigurationreservations/status"}, Verbs: []string{"get", "update"}},
+	}
+	want = append(want, rbacv1.PolicyRule{APIGroups: []string{"ops.cisco.vk"}, Resources: []string{"deviceoperations"}, Verbs: []string{"get", "create"}})
+	want = append(want, base.Rules...)
+	want = append(want,
+		rbacv1.PolicyRule{APIGroups: []string{"cisco.vk"}, Resources: []string{"ciscodevices"}, Verbs: []string{"get"}},
+		rbacv1.PolicyRule{APIGroups: []string{"ops.cisco.vk"}, Resources: []string{"iosxesoftwareupgrades"}, Verbs: []string{"get"}},
+		rbacv1.PolicyRule{APIGroups: []string{"coordination.k8s.io"}, Resources: []string{"leases"}, Verbs: []string{"get"}},
+		rbacv1.PolicyRule{APIGroups: []string{"ops.cisco.vk"}, Resources: []string{"catalystcenterswimhandoffs"}, Verbs: []string{"get", "list", "watch"}},
+		rbacv1.PolicyRule{APIGroups: []string{"ops.cisco.vk"}, Resources: []string{"catalystcenterswimhandoffs/status"}, Verbs: []string{"get", "update"}},
+	)
+	if !reflect.DeepEqual(swim.Rules, want) {
+		t.Fatalf("Catalyst Center worker permission contract drifted: got %+v, want %+v", swim.Rules, want)
+	}
+	for name, role := range roles {
+		for _, r := range role.Rules {
+			for _, resource := range r.Resources {
+				if resource == "leases" && (name != controlleradapter.CatalystCenterWorkerClusterRole || !reflect.DeepEqual(r.Verbs, []string{"get"})) {
+					t.Fatal("controller can mutate device lease")
+				}
+				if (resource == "iosxesoftwareupgrades" || resource == "ciscodevices") && name == controlleradapter.CatalystCenterWorkerClusterRole && !reflect.DeepEqual(r.Verbs, []string{"get"}) {
+					t.Fatal("SWIM can mutate authority")
+				}
+			}
+		}
+	}
+}
+
+func TestManagerSWIMRecoveryHasReadOnlyJournalAccess(t *testing.T) {
+	raw, err := os.ReadFile("../../charts/cisco-virtual-kubelet/templates/role.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var role rbacv1.ClusterRole
+	if err = yaml.Unmarshal(raw, &role); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, rule := range role.Rules {
+		for _, resource := range rule.Resources {
+			if strings.HasPrefix(resource, "catalystcenterswimhandoffs") {
+				if resource != "catalystcenterswimhandoffs" || !reflect.DeepEqual(rule.Verbs, []string{"get"}) {
+					t.Fatalf("manager may mutate controller journal: %+v", rule)
+				}
+				found = true
+			}
+		}
+	}
+	if !found {
+		t.Fatal("manager cannot read handoff recovery proof")
+	}
+}
+
+func TestManagerDefaultOffCanInspectRetainedReservationsWithoutMutation(t *testing.T) {
+	if _, err := exec.LookPath("helm"); err != nil {
+		t.Skip("helm is required for rendered manager RBAC regression")
+	}
+	for _, profile := range []string{"default", "strict"} {
+		t.Run(profile, func(t *testing.T) {
+			raw, err := exec.Command("helm", "template", "cvk", "../../charts/cisco-virtual-kubelet",
+				"--namespace", "default", "--set", "topology.enabled=false", "--set", "rbac.profile="+profile).CombinedOutput()
+			if err != nil {
+				t.Fatalf("render chart: %v\n%s", err, raw)
+			}
+			found := false
+			for _, document := range strings.Split(string(raw), "\n---") {
+				var role rbacv1.ClusterRole
+				if err := yaml.Unmarshal([]byte(document), &role); err != nil {
+					t.Fatal(err)
+				}
+				if role.Kind != "ClusterRole" || role.Name != "cisco-virtual-kubelet-controller" {
+					continue
+				}
+				for _, rule := range role.Rules {
+					for _, resource := range rule.Resources {
+						if !strings.HasPrefix(resource, "controllerconfigurationreservations") {
+							continue
+						}
+						if resource != "controllerconfigurationreservations" || !reflect.DeepEqual(rule.APIGroups, []string{"ops.cisco.vk"}) || !reflect.DeepEqual(rule.Verbs, []string{"get", "list"}) || len(rule.ResourceNames) != 0 {
+							t.Fatalf("default-off reservation inspection grants unexpected authority: %+v", rule)
+						}
+						found = true
+					}
+				}
+			}
+			if !found {
+				t.Fatal("manager cannot perform its mandatory retained-reservation startup read")
+			}
+		})
 	}
 }

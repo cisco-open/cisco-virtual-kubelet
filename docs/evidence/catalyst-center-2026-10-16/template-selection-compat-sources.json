@@ -1,0 +1,15 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "module": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "provider": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/template_deployment_selection.go": "487ef88d60053b08ee90b09b570c78620bd9c837eaa6e1bb805f18e8fe9f22c5",
+    "internal/controlleradapter/catalystcenter/template_deployment_empty_selection_test.go": "b313b6222fc276821f85e97f485b2be9b655566126ff315009ced379fbcbd1cd",
+    "internal/controlleradapter/catalystcenter/template_deployment_dependencies_test.go": "d97ed458431b0c120428869aa7dae7982b0d02bed08142647ae023db236d99c8",
+    "internal/controlleradapter/catalystcenter/template_deployment_execution_test.go": "3ab1b6e56bd8240b51c7bb4a4b6c1bf0a864cc49bb22662221843040e3fc1f4d",
+    "internal/controlleradapter/catalystcenter/template_inventory_cycle_test.go": "5a68bbd19134259146a149fac99614e9bf7177ae86f9691b6f2eef53d1fb9f88",
+    "internal/controlleradapter/catalystcenter/template_variable_metadata_live_test.go": "05e3b47e753ce8144dab6e9288514416eb160f5f3f66560d143f6e5e957b5511"
+  }
+}

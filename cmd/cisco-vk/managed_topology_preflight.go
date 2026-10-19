@@ -39,7 +39,10 @@ import (
 
 var managedTopologyCRDs = []schema.GroupVersionResource{
 	opsv1alpha1.GroupVersion.WithResource("iosxesoftwarerollouts"),
+	opsv1alpha1.GroupVersion.WithResource("controllerconfigurationreservations"),
 }
+
+var configurationReservationCRDs = []schema.GroupVersionResource{opsv1alpha1.GroupVersion.WithResource("controllerconfigurationreservations")}
 
 var managedAdmissionPolicySuffixes = []string{
 	"managed-node",
@@ -50,9 +53,11 @@ var managedAdmissionPolicySuffixes = []string{
 	"managed-device",
 	"managed-rollout",
 	"managed-upgrade-leaf",
+	"swim-handoff",
 	"topology-policy",
 	"topology-ledger",
 	"managed-maintenance-lease",
+	"configuration-reservation",
 	"shared-pod-status",
 	"shared-pod-binding",
 	"shared-pod-delete",
@@ -87,6 +92,14 @@ type admissionContractExpectation struct {
 }
 
 var managedAdmissionExpectations = map[string]admissionContractExpectation{
+	"configuration-reservation": {
+		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"controllerconfigurationreservations", "controllerconfigurationreservations/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		variables:         []string{"journal", "manager", "podBound", "deviceWorker", "controllerWorker", "oldClaim", "oldGrant", "claim", "grant", "oldCompletion", "completion", "sameClaim", "sameCompletion", "sameGrantIdentity", "oldSettled", "settled", "sameSettlement", "oldCancelled", "cancelled", "sameCancellation", "group", "oldGroupCancelled", "groupCancelled", "sameGroupCancellation", "sameGrant", "safeRemoval"},
+		validations:       4,
+		requiredFragments: []string{"authentication.kubernetes.io/pod-uid", "configuration-reservation-evidence", "managerSettledAt", "operationDigest", "variables.safeRemoval", "variables.sameSettlement"},
+		digest:            "sha256:ac27a74a5223cc43f361f2c1682a313808741f2d937309000aad4b77a8795819",
+	},
 	"managed-node": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"nodes", "nodes/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.ClusterScope,
@@ -141,6 +154,13 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		requiredFragments: []string{"requestedBy", "check('approve')", "planHash", "activationApproval.receipts", "check('activate')", "check('control')", "check('recover')", "preparationInvalidation", "request.subResource != 'status'", "spec.control.revision == 0"},
 		digest:            "sha256:8df8e50f1d5cb91d69c7e10ee2685a06557d5aa82d0d419daa88e073c1e57844",
 	},
+	"swim-handoff": {
+		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"catalystcenterswimhandoffs", "catalystcenterswimhandoffs/status"},
+		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
+		variables: []string{"journal", "boundPod", "creator", "controller"}, validations: 1,
+		requiredFragments: []string{"authentication.kubernetes.io/pod-uid", "deviceWorkerUsername", "controllerUsername", "Succeeded", "swim-handoff-evidence"},
+		digest:            "sha256:33a2a1a980a84736a748d9ff2143d5392450bae3bed744fc7cd9e38cf96bf46a",
+	},
 	"managed-upgrade-leaf": {
 		apiGroups: []string{"ops.cisco.vk"}, apiVersions: []string{"v1alpha1"}, resources: []string{"iosxesoftwareupgrades", "iosxesoftwareupgrades/status"},
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
@@ -148,7 +168,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		variables:         []string{"manager", "appDrainWriter", "oldClaims", "newClaims", "managerFunctionalWorkerBinding"},
 		validations:       8,
 		requiredFragments: []string{"worker-username", "network-worker-username", "iosxesoftwareupgrade-cleanup", "managerAdmission", "managerControl", "managerDrain", "workerDrain", "managedMutationClaims", "preparedReceipt", "primarySupervisorInstallRequested", "reservationID", "policyEpoch", "topologyLockID", "observedWorkerConfigRevision"},
-		digest:            "sha256:80cedca07e67a45caa10fdedc9aaa174e39825b342af5d44b69a1334f6a6101a",
+		digest:            "sha256:a249482434518d7d2d97f0a7739e08300d01a9baf86dac03bb0ce521ec5b0e3a",
 	},
 	"topology-policy": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"configmaps"},
@@ -169,9 +189,9 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 		operations: []admissionv1.OperationType{admissionv1.Create, admissionv1.Update, admissionv1.Delete}, scope: admissionv1.NamespacedScope,
 		matchConditions: []string{"managed-maintenance-request"},
 		variables:       []string{"manager", "oldRequest", "newRequest", "oldHeld", "newHeld", "oldTransitions", "managerCreate", "managerAdopt", "managerRebind", "boundWorker", "holderChanged"},
-		validations:     8, coreTyped: true,
-		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "maintenance-purpose", "software-drain", "worker-username", "app-worker-username", "network-worker-username", "holderIdentity", "device-uid"},
-		digest:            "sha256:0d4abc14a64c22d25a9e43f8a08ec0107de9b754f36a50fb6f59dfc53180db7d",
+		validations:     9, coreTyped: true,
+		requiredFragments: []string{"maintenance-request-version", "maintenance-session-token", "maintenance-operation-uid", "maintenance-control-revision", "maintenance-purpose", "software-drain", "controller-configuration-v1", "ConfigurationMutation", "authentication.kubernetes.io/pod-uid", "worker-username", "app-worker-username", "network-worker-username", "holderIdentity", "device-uid"},
+		digest:            "sha256:7386bf7baf10bdb6bcfd2a17f7d4751903a9f6e42b3403ad10a7c86a03805626",
 	},
 	"shared-pod-status": {
 		apiGroups: []string{""}, apiVersions: []string{"v1"}, resources: []string{"pods/status"},
@@ -289,6 +309,7 @@ var managedAdmissionExpectations = map[string]admissionContractExpectation{
 }
 
 type managedAdmissionContractVerification struct {
+	ManagerUsername                 string
 	WorkerServiceAccountPolicyEpoch string
 }
 
@@ -416,9 +437,22 @@ func verifyManagedAdmissionContract(
 		AppHostingServiceAccount:        appHostingServiceAccount,
 		NetworkManagementServiceAccount: networkManagementServiceAccount,
 	}
+	return verifyManagedAdmissionBindings(ctx, clientset, contractBindings)
+}
+
+// Workers use the same typed policy/binding verification with installation
+// identities supplied by their manager-owned template, not their own username
+// substituted for the manager actor in CEL.
+func verifyManagedAdmissionBindings(ctx context.Context, clientset kubernetes.Interface, contractBindings admissionContractBindings) (managedAdmissionContractVerification, error) {
+	var verification managedAdmissionContractVerification
+	if clientset == nil {
+		return verification, fmt.Errorf("admission client is nil")
+	}
 	if err := contractBindings.validate(); err != nil {
 		return verification, err
 	}
+	prefix := contractBindings.AdmissionPrefix
+	verification.ManagerUsername = contractBindings.ManagerUsername
 	policies := clientset.AdmissionregistrationV1().ValidatingAdmissionPolicies()
 	policyBindings := clientset.AdmissionregistrationV1().ValidatingAdmissionPolicyBindings()
 	workerAccountGenerations := make([]workerServiceAccountAdmissionGeneration, 0,
@@ -463,10 +497,11 @@ func verifyManagedAdmissionContract(
 			})
 		}
 	}
-	verification.WorkerServiceAccountPolicyEpoch, err = deriveWorkerServiceAccountPolicyEpoch(workerAccountGenerations)
+	epoch, err := deriveWorkerServiceAccountPolicyEpoch(workerAccountGenerations)
 	if err != nil {
 		return verification, err
 	}
+	verification.WorkerServiceAccountPolicyEpoch = epoch
 	return verification, nil
 }
 

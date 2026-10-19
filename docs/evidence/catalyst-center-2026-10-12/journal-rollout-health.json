@@ -1,0 +1,85 @@
+{
+  "image": "cvk-catc-nac:20261012-0146d7a983a4",
+  "deployments": [
+    {
+      "namespace": "cisco-vk-system",
+      "name": "cisco-vk-cisco-virtual-kubelet-controller",
+      "image": "cvk-catc-nac:20261012-0146d7a983a4",
+      "ready": 1
+    },
+    {
+      "namespace": "cvk-live",
+      "name": "cat9k-lab-101-vk",
+      "image": "cvk-catc-handoff:20261009-merge-admission",
+      "ready": 1
+    },
+    {
+      "namespace": "cvk-live",
+      "name": "cat9k-lab-103-vk",
+      "image": "cvk-catc-handoff:20261009-merge-admission",
+      "ready": 1
+    },
+    {
+      "namespace": "cvk-live",
+      "name": "cat9k-live-vk",
+      "image": "cvk-catc-handoff:20261009-merge-admission",
+      "ready": 1
+    },
+    {
+      "namespace": "cvk-live",
+      "name": "catc-controller-worker",
+      "image": "cvk-catc-nac:20261012-0146d7a983a4",
+      "ready": 1
+    },
+    {
+      "namespace": "cvk-live",
+      "name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network",
+      "image": "cvk-catc-handoff:20261009-merge-admission",
+      "ready": 1
+    },
+    {
+      "namespace": "cvk-live",
+      "name": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network",
+      "image": "cvk-catc-handoff:20261009-merge-admission",
+      "ready": 1
+    },
+    {
+      "namespace": "cvk-live",
+      "name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network",
+      "image": "cvk-catc-handoff:20261009-merge-admission",
+      "ready": 1
+    }
+  ],
+  "nodes": [
+    {
+      "name": "cat9k-lab-101",
+      "ready": "True"
+    },
+    {
+      "name": "cat9k-lab-103",
+      "ready": "True"
+    },
+    {
+      "name": "cat9k-live",
+      "ready": "True"
+    }
+  ],
+  "configuration": {
+    "name": "catc-nac-journal-qualification",
+    "uid": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+    "generation": 3,
+    "phase": "InSync",
+    "owners": [
+      {
+        "configName": "catc-nac-journal-qualification",
+        "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+        "section": "inventory"
+      },
+      {
+        "configName": "catc-nac-journal-qualification",
+        "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+        "section": "templates"
+      }
+    ]
+  }
+}

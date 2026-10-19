@@ -1,0 +1,36 @@
+# NoAuth discovery with the standard Retain default (deletionPolicy omitted).
+# Replace target/user with approved lab values. No Secret refs/versions required.
+# Deleting this manifest retains the native job and the old UID's ownership audit;
+# a replacement manifest cannot inherit the reservation. Use the Delete example
+# for manifest-driven cleanup. Native job creation/device authentication remain
+# unqualified; controlled lifecycle and live read-only preflight are tested separately.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-noauth-retained-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-noauth-retain-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-NoAuth-Retained-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              snmp_version: v3
+              snmp_mode: NoAuthNoPriv
+              snmp_user_name: lab-snmp-user

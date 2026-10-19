@@ -1,0 +1,91 @@
+{
+  "apiVersion": "ops.cisco.vk/v1alpha1",
+  "kind": "IOSXESoftwareRollout",
+  "metadata": {
+    "name": "catc-auto-remediation-20261008-101",
+    "namespace": "cvk-live"
+  },
+  "spec": {
+    "plan": {
+      "budgets": {
+        "domains": [
+          {
+            "maxConcurrentTransfers": 1,
+            "topologyKey": "distribution.cisco.vk/cache-domain"
+          },
+          {
+            "maxUnavailable": 1,
+            "topologyKey": "operations.cisco.vk/redundancy-domain"
+          }
+        ],
+        "maxConcurrentTransfers": 1,
+        "maxUnavailable": 1
+      },
+      "canaries": [
+        {
+          "devices": [
+            "cat9k-lab-101"
+          ],
+          "name": "c9300-24p"
+        }
+      ],
+      "health": {
+        "canarySoakSeconds": 30,
+        "maxObservationAgeSeconds": 300,
+        "network": {
+          "enabled": true,
+          "requireCompleteEvidence": true
+        },
+        "waveSoakSeconds": 30
+      },
+      "image": {
+        "imageFamily": "cat9k",
+        "sha256": "e1eecde5e78d7cc061c83d49e0e2bbb6405f447faaced9e6ba24f0815bcc1a9b",
+        "sources": [
+          {
+            "catalystCenter": {
+              "controllerName": "catc",
+              "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+              "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+              "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+              "imageVersion": "17.18.04.0.759",
+              "transferFallbackAddress": "192.0.2.254",
+              "preparation": {
+                "name": "swim-auto-cleanup-20261008",
+                "uid": "7ed30098-ca6b-452f-91ad-322a08e5e3b2",
+                "sha256": "dd96201b78b562029de5efb7f8a12bbef569b3947d55b82de2e6f28e8e78bb88"
+              }
+            },
+            "name": "catalyst-center",
+            "priority": 100
+          }
+        ]
+      },
+      "installTimeoutSeconds": 7200,
+      "pauseAfterCanary": false,
+      "rebootTimeoutSeconds": 3600,
+      "requestedAt": "2026-10-08T18:20:37.577948Z",
+      "requestedBy": "system:admin",
+      "rollbackOnFailure": false,
+      "strategy": "Reload",
+      "targetVersion": "17.18.04",
+      "targets": {
+        "allowAll": false,
+        "maxTargets": 1,
+        "selector": {
+          "matchLabels": {
+            "topology.cisco.vk/lab-node": "cat9k-lab-101",
+            "topology.cisco.vk/lab-set": "pr194-physical-c9k",
+            "topology.cisco.vk/managed": "true"
+          }
+        }
+      },
+      "workloads": {
+        "policy": "BlockIfRunning"
+      }
+    },
+    "control": {
+      "revision": 0
+    }
+  }
+}

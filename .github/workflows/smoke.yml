@@ -42,13 +42,16 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, pr/moskrive/nd-support]
   workflow_dispatch: {}
 
 jobs:
   build-and-smoke:
     runs-on: ubuntu-24.04
-    timeout-minutes: 35
+    # The expanded alpha race suite now exceeds 35 minutes locally.
+    # Keep every test and native admission/build check; allow its explicit
+    # 60m package budget plus cold-cache setup and the remaining smoke matrix.
+    timeout-minutes: 105
     env:
       KIND_NODE_IMAGE: kindest/node:v1.35.0@sha256:4613778f3cfcd10e615029370f5786704559103cf27bef934597ba562b269661
     permissions:
@@ -61,7 +64,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.9'
           cache: true
 
       - name: Setup Python for documentation checks
@@ -115,7 +118,7 @@ jobs:
       # Run the recursive Go package pattern before npm ci creates nested
       # node_modules directories that can themselves contain Go packages.
       - name: Unit tests
-        run: go test -race -count=1 ./...
+        run: go test -race -count=1 -timeout=60m ./...
 
       - name: gNOI lab runner and acceptance evidence safety tests (offline)
         run: |
@@ -710,7 +713,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.9'
           cache: true
           cache-dependency-path: tools/terraform-provider-iosxeconfig/go.sum
 
@@ -773,7 +776,7 @@ jobs:
       - name: Set up pinned Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.9'
           cache: true
           cache-dependency-path: |
             go.sum
@@ -797,7 +800,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version: '1.26.7'
+          go-version: '1.26.9'
           cache: true
 
       - name: Download YANG modules

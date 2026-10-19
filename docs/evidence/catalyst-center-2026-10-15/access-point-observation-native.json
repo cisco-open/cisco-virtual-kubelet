@@ -1,0 +1,11 @@
+{
+  "qualification": "read-only AP execution-observation prerequisites; no mutation",
+  "http_status": 200,
+  "native_devices": 3,
+  "access_points": 0,
+  "isolated_fixture_selected": false,
+  "absent_ap_keyed_readback": {
+    "http_status": 404,
+    "completion_evidence": false
+  }
+}

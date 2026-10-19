@@ -1,0 +1,71 @@
+[
+  {
+    "query": "(omitted)",
+    "groups": {
+      "aaaNetwork": {
+        "isNull": false,
+        "keys": [
+          "primaryServerIp",
+          "protocol",
+          "serverType"
+        ],
+        "hasInheritanceProvenance": false
+      },
+      "aaaClient": {
+        "isNull": false,
+        "keys": [
+          "primaryServerIp",
+          "protocol",
+          "serverType"
+        ],
+        "hasInheritanceProvenance": false
+      }
+    }
+  },
+  {
+    "query": "?_inherited=false",
+    "groups": {
+      "aaaNetwork": {
+        "isNull": false,
+        "keys": [
+          "primaryServerIp",
+          "protocol",
+          "serverType"
+        ],
+        "hasInheritanceProvenance": false
+      },
+      "aaaClient": {
+        "isNull": false,
+        "keys": [
+          "primaryServerIp",
+          "protocol",
+          "serverType"
+        ],
+        "hasInheritanceProvenance": false
+      }
+    }
+  },
+  {
+    "query": "?_inherited=true",
+    "groups": {
+      "aaaNetwork": {
+        "isNull": false,
+        "keys": [
+          "primaryServerIp",
+          "protocol",
+          "serverType"
+        ],
+        "hasInheritanceProvenance": false
+      },
+      "aaaClient": {
+        "isNull": false,
+        "keys": [
+          "primaryServerIp",
+          "protocol",
+          "serverType"
+        ],
+        "hasInheritanceProvenance": false
+      }
+    }
+  }
+]

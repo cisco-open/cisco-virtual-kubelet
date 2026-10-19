@@ -1,0 +1,78 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configUID": "a1270cd0-b3dd-4f11-aa30-a04786972dcf",
+  "configuration": {
+    "actionApplications": [
+      {
+        "section": "inventory",
+        "resource": "tag-created:v1:60b55ace5c1fe90e2fa71c571007b0ad638edfca5a5815a15b9c6639f695c786:ca28aa9e-8d8d-4ceb-8f20-21f32709210c:f769b9135174398c3edd8bba8bd71e3a4bd404dfdd53931dfcfd9e443bed772f:s:607d8d7749ace1e4b3a2bdc7aa95e8601ca6928628f83bcbb2e7d6584fb28109",
+        "operation": {
+          "id": "c2693e47cd2c68111e97f173ef8788db",
+          "configName": "sites",
+          "configUID": "a1270cd0-b3dd-4f11-aa30-a04786972dcf",
+          "configGeneration": 1,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "tag-owned:v1:c:60b55ace5c1fe90e2fa71c571007b0ad638edfca5a5815a15b9c6639f695c786:f769b9135174398c3edd8bba8bd71e3a4bd404dfdd53931dfcfd9e443bed772f:i",
+          "action": "Create",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T23:27:12Z",
+          "taskID": "01a15157-3621-71b5-a648-b2ec1a47db2a"
+        },
+        "verifiedAt": "2026-10-18T23:27:13Z"
+      },
+      {
+        "section": "inventory",
+        "resource": "tag-applied:v1:60b55ace5c1fe90e2fa71c571007b0ad638edfca5a5815a15b9c6639f695c786:ca28aa9e-8d8d-4ceb-8f20-21f32709210c:7c81a3e8cf33ee7575b8d5f23586572d83f11376b40f19a7bb3fe38b14e6d875:s:43bd0acca7d73f9da386b27a345a73ec8612c6b618c3cbc68eaa2ba1cb549238",
+        "operation": {
+          "id": "b2af02a67ff40cbf572b5e1441262900",
+          "configName": "sites",
+          "configUID": "a1270cd0-b3dd-4f11-aa30-a04786972dcf",
+          "configGeneration": 2,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "tag-owned:v1:u:60b55ace5c1fe90e2fa71c571007b0ad638edfca5a5815a15b9c6639f695c786:7c81a3e8cf33ee7575b8d5f23586572d83f11376b40f19a7bb3fe38b14e6d875:i",
+          "targetID": "ca28aa9e-8d8d-4ceb-8f20-21f32709210c",
+          "action": "Update",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T23:27:14Z",
+          "taskID": "01a15157-3fc7-7bc9-83b3-f38d940ac855"
+        },
+        "verifiedAt": "2026-10-18T23:27:15Z"
+      },
+      {
+        "section": "inventory",
+        "resource": "tag-deleted:v1:60b55ace5c1fe90e2fa71c571007b0ad638edfca5a5815a15b9c6639f695c786:ca28aa9e-8d8d-4ceb-8f20-21f32709210c",
+        "operation": {
+          "id": "8e21a7be03db10135e72f4882bedc550",
+          "configName": "sites",
+          "configUID": "a1270cd0-b3dd-4f11-aa30-a04786972dcf",
+          "configGeneration": 3,
+          "controllerGeneration": 1,
+          "section": "inventory",
+          "resource": "tag-delete:v1:60b55ace5c1fe90e2fa71c571007b0ad638edfca5a5815a15b9c6639f695c786:43bd0acca7d73f9da386b27a345a73ec8612c6b618c3cbc68eaa2ba1cb549238:i",
+          "targetID": "ca28aa9e-8d8d-4ceb-8f20-21f32709210c",
+          "action": "Delete",
+          "phase": "Verified",
+          "submittedAt": "2026-10-18T23:27:18Z",
+          "taskID": "01a15157-5afe-78f7-bd19-ab42961594a4"
+        },
+        "verifiedAt": "2026-10-18T23:27:22Z"
+      }
+    ],
+    "owners": [
+      {
+        "section": "inventory",
+        "configName": "sites",
+        "configUID": "a1270cd0-b3dd-4f11-aa30-a04786972dcf"
+      }
+    ]
+  },
+  "deletes": 1,
+  "generation": 3,
+  "nativeID": "ca28aa9e-8d8d-4ceb-8f20-21f32709210c",
+  "phase": "initial-pruned",
+  "posts": 1,
+  "puts": 1,
+  "tagName": "CVK-Q-Tag-Prune-1792366026891404000"
+}

@@ -1,0 +1,19 @@
+=== RUN   TestLiveCatalystCenterNetworkEmptyInheritance
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-040951-000000000
+    site_execution_live_test.go:452: submitted task=01a1480d-45cb-71d1-8126-905b6c61de31 at=2026-10-17T04:09:51.720395Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a1480d-483c-70f0-96e2-f221c482a6e8 at=2026-10-17T04:09:52.328111Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a1480d-4ada-71d0-9aa1-b4420e686811 at=2026-10-17T04:09:52.965918Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a1480d-5729-7a5a-ac27-803da5a8eb93 at=2026-10-17T04:09:56.106376Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:519: public NTP/DHCP phase=0 empty=true inherited-parent=true: two original Unknown tasks recovered, two latest receipts, native readback and repeated no-op verified
+    site_execution_live_test.go:519: public NTP/DHCP phase=1 empty=false inherited-parent=true: two original Unknown tasks recovered, two latest receipts, native readback and repeated no-op verified
+    site_execution_live_test.go:519: public NTP/DHCP phase=2 empty=true inherited-parent=true: two original Unknown tasks recovered, two latest receipts, native readback and repeated no-op verified
+    site_execution_live_test.go:519: six public reset/refill/reset mutations and original task trees, six no-dispatch retirements, exactly two latest applications; actual native API, simulated Kubernetes storage/actors
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterNetworkEmptyInheritance (75.10s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	77.492s

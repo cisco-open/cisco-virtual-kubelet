@@ -1,0 +1,6 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard	1.634s [no tests to run]
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration	8.244s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/configurationreservation	2.964s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	4.565s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol	1.269s [no tests to run]
+ok  	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk	3.993s

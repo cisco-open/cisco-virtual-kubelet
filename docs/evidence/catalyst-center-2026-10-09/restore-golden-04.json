@@ -1,0 +1,18 @@
+{
+  "path": "/dna/intent/api/v1/image/importation/golden",
+  "body": {
+    "imageId": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+    "siteId": "14943839-d66c-450d-b65a-5552eb1af040",
+    "deviceRole": "ACCESS",
+    "deviceFamilyIdentifier": "286315874"
+  },
+  "startedAt": "2026-10-09T02:45:29.601779+00:00",
+  "state": "Accepted",
+  "receipt": {
+    "response": {
+      "taskId": "01a11e8e-222a-75c8-b706-8a66bc3ec8b0",
+      "url": "/api/v1/task/01a11e8e-222a-75c8-b706-8a66bc3ec8b0"
+    },
+    "version": "1.0"
+  }
+}

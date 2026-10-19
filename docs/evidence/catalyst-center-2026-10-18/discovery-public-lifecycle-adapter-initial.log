@@ -1,0 +1,228 @@
+--- FAIL: TestDescriptor (0.00s)
+    adapter_test.go:21: unexpected capabilities: [health inventory software pnp-registration-stage private-input-comparison lan-device-verification lan-link-apply lan-link-delete lan-link-compose feature-config-deletion discovery-config-deletion]
+2026/10/18 04:34:58 http: TLS handshake error from 127.0.0.1:60678: remote error: tls: bad certificate
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 15227 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc0004c50c0, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x10679bfe8, 0x1078dd240}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc000d3d730, {0x10679bfe8, 0x1078dd240}, {{{0x103ee1dd8, 0x3}, {0x103ee27b0, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseDiscoveryPublicDeletion(0xc0008fb688, {0x103ee366b, 0x5}, 0x0)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_config_deletion_test.go:117 +0x103c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestDiscoveryPublicConfigDeletion.func1(0xc0008fb688)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_config_deletion_test.go:56 +0x44
+	>  testing.tRunner(0xc0008fb688, 0xc000e93458)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 15226
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+panic: test timed out after 10m0s
+	running tests:
+		TestNetworkApplications (3s)
+		TestNetworkApplications/ntp/replace-full (1s)
+
+goroutine 511117 [running]:
+testing.(*M).startAlarm.func1()
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2802 +0x498
+created by time.goFunc
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/time/sleep.go:215 +0x44
+
+goroutine 1 [chan receive]:
+testing.(*T).Run(0xc000705448, {0x103f2609b, 0x17}, 0x10674cd18)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2109 +0x7dc
+testing.runTests.func1(0xc000705448)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2585 +0x78
+testing.tRunner(0xc000705448, 0xc00075bab8)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+testing.runTests({0x103f708fd, 0x26}, {0x1040048d0, 0x50}, 0xc0000125d0, {0x1069502c0, 0x573, 0x573}, {0xc0006a3a80?, 0xc0005b3180?, ...})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2583 +0x7a4
+testing.(*M).Run(0xc00093de00)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2443 +0xb3c
+main.main()
+	_testmain.go:2834 +0x104
+
+goroutine 25 [select]:
+go.opencensus.io/stats/view.(*worker).start(0xc0004b2100)
+	/Users/johalley/go/pkg/mod/go.opencensus.io@v0.24.0/stats/view/worker.go:292 +0x128
+created by go.opencensus.io/stats/view.init.0 in goroutine 1
+	/Users/johalley/go/pkg/mod/go.opencensus.io@v0.24.0/stats/view/worker.go:34 +0xec
+
+goroutine 508864 [chan receive]:
+testing.(*T).Run(0xc0014986c8, {0xc00186c6d0, 0x10}, 0xc000e95a00)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2109 +0x7dc
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestNetworkApplications(0xc0014986c8)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/network_application_test.go:277 +0x1e8
+testing.tRunner(0xc0014986c8, 0x10674cd18)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+created by testing.(*T).Run in goroutine 1
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+
+goroutine 510992 [runnable]:
+encoding/json.intEncoder(0xc00100e4c0, {0x1061ecb40?, 0xc001e52a88?, 0x186?}, {0x0?, 0x1?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:553 +0x32c
+encoding/json.structEncoder.encode({{{0xc0007bd508, 0x17, 0x23}, 0xc001ae5230, 0xc001ae5260}}, 0xc00100e4c0, {0x1066e7640?, 0xc001e52a40?, 0x100ce1a90?}, {0xc?, ...})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:747 +0x350
+encoding/json.structEncoder.encode({{{0xc001afc508, 0x5, 0x8}, 0xc001ae5680, 0xc001ae56b0}}, 0xc00100e4c0, {0x10655b3e0?, 0xc001e52a20?, 0x16?}, {0xe0?, ...})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:747 +0x350
+encoding/json.arrayEncoder.encode({0x19?}, 0xc00100e4c0, {0x1061a5180?, 0xc000efd6d8?, 0xc000efd6df?}, {0x60?, 0x9f?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:890 +0xec
+encoding/json.sliceEncoder.encode({0x100ce1a90?}, 0xc00100e4c0, {0x1061a5180?, 0xc000efd6d8?, 0xc000203341?}, {0xc0?, 0xc?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:863 +0x378
+encoding/json.structEncoder.encode({{{0xc001ad9408, 0x5, 0x8}, 0xc001ae5d40, 0xc001ae5d70}}, 0xc00100e4c0, {0x10655b4c0?, 0xc000efd6c0?, 0xc001498000?}, {0x17?, ...})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:747 +0x350
+encoding/json.ptrEncoder.encode({0x100ce1a90?}, 0xc00100e4c0, {0x106335380?, 0xc001498210?, 0xc000203330?}, {0xc0?, 0xc?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:919 +0x2d0
+encoding/json.structEncoder.encode({{{0xc001ae2008, 0xb, 0x11}, 0xc001ae5e90, 0xc001ae5ec0}}, 0xc00100e4c0, {0x106676fc0?, 0xc0014981a0?, 0x100ce1a90?}, {0x9?, ...})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:747 +0x350
+encoding/json.structEncoder.encode({{{0xc001ab7908, 0x5, 0x8}, 0xc001afe0c0, 0xc001afe0f0}}, 0xc00100e4c0, {0x106501960?, 0xc001498008?, 0xc0010c02f8?}, {0x78?, ...})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:747 +0x350
+encoding/json.ptrEncoder.encode({0xc0010c0488?}, 0xc00100e4c0, {0x1066ea800?, 0xc001498008?, 0x1067e1fe0?}, {0x0?, 0xa8?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:919 +0x2d0
+encoding/json.(*encodeState).reflectValue(0xc00100e4c0, {0x1066ea800?, 0xc001498008?, 0x106498240?}, {0x1?, 0x0?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:367 +0x78
+encoding/json.(*encodeState).marshal(0xc00100e4c0, {0x1066ea800, 0xc001498008}, {0xfc?, 0x2d?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:343 +0xb0
+encoding/json.Marshal({0x1066ea800, 0xc001498008})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/encoding/json/encode.go:209 +0xb4
+k8s.io/apimachinery/pkg/util/json.Marshal(...)
+	/Users/johalley/go/pkg/mod/k8s.io/apimachinery@v0.35.0/pkg/util/json/json.go:36
+sigs.k8s.io/controller-runtime/pkg/client/fake.(*fakeClient).Get(0xc00088ec60, {0x1?, 0x0?}, {{0x103ee1dd8?, 0x2?}, {0x103ee27b0?, 0xc0008fb7db?}}, {0x1067d7440, 0xc000627d48}, {0x6?, ...})
+	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/client/fake/client.go:412 +0x38c
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*adapter).currentController(0xc000a08420, {0x10679d448, 0xc000efc700})
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/inventory.go:231 +0x114
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*adapter).recordNetworkSettingApplication(0xc000a08420, {0x10679d448, 0xc000efc700}, 0xc000c32008, 0xc0005273b0, 0xc000964ac0, 0xc000905760, 0xc00142f080)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/network_application.go:314 +0x7c4
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*adapter).bindNetworkSettingApplications.func5({0x10679d448, 0xc000efc700}, 0xc000905760)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/network_application.go:267 +0x14c
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.configurationApplyPlan.completeWithReceipt({0x0, 0xc00119f950, 0xc000964d00, 0xc000964b40, 0xc000e46480, {0x106793e10, 0xc00119f488}, {0xc0017bb2d0, 0x10}, {0xc000964940, ...}}, ...)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/config_completion.go:48 +0x5d4
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*configReconciler).evaluateConfigurationApplySource(0xc000e9dc30, {0x10679bfe8, 0x1078dd240}, 0xc000dc0008, 0xc000c32008, 0xc0010c25e0, 0xc0005273b0)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/config_apply.go:473 +0xf268
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*configReconciler).evaluateConfigurationApply(0xc000e9dc30, {0x10679bfe8, 0x1078dd240}, 0xc000dc0008, 0xc000c32008, 0xc0010c25e0)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/config_apply.go:63 +0xc8
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*configReconciler).evaluate(0xc000e9dc30, {0x10679bfe8, 0x1078dd240}, 0xc000dc0008, 0xc000c32008, 0xc0010c25e0)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/config_report.go:175 +0xe4c
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.(*configReconciler).Reconcile(0xc000e9dc30, {0x10679bfe8, 0x1078dd240}, {{{0xc0018860bd?, 0x18?}, {0xc0018860ab?, 0xc0010094b8?}}})
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/config_report.go:87 +0x454
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseNetworkApplication.func1()
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/network_application_test.go:73 +0x154
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.exerciseNetworkApplication(0xc000794d88, {0x103ee1d8d, 0x3}, {0x103ef6a2c, 0xc}, 0x0)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/network_application_test.go:241 +0x2c38
+github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestNetworkApplications.func1(0xc000794d88)
+	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/network_application_test.go:277 +0x5c
+testing.tRunner(0xc000794d88, 0xc000e95a00)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+created by testing.(*T).Run in goroutine 508864
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+
+goroutine 510993 [IO wait]:
+internal/poll.runtime_pollWait(0x116d32e00, 0x72)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/netpoll.go:351 +0xa0
+internal/poll.(*pollDesc).wait(0xc000ca2720, 0x72, 0x0)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_poll_runtime.go:84 +0xb8
+internal/poll.(*pollDesc).waitRead(...)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Accept(0xc000ca2700)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_unix.go:613 +0x35c
+net.(*netFD).accept(0xc000ca2700)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/fd_unix.go:150 +0x38
+net.(*TCPListener).accept(0xc001406a80)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/tcpsock_posix.go:159 +0x40
+net.(*TCPListener).Accept(0xc001406a80)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/tcpsock.go:387 +0x68
+crypto/tls.(*listener).Accept(0xc001aaed08)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/tls.go:78 +0x40
+net/http.(*Server).Serve(0xc0013d6700, {0x1067951b0, 0xc001aaed08})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/server.go:3454 +0x404
+net/http/httptest.(*Server).goServe.func1()
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/httptest/server.go:341 +0x9c
+created by net/http/httptest.(*Server).goServe in goroutine 510992
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/httptest/server.go:339 +0x98
+
+goroutine 511077 [select]:
+net/http.(*persistConn).writeLoop(0xc000a1c140)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/transport.go:2657 +0x118
+created by net/http.(*Transport).dialConn in goroutine 511074
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/transport.go:1995 +0x22a0
+
+goroutine 511023 [IO wait]:
+internal/poll.runtime_pollWait(0x116d33c00, 0x72)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/netpoll.go:351 +0xa0
+internal/poll.(*pollDesc).wait(0xc00132e120, 0x72, 0x0)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_poll_runtime.go:84 +0xb8
+internal/poll.(*pollDesc).waitRead(...)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc00132e100, {0xc000f36000, 0x800, 0x800})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_unix.go:165 +0x34c
+net.(*netFD).Read(0xc00132e100, {0xc000f36000, 0x800, 0x800})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/fd_posix.go:68 +0x48
+net.(*conn).Read(0xc000682150, {0xc000f36000, 0x800, 0x800})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/net.go:196 +0x88
+crypto/tls.(*atLeastReader).Read(0xc000c30f48, {0xc000f36000, 0x800, 0x800})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:815 +0x78
+bytes.(*Buffer).ReadFrom(0xc0008202a8, {0x10677c9a0, 0xc000c30f48})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/bytes/buffer.go:229 +0xf0
+crypto/tls.(*Conn).readFromUntil(0xc000820008, {0x116db0980, 0xc000682150}, 0x5)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:837 +0x184
+crypto/tls.(*Conn).readRecordOrCCS(0xc000820008, 0x0)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:626 +0x284
+crypto/tls.(*Conn).readRecord(...)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:588
+crypto/tls.(*Conn).Read(0xc000820008, {0xc000856000, 0x1000, 0x0?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:1393 +0x1dc
+net/http.(*connReader).Read(0xc001004440, {0xc000856000, 0x1000, 0x1000})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/server.go:812 +0x204
+bufio.(*Reader).fill(0xc000bbc300)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/bufio/bufio.go:113 +0x210
+bufio.(*Reader).Peek(0xc000bbc300, 0x4)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/bufio/bufio.go:152 +0xac
+net/http.(*conn).serve(0xc00014c7e0, {0x10679d3d8, 0xc0012eebd0})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/server.go:2123 +0xbe0
+created by net/http.(*Server).Serve in goroutine 510993
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/server.go:3484 +0x5ec
+
+goroutine 511076 [IO wait]:
+internal/poll.runtime_pollWait(0x116d33400, 0x72)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/netpoll.go:351 +0xa0
+internal/poll.(*pollDesc).wait(0xc000ca3220, 0x72, 0x0)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_poll_runtime.go:84 +0xb8
+internal/poll.(*pollDesc).waitRead(...)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_poll_runtime.go:89
+internal/poll.(*FD).Read(0xc000ca3200, {0xc000fa1500, 0xa80, 0xa80})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/internal/poll/fd_unix.go:165 +0x34c
+net.(*netFD).Read(0xc000ca3200, {0xc000fa1500, 0xa80, 0xa80})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/fd_posix.go:68 +0x48
+net.(*conn).Read(0xc000e0e1f0, {0xc000fa1500, 0xa80, 0xa80})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/net.go:196 +0x88
+crypto/tls.(*atLeastReader).Read(0xc000c30f90, {0xc000fa1500, 0xa80, 0xa80})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:815 +0x78
+bytes.(*Buffer).ReadFrom(0xc000ef8d28, {0x10677c9a0, 0xc000c30f90})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/bytes/buffer.go:229 +0xf0
+crypto/tls.(*Conn).readFromUntil(0xc000ef8a88, {0x116db0980, 0xc000e0e1f0}, 0x5)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:837 +0x184
+crypto/tls.(*Conn).readRecordOrCCS(0xc000ef8a88, 0x0)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:626 +0x284
+crypto/tls.(*Conn).readRecord(...)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:588
+crypto/tls.(*Conn).Read(0xc000ef8a88, {0xc000e31000, 0x1000, 0xc000f0e3f0?})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/crypto/tls/conn.go:1393 +0x1dc
+net/http.(*persistConn).Read(0xc000a1c140, {0xc000e31000, 0x1000, 0x1000})
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/transport.go:2174 +0x1d0
+bufio.(*Reader).fill(0xc000fa5500)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/bufio/bufio.go:113 +0x210
+bufio.(*Reader).Peek(0xc000fa5500, 0x1)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/bufio/bufio.go:152 +0xac
+net/http.(*persistConn).readLoop(0xc000a1c140)
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/transport.go:2330 +0x22c
+created by net/http.(*Transport).dialConn in goroutine 511074
+	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/net/http/transport.go:1994 +0x2238
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	601.065s
+FAIL

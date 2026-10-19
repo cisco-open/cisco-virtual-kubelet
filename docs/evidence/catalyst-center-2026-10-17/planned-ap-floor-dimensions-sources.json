@@ -1,0 +1,25 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "scope": "Final native all-dimensions cycle plus focused, real Kubernetes API and affected regression verification. Real Catalyst Center tasks; Kubernetes persistence/restarts simulated by the live driver. Two-AP API fixtures remain covered, but the earlier native cohort was not rerun in this phase. No installed worker, physical AP/WLC or full model parity claim.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/site_floor_handoff.go": "ab2129a82083dd17205f9f7188741d208c5c07d9fe732865f6be3d5244ff892a",
+    "internal/controlleradapter/catalystcenter/site_floor_handoff_test.go": "cc336f746c7aa5576e1d3b109409455fac8ecc0d2dbee56d7672f4c3c83c8e7c",
+    "internal/controlleradapter/catalystcenter/site_floor_handoff_envtest_test.go": "e2de328d515a66dd03a692f2beb49b900937fad8151a3d5ff62e8888e3fb83fb",
+    "internal/controlleradapter/catalystcenter/site_applied.go": "d613e12dad79d2d0fbe31df5dcacb533dff674d260f1935151f1cd6d9fa2b3a3",
+    "internal/controlleradapter/catalystcenter/config_executor.go": "90a819ab91c08c520b2f2e1c887055ca49fed1f4cce137789e0b0cd4bf614688",
+    "internal/controlleradapter/catalystcenter/site_planned_ap_execution.go": "36ecded747cad164c1787dd2042c9a73cf118094f96967f0999cdeb9fc1a9dd7",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "092acc0678542b98e9dc18e56de99c5e207871e3393a20f44531838c24bd427a",
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_effect.go": "3fe257d700371c49c5ed92e72187ef4302eef32ae22597f4f92b144fed420e21",
+    "internal/controlleradapter/catalystcenter/planned_ap_floor_effect_test.go": "616303f6d595b32384c6368d26ee7c7bd32bce688610e793731b32dcb7c4014b",
+    "internal/controlleradapter/catalystcenter/planned_ap_manifest_test.go": "dd37c939523bd1f99927fe3eb1db1f899f690b1d1f738c6c989884a1a6969fda",
+    "internal/controlleradapter/catalystcenter/site_floor_effect_receipts_test.go": "69134f984073f23e19208ec626f49a6d82ab2806fcc8e2b861f104fd3bf9c6d9",
+    "internal/controlleradapter/catalystcenter/site_design_live_test.go": "5a04cdef2e32c8519e373e50ffb90045578c44c237199ee90bc2cbd94820c5ae",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "977e08f13e577a825f903e9e18f48f3bb5af7e7d5936ead6e7754c031181e7c8",
+    "internal/controlleradapter/catalystcenter/site_native_comparison_test.go": "e0493b95187903aa80ced4f611963ac9be911de4dcb7d58ebcbc9d5eaec45b05",
+    "examples/configs/catalyst-center/planned-ap-floor-handoff.yaml": "792be775afc2f36230fb5ff4dfba7728bbdccce863e56b3cbaa9aac6bf5f903b",
+    "examples/configs/catalyst-center/planned-ap-private-state.yaml": "d652310ceef157d869280bd2bc648588894239427cc0d2a3cf7869f9920ee5b3",
+    "internal/controlleradapter/catalystcenter/site_floor_cohort_live_test.go": "6c8816282aeed91c501249fcd24f3eaae58f6ff273468fc6bf12023551c16bb3"
+  }
+}

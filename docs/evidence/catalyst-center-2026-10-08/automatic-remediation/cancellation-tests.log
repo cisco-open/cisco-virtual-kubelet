@@ -1,0 +1,4 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/mutationguard	2.814s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	14.927s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerhandoff	(cached)

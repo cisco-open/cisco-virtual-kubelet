@@ -47,6 +47,12 @@ func TestValidateConfigContract(t *testing.T) {
 		mutate func(*ciskov1.NetworkController, *configv1alpha1.NetworkControllerConfig)
 		want   string
 	}{
+		{name: "unadvertised private comparison", mutate: func(_ *ciskov1.NetworkController, c *configv1alpha1.NetworkControllerConfig) {
+			c.Spec.SecretRefs[0].Use = "PrivateComparisonKey"
+		}, want: "use"},
+		{name: "unknown secret use", mutate: func(_ *ciskov1.NetworkController, c *configv1alpha1.NetworkControllerConfig) {
+			c.Spec.SecretRefs[0].Use = "Other"
+		}, want: "use"},
 		{name: "wrong controller", mutate: func(_ *ciskov1.NetworkController, c *configv1alpha1.NetworkControllerConfig) {
 			c.Spec.ControllerRef.Name = "other"
 		}, want: "references"},
@@ -79,13 +85,41 @@ func TestValidateConfigContract(t *testing.T) {
 			gotController := controller.DeepCopy()
 			gotConfig := config.DeepCopy()
 			test.mutate(gotController, gotConfig)
+			if err := ValidateConfigMetadataContract(gotController, gotConfig); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("metadata contract error=%v, want substring %q", err, test.want)
+			}
 			if err := ValidateConfigContract(gotController, gotConfig, intentSecretRoot); err == nil || !strings.Contains(err.Error(), test.want) {
 				t.Fatalf("ValidateConfigContract error=%v, want substring %q", err, test.want)
 			}
 		})
 	}
+	if err := ValidateConfigMetadataContract(controller, config); err != nil {
+		t.Fatalf("metadata contract requires no worker files: %v", err)
+	}
 	if err := ValidateConfigContract(controller, config, t.TempDir()); err == nil || !strings.Contains(err.Error(), "not projected") {
 		t.Fatalf("missing projected file error=%v", err)
+	}
+	// A directory is not a usable projected credential even when all metadata
+	// remains valid. The metadata gate deliberately does no local filesystem I/O.
+	unusableRoot := t.TempDir()
+	ref := config.Spec.SecretRefs[0]
+	relative, err := IntentSecretRelativePath(IntentSecretPathInput{ConfigName: config.Name, Section: ref.Section, JSONPointer: ref.Path, SourceAlias: ref.Source, SecretName: "site-secret", SecretKey: "password"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(unusableRoot, relative), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateConfigContract(controller, config, unusableRoot); err == nil || !strings.Contains(err.Error(), "not a regular file") {
+		t.Fatalf("nonregular projection accepted: %v", err)
+	}
+	if err := ValidateConfigMetadataContract(controller, config); err != nil {
+		t.Fatalf("metadata gate consulted worker projection: %v", err)
+	}
+	for _, root := range []string{"", "relative", "/tmp/../tmp"} {
+		if err := ValidateConfigContract(controller, config, root); err == nil || !strings.Contains(err.Error(), "clean absolute") {
+			t.Fatalf("unsafe projection root accepted: %q: %v", root, err)
+		}
 	}
 	remappedController := controller.DeepCopy()
 	remappedController.Spec.IntentSecretSources[0].Name = "replacement-site-secret"
@@ -143,5 +177,25 @@ func writeContractIntentSecret(t *testing.T, root string, config *configv1alpha1
 	}
 	if err := os.WriteFile(path, []byte("test-only-secret"), 0o600); err != nil {
 		t.Fatalf("write intent Secret fixture: %v", err)
+	}
+}
+
+func TestValidateConfigContractAdvertisedPrivateComparison(t *testing.T) {
+	defer resetRegistry(t)()
+	reg := validRegistration("contract-test")
+	reg.Descriptor.NetAsCode.Format = "netascode-contract-test"
+	reg.Descriptor.NetAsCode.ModelVersions = []string{"1.2.0", "1.3.0"}
+	reg.Descriptor.NetAsCode.Sections = []string{"inventory", "sites"}
+	reg.Descriptor.Capabilities = append(reg.Descriptor.Capabilities, "private-input-comparison")
+	Register(reg)
+	controller, config := validContractObjects()
+	config.Spec.SecretRefs[0].Use = "PrivateComparisonKey"
+	root := t.TempDir()
+	writeContractIntentSecret(t, root, config)
+	if err := ValidateConfigContract(controller, config, root); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateConfigContract(controller, config, t.TempDir()); err == nil {
+		t.Fatal("capability bypassed projected file requirement")
 	}
 }

@@ -55,7 +55,7 @@ func TestMaintenanceSessionCRDTransitionValidation(t *testing.T) {
 			"requestedAt": "2026-09-11T00:00:00Z", "acknowledgedAt": "2026-09-11T00:00:01Z", "controlRevision": int64(7),
 		}
 	}
-	for _, name := range []string{"unchanged", "revision advances", "revision regresses", "active token changes", "active operation namespace changes", "active operation name changes", "active Lease namespace changes", "active Lease name changes", "active Lease changes", "active acknowledgement changes", "ack missing", "next settled session", "same settled session regresses", "legacy recovery denied", "drain recovery", "drain promotion", "drain holder-only change denied", "mixed protocol fields denied"} {
+	for _, name := range []string{"unchanged", "revision advances", "revision regresses", "active token changes", "active operation namespace changes", "active operation name changes", "active Lease namespace changes", "active Lease name changes", "active Lease changes", "active acknowledgement changes", "ack missing", "next settled session", "same settled session regresses", "legacy recovery denied", "drain recovery", "drain promotion", "drain holder-only change denied", "mixed protocol fields denied", "configuration session", "configuration recovery", "configuration wrong holder", "configuration wrong purpose", "configuration malformed token"} {
 		t.Run(name, func(t *testing.T) {
 			old, current := newSession(), newSession()
 			allowed := false
@@ -124,6 +124,26 @@ func TestMaintenanceSessionCRDTransitionValidation(t *testing.T) {
 					session["lease"].(map[string]interface{})["holder"] = "software-drain/leaf-uid"
 				}
 				current["lease"].(map[string]interface{})["holder"] = "software-upgrade/leaf-uid"
+			case "configuration session", "configuration recovery", "configuration wrong holder", "configuration wrong purpose", "configuration malformed token":
+				for _, session := range []map[string]interface{}{old, current} {
+					session["protocolVersion"] = "controller-configuration-v1"
+					session["purpose"] = "ConfigurationMutation"
+					session["sessionToken"] = "11111111-1111-4111-8111-111111111111"
+					session["lease"].(map[string]interface{})["holder"] = "controller-configuration/leaf-uid"
+				}
+				switch name {
+				case "configuration session":
+					allowed = true
+				case "configuration recovery":
+					current["phase"] = "Recovering"
+					allowed = true
+				case "configuration wrong holder":
+					current["lease"].(map[string]interface{})["holder"] = "software-upgrade/leaf-uid"
+				case "configuration wrong purpose":
+					current["purpose"] = "SoftwareMutation"
+				case "configuration malformed token":
+					current["sessionToken"] = "bad-token"
+				}
 			case "mixed protocol fields denied":
 				current["protocolVersion"] = "pdb-drain-v1"
 			}

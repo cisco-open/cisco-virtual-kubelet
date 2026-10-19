@@ -1,0 +1,23 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-181857 01a145f0-52cb-76d8-9f39-e740589c3eab
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-181857 01a145f0-6460-7076-93e8-516f34007361
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-181857#CVK-Commit-Qualification 01a145f0-81c9-76da-b8fe-a8d45f537e95
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-181857#CVK-Commit-Qualification 01a145f0-be95-7f11-9092-39549daa595c
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-181857#CVK-Commit-Qualification 01a145f1-04a3-7eaa-8d28-ac164b8a5d23
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-181857#CVK-Commit-Qualification 01a145f1-4bdc-7c87-a0bd-f0114901db5b
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified 1015ee0a-6621-4ee9-b8a7-71fad1a988db
+    template_projects_live_test.go:166: divider candidate task grouped-divider 01a145f1-8820-71a4-8aed-e713bdf127eb
+    template_projects_live_test.go:166: divider candidate result grouped-divider dividerPreserved false managedFieldsMatch false
+    template_projects_live_test.go:166: divider candidate task ordered-divider 01a145f1-aec6-70db-8f2e-e3b151b0e498
+    template_projects_live_test.go:166: divider candidate result ordered-divider dividerPreserved false managedFieldsMatch false
+    template_projects_live_test.go:166: divider candidate task ordered-content-reference 01a145f1-cdf4-7b3f-bbb7-297f772465e1
+    template_projects_live_test.go:166: divider candidate result ordered-content-reference dividerPreserved false managedFieldsMatch false
+    template_projects_live_test.go:166: none of the documented-field candidates preserved the complete divider intent; native qualification remains failed
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a145f1-dbde-7865-821c-7f1268fed378
+    template_commit_live_test.go:95: template fixture cleanup verified 1015ee0a-6621-4ee9-b8a7-71fad1a988db
+    template_projects_live_test.go:112: isolated project cleanup verified 6db72619-ccab-4e38-867d-f25cd739f9c0
+--- FAIL: TestLiveCatalystCenterTemplateProject (106.76s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	108.107s
+FAIL

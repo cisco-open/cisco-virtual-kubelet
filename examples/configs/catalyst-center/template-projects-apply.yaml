@@ -1,0 +1,26 @@
+# Requires matching journal CRDs, manager and worker for apply.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-template-projects-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [templates]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-template-project-example-v1
+  source:
+    inline:
+      catalyst_center:
+        templates:
+          projects:
+            - name: CVK-Lab-Templates
+              description: CVK lab template project

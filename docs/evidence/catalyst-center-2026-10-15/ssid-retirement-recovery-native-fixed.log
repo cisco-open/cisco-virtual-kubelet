@@ -1,0 +1,14 @@
+=== RUN   TestLiveWirelessSSIDManifestRetirementRecovery
+    wireless_ssid_manifest_live_test.go:164: isolated disabled SSID and private recovery directory CVK_PSK_7f42ef55a2f366bb /private/tmp/cvk-ssid-manifest-4030639456
+    wireless_ssid_manifest_live_test.go:548: disabled credential SSID created and accepted-task restart verified CVK_PSK_7f42ef55a2f366bb mdi0q1zl-x1bt-s183-zJqY-zwy1nweYzJm2nMjIqZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:559: multi-PSK priority reorder converged without native mutation
+    wireless_ssid_manifest_live_test.go:573: accepted native update retained its task through simulated uncertain-phase restart 1
+    wireless_ssid_manifest_live_test.go:580: same-UUID credential rotation and stale-projection refusal verified mdi0q1zl-x1bt-s183-zJqY-zwy1nweYzJm2nMjIqZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:594: accepted native update retained its task through simulated uncertain-phase restart 2
+    wireless_ssid_manifest_live_test.go:618: accepted native update retained its task through simulated uncertain-phase restart 3
+    wireless_ssid_manifest_live_test.go:628: accepted native update retained its task through simulated uncertain-phase restart 4
+    wireless_ssid_manifest_live_test.go:639: single-key retirement, old-counter refusal, advanced reintroduction and explicit-empty retirement verified mdi0q1zl-x1bt-s183-zJqY-zwy1nweYzJm2nMjIqZbwmuSYxZnq
+    wireless_ssid_manifest_live_test.go:678: repository credential example/public manifest/native task/JSON restart/version receipt/rotation/exact cleanup verified; no profile association or device action
+--- PASS: TestLiveWirelessSSIDManifestRetirementRecovery (38.27s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	40.291s

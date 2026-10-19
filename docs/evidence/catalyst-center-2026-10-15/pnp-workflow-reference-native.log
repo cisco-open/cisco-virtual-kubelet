@@ -1,0 +1,8 @@
+=== RUN   TestLivePnPWorkflowInventoryReadiness
+    pnp_claim_workflow_live_test.go:45: read-only repeated safe inventory: PnP=0 network=3 main-workflows=0 image-references=0 template-references=0; no device writes
+=== RUN   TestLivePnPWorkflowInventoryReadiness/AcceptedOwnedClaim
+    pnp_claim_workflow_live_test.go:47: no explicitly owned lab PnP claim supplied; reference matching, native completion and admission remain unqualified
+--- PASS: TestLivePnPWorkflowInventoryReadiness (0.52s)
+    --- SKIP: TestLivePnPWorkflowInventoryReadiness/AcceptedOwnedClaim (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.404s

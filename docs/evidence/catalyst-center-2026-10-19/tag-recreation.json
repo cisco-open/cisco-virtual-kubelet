@@ -1,0 +1,113 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "applied": true,
+  "nativeGateSource": {
+    "files": 1659,
+    "sha256": "0dd722635c842482cfa3ea906bd556c7eacb0802883c7c8fc6660bf78e4d00af",
+    "productionSHA256": "ab87bf9faee453ece3b3155e13489e72e23c00261f95ce66eb439319f6aeaa42"
+  },
+  "finalSource": {
+    "files": 1661,
+    "sha256": "0858411c98e44993eb8b2c4f1c9d0726dc8318e3ceaf722c482054c9bcb55fa3",
+    "productionSHA256": "ab87bf9faee453ece3b3155e13489e72e23c00261f95ce66eb439319f6aeaa42",
+    "productionMatchesNativeGate": true
+  },
+  "newCRDTransportStoreStateMachineOrPermit": false,
+  "sharedDigestAndInputOrderingReused": true,
+  "predecessorDeleteAndFullCohortDigestRequired": true,
+  "atomicArchiveAndCreatorPublication": true,
+  "freshNativeUUIDRequired": true,
+  "allArchivesMustBeReachable": true,
+  "fullPinnedModelParity": false,
+  "installedActors": false,
+  "CRDeletion": false,
+  "ownerOrSectionHandoff": false,
+  "gates": {
+    "api": {
+      "passed": true,
+      "passingEvents": 238,
+      "durationSeconds": 143.984,
+      "log": "cvk-tag-recreate-api-regression.log"
+    },
+    "configMap": {
+      "passed": true,
+      "passingEvents": 26,
+      "durationSeconds": 36.011,
+      "log": "cvk-tag-recreate-configmap.log"
+    },
+    "composition": {
+      "passed": true,
+      "passingEvents": 2051,
+      "durationSeconds": 191.11,
+      "log": "cvk-tag-recreate-composition.log"
+    },
+    "foundation": {
+      "passed": true,
+      "log": "cvk-tag-recreate-foundation.log"
+    },
+    "swim": {
+      "passed": true,
+      "log": "cvk-tag-recreate-swim.log"
+    },
+    "build": {
+      "passed": true,
+      "binarySHA256": "38e90c19ebc5e291ce075a6d35a7f92756289e00b5496a3e117932454db9e7f0"
+    },
+    "finalExamplesAndLiveCompile": {
+      "passed": true,
+      "durationSeconds": 3.353,
+      "passingEvents": 83,
+      "log": "cvk-tag-recreate-final-example-live-compile.log"
+    },
+    "strictDocs": {
+      "passed": true,
+      "durationSeconds": 8.21,
+      "log": "cvk-tag-recreate-docs.log"
+    },
+    "scopedWhitespace": {
+      "passed": true
+    }
+  },
+  "native": {
+    "passed": true,
+    "scope": "inventory-only public manifests with isolated real Kubernetes persistence",
+    "durationSeconds": 49.168,
+    "posts": 3,
+    "puts": 3,
+    "deletes": 3,
+    "originalTasksRecovered": 9,
+    "recreateCycles": 2,
+    "distinctUUIDs": 3,
+    "retiredCompleteCohorts": 2,
+    "cleanedByManifest": true,
+    "supervisedCleanup": false,
+    "baselineRestored": true,
+    "log": "cvk-tag-recreate-native-public-recovery.log",
+    "records": "tag-recreation-native-records"
+  },
+  "earlierFixtureFailure": {
+    "log": "cvk-tag-recreate-timestamp-fixture-failure.log",
+    "reason": "Synthetic fixture reused timestamp variable addresses, changing predecessor data after digest construction. Separate immutable child timestamp values fix the fixture; the original public flow cases passed."
+  },
+  "finalAffectedRegression": {
+    "passed": true,
+    "exitCode": 0,
+    "passingEvents": 347,
+    "durationSeconds": 179.693,
+    "log": "cvk-tag-recreate-final-regression.log"
+  },
+  "remaining": [
+    "CR-driven deletion and finalizer integration",
+    "owner and section handoff",
+    "owned dynamic-rule native lifecycle",
+    "ConfigMap-native combined qualification and installed actors",
+    "shared receipt/byte/deadline scale limits",
+    "broader pinned91CatalystCenter+2auxiliary resource scope"
+  ],
+  "configMapControlledCases": 12,
+  "configMapRealAPICases": 12,
+  "resourceLedgerRows": 93,
+  "sourceVerifiedUnchanged": true,
+  "qualifiedNativeHelperAppliedExactly": true
+}

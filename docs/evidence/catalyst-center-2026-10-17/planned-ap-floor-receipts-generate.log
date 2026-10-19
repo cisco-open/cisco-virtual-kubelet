@@ -1,0 +1,9 @@
+Generating CRDs from ./api...
+go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0 \
+		crd:crdVersions=v1 \
+		paths=./api/... \
+		output:crd:dir=./config/crd
+Generating DeepCopy methods...
+go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.19.0 \
+		object \
+		paths=./api/...

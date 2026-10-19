@@ -1,0 +1,38 @@
+# Resolve controller/credential references and use an exclusive inventory owner.
+# Optional null fields are unselected: they send no native value and do not reset
+# an existing job or trigger a defaults fallback. Retain preserves remote jobs.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-optional-null-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-null-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery:
+            - name: CVK-Null-Lab-101
+              type: SINGLE
+              ip_address_list: 198.51.100.101
+              protocol_order: SSH
+              global_credential_list: [CVK-Lab-CLI, CVK-Lab-SNMP-Read]
+              cdp_level: null
+              lldp_level: null
+              retry: null
+              time_out: null
+              netconf_port: null
+              preferred_mgmt_ip_method: null
+              ip_filter_list: null

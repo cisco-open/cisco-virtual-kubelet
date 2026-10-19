@@ -1,0 +1,65 @@
+# Defines and commits template metadata with inert comment content.
+# No device deployment is selected by this templates-only config.
+# To clear a STRING default, set default_value: ""; to remove all choices,
+# set data_values: {}. An omitted/null optional field does not request clearing.
+# A nonempty data_values map is authoritative: removed labels are removed too.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-template-variable-metadata
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      templates:
+        projects:
+          - name: CVK-Variable-Examples
+            dayn_templates:
+              - name: sample
+                language: JINJA
+                software_type: IOS-XE
+                device_types: [{product_family: Switches and Hubs}]
+                variables:
+                  - name: counter
+                    data_type: INTEGER
+                    default_value: 7
+                    required: true
+                    binding: null
+                    hint_text: null
+                    not_param: null
+                    param_array: null
+                  - name: enabled
+                    data_type: STRING
+                    default_value: true
+                    selection_type: SINGLE_SELECT
+                    data_values: {enabled: true, disabled: false}
+                  - name: threshold
+                    data_type: STRING
+                    default_value: 7.5
+                    selection_type: SINGLE_SELECT
+                    data_values: {low: 7.5, high: 8.5}
+  cvk-template-assets.json: |
+    {"CVK-Variable-Examples#sample.j2":"! {{ counter }} {{ enabled }} {{ threshold }}\n"}
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-template-variable-metadata-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [templates]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-template-variable-metadata-example-v1
+  source:
+    configMapRef:
+      name: catc-template-variable-metadata
+      key: model.yaml

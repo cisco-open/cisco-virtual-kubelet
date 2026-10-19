@@ -1,0 +1,246 @@
+{{- if .Values.topology.enabled }}
+{{- include "cisco-virtual-kubelet.validateManagedTopology" . }}
+{{- $fullname := include "cisco-virtual-kubelet.fullname" . }}
+{{- $manager := include "cisco-virtual-kubelet.managerUsername" . }}
+{{- $namespace := .Values.config.leaseNamespace | default .Release.Namespace }}
+# Actor confinement for staged metadata custody. This policy does not grant
+# native dispatch or implement bootstrap fence acquisition/settlement.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $fullname }}-metadata-handoff
+  annotations:
+    ops.cisco.vk/metadata-handoff-protocol: controller-metadata-handoff-v1
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    matchPolicy: Equivalent
+    resourceRules:
+      - apiGroups: ["cisco.vk"]
+        apiVersions: ["v1alpha1"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["networkcontrollers", "networkcontrollers/status"]
+        scope: Namespaced
+  matchConditions:
+    - name: retained-metadata-custody
+      expression: >-
+        (object != null && has(object.status) && has(object.status.configuration) &&
+         has(object.status.configuration.metadataHandoff)) ||
+        (oldObject != null && has(oldObject.status) && has(oldObject.status.configuration) &&
+         has(oldObject.status.configuration.metadataHandoff))
+  variables:
+    - name: statusRequest
+      expression: "has(request.subResource) && request.subResource == 'status'"
+    - name: manager
+      expression: request.userInfo.username == {{ $manager | quote }}
+    - name: leaseNamespace
+      expression: {{ $namespace | quote | quote }}
+    - name: before
+      expression: "oldObject != null && has(oldObject.status) && has(oldObject.status.configuration) ? oldObject.status.configuration : null"
+    - name: after
+      expression: "object != null && has(object.status) && has(object.status.configuration) ? object.status.configuration : null"
+    - name: oldHandoff
+      expression: "variables.before != null && has(variables.before.metadataHandoff)"
+    - name: newHandoff
+      expression: "variables.after != null && has(variables.after.metadataHandoff)"
+    - name: custody
+      expression: "variables.oldHandoff ? variables.before.metadataHandoff : variables.after.metadataHandoff"
+    - name: oldOperation
+      expression: "variables.before != null && has(variables.before.operation)"
+    - name: newOperation
+      expression: "variables.after != null && has(variables.after.operation)"
+    - name: sameOperation
+      expression: "variables.oldOperation == variables.newOperation && (!variables.oldOperation || variables.before.operation == variables.after.operation)"
+    - name: oldCancelled
+      expression: "variables.oldHandoff && has(variables.before.metadataHandoff.cancelledAt)"
+    - name: newCancelled
+      expression: "variables.newHandoff && has(variables.after.metadataHandoff.cancelledAt)"
+    - name: sameCancellation
+      expression: "variables.oldCancelled == variables.newCancelled && (!variables.oldCancelled || variables.before.metadataHandoff.cancelledAt == variables.after.metadataHandoff.cancelledAt)"
+    - name: oldRefused
+      expression: "variables.oldHandoff && has(variables.before.metadataHandoff.refusedAt)"
+    - name: newRefused
+      expression: "variables.newHandoff && has(variables.after.metadataHandoff.refusedAt)"
+    - name: oldReleased
+      expression: "variables.oldHandoff && has(variables.before.metadataHandoff.releasedAt)"
+    - name: newReleased
+      expression: "variables.newHandoff && has(variables.after.metadataHandoff.releasedAt)"
+    - name: sameRefusal
+      expression: >-
+        variables.oldRefused == variables.newRefused &&
+        (!variables.oldRefused ||
+         (variables.before.metadataHandoff.refusedAt == variables.after.metadataHandoff.refusedAt &&
+          variables.before.metadataHandoff.refusedSubmissionAt == variables.after.metadataHandoff.refusedSubmissionAt))
+    - name: sameRelease
+      expression: "variables.oldReleased == variables.newReleased && (!variables.oldReleased || variables.before.metadataHandoff.releasedAt == variables.after.metadataHandoff.releasedAt)"
+    - name: oldSettlement
+      expression: "variables.oldHandoff && has(variables.before.metadataHandoff.settlementDigest)"
+    - name: newSettlement
+      expression: "variables.newHandoff && has(variables.after.metadataHandoff.settlementDigest)"
+    - name: sameSettlement
+      expression: "variables.oldSettlement == variables.newSettlement && (!variables.oldSettlement || variables.before.metadataHandoff.settlementDigest == variables.after.metadataHandoff.settlementDigest)"
+    - name: sameHandoff
+      expression: "variables.oldHandoff == variables.newHandoff && (!variables.oldHandoff || variables.before.metadataHandoff == variables.after.metadataHandoff)"
+    - name: oldReady
+      expression: "variables.oldHandoff && has(variables.before.metadataHandoff.readyAt)"
+    - name: newReady
+      expression: "variables.newHandoff && has(variables.after.metadataHandoff.readyAt)"
+    - name: sameReady
+      expression: "variables.oldReady == variables.newReady && (!variables.oldReady || variables.before.metadataHandoff.readyAt == variables.after.metadataHandoff.readyAt)"
+    - name: oldFences
+      expression: "variables.oldHandoff && has(variables.before.metadataHandoff.fences)"
+    - name: newFences
+      expression: "variables.newHandoff && has(variables.after.metadataHandoff.fences)"
+    - name: completeFences
+      expression: "variables.oldFences && variables.before.metadataHandoff.fences.size() == variables.custody.physicalIdentities.size()"
+    - name: sameFences
+      expression: "variables.oldFences == variables.newFences && (!variables.oldFences || variables.before.metadataHandoff.fences == variables.after.metadataHandoff.fences)"
+    - name: publishFences
+      expression: >-
+        variables.newFences && !variables.oldReady && !variables.newReady && variables.oldOperation &&
+        variables.before.operation == variables.custody.operation &&
+        variables.sameOperation && !variables.oldRefused && !variables.newRefused &&
+        !variables.oldReleased && !variables.newReleased
+    - name: publishReady
+      expression: >-
+        !variables.oldReady && variables.newReady && variables.completeFences &&
+        variables.oldOperation && variables.before.operation == variables.custody.operation &&
+        variables.sameOperation && variables.sameFences &&
+        !variables.oldRefused && !variables.newRefused &&
+        !variables.oldReleased && !variables.newReleased
+    - name: boundWorker
+      expression: >-
+        variables.oldHandoff &&
+        request.userInfo.username == variables.custody.workerUsername &&
+        'authentication.kubernetes.io/pod-uid' in request.userInfo.extra &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-uid'].size() == 1 &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-uid'][0] == variables.custody.workerPod.uid &&
+        'authentication.kubernetes.io/pod-name' in request.userInfo.extra &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-name'].size() == 1 &&
+        request.userInfo.extra['authentication.kubernetes.io/pod-name'][0] == variables.custody.workerPod.name
+    - name: sameControlHistory
+      expression: >-
+        variables.before != null && variables.after != null &&
+        (has(variables.before.owners) ? variables.before.owners : []) == (has(variables.after.owners) ? variables.after.owners : []) &&
+        (has(variables.before.credentialApplications) ? variables.before.credentialApplications : []) == (has(variables.after.credentialApplications) ? variables.after.credentialApplications : []) &&
+        (has(variables.before.groupCancellations) ? variables.before.groupCancellations : []) == (has(variables.after.groupCancellations) ? variables.after.groupCancellations : [])
+    - name: oldActions
+      expression: "variables.before != null && has(variables.before.actionApplications) ? variables.before.actionApplications : []"
+    - name: newActions
+      expression: "variables.after != null && has(variables.after.actionApplications) ? variables.after.actionApplications : []"
+    - name: sameActions
+      expression: "variables.oldActions == variables.newActions"
+    - name: operationBound
+      expression: >-
+        variables.newOperation &&
+        variables.after.operation.id == variables.custody.operation.id &&
+        variables.after.operation.configUID == variables.custody.operation.configUID &&
+        variables.after.operation.configName == variables.custody.operation.configName &&
+        variables.after.operation.configGeneration == variables.custody.operation.configGeneration &&
+        variables.after.operation.controllerGeneration == variables.custody.operation.controllerGeneration &&
+        variables.after.operation.section == variables.custody.operation.section &&
+        variables.after.operation.resource == variables.custody.operation.resource &&
+        variables.after.operation.action == variables.custody.operation.action &&
+        variables.after.operation.targetID == variables.custody.operation.targetID &&
+        (has(variables.after.operation.sourceUID) ? variables.after.operation.sourceUID : '') == (has(variables.custody.operation.sourceUID) ? variables.custody.operation.sourceUID : '') &&
+        (has(variables.after.operation.sourceVersion) ? variables.after.operation.sourceVersion : '') == (has(variables.custody.operation.sourceVersion) ? variables.custody.operation.sourceVersion : '') &&
+        (!has(variables.after.operation.targetSerial) || variables.after.operation.targetSerial == '') &&
+        (!has(variables.after.operation.taskID) || variables.after.operation.taskID == '') &&
+        (!has(variables.after.operation.createdResourceID) || variables.after.operation.createdResourceID == '') &&
+        (!has(variables.after.operation.parentID) || variables.after.operation.parentID == '') &&
+        !has(variables.after.operation.physicalGroup) && !has(variables.after.operation.dependencyVersions) &&
+        !has(variables.after.operation.cancellationRequestedAt) && !has(variables.after.operation.preparedAt) &&
+        (!has(variables.after.operation.credentialVersions) || variables.after.operation.credentialVersions.size() == 0) &&
+        (!has(variables.after.operation.ssidCredentialHistory) || variables.after.operation.ssidCredentialHistory.size() == 0)
+    - name: operationProgress
+      expression: >-
+        variables.oldOperation && variables.operationBound &&
+        ((variables.before.operation.phase == 'Prepared' &&
+          (variables.after.operation == variables.before.operation ||
+           (variables.oldReady && variables.completeFences && variables.after.operation.phase == 'Submitting' && has(variables.after.operation.submittedAt)))) ||
+         (variables.before.operation.phase != 'Prepared' &&
+          variables.before.operation.submittedAt == variables.after.operation.submittedAt &&
+          ((variables.before.operation.phase == 'Submitting' && variables.after.operation.phase in ['Submitting','Unknown','Verifying']) ||
+           (variables.before.operation.phase == 'Unknown' && variables.after.operation.phase == 'Unknown') ||
+           (variables.before.operation.phase == 'Verifying' && variables.after.operation.phase in ['Verifying','Verified']) ||
+           (variables.before.operation.phase == 'Verified' && variables.after.operation.phase == 'Verified'))))
+    - name: appendAbsence
+      expression: >-
+        variables.newOperation && variables.after.operation.phase == 'Verified' &&
+        variables.newActions.size() == variables.oldActions.size() + 1 &&
+        !variables.oldActions.exists(r, r.operation.id == variables.custody.operation.id) &&
+        variables.oldActions.all(r, variables.newActions.exists(n, n.section == r.section && n.resource == r.resource && n == r)) &&
+        variables.newActions.exists(r, r.operation.id == variables.custody.operation.id &&
+          r.operation == variables.after.operation &&
+          r.resource.startsWith('pnp-removed:v1:' + variables.custody.operation.targetID + ':') &&
+          has(r.verifiedAt))
+    - name: certifiedRefusal
+      expression: >-
+        variables.oldOperation && variables.before.operation.phase == 'Submitting' &&
+        variables.before.operation.id == variables.custody.operation.id &&
+        variables.before.operation.resource == variables.custody.operation.resource &&
+        variables.before.operation.configUID == variables.custody.operation.configUID &&
+        !variables.newOperation && !variables.oldRefused && variables.newRefused &&
+        variables.after.metadataHandoff.refusedSubmissionAt == variables.before.operation.submittedAt &&
+        variables.sameControlHistory && variables.sameActions
+    - name: cancelPrepared
+      expression: >-
+        variables.oldHandoff && variables.newHandoff && variables.oldOperation &&
+        variables.before.operation == variables.custody.operation && !variables.newOperation &&
+        variables.oldReady && variables.completeFences && variables.sameReady && variables.sameFences &&
+        !variables.oldCancelled && variables.newCancelled &&
+        !variables.oldRefused && !variables.newRefused && !variables.oldSettlement && !variables.newSettlement &&
+        !variables.oldReleased && !variables.newReleased && variables.sameControlHistory && variables.sameActions
+    - name: releaseEvidence
+      expression: >-
+        ((variables.oldRefused || variables.oldCancelled) && !variables.oldOperation) ||
+        (variables.oldOperation && variables.before.operation.phase == 'Verified' &&
+         variables.before.operation.id == variables.custody.operation.id &&
+         variables.oldActions.exists(r, r.operation == variables.before.operation &&
+           r.resource.startsWith('pnp-removed:v1:' + variables.custody.operation.targetID + ':') && has(r.verifiedAt)))
+    - name: publishSettlement
+      expression: >-
+        !variables.oldSettlement && variables.newSettlement && variables.oldReady &&
+        variables.completeFences && variables.releaseEvidence &&
+        variables.sameOperation && variables.sameReady && variables.sameFences &&
+        variables.sameRefusal && !variables.oldReleased && !variables.newReleased
+  validations:
+    - expression: >-
+        (request.operation == 'DELETE' && variables.manager && variables.oldReleased) ||
+        (request.operation == 'UPDATE' &&
+         ((!variables.statusRequest && variables.sameHandoff && object.status == oldObject.status) ||
+          (variables.statusRequest && (variables.manager || variables.boundWorker))))
+      message: staged metadata custody requires the installed manager or exact Pod-bound worker; unreleased deletion is denied
+    - expression: >-
+        request.operation != 'UPDATE' || !variables.statusRequest ||
+        ((!variables.oldHandoff && variables.newHandoff && variables.manager &&
+          variables.oldOperation && variables.sameOperation && variables.sameControlHistory && variables.sameActions &&
+          variables.after.metadataHandoff.operation == variables.before.operation &&
+          variables.after.metadataHandoff.protocol == 'controller-metadata-handoff-v1' &&
+          variables.after.metadataHandoff.leaseNamespace == variables.leaseNamespace &&
+          variables.after.metadataHandoff.workerUsername.startsWith('system:serviceaccount:' + request.namespace + ':') &&
+          variables.after.metadataHandoff.operation.resource.startsWith('pnp-remove:v2:') &&
+          !variables.newCancelled && !variables.newRefused && !variables.newReleased && !variables.newFences && !variables.newReady && !variables.newSettlement) ||
+         (variables.oldHandoff && !variables.newHandoff && variables.manager && variables.oldReleased &&
+          variables.sameOperation && variables.sameControlHistory && variables.sameActions) ||
+         (variables.oldHandoff && variables.newHandoff &&
+          ((variables.manager && variables.cancelPrepared) ||
+           (variables.manager && variables.sameCancellation && (variables.sameSettlement || variables.publishSettlement) && (variables.sameReady || variables.publishReady) && variables.sameRefusal && variables.sameControlHistory && variables.sameActions &&
+            variables.sameOperation && (variables.sameFences || variables.publishFences) && (variables.sameRelease || (!variables.oldReleased && variables.newReleased && variables.oldSettlement && variables.sameSettlement && variables.releaseEvidence))) ||
+           (variables.boundWorker && variables.sameCancellation && variables.sameSettlement && variables.sameReady && variables.sameRelease && variables.sameFences &&
+            ((variables.sameHandoff && variables.sameControlHistory &&
+              ((variables.sameOperation && variables.sameActions) ||
+               (variables.operationProgress && (variables.sameActions || variables.appendAbsence)))) ||
+             variables.certifiedRefusal)))))
+      message: metadata seal/release belongs to the manager; only the bound worker may record its original refusal or advance its exact operation
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $fullname }}-metadata-handoff
+  annotations:
+    ops.cisco.vk/metadata-handoff-protocol: controller-metadata-handoff-v1
+spec:
+  policyName: {{ $fullname }}-metadata-handoff
+  validationActions: [Deny]
+{{- end }}

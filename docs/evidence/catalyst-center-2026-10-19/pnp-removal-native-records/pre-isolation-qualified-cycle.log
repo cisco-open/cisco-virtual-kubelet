@@ -1,0 +1,10 @@
+=== RUN   TestLivePnPRegistrationGuardedRemoval
+    pnp_registration_stage_live_test.go:122: private registration recovery directory /private/tmp/cvk-pnp-registration-4237909264
+    pnp_registration_stage_live_test.go:122: owned native registration 6ad57cb80bc0186771cb1032 CVKB581E088
+    pnp_registration_stage_live_test.go:122: original verified Create guarded exact UUID removal and repeated absence; no public Delete receipt or device operation 6ad57cb80bc0186771cb1032
+    pnp_registration_stage_live_test.go:122: safe Delete acknowledgement structure {"auditCount":2,"hasDeviceInfo":true,"hasResponse":false,"rootIDMatches":true,"status":200,"validObject":true}
+    pnp_registration_stage_live_test.go:122: public reconciler qualification true
+    pnp_registration_stage_live_test.go:122: registration, serialized journal stages, owned no-op and exact UUID cleanup verified; no claim/reset/device action submitted
+--- PASS: TestLivePnPRegistrationGuardedRemoval (9.57s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.713s

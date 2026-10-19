@@ -1,0 +1,701 @@
+=== RUN   TestEnvtestProfileSitePrune
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/complete
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/unknown
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/import
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/retain
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/empty-source
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/capacity
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/recreate
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/absent-before
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/site-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/parent-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/rename
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/preflight-refusal
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/preflight-identity
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/lost-ack
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/source-change
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/owner-change
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/history-change
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/child-failed
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/tree-missing
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/drop-verified
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/edit-verified
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/edit-settled
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/reappear
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/device
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/child-device
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/device-read-error
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/task-site-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/task-parent-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/task-present
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/mid-tree-site
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/mid-tree-history
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/pnp
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/child-pnp
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/pnp-location
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/pnp-unbound
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/pnp-read-error
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/pnp-unknown-site
+=== RUN   TestEnvtestProfileSitePrune/wireless-false/pnp-unclaimed
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/complete
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/unknown
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/import
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/retain
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/empty-source
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/capacity
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/recreate
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/absent-before
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/site-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/parent-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/rename
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/preflight-refusal
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/preflight-identity
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/lost-ack
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/source-change
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/owner-change
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/history-change
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/child-failed
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/tree-missing
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/drop-verified
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/edit-verified
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/edit-settled
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/reappear
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/device
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/child-device
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/device-read-error
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/task-site-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/task-parent-replaced
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/task-present
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/mid-tree-site
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/mid-tree-history
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/pnp
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/child-pnp
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/pnp-location
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/pnp-unbound
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/pnp-read-error
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/pnp-unknown-site
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/pnp-unclaimed
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/site-tag
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/policy-tag
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/child-tag
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/unknown-tag
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/tag-read-error
+=== RUN   TestEnvtestProfileSitePrune/wireless-true/post-task-tag
+--- PASS: TestEnvtestProfileSitePrune (76.92s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/complete (3.22s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/unknown (0.60s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/import (0.19s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/retain (0.39s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/empty-source (0.56s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/capacity (11.49s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/recreate (0.70s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/absent-before (0.38s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/site-replaced (0.37s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/parent-replaced (0.36s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/rename (0.37s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/preflight-refusal (0.68s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/preflight-identity (0.43s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/lost-ack (0.45s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/source-change (0.43s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/owner-change (0.41s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/history-change (0.45s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/child-failed (0.46s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/tree-missing (0.47s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/drop-verified (0.50s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/edit-verified (0.51s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/edit-settled (0.56s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/reappear (0.56s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/device (0.69s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/child-device (0.70s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/device-read-error (0.71s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/task-site-replaced (0.47s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/task-parent-replaced (0.50s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/task-present (0.56s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/mid-tree-site (0.67s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/mid-tree-history (0.49s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/pnp (0.79s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/child-pnp (0.74s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/pnp-location (0.76s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/pnp-unbound (0.75s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/pnp-read-error (0.71s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/pnp-unknown-site (0.72s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-false/pnp-unclaimed (0.68s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/complete (0.60s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/unknown (0.62s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/import (0.20s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/retain (0.41s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/empty-source (0.66s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/capacity (11.82s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/recreate (0.72s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/absent-before (0.40s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/site-replaced (0.37s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/parent-replaced (0.37s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/rename (0.38s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/preflight-refusal (0.74s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/preflight-identity (0.49s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/lost-ack (0.48s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/source-change (0.47s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/owner-change (0.42s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/history-change (0.44s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/child-failed (0.50s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/tree-missing (0.47s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/drop-verified (0.51s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/edit-verified (0.51s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/edit-settled (0.64s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/reappear (0.63s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/device (0.72s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/child-device (0.74s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/device-read-error (0.72s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/task-site-replaced (0.61s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/task-parent-replaced (0.72s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/task-present (0.53s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/mid-tree-site (0.49s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/mid-tree-history (0.49s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/pnp (0.76s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/child-pnp (0.75s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/pnp-location (0.80s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/pnp-unbound (1.10s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/pnp-read-error (0.83s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/pnp-unknown-site (0.83s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/pnp-unclaimed (0.66s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/site-tag (0.80s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/policy-tag (0.80s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/child-tag (0.76s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/unknown-tag (0.76s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/tag-read-error (0.81s)
+    --- PASS: TestEnvtestProfileSitePrune/wireless-true/post-task-tag (0.82s)
+=== RUN   TestProfileSitePruneExampleScope
+=== RUN   TestProfileSitePruneExampleScope/empty
+=== RUN   TestProfileSitePruneExampleScope/secret
+=== RUN   TestProfileSitePruneExampleScope/mixed
+=== RUN   TestProfileSitePruneExampleScope/cr-delete
+--- PASS: TestProfileSitePruneExampleScope (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/empty (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/secret (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/mixed (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/cr-delete (0.00s)
+=== RUN   TestProfileSitePrune
+=== RUN   TestProfileSitePrune/wireless-false/complete
+=== RUN   TestProfileSitePrune/wireless-false/unknown
+=== RUN   TestProfileSitePrune/wireless-false/import
+=== RUN   TestProfileSitePrune/wireless-false/retain
+=== RUN   TestProfileSitePrune/wireless-false/empty-source
+=== RUN   TestProfileSitePrune/wireless-false/capacity
+=== RUN   TestProfileSitePrune/wireless-false/recreate
+=== RUN   TestProfileSitePrune/wireless-false/absent-before
+=== RUN   TestProfileSitePrune/wireless-false/site-replaced
+=== RUN   TestProfileSitePrune/wireless-false/parent-replaced
+=== RUN   TestProfileSitePrune/wireless-false/rename
+=== RUN   TestProfileSitePrune/wireless-false/preflight-refusal
+=== RUN   TestProfileSitePrune/wireless-false/preflight-identity
+=== RUN   TestProfileSitePrune/wireless-false/lost-ack
+=== RUN   TestProfileSitePrune/wireless-false/source-change
+=== RUN   TestProfileSitePrune/wireless-false/owner-change
+=== RUN   TestProfileSitePrune/wireless-false/history-change
+=== RUN   TestProfileSitePrune/wireless-false/child-failed
+=== RUN   TestProfileSitePrune/wireless-false/tree-missing
+=== RUN   TestProfileSitePrune/wireless-false/drop-verified
+=== RUN   TestProfileSitePrune/wireless-false/edit-verified
+=== RUN   TestProfileSitePrune/wireless-false/edit-settled
+=== RUN   TestProfileSitePrune/wireless-false/reappear
+=== RUN   TestProfileSitePrune/wireless-false/device
+=== RUN   TestProfileSitePrune/wireless-false/child-device
+=== RUN   TestProfileSitePrune/wireless-false/device-read-error
+=== RUN   TestProfileSitePrune/wireless-false/task-site-replaced
+=== RUN   TestProfileSitePrune/wireless-false/task-parent-replaced
+=== RUN   TestProfileSitePrune/wireless-false/task-present
+=== RUN   TestProfileSitePrune/wireless-false/mid-tree-site
+=== RUN   TestProfileSitePrune/wireless-false/mid-tree-history
+=== RUN   TestProfileSitePrune/wireless-false/pnp
+=== RUN   TestProfileSitePrune/wireless-false/child-pnp
+=== RUN   TestProfileSitePrune/wireless-false/pnp-location
+=== RUN   TestProfileSitePrune/wireless-false/pnp-unbound
+=== RUN   TestProfileSitePrune/wireless-false/pnp-read-error
+=== RUN   TestProfileSitePrune/wireless-false/pnp-unknown-site
+=== RUN   TestProfileSitePrune/wireless-false/pnp-unclaimed
+=== RUN   TestProfileSitePrune/wireless-true/complete
+=== RUN   TestProfileSitePrune/wireless-true/unknown
+=== RUN   TestProfileSitePrune/wireless-true/import
+=== RUN   TestProfileSitePrune/wireless-true/retain
+=== RUN   TestProfileSitePrune/wireless-true/empty-source
+=== RUN   TestProfileSitePrune/wireless-true/capacity
+=== RUN   TestProfileSitePrune/wireless-true/recreate
+=== RUN   TestProfileSitePrune/wireless-true/absent-before
+=== RUN   TestProfileSitePrune/wireless-true/site-replaced
+=== RUN   TestProfileSitePrune/wireless-true/parent-replaced
+=== RUN   TestProfileSitePrune/wireless-true/rename
+=== RUN   TestProfileSitePrune/wireless-true/preflight-refusal
+=== RUN   TestProfileSitePrune/wireless-true/preflight-identity
+=== RUN   TestProfileSitePrune/wireless-true/lost-ack
+=== RUN   TestProfileSitePrune/wireless-true/source-change
+=== RUN   TestProfileSitePrune/wireless-true/owner-change
+=== RUN   TestProfileSitePrune/wireless-true/history-change
+=== RUN   TestProfileSitePrune/wireless-true/child-failed
+=== RUN   TestProfileSitePrune/wireless-true/tree-missing
+=== RUN   TestProfileSitePrune/wireless-true/drop-verified
+=== RUN   TestProfileSitePrune/wireless-true/edit-verified
+=== RUN   TestProfileSitePrune/wireless-true/edit-settled
+=== RUN   TestProfileSitePrune/wireless-true/reappear
+=== RUN   TestProfileSitePrune/wireless-true/device
+=== RUN   TestProfileSitePrune/wireless-true/child-device
+=== RUN   TestProfileSitePrune/wireless-true/device-read-error
+=== RUN   TestProfileSitePrune/wireless-true/task-site-replaced
+=== RUN   TestProfileSitePrune/wireless-true/task-parent-replaced
+=== RUN   TestProfileSitePrune/wireless-true/task-present
+=== RUN   TestProfileSitePrune/wireless-true/mid-tree-site
+=== RUN   TestProfileSitePrune/wireless-true/mid-tree-history
+=== RUN   TestProfileSitePrune/wireless-true/pnp
+=== RUN   TestProfileSitePrune/wireless-true/child-pnp
+=== RUN   TestProfileSitePrune/wireless-true/pnp-location
+=== RUN   TestProfileSitePrune/wireless-true/pnp-unbound
+=== RUN   TestProfileSitePrune/wireless-true/pnp-read-error
+=== RUN   TestProfileSitePrune/wireless-true/pnp-unknown-site
+=== RUN   TestProfileSitePrune/wireless-true/pnp-unclaimed
+=== RUN   TestProfileSitePrune/wireless-true/site-tag
+=== RUN   TestProfileSitePrune/wireless-true/policy-tag
+=== RUN   TestProfileSitePrune/wireless-true/child-tag
+=== RUN   TestProfileSitePrune/wireless-true/unknown-tag
+=== RUN   TestProfileSitePrune/wireless-true/tag-read-error
+=== RUN   TestProfileSitePrune/wireless-true/post-task-tag
+--- PASS: TestProfileSitePrune (24.28s)
+    --- PASS: TestProfileSitePrune/wireless-false/complete (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-false/unknown (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-false/import (0.06s)
+    --- PASS: TestProfileSitePrune/wireless-false/retain (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-false/empty-source (0.18s)
+    --- PASS: TestProfileSitePrune/wireless-false/capacity (4.79s)
+    --- PASS: TestProfileSitePrune/wireless-false/recreate (0.22s)
+    --- PASS: TestProfileSitePrune/wireless-false/absent-before (0.13s)
+    --- PASS: TestProfileSitePrune/wireless-false/site-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-false/parent-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-false/rename (0.11s)
+    --- PASS: TestProfileSitePrune/wireless-false/preflight-refusal (0.22s)
+    --- PASS: TestProfileSitePrune/wireless-false/preflight-identity (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/lost-ack (0.13s)
+    --- PASS: TestProfileSitePrune/wireless-false/source-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/owner-change (0.13s)
+    --- PASS: TestProfileSitePrune/wireless-false/history-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/child-failed (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-false/tree-missing (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-false/drop-verified (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-false/edit-verified (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-false/edit-settled (0.18s)
+    --- PASS: TestProfileSitePrune/wireless-false/reappear (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-false/device (0.22s)
+    --- PASS: TestProfileSitePrune/wireless-false/child-device (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/device-read-error (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-false/task-site-replaced (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/task-parent-replaced (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/task-present (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-false/mid-tree-site (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/mid-tree-history (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/child-pnp (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-location (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-unbound (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-read-error (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-unknown-site (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-unclaimed (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-true/complete (0.20s)
+    --- PASS: TestProfileSitePrune/wireless-true/unknown (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/import (0.06s)
+    --- PASS: TestProfileSitePrune/wireless-true/retain (0.22s)
+    --- PASS: TestProfileSitePrune/wireless-true/empty-source (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-true/capacity (4.77s)
+    --- PASS: TestProfileSitePrune/wireless-true/recreate (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-true/absent-before (0.13s)
+    --- PASS: TestProfileSitePrune/wireless-true/site-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-true/parent-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-true/rename (0.11s)
+    --- PASS: TestProfileSitePrune/wireless-true/preflight-refusal (0.22s)
+    --- PASS: TestProfileSitePrune/wireless-true/preflight-identity (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-true/lost-ack (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-true/source-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-true/owner-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-true/history-change (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-failed (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-true/tree-missing (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-true/drop-verified (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-true/edit-verified (0.18s)
+    --- PASS: TestProfileSitePrune/wireless-true/edit-settled (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-true/reappear (0.20s)
+    --- PASS: TestProfileSitePrune/wireless-true/device (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-device (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/device-read-error (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/task-site-replaced (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-true/task-parent-replaced (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-true/task-present (0.20s)
+    --- PASS: TestProfileSitePrune/wireless-true/mid-tree-site (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-true/mid-tree-history (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-pnp (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-location (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-unbound (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-read-error (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-unknown-site (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-unclaimed (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/site-tag (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/policy-tag (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-tag (0.25s)
+    --- PASS: TestProfileSitePrune/wireless-true/unknown-tag (0.25s)
+    --- PASS: TestProfileSitePrune/wireless-true/tag-read-error (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/post-task-tag (0.26s)
+=== RUN   TestEnvtestWirelessTagMembershipRemoval
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 35435 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc000462340, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x106098008?, 0xc000462340?}, 0x2c?}, {0x1037b398e, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc00078c008)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc000caa008, 0xc00078c008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc000caa008, {0xc0006e8e60, 0x1, 0x0?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestWirelessTagMembershipRemoval(0xc000caa008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/wireless_tag_membership_envtest_test.go:13 +0x58
+	>  testing.tRunner(0xc000caa008, 0x10603ca60)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-retain
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-retain
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer
+--- PASS: TestEnvtestWirelessTagMembershipRemoval (106.56s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-complete (7.21s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-retain (4.11s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof (3.78s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device (4.31s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-device (4.59s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device-error (4.68s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp (4.46s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error (4.52s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (4.82s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer (5.06s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-complete (7.33s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-retain (5.06s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof (4.75s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device (5.42s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-device (5.29s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device-error (5.32s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp (5.39s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error (5.28s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (5.77s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer (5.97s)
+=== RUN   TestWirelessTagMembershipScopeEnvelope
+=== RUN   TestWirelessTagMembershipScopeEnvelope/valid
+=== RUN   TestWirelessTagMembershipScopeEnvelope/empty
+=== RUN   TestWirelessTagMembershipScopeEnvelope/unsorted
+=== RUN   TestWirelessTagMembershipScopeEnvelope/duplicate
+=== RUN   TestWirelessTagMembershipScopeEnvelope/null
+=== RUN   TestWirelessTagMembershipScopeEnvelope/noncanonical
+=== RUN   TestWirelessTagMembershipScopeEnvelope/future
+=== RUN   TestWirelessTagMembershipScopeEnvelope/create
+=== RUN   TestWirelessTagMembershipScopeEnvelope/over-capacity
+=== RUN   TestWirelessTagMembershipScopeEnvelope/cohort
+--- PASS: TestWirelessTagMembershipScopeEnvelope (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/valid (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/empty (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/unsorted (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/duplicate (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/null (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/noncanonical (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/future (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/create (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/over-capacity (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/cohort (0.00s)
+=== RUN   TestWirelessTagMembershipAffectedScopes
+=== RUN   TestWirelessTagMembershipAffectedScopes/site
+=== RUN   TestWirelessTagMembershipAffectedScopes/zone
+=== RUN   TestWirelessTagMembershipAffectedScopes/empty
+=== RUN   TestWirelessTagMembershipAffectedScopes/unchanged
+--- PASS: TestWirelessTagMembershipAffectedScopes (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/site (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/zone (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/empty (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/unchanged (0.00s)
+=== RUN   TestWirelessTagMembershipRemoval
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-retain
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-child-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-device-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-pnp
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-retain
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-child-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-device-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-pnp
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer
+--- PASS: TestWirelessTagMembershipRemoval (39.49s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-complete (2.01s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-retain (1.57s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof (1.42s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-device (1.61s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-child-device (1.59s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-device-error (1.59s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-pnp (1.62s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error (1.61s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (1.74s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer (1.81s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-complete (2.90s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-retain (1.97s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof (2.11s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-device (2.14s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-child-device (2.49s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-device-error (2.47s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-pnp (2.16s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error (2.14s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (2.25s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer (2.29s)
+=== RUN   TestEnvtestWirelessTagReceipts
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/complete
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/import
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/legacy
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/drop-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/edit-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/drop-effect
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/history-race
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/producer-changed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/key-removed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/key-rotated
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/native-edit
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/uuid-replaced
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/alias
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/receipt-edited
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/replace-at-capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/child-failed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/tree-missing
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/lost-ack
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/managed-drift
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/source
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-false/owner
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/complete
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/import
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/legacy
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/drop-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/edit-verified
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/drop-effect
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/history-race
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/producer-changed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/key-removed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/key-rotated
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/native-edit
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/uuid-replaced
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/alias
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/receipt-edited
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/replace-at-capacity
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/child-failed
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/tree-missing
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/lost-ack
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/managed-drift
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/source
+=== RUN   TestEnvtestWirelessTagReceipts/cohort-true/owner
+--- PASS: TestEnvtestWirelessTagReceipts (124.09s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/complete (5.65s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/import (0.57s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/capacity (17.65s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/legacy (1.18s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/drop-verified (0.94s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/edit-verified (1.03s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/drop-effect (0.98s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/history-race (0.92s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/producer-changed (1.01s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/key-removed (2.07s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/key-rotated (1.67s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/native-edit (1.77s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/uuid-replaced (1.75s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/alias (1.71s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/receipt-edited (1.60s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/replace-at-capacity (14.41s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/child-failed (0.99s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/tree-missing (0.96s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/lost-ack (0.81s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/managed-drift (0.94s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/source (0.88s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-false/owner (0.82s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/complete (4.61s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/import (0.65s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/capacity (18.15s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/legacy (1.30s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/drop-verified (1.01s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/edit-verified (1.03s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/drop-effect (1.03s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/history-race (0.97s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/producer-changed (1.03s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/key-removed (1.55s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/key-rotated (1.57s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/native-edit (1.72s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/uuid-replaced (1.71s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/alias (1.78s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/receipt-edited (1.53s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/replace-at-capacity (15.01s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/child-failed (0.89s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/tree-missing (0.90s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/lost-ack (0.79s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/managed-drift (0.96s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/source (0.84s)
+    --- PASS: TestEnvtestWirelessTagReceipts/cohort-true/owner (0.78s)
+=== RUN   TestWirelessTagBaselineExampleScope
+=== RUN   TestWirelessTagBaselineExampleScope/value-use
+=== RUN   TestWirelessTagBaselineExampleScope/wrong-section
+=== RUN   TestWirelessTagBaselineExampleScope/wrong-path
+=== RUN   TestWirelessTagBaselineExampleScope/multiple
+=== RUN   TestWirelessTagBaselineExampleScope/mixed
+=== RUN   TestWirelessTagBaselineExampleScope/config-delete
+=== RUN   TestWirelessTagBaselineExampleScope/report
+--- PASS: TestWirelessTagBaselineExampleScope (0.00s)
+    --- PASS: TestWirelessTagBaselineExampleScope/value-use (0.00s)
+    --- PASS: TestWirelessTagBaselineExampleScope/wrong-section (0.00s)
+    --- PASS: TestWirelessTagBaselineExampleScope/wrong-path (0.00s)
+    --- PASS: TestWirelessTagBaselineExampleScope/multiple (0.00s)
+    --- PASS: TestWirelessTagBaselineExampleScope/mixed (0.00s)
+    --- PASS: TestWirelessTagBaselineExampleScope/config-delete (0.00s)
+    --- PASS: TestWirelessTagBaselineExampleScope/report (0.00s)
+=== RUN   TestWirelessTagProducerMemberBinding
+=== RUN   TestWirelessTagProducerMemberBinding/valid
+=== RUN   TestWirelessTagProducerMemberBinding/member-omitted
+=== RUN   TestWirelessTagProducerMemberBinding/member-added
+=== RUN   TestWirelessTagProducerMemberBinding/duplicate-logical
+=== RUN   TestWirelessTagProducerMemberBinding/duplicate-uuid
+=== RUN   TestWirelessTagProducerMemberBinding/future-version
+=== RUN   TestWirelessTagProducerMemberBinding/owner
+=== RUN   TestWirelessTagProducerMemberBinding/nonce
+=== RUN   TestWirelessTagProducerMemberBinding/creator-overlap
+=== RUN   TestWirelessTagProducerMemberBinding/native-alias
+--- PASS: TestWirelessTagProducerMemberBinding (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/valid (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/member-omitted (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/member-added (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/duplicate-logical (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/duplicate-uuid (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/future-version (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/owner (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/nonce (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/creator-overlap (0.00s)
+    --- PASS: TestWirelessTagProducerMemberBinding/native-alias (0.00s)
+=== RUN   TestWirelessTagReceipts
+=== RUN   TestWirelessTagReceipts/cohort-false/complete
+=== RUN   TestWirelessTagReceipts/cohort-false/import
+=== RUN   TestWirelessTagReceipts/cohort-false/capacity
+=== RUN   TestWirelessTagReceipts/cohort-false/legacy
+=== RUN   TestWirelessTagReceipts/cohort-false/drop-verified
+=== RUN   TestWirelessTagReceipts/cohort-false/edit-verified
+=== RUN   TestWirelessTagReceipts/cohort-false/drop-effect
+=== RUN   TestWirelessTagReceipts/cohort-false/history-race
+=== RUN   TestWirelessTagReceipts/cohort-false/producer-changed
+=== RUN   TestWirelessTagReceipts/cohort-false/key-removed
+=== RUN   TestWirelessTagReceipts/cohort-false/key-rotated
+=== RUN   TestWirelessTagReceipts/cohort-false/native-edit
+=== RUN   TestWirelessTagReceipts/cohort-false/uuid-replaced
+=== RUN   TestWirelessTagReceipts/cohort-false/alias
+=== RUN   TestWirelessTagReceipts/cohort-false/receipt-edited
+=== RUN   TestWirelessTagReceipts/cohort-false/replace-at-capacity
+=== RUN   TestWirelessTagReceipts/cohort-false/child-failed
+=== RUN   TestWirelessTagReceipts/cohort-false/tree-missing
+=== RUN   TestWirelessTagReceipts/cohort-false/lost-ack
+=== RUN   TestWirelessTagReceipts/cohort-false/managed-drift
+=== RUN   TestWirelessTagReceipts/cohort-false/source
+=== RUN   TestWirelessTagReceipts/cohort-false/owner
+=== RUN   TestWirelessTagReceipts/cohort-true/complete
+=== RUN   TestWirelessTagReceipts/cohort-true/import
+=== RUN   TestWirelessTagReceipts/cohort-true/capacity
+=== RUN   TestWirelessTagReceipts/cohort-true/legacy
+=== RUN   TestWirelessTagReceipts/cohort-true/drop-verified
+=== RUN   TestWirelessTagReceipts/cohort-true/edit-verified
+=== RUN   TestWirelessTagReceipts/cohort-true/drop-effect
+=== RUN   TestWirelessTagReceipts/cohort-true/history-race
+=== RUN   TestWirelessTagReceipts/cohort-true/producer-changed
+=== RUN   TestWirelessTagReceipts/cohort-true/key-removed
+=== RUN   TestWirelessTagReceipts/cohort-true/key-rotated
+=== RUN   TestWirelessTagReceipts/cohort-true/native-edit
+=== RUN   TestWirelessTagReceipts/cohort-true/uuid-replaced
+=== RUN   TestWirelessTagReceipts/cohort-true/alias
+=== RUN   TestWirelessTagReceipts/cohort-true/receipt-edited
+=== RUN   TestWirelessTagReceipts/cohort-true/replace-at-capacity
+=== RUN   TestWirelessTagReceipts/cohort-true/child-failed
+=== RUN   TestWirelessTagReceipts/cohort-true/tree-missing
+=== RUN   TestWirelessTagReceipts/cohort-true/lost-ack
+=== RUN   TestWirelessTagReceipts/cohort-true/managed-drift
+=== RUN   TestWirelessTagReceipts/cohort-true/source
+=== RUN   TestWirelessTagReceipts/cohort-true/owner
+--- PASS: TestWirelessTagReceipts (44.46s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/complete (1.42s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/import (0.22s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/capacity (6.75s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/legacy (0.45s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/drop-verified (0.36s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/edit-verified (0.36s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/drop-effect (0.35s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/history-race (0.32s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/producer-changed (0.37s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/key-removed (0.55s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/key-rotated (0.57s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/native-edit (0.63s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/uuid-replaced (0.65s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/alias (0.63s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/receipt-edited (0.57s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/replace-at-capacity (5.38s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/child-failed (0.31s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/tree-missing (0.31s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/lost-ack (0.28s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/managed-drift (0.34s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/source (0.28s)
+    --- PASS: TestWirelessTagReceipts/cohort-false/owner (0.27s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/complete (1.85s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/import (0.24s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/capacity (6.83s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/legacy (0.50s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/drop-verified (0.38s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/edit-verified (0.38s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/drop-effect (0.40s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/history-race (0.35s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/producer-changed (0.40s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/key-removed (0.62s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/key-rotated (0.61s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/native-edit (0.71s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/uuid-replaced (0.70s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/alias (0.72s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/receipt-edited (0.64s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/replace-at-capacity (5.83s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/child-failed (0.34s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/tree-missing (0.35s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/lost-ack (0.30s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/managed-drift (0.36s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/source (0.31s)
+    --- PASS: TestWirelessTagReceipts/cohort-true/owner (0.29s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	418.212s

@@ -64,6 +64,18 @@ func main() {
 func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) > 0 {
 		switch args[0] {
+		case "controller-merge":
+			return runControllerMerge(args[1:], stdin, stdout, stderr)
+		case "controller-export-credentials":
+			return runControllerExportCredentials(args[1:], stdin, stdout, stderr)
+		case "controller-export-discovery":
+			return runControllerExportDiscovery(args[1:], stdin, stdout, stderr)
+		case "controller-export-sites":
+			return runControllerExportSites(args[1:], stdin, stdout, stderr)
+		case "controller-export-network":
+			return runControllerExportNetwork(args[1:], stdin, stdout, stderr)
+		case "controller-report":
+			return runControllerReport(args[1:], stdin, stdout, stderr)
 		case "emit-cr":
 			return runEmitCR(args[1:], stdin, stdout, stderr)
 		case "matrix":
@@ -433,7 +445,14 @@ func printUsage(w io.Writer) {
 	fmt.Fprintln(w, `Usage:
   cvk-netascode-migrate [--family-index path] [netascode.yaml|-]
   cvk-netascode-migrate emit-cr [flags] [netascode.yaml|-]
-  cvk-netascode-migrate matrix [--output docs/family-parity.md]`)
+  cvk-netascode-migrate matrix [--output docs/family-parity.md]
+  cvk-netascode-migrate controller-export-credentials --model-version 0.5.0 --output new-model.json [--defaults credential-defaults.yaml] [--managed-sites JSON] [--manage-global-settings] [--manage-specific-sites-only] [model.yaml|-]
+  cvk-netascode-migrate controller-export-discovery --model-version 0.5.0 --output new-model.json [--managed-sites JSON] [--manage-global-settings] [--manage-specific-sites-only] [model.yaml|-]
+  cvk-netascode-migrate controller-merge --model-version 0.5.0 --output new-source.json [--component all|model|defaults] [--resolve-yaml [--env NAME]] [--yaml-directory path] [--yaml-file path] [final-model.yaml|-]
+  cvk-netascode-migrate controller-export-sites --model-version 0.5.0 --output new-model.json [--defaults site-defaults.yaml] [--use-bulk-api] [model.yaml|-]
+  cvk-netascode-migrate controller-export-sites --model-version 0.5.0 --output new-model.json --source-configmap snapshot.yaml --model-key model.yaml [--defaults site-defaults.yaml] [--use-bulk-api] [--output-configmap [--managed-sites JSON] [--manage-global-settings] [--manage-specific-sites-only]]
+  cvk-netascode-migrate controller-export-network --model-version 0.5.0 --output new-model.json [--defaults network-defaults.yaml] [--managed-sites JSON] [--manage-global-settings] [--manage-specific-sites-only] [model.yaml|-]
+  cvk-netascode-migrate controller-report --model-version 0.5.0 [--require-config-parity] [netascode.yaml|-]`)
 }
 
 type starterCR struct {

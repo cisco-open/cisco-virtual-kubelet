@@ -1,0 +1,30 @@
+# Follow-on revision of discovery-apply.yaml; keep the same config UID/name.
+# Delete stops/removes only receipt-owned jobs whose original
+# UUID and field fingerprint still match. Imported jobs are never adopted.
+# inventory: {} has the same empty discovery selection as discovery: [].
+# This removes discovery jobs; device inventory deletion is a separate operation.
+# Mixed-resource pruning remains unsupported. For opt-in CR-deletion cleanup,
+# see discovery-delete-apply.yaml and the discovery deletion guide.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-discovery
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [inventory]
+  scope: global
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-discovery-prune-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          discovery: []

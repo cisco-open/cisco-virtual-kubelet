@@ -1,0 +1,58 @@
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/known
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/missing-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/malformed-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-during-proof
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-restore
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/native-state-race
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/wrong-declared-body
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-pruned
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-wrong-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/known
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/missing-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/malformed-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-during-proof
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-restore
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/native-state-race
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/wrong-declared-body
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-pruned
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-wrong-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/known
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/missing-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/malformed-key
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-during-proof
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-restore
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/native-state-race
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/wrong-declared-body
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-pruned
+=== RUN   TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-wrong-key
+--- PASS: TestEnvtestTemplateCreatorPrivateBaseline (55.11s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/known (2.99s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/missing-key (0.93s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/malformed-key (1.07s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-during-proof (1.78s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/key-change-restore (0.43s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/native-state-race (2.99s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/wrong-declared-body (2.63s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-pruned (1.31s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/project-create/baseline-wrong-key (1.38s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/known (0.77s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/missing-key (0.90s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/malformed-key (1.07s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-during-proof (1.77s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/key-change-restore (0.81s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/native-state-race (3.89s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/wrong-declared-body (2.97s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-pruned (1.80s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/draft-create/baseline-wrong-key (1.76s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/known (1.23s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/missing-key (1.07s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/malformed-key (1.20s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-during-proof (2.07s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/key-change-restore (1.24s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/native-state-race (5.94s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/wrong-declared-body (3.29s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-pruned (1.83s)
+    --- PASS: TestEnvtestTemplateCreatorPrivateBaseline/composite-draft/baseline-wrong-key (1.76s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	57.283s

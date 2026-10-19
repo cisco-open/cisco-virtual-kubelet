@@ -1,0 +1,13 @@
+{
+  "task": {
+    "isError": true,
+    "errorCode": "InternalError",
+    "failureReason": "Index 1 out of bounds for length 1",
+    "progress": "Group creation failed.",
+    "startTime": 1792061024631,
+    "endTime": 1792061024961
+  }
+}
+{
+  "fixture_readback": []
+}

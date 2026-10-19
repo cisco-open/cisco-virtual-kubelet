@@ -1,0 +1,46 @@
+# Prerequisites: Global/CVK-Lab, an existing disabled CVK-Lab-Disabled SSID,
+# and the existing HIGH and LOW RF profiles. Verify these references first.
+# Both policy tags must be new, or both must already match this source.
+# Creating a new member alongside an existing shared-site member is not qualified.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-policy-cohort
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [network_profiles]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-policy-cohort-example-v1
+  source:
+    inline:
+      catalyst_center:
+        network_profiles:
+          wireless:
+            - name: CVK-Lab-Zones
+              sites: [Global/CVK-Lab]
+              ssid_details:
+                - name: CVK-Lab-Disabled
+                  wlan_profile_name: CVK-Lab-Zones-WLAN
+              ap_zones:
+                - name: CVK-Lab-High
+                  rf_profile_name: HIGH
+                  ssids: [CVK-Lab-Disabled]
+                - name: CVK-Lab-Low
+                  rf_profile_name: LOW
+                  ssids: [CVK-Lab-Disabled]
+              policy_tags:
+                - name: CVK-Lab-High-Policy
+                  sites: [Global/CVK-Lab]
+                  ap_zones: [CVK-Lab-High]
+                - name: CVK-Lab-Low-Policy
+                  sites: [Global/CVK-Lab]
+                  ap_zones: [CVK-Lab-Low]

@@ -1,0 +1,501 @@
+=== RUN   TestTagOwnedReceiptIntegrity
+=== RUN   TestTagOwnedReceiptIntegrity/valid
+=== RUN   TestTagOwnedReceiptIntegrity/no-creator
+=== RUN   TestTagOwnedReceiptIntegrity/duplicate-creator
+=== RUN   TestTagOwnedReceiptIntegrity/duplicate-applied
+=== RUN   TestTagOwnedReceiptIntegrity/foreign-owner
+=== RUN   TestTagOwnedReceiptIntegrity/foreign-name
+=== RUN   TestTagOwnedReceiptIntegrity/foreign-uuid
+=== RUN   TestTagOwnedReceiptIntegrity/wrong-section
+=== RUN   TestTagOwnedReceiptIntegrity/missing-source-mode
+=== RUN   TestTagOwnedReceiptIntegrity/lost-configmap-binding
+=== RUN   TestTagOwnedReceiptIntegrity/missing-task
+=== RUN   TestTagOwnedReceiptIntegrity/missing-time
+=== RUN   TestTagOwnedReceiptIntegrity/future-time
+=== RUN   TestTagOwnedReceiptIntegrity/wrong-result-prefix
+=== RUN   TestTagOwnedReceiptIntegrity/missing-state-digest
+=== RUN   TestTagOwnedReceiptIntegrity/malformed-private
+=== RUN   TestTagOwnedReceiptIntegrity/task-id-collision
+=== RUN   TestTagOwnedReceiptIntegrity/early-update
+--- PASS: TestTagOwnedReceiptIntegrity (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/valid (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/no-creator (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/duplicate-creator (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/duplicate-applied (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/foreign-owner (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/foreign-name (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/foreign-uuid (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/wrong-section (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/missing-source-mode (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/lost-configmap-binding (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/missing-task (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/missing-time (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/future-time (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/wrong-result-prefix (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/missing-state-digest (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/malformed-private (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/task-id-collision (0.00s)
+    --- PASS: TestTagOwnedReceiptIntegrity/early-update (0.00s)
+=== RUN   TestTagOwnedMandatorySettlementReceipt
+=== RUN   TestTagOwnedMandatorySettlementReceipt/valid
+=== RUN   TestTagOwnedMandatorySettlementReceipt/missing
+=== RUN   TestTagOwnedMandatorySettlementReceipt/duplicate
+=== RUN   TestTagOwnedMandatorySettlementReceipt/changed-operation
+--- PASS: TestTagOwnedMandatorySettlementReceipt (0.64s)
+    --- PASS: TestTagOwnedMandatorySettlementReceipt/valid (0.61s)
+    --- PASS: TestTagOwnedMandatorySettlementReceipt/missing (0.01s)
+    --- PASS: TestTagOwnedMandatorySettlementReceipt/duplicate (0.01s)
+    --- PASS: TestTagOwnedMandatorySettlementReceipt/changed-operation (0.01s)
+=== RUN   TestTagOwnedCapacityAndImmutableCreator
+--- PASS: TestTagOwnedCapacityAndImmutableCreator (0.00s)
+=== RUN   TestEnvtestTagPrunePublicLifecycle
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/prune
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/omitted-tags
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/upgrade-baseline
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/old-task
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/retain
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/legacy
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/member-device
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/member-interface
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/member-template
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/unknown-type
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/native-drift
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/unknown-field-drift
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/foreign-id
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/protected
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/external-absence
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/missing-count
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/list-error
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/count-list-disagree
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/lost-ack
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/late-consumer
+=== RUN   TestEnvtestTagPrunePublicLifecycle/inventory/second-referenced
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/prune
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/omitted-tags
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/upgrade-baseline
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/old-task
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/retain
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/legacy
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/member-device
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/member-interface
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/member-template
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/unknown-type
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/native-drift
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/unknown-field-drift
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/foreign-id
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/protected
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/external-absence
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/missing-count
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/list-error
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/count-list-disagree
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/lost-ack
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/late-consumer
+=== RUN   TestEnvtestTagPrunePublicLifecycle/templates/second-referenced
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/prune
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/omitted-tags
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/upgrade-baseline
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/old-task
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/retain
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/legacy
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/member-device
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/member-interface
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/member-template
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/unknown-type
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/native-drift
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/unknown-field-drift
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/foreign-id
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/protected
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/external-absence
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/missing-count
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/list-error
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/count-list-disagree
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/lost-ack
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/late-consumer
+=== RUN   TestEnvtestTagPrunePublicLifecycle/combined/second-referenced
+--- PASS: TestEnvtestTagPrunePublicLifecycle (62.03s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/prune (2.97s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/omitted-tags (0.93s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/upgrade-baseline (0.92s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/old-task (0.86s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/retain (0.80s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/legacy (0.79s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/member-device (0.82s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/member-interface (0.80s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/member-template (0.85s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/unknown-type (0.81s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/native-drift (0.79s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/unknown-field-drift (0.81s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/foreign-id (0.81s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/protected (0.84s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/external-absence (0.81s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/missing-count (0.79s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/list-error (0.81s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/count-list-disagree (0.85s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/lost-ack (0.83s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/late-consumer (1.56s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/inventory/second-referenced (1.33s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/prune (0.89s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/omitted-tags (0.90s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/upgrade-baseline (0.92s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/old-task (0.87s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/retain (0.75s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/legacy (0.78s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/member-device (0.84s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/member-interface (0.80s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/member-template (0.83s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/unknown-type (0.79s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/native-drift (0.81s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/unknown-field-drift (0.80s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/foreign-id (0.77s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/protected (0.79s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/external-absence (0.80s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/missing-count (0.81s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/list-error (0.82s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/count-list-disagree (0.82s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/lost-ack (0.85s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/late-consumer (1.61s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/templates/second-referenced (1.35s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/prune (0.94s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/omitted-tags (0.93s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/upgrade-baseline (0.95s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/old-task (0.87s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/retain (0.78s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/legacy (0.78s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/member-device (0.84s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/member-interface (0.83s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/member-template (0.86s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/unknown-type (0.83s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/native-drift (0.82s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/unknown-field-drift (0.84s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/foreign-id (0.83s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/protected (0.82s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/external-absence (0.83s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/missing-count (0.85s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/list-error (0.86s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/count-list-disagree (0.85s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/lost-ack (0.87s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/late-consumer (1.66s)
+    --- PASS: TestEnvtestTagPrunePublicLifecycle/combined/second-referenced (1.41s)
+=== RUN   TestTagDeletedReceiptIntegrity
+=== RUN   TestTagDeletedReceiptIntegrity/valid
+=== RUN   TestTagDeletedReceiptIntegrity/legacy-baseline
+=== RUN   TestTagDeletedReceiptIntegrity/wrong-full-state
+=== RUN   TestTagDeletedReceiptIntegrity/wrong-uuid
+=== RUN   TestTagDeletedReceiptIntegrity/foreign-owner
+=== RUN   TestTagDeletedReceiptIntegrity/wrong-source
+=== RUN   TestTagDeletedReceiptIntegrity/missing-task
+=== RUN   TestTagDeletedReceiptIntegrity/reused-task
+=== RUN   TestTagDeletedReceiptIntegrity/missing-time
+=== RUN   TestTagDeletedReceiptIntegrity/future-time
+=== RUN   TestTagDeletedReceiptIntegrity/wrong-result
+=== RUN   TestTagDeletedReceiptIntegrity/duplicate
+=== RUN   TestTagDeletedReceiptIntegrity/changed-operation
+--- PASS: TestTagDeletedReceiptIntegrity (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/valid (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/legacy-baseline (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/wrong-full-state (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/wrong-uuid (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/foreign-owner (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/wrong-source (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/missing-task (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/reused-task (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/missing-time (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/future-time (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/wrong-result (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/duplicate (0.00s)
+    --- PASS: TestTagDeletedReceiptIntegrity/changed-operation (0.00s)
+=== RUN   TestTagDeletedMandatorySettlement
+=== RUN   TestTagDeletedMandatorySettlement/valid
+=== RUN   TestTagDeletedMandatorySettlement/missing
+=== RUN   TestTagDeletedMandatorySettlement/duplicate
+=== RUN   TestTagDeletedMandatorySettlement/changed-operation
+--- PASS: TestTagDeletedMandatorySettlement (0.05s)
+    --- PASS: TestTagDeletedMandatorySettlement/valid (0.02s)
+    --- PASS: TestTagDeletedMandatorySettlement/missing (0.01s)
+    --- PASS: TestTagDeletedMandatorySettlement/duplicate (0.01s)
+    --- PASS: TestTagDeletedMandatorySettlement/changed-operation (0.01s)
+=== RUN   TestTagPrunePublicLifecycle
+=== RUN   TestTagPrunePublicLifecycle/inventory/prune
+=== RUN   TestTagPrunePublicLifecycle/inventory/omitted-tags
+=== RUN   TestTagPrunePublicLifecycle/inventory/upgrade-baseline
+=== RUN   TestTagPrunePublicLifecycle/inventory/old-task
+=== RUN   TestTagPrunePublicLifecycle/inventory/retain
+=== RUN   TestTagPrunePublicLifecycle/inventory/legacy
+=== RUN   TestTagPrunePublicLifecycle/inventory/member-device
+=== RUN   TestTagPrunePublicLifecycle/inventory/member-interface
+=== RUN   TestTagPrunePublicLifecycle/inventory/member-template
+=== RUN   TestTagPrunePublicLifecycle/inventory/unknown-type
+=== RUN   TestTagPrunePublicLifecycle/inventory/native-drift
+=== RUN   TestTagPrunePublicLifecycle/inventory/unknown-field-drift
+=== RUN   TestTagPrunePublicLifecycle/inventory/foreign-id
+=== RUN   TestTagPrunePublicLifecycle/inventory/protected
+=== RUN   TestTagPrunePublicLifecycle/inventory/external-absence
+=== RUN   TestTagPrunePublicLifecycle/inventory/missing-count
+=== RUN   TestTagPrunePublicLifecycle/inventory/list-error
+=== RUN   TestTagPrunePublicLifecycle/inventory/count-list-disagree
+=== RUN   TestTagPrunePublicLifecycle/inventory/lost-ack
+=== RUN   TestTagPrunePublicLifecycle/inventory/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/inventory/second-referenced
+=== RUN   TestTagPrunePublicLifecycle/templates/prune
+=== RUN   TestTagPrunePublicLifecycle/templates/omitted-tags
+=== RUN   TestTagPrunePublicLifecycle/templates/upgrade-baseline
+=== RUN   TestTagPrunePublicLifecycle/templates/old-task
+=== RUN   TestTagPrunePublicLifecycle/templates/retain
+=== RUN   TestTagPrunePublicLifecycle/templates/legacy
+=== RUN   TestTagPrunePublicLifecycle/templates/member-device
+=== RUN   TestTagPrunePublicLifecycle/templates/member-interface
+=== RUN   TestTagPrunePublicLifecycle/templates/member-template
+=== RUN   TestTagPrunePublicLifecycle/templates/unknown-type
+=== RUN   TestTagPrunePublicLifecycle/templates/native-drift
+=== RUN   TestTagPrunePublicLifecycle/templates/unknown-field-drift
+=== RUN   TestTagPrunePublicLifecycle/templates/foreign-id
+=== RUN   TestTagPrunePublicLifecycle/templates/protected
+=== RUN   TestTagPrunePublicLifecycle/templates/external-absence
+=== RUN   TestTagPrunePublicLifecycle/templates/missing-count
+=== RUN   TestTagPrunePublicLifecycle/templates/list-error
+=== RUN   TestTagPrunePublicLifecycle/templates/count-list-disagree
+=== RUN   TestTagPrunePublicLifecycle/templates/lost-ack
+=== RUN   TestTagPrunePublicLifecycle/templates/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/templates/second-referenced
+=== RUN   TestTagPrunePublicLifecycle/combined/prune
+=== RUN   TestTagPrunePublicLifecycle/combined/omitted-tags
+=== RUN   TestTagPrunePublicLifecycle/combined/upgrade-baseline
+=== RUN   TestTagPrunePublicLifecycle/combined/old-task
+=== RUN   TestTagPrunePublicLifecycle/combined/retain
+=== RUN   TestTagPrunePublicLifecycle/combined/legacy
+=== RUN   TestTagPrunePublicLifecycle/combined/member-device
+=== RUN   TestTagPrunePublicLifecycle/combined/member-interface
+=== RUN   TestTagPrunePublicLifecycle/combined/member-template
+=== RUN   TestTagPrunePublicLifecycle/combined/unknown-type
+=== RUN   TestTagPrunePublicLifecycle/combined/native-drift
+=== RUN   TestTagPrunePublicLifecycle/combined/unknown-field-drift
+=== RUN   TestTagPrunePublicLifecycle/combined/foreign-id
+=== RUN   TestTagPrunePublicLifecycle/combined/protected
+=== RUN   TestTagPrunePublicLifecycle/combined/external-absence
+=== RUN   TestTagPrunePublicLifecycle/combined/missing-count
+=== RUN   TestTagPrunePublicLifecycle/combined/list-error
+=== RUN   TestTagPrunePublicLifecycle/combined/count-list-disagree
+=== RUN   TestTagPrunePublicLifecycle/combined/lost-ack
+=== RUN   TestTagPrunePublicLifecycle/combined/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/combined/second-referenced
+--- PASS: TestTagPrunePublicLifecycle (17.95s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/prune (0.30s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/omitted-tags (0.30s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/upgrade-baseline (0.30s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/old-task (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/retain (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/legacy (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/member-device (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/member-interface (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/member-template (0.29s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/unknown-type (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/native-drift (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/unknown-field-drift (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/foreign-id (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/protected (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/external-absence (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/missing-count (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/list-error (0.27s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/count-list-disagree (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/lost-ack (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/late-consumer (0.54s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/second-referenced (0.49s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/prune (0.29s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/omitted-tags (0.30s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/upgrade-baseline (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/old-task (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/retain (0.21s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/legacy (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/member-device (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/member-interface (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/member-template (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/unknown-type (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/native-drift (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/unknown-field-drift (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/foreign-id (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/protected (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/external-absence (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/missing-count (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/list-error (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/count-list-disagree (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/lost-ack (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/late-consumer (0.53s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/second-referenced (0.47s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/prune (0.31s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/omitted-tags (0.30s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/upgrade-baseline (0.30s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/old-task (0.27s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/retain (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/legacy (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/member-device (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/member-interface (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/member-template (0.30s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/unknown-type (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/native-drift (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/unknown-field-drift (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/foreign-id (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/protected (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/external-absence (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/missing-count (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/list-error (0.27s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/count-list-disagree (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/lost-ack (0.27s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/late-consumer (0.56s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/second-referenced (0.50s)
+=== RUN   TestEnvtestTagRecreationPublicCycles
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 36308 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc00099b700, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x1061f5d68?, 0xc00099b700?}, 0xc000bef518?}, {0x103751140, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000d52848)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc000ecefc8, 0xc000d52848)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:29 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc000ecefc8, {0xc000c95e98, 0x1, 0x100336f58?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:24 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestTagRecreationPublicCycles(0xc000ecefc8)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/tag_recreate_envtest_test.go:13 +0x5c
+	>  testing.tRunner(0xc000ecefc8, 0x106194ae8)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate-twice
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate-foreign
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate-resurrected
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate-reused-id
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate-missing-cohort
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate-missing-archive
+=== RUN   TestEnvtestTagRecreationPublicCycles/inventory/recreate-tampered-archive
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate-twice
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate-foreign
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate-resurrected
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate-reused-id
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate-missing-cohort
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate-missing-archive
+=== RUN   TestEnvtestTagRecreationPublicCycles/templates/recreate-tampered-archive
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate-twice
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate-foreign
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate-resurrected
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate-reused-id
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate-missing-cohort
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate-missing-archive
+=== RUN   TestEnvtestTagRecreationPublicCycles/combined/recreate-tampered-archive
+--- PASS: TestEnvtestTagRecreationPublicCycles (47.07s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate (3.81s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate-twice (2.86s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate-foreign (1.64s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate-resurrected (1.69s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate-reused-id (1.96s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate-missing-cohort (1.40s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate-missing-archive (1.28s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/inventory/recreate-tampered-archive (1.26s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate (1.74s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate-twice (2.74s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate-foreign (1.62s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate-resurrected (1.64s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate-reused-id (2.01s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate-missing-cohort (1.39s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate-missing-archive (1.23s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/templates/recreate-tampered-archive (1.26s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate (1.82s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate-twice (2.94s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate-foreign (1.71s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate-resurrected (1.74s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate-reused-id (2.00s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate-missing-cohort (1.42s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate-missing-archive (1.31s)
+    --- PASS: TestEnvtestTagRecreationPublicCycles/combined/recreate-tampered-archive (1.27s)
+=== RUN   TestTagRecreationArchiveIntegrity
+=== RUN   TestTagRecreationArchiveIntegrity/valid
+=== RUN   TestTagRecreationArchiveIntegrity/missing-creator
+=== RUN   TestTagRecreationArchiveIntegrity/missing-applied
+=== RUN   TestTagRecreationArchiveIntegrity/missing-delete
+=== RUN   TestTagRecreationArchiveIntegrity/changed-archive
+=== RUN   TestTagRecreationArchiveIntegrity/wrong-parent
+=== RUN   TestTagRecreationArchiveIntegrity/wrong-digest
+=== RUN   TestTagRecreationArchiveIntegrity/missing-link
+=== RUN   TestTagRecreationArchiveIntegrity/reused-uuid
+=== RUN   TestTagRecreationArchiveIntegrity/foreign-owner
+=== RUN   TestTagRecreationArchiveIntegrity/foreign-name
+=== RUN   TestTagRecreationArchiveIntegrity/wrong-section
+=== RUN   TestTagRecreationArchiveIntegrity/early-child
+=== RUN   TestTagRecreationArchiveIntegrity/duplicate-operation
+=== RUN   TestTagRecreationArchiveIntegrity/orphan
+--- PASS: TestTagRecreationArchiveIntegrity (0.03s)
+    --- PASS: TestTagRecreationArchiveIntegrity/valid (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/missing-creator (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/missing-applied (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/missing-delete (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/changed-archive (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/wrong-parent (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/wrong-digest (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/missing-link (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/reused-uuid (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/foreign-owner (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/foreign-name (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/wrong-section (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/early-child (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/duplicate-operation (0.00s)
+    --- PASS: TestTagRecreationArchiveIntegrity/orphan (0.00s)
+=== RUN   TestTagRecreationPublicCycles
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-twice
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-foreign
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-resurrected
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-reused-id
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-missing-cohort
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-missing-archive
+=== RUN   TestTagRecreationPublicCycles/inventory/recreate-tampered-archive
+=== RUN   TestTagRecreationPublicCycles/templates/recreate
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-twice
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-foreign
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-resurrected
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-reused-id
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-missing-cohort
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-missing-archive
+=== RUN   TestTagRecreationPublicCycles/templates/recreate-tampered-archive
+=== RUN   TestTagRecreationPublicCycles/combined/recreate
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-twice
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-foreign
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-resurrected
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-reused-id
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-missing-cohort
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-missing-archive
+=== RUN   TestTagRecreationPublicCycles/combined/recreate-tampered-archive
+--- PASS: TestTagRecreationPublicCycles (13.86s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate (0.61s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-twice (1.03s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-foreign (0.54s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-resurrected (0.56s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-reused-id (0.64s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-missing-cohort (0.44s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-missing-archive (0.42s)
+    --- PASS: TestTagRecreationPublicCycles/inventory/recreate-tampered-archive (0.43s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate (0.58s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-twice (0.99s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-foreign (0.50s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-resurrected (0.54s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-reused-id (0.62s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-missing-cohort (0.42s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-missing-archive (0.40s)
+    --- PASS: TestTagRecreationPublicCycles/templates/recreate-tampered-archive (0.43s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate (0.62s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-twice (1.02s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-foreign (0.54s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-resurrected (0.59s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-reused-id (0.65s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-missing-cohort (0.45s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-missing-archive (0.43s)
+    --- PASS: TestTagRecreationPublicCycles/combined/recreate-tampered-archive (0.43s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	143.984s

@@ -1,0 +1,10 @@
+{
+  "at": "2026-10-09T16:50:41.670149+00:00",
+  "version": "show version | include Cisco IOS XE Software\nCisco IOS XE Software, Version 17.18.04\n",
+  "install": "show install summary\n[ Switch 1 ] Installed Package(s) Information:\nState (St): I - Inactive, U - Activated & Uncommitted,\n            C - Activated & Committed, D - Deactivated & Uncommitted\n--------------------------------------------------------------------------------\nType  St   Filename/Version\n--------------------------------------------------------------------------------\nIMG   C    17.18.04.0.759\n\n--------------------------------------------------------------------------------\nAuto abort timer: inactive\n--------------------------------------------------------------------------------\n\n\n",
+  "applications": "show app-hosting list\nNo App found\n\n",
+  "absent": "dir flash:gNOI_iosxe_17.18.02.0.4112.1766116039.bin\n%Error opening flash:/gNOI_iosxe_17.18.02.0.4112.1766116039.bin (No such file or directory)\n",
+  "sourceSHA256": "c210d89b0bcbdeea4962b87b5f159c331988fe5a85d07a5a30da0438b2d99355",
+  "sourceSHA512": "d8a8d7b9dde721501e5abb5ca63a21d49c9c49380b516d5ad366a7af729ea2c7e9ea898e7981b585db450b25393faddb2f0e45fe365459bd3c3541d2453f174c",
+  "retiredReceiptUID": "fcd5a376-5524-41f5-a939-4de69696fee6"
+}

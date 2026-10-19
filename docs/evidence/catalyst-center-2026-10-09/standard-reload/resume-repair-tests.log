@@ -1,0 +1,4 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controller	29.942s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.038s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controllerhandoff	(cached)
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	14.764s

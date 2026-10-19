@@ -1,0 +1,12 @@
+{
+  "result": "NOT_QUALIFIED",
+  "scope": "Native global IP/BGP transit definition; no device or fabric association",
+  "fixture": "CVK_12203357",
+  "taskID": "01a131d3-9a96-7e67-8cc6-ae49aacf1fd7",
+  "terminalErrorCode": "NCSP11008",
+  "diagnosis": "Catalyst Center reported a missing application package for ConnectivityDomain (qualifier null).",
+  "inventoryAfter": [],
+  "cleanupRequired": false,
+  "replayed": false,
+  "workerRollout": false
+}

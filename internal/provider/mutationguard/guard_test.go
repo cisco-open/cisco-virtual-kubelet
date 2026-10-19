@@ -458,3 +458,28 @@ func TestDeletionQuarantineBlocksLiveAndTakesOverExpiredForeignLease(t *testing.
 		})
 	}
 }
+
+func TestControllerSWIMQuarantineDoesNotAgeOut(t *testing.T) {
+	up := &opsv1alpha1.IOSXESoftwareUpgrade{}
+	up.Spec.ImageSource.CatalystCenter = &opsv1alpha1.CatalystCenterImageSource{}
+	up.Status.ExecutionModel = opsv1alpha1.UpgradeExecutionModelCatalystCenterV1
+	up.Status.StagingRequested = true
+	up.Status.Phase = opsv1alpha1.UpgradePhaseActivating
+	up.CreationTimestamp = metav1.NewTime(time.Now().Add(-365 * 24 * time.Hour))
+	if !UpgradeRequiresQuarantineAt(up, time.Now()) {
+		t.Fatal("unresolved remote mutation aged out")
+	}
+	up.Status.Phase = opsv1alpha1.UpgradePhaseSucceeded
+	if !UpgradeRequiresQuarantineAt(up, time.Now()) {
+		t.Fatal("phase alone released remote mutation")
+	}
+	observed := metav1.Now()
+	up.Status.ControllerHandoff = &opsv1alpha1.UpgradeControllerHandoffStatus{VerifiedVersion: "17.18.04.0.759", VerifiedAt: &observed}
+	if UpgradeRequiresQuarantineAt(up, time.Now()) {
+		t.Fatal("verified controller success remained quarantined")
+	}
+	up.Spec.ImageSource.CatalystCenter = nil
+	if !UpgradeRequiresQuarantineAt(up, time.Now()) {
+		t.Fatal("controller marker accepted for a direct source")
+	}
+}

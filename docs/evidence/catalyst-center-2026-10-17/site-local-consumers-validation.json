@@ -1,0 +1,220 @@
+{
+  "scope": "Local-only settings/credential fences, shared reader regressions and generated-area native lifecycle; simulated persistence, not public/installed retirement routing",
+  "gates": {
+    "regression": {
+      "families": 66,
+      "subcases": 977,
+      "seconds": 85.375,
+      "exit_code": 0,
+      "log_sha256": "6abe390ea0e71d4725bac85b7a2424fca60977131ee5444406d399fa5c788774"
+    },
+    "api": {
+      "families": 8,
+      "subcases": 110,
+      "seconds": 77.034,
+      "exit_code": 0,
+      "log_sha256": "2cf87bcf9d680f29b808459e1f8704a391ea81cd9593e6d28a551215f5c5c196"
+    },
+    "reader-regression": {
+      "families": 62,
+      "subcases": 619,
+      "seconds": 57.209,
+      "exit_code": 0,
+      "log_sha256": "897adbda500305932d016bc35c0a96325eb30bfb5aa3951e4ad8892f9fed904e"
+    }
+  },
+  "native": {
+    "result": {
+      "archivedCohorts": 2,
+      "baselineRestored": true,
+      "deletes": 4,
+      "firstID": "8fb475ba-35a6-407c-b1f7-399feb887015",
+      "installed": false,
+      "parentChild": true,
+      "parentHandoff": true,
+      "posts": 4,
+      "publicRetirementRouting": false,
+      "secondID": "16149731-e4aa-4a98-868a-cfb7cf73f979"
+    },
+    "task_ids": [
+      "01a14b75-499d-73fa-840d-e9ee1de59efb",
+      "01a14b75-52a5-7ccb-a690-53ef171db866",
+      "01a14b75-9524-7edd-a43f-b5182d5700e7",
+      "01a14b75-d26b-7c13-bc2a-3ca19b705723",
+      "01a14b75-e1e9-7e5d-b32a-525b15a818ee",
+      "01a14b75-ef8b-7e4a-82bf-4804bf53d125",
+      "01a14b76-32d0-7dcb-8f43-59d25ebe09a2",
+      "01a14b76-7013-7860-a878-2084897314be"
+    ],
+    "receipt_count": 8,
+    "archived_rows": 4,
+    "retained_owners": 1,
+    "active_operation": false,
+    "seconds": 80.2,
+    "go_test_seconds": 82.448,
+    "exit_code": 0,
+    "log_sha256": "3fd13eeaee4d26479c5b20eb25a0c7a774bf1cbd8d05e892ea285fb0b87cf5d4",
+    "private_checkpoint": "/private/tmp/cvk-site-lifecycle-1406516110"
+  },
+  "read_only_endpoint_availability": {
+    "scope": "Read-only endpoint availability on one existing site per type; no mutation or field values recorded",
+    "types": {
+      "area": {
+        "available": true,
+        "endpoints": {
+          "ntp": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "dns": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "dhcp": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "timeZone": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "banner": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "telemetry": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 5
+          },
+          "aaa": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 2
+          },
+          "deviceCredentials": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 6
+          }
+        }
+      },
+      "building": {
+        "available": true,
+        "endpoints": {
+          "ntp": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "dns": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "dhcp": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "timeZone": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "banner": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "telemetry": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 5
+          },
+          "aaa": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 2
+          },
+          "deviceCredentials": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 6
+          }
+        }
+      },
+      "floor": {
+        "available": true,
+        "endpoints": {
+          "ntp": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "dns": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "dhcp": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "timeZone": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "banner": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 1
+          },
+          "telemetry": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 5
+          },
+          "aaa": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 2
+          },
+          "deviceCredentials": {
+            "http_status": 200,
+            "response_object": true,
+            "group_count": 6
+          }
+        }
+      }
+    }
+  },
+  "source_sha256": {
+    "internal/controlleradapter/catalystcenter/site_retirement_settings.go": "d90431eec9ef5fd8b02309e0c0e4141257619f6725c24946510724f0d4a5c956",
+    "internal/controlleradapter/catalystcenter/site_retirement_settings_test.go": "511e0f0f76b60cc42276eadf853a60be2ebce83f7a048811323f7577c827bb06",
+    "internal/controlleradapter/catalystcenter/site_retirement.go": "39b5a14208659e8e107711affae51a0d99860badeed3f39c3c136bd74697bc82",
+    "internal/controlleradapter/catalystcenter/network_settings.go": "cbf843ddc478e2216567f038dbc01d815baf7fdd3549bfe6e5294efe17db4550",
+    "internal/controlleradapter/catalystcenter/site_credentials.go": "90fd5192947cb50dc8bdcb6a52b90d18e7b24c1f2f31970c1a787ef5b3fadf05",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "15496829daa006be361d1362a4e70f61189f137e91ae7bcc151b811670cc6be7",
+    "internal/controlleradapter/catalystcenter/site_retirement_dispatch_test.go": "5453757511bf3c91fb7b3a5ad40854976983ebbfb9a56a971096017853621854",
+    "internal/controlleradapter/catalystcenter/site_retirement_test.go": "250cc22cadbcd446ccfceadcb46e9caab00b7cb260a6be126f675397c2e4a357",
+    "internal/controlleradapter/catalystcenter/site_recreation_live_test.go": "1626406e465637859557d20062a412600caff50afcb4bdf006ba05b5357980d3",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "b733c704ad9a476dcdc6c9c72281d7f37a8a6047e52e93f035e33be64c9cc40d",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery.go": "9588597d5654eefa9c32598481551ca1f57ac818fd29751bc795f86db6ac9dce"
+  },
+  "pinned_resource_rows": 93,
+  "limitations": [
+    "Empty local groups do not prove provenance of defaults versus prior resets; retained CVK policy receipts remain blockers",
+    "No policy or credential cleanup authority added",
+    "Other operational references still require complete assessment",
+    "Building/floor native mutation lifecycle not qualified",
+    "Public/compiler routing and installed complete-cycle qualification remain pending"
+  ]
+}

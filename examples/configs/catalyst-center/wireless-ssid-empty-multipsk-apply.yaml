@@ -1,0 +1,46 @@
+# Explicitly owns an empty Multi-PSK set on a new definition.
+# To clear an owned existing set, update that same config/SSID and retain its
+# main passphrase; the controller preserves retired priority version history.
+# Authorize alias ssid-passphrase on NetworkController catc using
+# intentSecretSources; its selected Secret key must contain the atomic JSON
+# {"version":1,"value":"..."}. Supply the password separately from Git.
+# Rotate by updating both the projected JSON version/value and passphrase_version.
+# This example remains disabled; it does not test actual client authentication.
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-ssid-empty-multipsk
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-ssid-empty-multipsk-example-v1
+  secretRefs:
+    - section: wireless
+      path: /ssids/0/passphrase
+      source: ssid-passphrase
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          ssids:
+            - name: CVK_EMPTY_MULTIPSK_SSID
+              auth_type: WPA2_PERSONAL
+              wlan_type: Enterprise
+              ssid_radio_type: 5GHz
+              enabled: false
+              auth_key_psk: true
+              rsn_cipher_suite_ccmp128: true
+              passphrase_version: 1
+              multi_psk_settings: []

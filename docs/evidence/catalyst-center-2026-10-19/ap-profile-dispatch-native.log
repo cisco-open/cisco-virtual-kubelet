@@ -1,0 +1,36 @@
+=== RUN   TestLiveWirelessAPCalendar
+    wireless_ap_calendar_live_test.go:47: isolated names CVK_C_b38719ff2f64dab3 [CVK_P_eb9c3ccc17f5f1e6 CVK_Q_2c8b4370d8923ef6]
+    wireless_ap_calendar_live_test.go:283: definition task power-profile:CVK_P_eb9c3ccc17f5f1e6 Create 01a15413-ed33-732c-b1be-70b3839e4386
+    wireless_ap_calendar_live_test.go:292: owned power UUID CVK_P_eb9c3ccc17f5f1e6 mdiYq1zl-x1bF-zwi5-yZnJ-y2mXn2y1zJfLnKmWvJflmL8ZudrF
+    wireless_ap_calendar_live_test.go:283: definition task power-profile:CVK_Q_2c8b4370d8923ef6 Create 01a15413-f495-7bfe-a10f-aacf54f2ccf7
+    wireless_ap_calendar_live_test.go:292: owned power UUID CVK_Q_2c8b4370d8923ef6 mdiYq1zl-x1fF-mMm4-yJqZ-nZbKodKYm2vMnKmWvJflmL8ZutrF
+    wireless_ap_calendar_live_test.go:301: definition task ap-profile:CVK_C_b38719ff2f64dab3 Create 01a15413-fec4-7503-b2d3-95476975d2b3
+    wireless_ap_calendar_live_test.go:310: owned AP UUID mdiYq1zl-x0nF-yJm4-nZe5-zMyYzJy0zgfIm0mWvJflmL8ZqZrF
+    wireless_ap_calendar_live_test.go:342: qualified calendar DAILY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:325: definition task ap-profile:CVK_C_b38719ff2f64dab3 Update 01a15414-1249-7ca8-966e-ef959be0b5b6
+    wireless_ap_calendar_live_test.go:342: qualified calendar WEEKLY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:325: definition task ap-profile:CVK_C_b38719ff2f64dab3 Update 01a15414-22ae-7e3c-91b3-4aa1ece229d6
+    wireless_ap_calendar_live_test.go:342: qualified calendar MONTHLY same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:325: definition task ap-profile:CVK_C_b38719ff2f64dab3 Update 01a15414-3316-7550-a2b4-a3daaef62d1a
+    wireless_ap_calendar_live_test.go:342: qualified calendar MULTIPLE same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:325: definition task ap-profile:CVK_C_b38719ff2f64dab3 Update 01a15414-438b-7d02-ab29-4b342ae28761
+    wireless_ap_calendar_live_test.go:342: qualified calendar REORDERED same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:325: definition task ap-profile:CVK_C_b38719ff2f64dab3 Update 01a15414-525d-784b-a83b-366b366c714b
+    wireless_ap_calendar_live_test.go:342: qualified calendar CLEAR same UUID and unchanged baselines
+    wireless_ap_calendar_live_test.go:363: cleanup task AP mdiYq1zl-x0nF-yJm4-nZe5-zMyYzJy0zgfIm0mWvJflmL8ZqZrF 01a15414-5d53-7aea-9606-3e789b3555e9
+    wireless_ap_calendar_live_test.go:367: cleanup task CVK_Q_2c8b4370d8923ef6 mdiYq1zl-x1fF-mMm4-yJqZ-nZbKodKYm2vMnKmWvJflmL8ZutrF 01a15414-6344-713f-bb2f-44e7363cca75
+    wireless_ap_calendar_live_test.go:367: cleanup task CVK_P_eb9c3ccc17f5f1e6 mdiYq1zl-x1bF-zwi5-yZnJ-y2mXn2y1zJfLnKmWvJflmL8ZudrF 01a15414-692d-7996-96fc-aa2f1169f5c8
+    wireless_ap_calendar_live_test.go:374: baseline restored; no assignment, provisioning or device action submitted
+--- PASS: TestLiveWirelessAPCalendar (34.18s)
+=== RUN   TestLiveWirelessAPDispatchRecovery
+=== RUN   TestLiveWirelessAPDispatchRecovery/ap_profiles
+    wireless_definition_recovery_live_test.go:154: fixture CVK_DR_987998612000 evidence /var/folders/w5/1l6hg4ks3wvcdv_bkztxwtyw0000gn/T/cvk-definition-recovery-2570602535
+    wireless_definition_recovery_live_test.go:266: acknowledged unowned Create retained Unknown; task-tree observation only 01a15414-7110-7c77-b606-307aed69c538
+    wireless_definition_recovery_live_test.go:304: preflight read refused; exact operation retired without mutation; owner retained CVK_DR_987998612000
+    wireless_definition_recovery_live_test.go:289: retained acknowledged update Unknown mde5q1zl-x0rs-xZK4-nZK5-odyXmJaWmemWvJflmL8Zrdrsnv82 01a15414-7716-7a49-b4d5-97a567f2a8cd
+    wireless_definition_recovery_live_test.go:350: stale observation refused and consumed before mutation CVK_DR_987998612000 mde5q1zl-x0rs-xZK4-nZK5-odyXmJaWmemWvJflmL8Zrdrsnv82
+    wireless_definition_recovery_live_test.go:405: complete CVK_DR_987998612000 mde5q1zl-x0rs-xZK4-nZK5-odyXmJaWmemWvJflmL8Zrdrsnv82 tasks map[Create:01a15414-7110-7c77-b606-307aed69c538 Delete:01a15414-7f0a-7cf8-b927-bfd1695ad116 Update:01a15414-7716-7a49-b4d5-97a567f2a8cd] mutations 3 baseline restored
+--- PASS: TestLiveWirelessAPDispatchRecovery (5.47s)
+    --- PASS: TestLiveWirelessAPDispatchRecovery/ap_profiles (5.47s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	40.668s

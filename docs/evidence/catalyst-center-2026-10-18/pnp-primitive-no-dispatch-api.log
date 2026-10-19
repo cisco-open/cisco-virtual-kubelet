@@ -1,0 +1,28 @@
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/read-error
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/cohort
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/source
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/configmap
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/owner
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/operation
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/inner-read-error
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/inner-cohort
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/inner-owner
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/inner-operation
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/inner-managed
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/inner-network-error
+--- PASS: TestEnvtestPnPRegistrationNoDispatchReplan (11.85s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/read-error (3.19s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/cohort (0.72s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/source (0.58s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/configmap (0.65s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/owner (0.14s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/operation (0.15s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/inner-read-error (0.59s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/inner-cohort (0.58s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/inner-owner (0.15s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/inner-operation (0.17s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/inner-managed (0.58s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/inner-network-error (0.58s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.041s

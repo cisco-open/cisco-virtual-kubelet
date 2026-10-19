@@ -1,0 +1,188 @@
+{
+  "scope": "private deletion-bound discovery dispatch, original-task recovery, absence receipt and journal settlement; public CR cleanup remains disabled",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/config_journal.go": "e5c3a5e0d40f47a7dc3cce40efb803b3af7b986ab1f1f62859643d617b121d92",
+    "internal/controlleradapter/catalystcenter/config_report.go": "4a9d990598411ab9aacb9084a527ff32a0d1ed0a3899df2a1e989647cf065277",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_execution.go": "c01afc0dd3cbe705aae03e48f5936283e3d0c3227cd77c5947ceaa4d77e0a7ba",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_preparation.go": "63b29eaa76e7a5bea969a01979a349d12f8c24d11eab7d0743e5b06b67e25ab3",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation.go": "5ac557469c7eecb3396af24f56cc4cc3fbc81196f907d3db41a5b1edb09bd73b",
+    "internal/controlleradapter/catalystcenter/discovery_owned.go": "248269005a5978f3493669d198bcef562e02eccdbfd326f3f02b6095e6c57c79",
+    "internal/controlleradapter/catalystcenter/discovery_ownership_binding.go": "3025f8aa97e0748ef369dbd46251f39609a03a22df37c442d25b89f518cd148a",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_execution_test.go": "599f4115c1cf734768312e9ea76d0043506c14e4467b1ef3533cc01ba9b4dfab",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go": "cbd1968d081fb783ae178518a901277fd3f2d0298aedd6e490a816e0a9873f6e",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_live_test.go": "3595be7e312118cfec49d143e68110792c662fcf5c2a438391fcfb0178f85e52",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "89d045267372c7913b07d526015e3a2696fd54a488b854ceb88cd0c5fd3c433b"
+  },
+  "remaining": [
+    "public manager enrollment and finalizer release",
+    "drain original pre-deletion non-finalize tasks",
+    "missing-source and empty/unowned enrollment",
+    "paused or changed-controller recovery policy",
+    "installed-worker qualification",
+    "full pinned-model execution parity"
+  ],
+  "native": {
+    "checkpoint": "/private/tmp/cvk-discovery-owned-283765589",
+    "identity": {
+      "deletes": 0,
+      "id": "168",
+      "ip": "198.51.100.101",
+      "name": "CVK_DISC_abad918eaee6d5fd",
+      "posts": 1
+    },
+    "cleanup": {
+      "automaticPrivateLifecycle": true,
+      "deleteTaskId": "01a14cbf-c41a-72b8-87eb-71b74a3b333d",
+      "deleted": true,
+      "id": "168",
+      "injectedKnownTaskRecovery": true
+    },
+    "completion": {
+      "cleaned": true,
+      "deletes": 1,
+      "installedClusterMutated": false,
+      "inventoryIdentityPreserved": true,
+      "posts": 1,
+      "privateCleanupExecution": true
+    },
+    "unknownJournal": {
+      "actionApplications": [
+        {
+          "section": "inventory",
+          "resource": "discovery-record:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:168",
+          "operation": {
+            "id": "c49bf8bb419475ae3060348953bd09c1",
+            "configName": "sites",
+            "configUID": "config",
+            "configGeneration": 1,
+            "controllerGeneration": 1,
+            "section": "inventory",
+            "resource": "discovery-owned:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:1f:8a855fb5b815304c4df71515dd7520e6a7d83c72d3d75eb248fb27b72b498d82",
+            "action": "Create",
+            "phase": "Verified",
+            "submittedAt": "2026-10-18T02:02:53Z",
+            "taskID": "01a14cbf-6553-7c28-8237-4525294f2308"
+          },
+          "verifiedAt": "2026-10-18T02:03:14Z"
+        }
+      ],
+      "owners": [
+        {
+          "section": "inventory",
+          "configName": "sites",
+          "configUID": "config"
+        }
+      ],
+      "operation": {
+        "id": "3d10c5cb2b2a1373d3f6b7969f1306cf",
+        "configName": "sites",
+        "configUID": "config",
+        "configGeneration": 1,
+        "controllerGeneration": 1,
+        "section": "inventory",
+        "resource": "discovery-finalize:v1:1f57b5931faf48e283f3710d8f23891124eea9015c567f0becc61a19fab2f66a:f5131ca04c8be049a6eebd8648e6641512160d352e0a781e40591c878a633143:e338ac9986309fa2ec8e3782b9c7b4f73378165bc12884c7362c417f1a60bba8:discovery-owned:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:1f:8a855fb5b815304c4df71515dd7520e6a7d83c72d3d75eb248fb27b72b498d82:prune",
+        "targetID": "168",
+        "action": "Delete",
+        "phase": "Unknown",
+        "submittedAt": "2026-10-18T02:03:18Z",
+        "taskID": "01a14cbf-c41a-72b8-87eb-71b74a3b333d"
+      }
+    },
+    "verifiedJournal": {
+      "actionApplications": [
+        {
+          "section": "inventory",
+          "resource": "discovery-record:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:168",
+          "operation": {
+            "id": "3d10c5cb2b2a1373d3f6b7969f1306cf",
+            "configName": "sites",
+            "configUID": "config",
+            "configGeneration": 1,
+            "controllerGeneration": 1,
+            "section": "inventory",
+            "resource": "discovery-finalize:v1:1f57b5931faf48e283f3710d8f23891124eea9015c567f0becc61a19fab2f66a:f5131ca04c8be049a6eebd8648e6641512160d352e0a781e40591c878a633143:e338ac9986309fa2ec8e3782b9c7b4f73378165bc12884c7362c417f1a60bba8:discovery-owned:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:1f:8a855fb5b815304c4df71515dd7520e6a7d83c72d3d75eb248fb27b72b498d82:prune",
+            "targetID": "168",
+            "action": "Delete",
+            "phase": "Verified",
+            "submittedAt": "2026-10-18T02:03:18Z",
+            "taskID": "01a14cbf-c41a-72b8-87eb-71b74a3b333d"
+          },
+          "verifiedAt": "2026-10-18T02:03:20Z"
+        }
+      ],
+      "owners": [
+        {
+          "section": "inventory",
+          "configName": "sites",
+          "configUID": "config"
+        }
+      ],
+      "operation": {
+        "id": "3d10c5cb2b2a1373d3f6b7969f1306cf",
+        "configName": "sites",
+        "configUID": "config",
+        "configGeneration": 1,
+        "controllerGeneration": 1,
+        "section": "inventory",
+        "resource": "discovery-finalize:v1:1f57b5931faf48e283f3710d8f23891124eea9015c567f0becc61a19fab2f66a:f5131ca04c8be049a6eebd8648e6641512160d352e0a781e40591c878a633143:e338ac9986309fa2ec8e3782b9c7b4f73378165bc12884c7362c417f1a60bba8:discovery-owned:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:1f:8a855fb5b815304c4df71515dd7520e6a7d83c72d3d75eb248fb27b72b498d82:prune",
+        "targetID": "168",
+        "action": "Delete",
+        "phase": "Verified",
+        "submittedAt": "2026-10-18T02:03:18Z",
+        "taskID": "01a14cbf-c41a-72b8-87eb-71b74a3b333d"
+      }
+    },
+    "finalJournal": {
+      "actionApplications": [
+        {
+          "section": "inventory",
+          "resource": "discovery-record:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:168",
+          "operation": {
+            "id": "3d10c5cb2b2a1373d3f6b7969f1306cf",
+            "configName": "sites",
+            "configUID": "config",
+            "configGeneration": 1,
+            "controllerGeneration": 1,
+            "section": "inventory",
+            "resource": "discovery-finalize:v1:1f57b5931faf48e283f3710d8f23891124eea9015c567f0becc61a19fab2f66a:f5131ca04c8be049a6eebd8648e6641512160d352e0a781e40591c878a633143:e338ac9986309fa2ec8e3782b9c7b4f73378165bc12884c7362c417f1a60bba8:discovery-owned:c660ea22703377cfe932d63dbaed593567220c5775740265775d3a5179e6ac9f:1f:8a855fb5b815304c4df71515dd7520e6a7d83c72d3d75eb248fb27b72b498d82:prune",
+            "targetID": "168",
+            "action": "Delete",
+            "phase": "Verified",
+            "submittedAt": "2026-10-18T02:03:18Z",
+            "taskID": "01a14cbf-c41a-72b8-87eb-71b74a3b333d"
+          },
+          "verifiedAt": "2026-10-18T02:03:20Z"
+        }
+      ],
+      "owners": [
+        {
+          "section": "inventory",
+          "configName": "sites",
+          "configUID": "config"
+        }
+      ]
+    },
+    "KubernetesPersistence": "separate simulated API; not installed worker",
+    "unknownFault": "injected Accepted-to-Unknown in simulated Kubernetes only",
+    "nativeMutationCount": {
+      "create": 1,
+      "delete": 1
+    }
+  },
+  "gates": {
+    "localCleanup": "passed 4.162s before two added final-dispatch race cases",
+    "finalRegression": "passed 26.869s; discovery/shared-journal/wireless-deletion including all 16 execution scenarios",
+    "realAPI": "passed 23.078s; observation, preparation and all 16 execution scenarios",
+    "ND": "passed 4.888s complete package",
+    "softwareUpgrades": "passed 14.653s complete package",
+    "SWIM": "passed 3.427s all 47 non-live test functions",
+    "controllerUpgrades": "passed 6.988s selected upgrade/GNOI/SWIM functions",
+    "directGNOI": "passed 5.549s selected direct-device tests",
+    "native": "passed 33.717s; final job168 baseline and lab inventory identity preservation"
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-discovery-cleanup-execution",
+    "sha256": "c3662221396b3ad1ccc3cfc88dd540d7366af1983ed75a134f039176ed2577a2",
+    "installed": false
+  }
+}

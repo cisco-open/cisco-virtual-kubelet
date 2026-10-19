@@ -1,0 +1,49 @@
+{
+  "status": "recreation-history-protocol-qualified; execution integration incomplete",
+  "sources": {
+    "internal/controlleradapter/catalystcenter/site_recreation.go": "b64faf3a4b906731081a3d69f87e9071861ac67e27e9391f8f04d6a0ac5301f2",
+    "internal/controlleradapter/catalystcenter/site_recreation_test.go": "09700f59db4b8a200224fbf3f53a702dfa6f9a399783fcec35c1fbe516fb17b1",
+    "internal/controlleradapter/catalystcenter/site_recreation_envtest_test.go": "78039ecd58aec59d2fd2a6e7fe85ce26cfd4c1df39fea2c11d0d17134da7c5b6",
+    "internal/controlleradapter/catalystcenter/site_ownership.go": "bd2c3874a34a694c00651fbe14bd1f80655408642edfec1638e5031fe41e7619",
+    "internal/controlleradapter/catalystcenter/site_applied.go": "a328fa468387144730c7b802305b8145b257e3e1c0c33f70b4517129b49fe709",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery.go": "f55a4655035eef789d1ddef70ffa5020344eaeb096a582ef2c2dbc5b4ea8a074",
+    "internal/controlleradapter/catalystcenter/site_retirement_receipt.go": "f9cc17bdc5198fd1b939136adce65646c850433208a52fd98a315b2d891f2043",
+    "internal/controlleradapter/catalystcenter/site_dispatch_binding.go": "0824dea2ce9ff7c335a4a0467f3459489c8ebf2ef8f63191530274d6d169e0b4",
+    "internal/controlleradapter/catalystcenter/site_task_recovery.go": "f550e1f025d9864928f562e51d937705655a9ca58de8c8c9d55fb443c1eda9c1"
+  },
+  "gates": [
+    {
+      "log": "site-recreation-protocol-regression.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t74.939s",
+      "topLevelPassingTests": 59,
+      "passingSubcases": 813,
+      "sha256": "97165b19862509392d7a87bd95ccd0ae6d4841aaacef42bbc2d973b19b5ddfcf"
+    },
+    {
+      "log": "site-recreation-protocol-api.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t51.256s",
+      "topLevelPassingTests": 5,
+      "passingSubcases": 81,
+      "sha256": "b043c1142d527d793125474e1cb4f34fecca60e94460a0178f086a6fff361a3e"
+    }
+  ],
+  "contracts": {
+    "completeCreatorLatestRetirementCohortsRetained": true,
+    "originalOperationsAndTimestampsUnchangedByStaging": true,
+    "partialArchiveWithoutSuccessorRejected": true,
+    "everyArchiveReachableFromCurrentCreator": true,
+    "olderTaskAndUUIDReuseRejected": true,
+    "allThreePublicReadersValidateHistory": true,
+    "existingCreateRetirementBehaviorPreserved": true,
+    "recreationWriterEnabled": false,
+    "publicPruneEnabled": false
+  },
+  "scope": "Structural owned-area fixtures and real private Kubernetes API serialization. No new lab mutation or installed recreation qualification.",
+  "remaining": [
+    "recreation planning/native absence and ancestry preflight",
+    "guarded recreation submission and original-task recovery integration",
+    "atomic archival in production creator publication and capacity admission",
+    "parent/child retirement coordination and full consumer lifecycle checks",
+    "public compiler/policy, config deletion and installed complete-cycle qualification"
+  ]
+}

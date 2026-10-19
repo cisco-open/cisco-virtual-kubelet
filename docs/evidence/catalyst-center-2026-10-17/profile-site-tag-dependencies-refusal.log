@@ -1,0 +1,22 @@
+=== RUN   TestEnvtestProfileSiteTagDependencies
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer
+=== RUN   TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign
+--- PASS: TestEnvtestProfileSiteTagDependencies (33.10s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer (7.39s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign (7.21s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer (6.02s)
+    --- PASS: TestEnvtestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign (9.15s)
+=== RUN   TestProfileSiteTagDependencies
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign
+--- PASS: TestProfileSiteTagDependencies (10.64s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer (1.81s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign (2.83s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer (2.29s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign (3.70s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	46.148s

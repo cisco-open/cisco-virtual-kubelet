@@ -1,0 +1,23 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:125: submitted Create CVK-Q-Project-20261016-155450 01a1456c-6adf-7c93-bc27-377b5ebe6336
+    template_projects_live_test.go:125: submitted Update CVK-Q-Project-20261016-155450 01a1456c-7ac1-7a8d-abc6-75e4063d87c7
+    template_projects_live_test.go:151: project create and description update verified
+    template_projects_live_test.go:153: native template operation Create draft:CVK-Q-Project-20261016-155450#CVK-Commit-Qualification 01a1456c-982f-717b-8e66-5829aaf2975f
+    template_projects_live_test.go:153: native template operation Update commit:CVK-Q-Project-20261016-155450#CVK-Commit-Qualification 01a1456c-c93f-7ccf-8ac4-be0a488c7fa8
+    template_projects_live_test.go:153: native template operation Update draft:CVK-Q-Project-20261016-155450#CVK-Commit-Qualification 01a1456d-16d9-7404-8b0d-4e3a7c547403
+    template_projects_live_test.go:153: native template operation Update commit:CVK-Q-Project-20261016-155450#CVK-Commit-Qualification 01a1456d-5ddd-700d-9990-e031fb77996c
+    template_projects_live_test.go:153: native draft create/update and two committed versions verified 6fcbc167-5382-4aeb-ac34-1b380c9e47ae
+    template_pnp_reference_live_test.go:72: native unassigned workflow reference set verified 0
+    template_projects_live_test.go:153: generated unassigned workflow UUID 6ad249240bc0186771cac92a
+    template_pnp_reference_live_test.go:72: native unassigned workflow reference set verified 1
+    template_projects_live_test.go:153: generated unassigned workflow UUID 6ad249300bc0186771cac92b
+    template_pnp_reference_live_test.go:72: native unassigned workflow reference set verified 2
+    template_pnp_reference_live_test.go:72: native unassigned workflow reference set verified 1
+    template_pnp_reference_live_test.go:72: native unassigned workflow reference set verified 0
+    template_pnp_reference_live_test.go:169: exact unassigned workflow cleanup and reference removal verified; no device writes
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a1456e-7e6b-726c-ac17-a4700c0d0d51
+    template_commit_live_test.go:95: template fixture cleanup verified 6fcbc167-5382-4aeb-ac34-1b380c9e47ae
+    template_projects_live_test.go:99: isolated project cleanup verified de7ebb5e-f0c1-4d72-8f64-5002d579e02e
+--- PASS: TestLiveCatalystCenterTemplateProject (143.94s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	146.445s

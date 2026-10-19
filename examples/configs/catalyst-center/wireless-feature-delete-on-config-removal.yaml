@@ -1,0 +1,37 @@
+# The manager enrolls cleanup protection before the worker may apply this intent.
+# Keep the NetworkController active until this config finishes deletion.
+# Deletion removes only creation-receipt-owned, unchanged, unreferenced designs.
+# Imports are retained. An uncertain task or changed native design holds cleanup.
+# Worker permissions remain config-read/status-write; finalizers are manager-owned.
+# Apply, wait for Ready, then delete this NetworkControllerConfig to clean up.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-features
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [feature_templates]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Delete
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-feature-config-cleanup-example-v1
+  source:
+    inline:
+      catalyst_center:
+        feature_templates:
+          wireless:
+            cleanair:
+              - name: CA
+                radio_band: 2.4GHz
+                enable: false
+            rrm_fra:
+              - name: FRA
+                radio_band: 2.4GHz_5GHz
+                fra_status: false

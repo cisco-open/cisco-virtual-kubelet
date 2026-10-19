@@ -1,0 +1,83 @@
+{
+  "status": "Private source-independent PnP Delete journal/restart qualified; public routing incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1685,
+    "sha256": "abc5e6f5df4b036177ea41e30bad3c50081d9e7ea8e83a009f46d3c0f8811abd",
+    "productionSHA256": "7bde157cf64c8e0188b90f53dbcfc6adf8fa71c4c737ffdfae58498f3e7bf246"
+  },
+  "gates": {
+    "controlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 21,
+      "seconds": 12.858,
+      "log": "/private/tmp/cvk-pnp-delete-qualified-api.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1005,
+      "seconds": 56.921,
+      "log": "/private/tmp/cvk-pnp-delete-qualified-compat.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-pnp-delete-qualified-foundation.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-pnp-delete-qualified-cisco-vk",
+      "log": "/private/tmp/cvk-pnp-delete-qualified-build.log"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.75,
+      "log": "/private/tmp/cvk-pnp-delete-docs.log"
+    },
+    "formatSourceAndLedger": {
+      "result": "PASS",
+      "sourceUnchanged": true,
+      "uniquePinnedResourceRows": 93
+    }
+  },
+  "native": {
+    "result": "PASS",
+    "seconds": 47.2883038520813,
+    "id": "6ad587370bc0186771cb1124",
+    "generatedSerial": "CVK54332EA8",
+    "POST": 1,
+    "DELETE": 1,
+    "sourceReplacedWithEmptyDevicesBeforeDelete": true,
+    "originalRawSourceNotReconstructed": true,
+    "synchronousAckPersisted": true,
+    "freshAdapterAbsenceReceiptAndRelease": true,
+    "finalRows": 2,
+    "creatorPreserved": true,
+    "baselineAndNetworkRestored": true,
+    "physicalActions": 0,
+    "kubernetesPersistence": "simulated JSON; actual API tests separate"
+  },
+  "journal": {
+    "resource": "pnp-remove:v2:<uuid>:<creator-receipt-digest>",
+    "result": "pnp-removed:v1:<uuid>:<creator-receipt-digest>",
+    "newSchemaTransportPermission": false,
+    "genericVerifyBypassPrevented": true,
+    "missingCreatorOwnerOrAbsenceReceiptFencesRelease": true,
+    "unknownAcknowledgementFromAbsence": "refused; Unknown is retained",
+    "ambiguousPreparedStartAndReleaseRefused": true,
+    "sameAdmissionAtPrepareAndStart": true
+  },
+  "remaining": [
+    "Public family routing/reconciliation for omitted/missing sources",
+    "Whole-model native ordering/preflight and complete consumer/private-content protection",
+    "Proven no-dispatch retirement",
+    "CR deletion/spec binding, manager finalization and installed actors",
+    "Broader stack/contacted-device cases and remaining full 93-resource model scope"
+  ]
+}

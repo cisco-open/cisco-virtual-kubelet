@@ -1,0 +1,123 @@
+{
+  "result": "ROLLOUT_HEALTHY",
+  "image": {
+    "image": "cvk-catc-nac:20261012-52562fb00d19",
+    "sha256": "52562fb00d19b79d7a968d37fee68fb1f5335807a727ff7d984f2f817811a7b6"
+  },
+  "health": {
+    "image": "cvk-catc-nac:20261012-52562fb00d19",
+    "deployments": [
+      {
+        "namespace": "cisco-vk-system",
+        "name": "cisco-vk-cisco-virtual-kubelet-controller",
+        "image": "cvk-catc-nac:20261012-52562fb00d19",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-101-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-lab-103-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "cat9k-live-vk",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "catc-controller-worker",
+        "image": "cvk-catc-nac:20261012-52562fb00d19",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u20f3e68e-b127-4f2e-9a36-b66945135051-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u6afd6bd0-284d-4ee2-a6e4-638ca07976b4-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      },
+      {
+        "namespace": "cvk-live",
+        "name": "u782dc4b2-7e43-4188-8436-87633f0bf4fb-network",
+        "image": "cvk-catc-handoff:20261009-merge-admission",
+        "ready": 1
+      }
+    ],
+    "nodes": [
+      {
+        "name": "cat9k-lab-101",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-lab-103",
+        "ready": "True"
+      },
+      {
+        "name": "cat9k-live",
+        "ready": "True"
+      }
+    ],
+    "configuration": {
+      "name": "catc-nac-journal-qualification",
+      "uid": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+      "generation": 6,
+      "phase": "InSync",
+      "owners": [
+        {
+          "configName": "catc-wireless-features-qualification",
+          "configUID": "f1e12128-6587-4436-8e53-02600399e97b",
+          "section": "feature_templates"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "inventory"
+        },
+        {
+          "configName": "catc-global-credential-qualification",
+          "configUID": "3ca01713-4714-48ad-9fe2-b7ad5c39b305",
+          "section": "network_settings"
+        },
+        {
+          "configName": "catc-aaa-qualification",
+          "configUID": "4510b61d-d0e3-41a9-a7b5-72f104d51c4d",
+          "section": "system_settings"
+        },
+        {
+          "configName": "catc-nac-journal-qualification",
+          "configUID": "5c9724f7-af1a-4fe2-8b9c-724f996f2470",
+          "section": "templates"
+        },
+        {
+          "configName": "catc-wireless-qualification",
+          "configUID": "cffa4b5a-4403-4cf0-b9c2-8825b8daa5f1",
+          "section": "wireless"
+        }
+      ]
+    }
+  },
+  "scope": "Health before live AP credential qualification",
+  "tests": [
+    "Full controller adapter and migration race suite",
+    "Combined manifest power/AP ordering and accepted-operation restart",
+    "Durable credential version receipt and projection lag refusal",
+    "Pruned credential journal cannot become generic metadata or release its fence"
+  ],
+  "limits": [
+    "This health snapshot does not prove completion of the ongoing live qualification",
+    "No physical AP provisioning tested"
+  ]
+}

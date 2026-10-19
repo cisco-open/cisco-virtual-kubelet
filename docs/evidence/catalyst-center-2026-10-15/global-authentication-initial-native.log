@@ -1,0 +1,9 @@
+=== RUN   TestLiveCatalystCenterAuthTemplatesExecution
+    authentication_execution_live_test.go:147: unused global profile baseline 0ddb440b-e867-409c-9902-bc7a8c2ceec8 original wakeOnLan false
+    authentication_execution_live_test.go:200: global auth operation 0ddb440b-e867-409c-9902-bc7a8c2ceec8 01a1403b-20e6-7f5a-b672-fc893b3c86a3
+    authentication_execution_live_test.go:232: global auth changed fields beyond the selected wakeOnLan value <nil>
+    authentication_execution_live_test.go:167: global qualification not fully restored; retain original task evidence and inspect before another write 0ddb440b-e867-409c-9902-bc7a8c2ceec8 original wakeOnLan false
+--- FAIL: TestLiveCatalystCenterAuthTemplatesExecution (11.26s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.346s
+FAIL

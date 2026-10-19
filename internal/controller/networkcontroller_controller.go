@@ -45,8 +45,11 @@ import (
 	"sigs.k8s.io/yaml"
 
 	configv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 	ciskov1 "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1"
 	controlleradapter "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter"
+	configurationcontract "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
+	"github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol"
 )
 
 const (
@@ -66,15 +69,29 @@ const (
 // each registered NetworkController. It never imports a concrete adapter and
 // never calls a product API from the central manager.
 type NetworkControllerReconciler struct {
+	ConfigurationAdmissionBinding *configurationcontract.RuntimeAdmissionBinding
+	MetadataHandoffProtocol       string
 	client.Client
-	Image           string
-	ImagePullPolicy corev1.PullPolicy
-	Recorder        record.EventRecorder
+	APIReader                       client.Reader
+	ManageConfigurationReservations bool
+	// Nil disables new reservations while preserving retirement and recovery.
+	AuthorizeConfigurationReservation func(context.Context, *opsv1alpha1.ControllerConfigurationReservation) error
+	// Nil retains observation-only metadata preparation; the composition root
+	// must verify compatible acquisition/claim/settlement before supplying it.
+	AuthorizeMetadataHandoff configurationcontract.MetadataHandoffRuntimeCheck
+	// Nil retains terminal metadata custody until compatible settlement is installed.
+	AuthorizeMetadataSettlement configurationcontract.MetadataSettlementRuntimeCheck
+	Image                       string
+	ImagePullPolicy             corev1.PullPolicy
+	Recorder                    record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=cisco.vk,resources=networkcontrollers,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=cisco.vk,resources=networkcontrollers/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=config.cisco.vk,resources=networkcontrollerconfigs,verbs=get;list;watch
+// Default-off startup inspects retained reservations. Mutation/watch authority
+// belongs to the separately installed/retained managed-topology manager role.
+// +kubebuilder:rbac:groups=ops.cisco.vk,resources=controllerconfigurationreservations,verbs=get;list
+// +kubebuilder:rbac:groups=config.cisco.vk,resources=networkcontrollerconfigs,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
@@ -82,7 +99,7 @@ type NetworkControllerReconciler struct {
 // The worker ClusterRoles are installed by Helm and bound into each
 // controller namespace. Any further worker role must be installed and
 // explicitly added to this audited bind allow-list when its adapter lands.
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet-controller-worker;cisco-virtual-kubelet-controller-worker-device-adoption,verbs=bind
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,resourceNames=cisco-virtual-kubelet-controller-worker;cisco-virtual-kubelet-controller-worker-device-adoption;cisco-virtual-kubelet-controller-worker-swim,verbs=bind
 
 // Reconcile creates the non-sensitive bootstrap ConfigMap, dedicated Service
 // Account and RoleBinding, and restricted worker Deployment for a registered
@@ -93,6 +110,13 @@ func (r *NetworkControllerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err := r.Get(ctx, req.NamespacedName, &controller); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	pendingReservations, err := r.reconcileConfigurationReservationRetirement(ctx, &controller)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if controller.DeletionTimestamp != nil && pendingReservations {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
 	if controller.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(&controller, networkControllerFinalizer) {
 			controllerutil.AddFinalizer(&controller, networkControllerFinalizer)
@@ -101,6 +125,13 @@ func (r *NetworkControllerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			}
 		}
 	} else {
+		// The controller owns the durable mutation journal, so removing all
+		// referring configs must not erase an outstanding remote operation.
+		// Observation/recovery may continue; this is not a new submission permit.
+		if controller.Status.Configuration != nil && controller.Status.Configuration.Operation != nil {
+			logger.Info("retaining deleting NetworkController while configuration operation requires recovery")
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
 		configs, err := r.dependentNetworkControllerConfigs(ctx, &controller)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -122,6 +153,38 @@ func (r *NetworkControllerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		logger.Info("retaining deleting NetworkController worker until dependent configs are removed",
 			"dependentConfigs", len(configs.Items),
 		)
+	}
+
+	// Preserve the exact metadata worker and all its bootstrap/access objects
+	// until original custody is settled and retired. An in-flight/Unknown or
+	// certified-refused journal must not roll merely because desired inputs do.
+	if controller.Status.Configuration != nil && controller.Status.Configuration.MetadataHandoff != nil {
+		if op := controller.Status.Configuration.Operation; op != nil && op.Phase == "Prepared" && !controller.Spec.Paused && controller.DeletionTimestamp == nil {
+			if _, err := r.reconcileConfigurationReservationCreation(ctx, &controller); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+
+	// Custody retirement and worker journal finishing are separate CAS steps.
+	// Preserve the original worker through that gap, including pause/spec edits;
+	// otherwise quiescing or replacing it can strand an already Verified result.
+	if controller.Status.Configuration != nil && controller.Status.Configuration.Operation != nil && controller.Status.Configuration.Operation.Phase == "Verified" {
+		if scope := controlleradapter.ConfigurationMetadataScopeFor(string(controller.Spec.Type)); scope != nil && scope.Selected != nil && scope.Selected(controller.DeepCopy()) {
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
+	}
+
+	// Group journals bind the connector Pod incarnation. Until explicit worker
+	// handoff is qualified, preserve its bootstrap, RBAC and Deployment through
+	// completion/cancellation and settlement. Even Verified retains recovery
+	// work until the connector clears the journal after every member settles.
+	if controller.Spec.Type == "catalyst-center" && controller.Status.Configuration != nil && controller.Status.Configuration.Operation != nil && controller.Status.Configuration.Operation.PhysicalGroup != nil {
+		if _, err := r.reconcileConfigurationReservationCreation(ctx, &controller); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
 	if err := ciskov1.ValidateNetworkController(&controller); err != nil {
@@ -179,6 +242,13 @@ func (r *NetworkControllerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}
 		return ctrl.Result{Requeue: !quiesced}, nil
 	}
+	lifecycleChanged, lifecyclePending, err := r.reconcileConfigLifecycles(ctx, &controller)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if lifecycleChanged {
+		return ctrl.Result{Requeue: true}, nil
+	}
 	intentSecretSources, skippedIntentSecrets, err := r.controllerIntentSecretProjections(ctx, &controller)
 	if err != nil {
 		// A transient cache/list failure must not tear down a healthy endpoint
@@ -229,6 +299,10 @@ func (r *NetworkControllerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	if err := r.reconcileConfigurationReadAccess(ctx, &controller); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	deployment, ready, err := r.reconcileWorkerDeployment(
 		ctx,
 		&controller,
@@ -249,7 +323,15 @@ func (r *NetworkControllerReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err := r.updateAvailableStatus(ctx, &controller, descriptor, deployment); err != nil {
 		return ctrl.Result{}, err
 	}
+	creatingReservation, err := r.reconcileConfigurationReservationCreation(ctx, &controller)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	pendingReservations = pendingReservations || creatingReservation
 	logger.Info("controller worker reconciled", "deployment", deployment.Name, "paused", controller.Spec.Paused)
+	if pendingReservations || lifecyclePending {
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -542,7 +624,11 @@ func (r *NetworkControllerReconciler) mutateWorkerDeployment(
 			},
 		},
 		Containers: []corev1.Container{{
-			Name:            "controller-worker",
+			Name: "controller-worker",
+			Env: []corev1.EnvVar{
+				{Name: controlleradapter.EnvWorkerPodName, ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.name"}}},
+				{Name: controlleradapter.EnvWorkerPodUID, ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{APIVersion: "v1", FieldPath: "metadata.uid"}}},
+			},
 			Image:           image,
 			ImagePullPolicy: imagePullPolicy,
 			Args: []string{
@@ -581,6 +667,27 @@ func (r *NetworkControllerReconciler) mutateWorkerDeployment(
 			VolumeMounts: volumeMounts,
 		}},
 		Volumes: volumes,
+	}
+	encoded, err := injectConfigurationAdmissionBinding(&deployment.Spec.Template, r.ConfigurationAdmissionBinding, controller.Spec.Type == "catalyst-center")
+	if err != nil {
+		return err
+	}
+	metadataProtocol := ""
+	if controller.Spec.Type == "catalyst-center" {
+		metadataProtocol = r.MetadataHandoffProtocol
+		if metadataProtocol != "" {
+			if metadataProtocol != ciskov1.NetworkControllerMetadataHandoffProtocol || r.ConfigurationAdmissionBinding == nil || r.ConfigurationAdmissionBinding.Validate() != nil || r.ConfigurationAdmissionBinding.LeaseNamespace == "" {
+				return fmt.Errorf("metadata worker requires the exact installed protocol and shared admission binding")
+			}
+			deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{Name: managedprotocol.EnvControllerMetadataProtocol, Value: metadataProtocol})
+		}
+	}
+	if encoded != "" {
+		hashInput := bootstrap + "\n" + encoded
+		if metadataProtocol != "" {
+			hashInput += "\n" + metadataProtocol
+		}
+		deployment.Spec.Template.Annotations["cisco.vk/controller-contract-hash"] = networkControllerContractHash(controller, descriptor, hashInput)
 	}
 	return nil
 }
@@ -769,6 +876,10 @@ func (r *NetworkControllerReconciler) quiesceWorker(ctx context.Context, control
 		}
 	} else if !apierrors.IsNotFound(err) {
 		return false, fmt.Errorf("fetch controller worker Deployment: %w", err)
+	}
+
+	if pending, err := r.retireConfigurationReadAccess(ctx, controller); err != nil || pending {
+		return false, err
 	}
 
 	objects := []client.Object{
@@ -1077,10 +1188,11 @@ func networkControllerWorkerRequests(_ context.Context, object client.Object) []
 	if name == "" || annotations[networkControllerUIDAnnotation] == "" {
 		return nil
 	}
-	return []ctrl.Request{{NamespacedName: client.ObjectKey{
-		Namespace: object.GetNamespace(),
-		Name:      name,
-	}}}
+	namespace := object.GetNamespace()
+	if installationNamespace := annotations[configurationAccessControllerNamespace]; installationNamespace != "" && object.GetLabels()[configurationAccessControllerUID] == annotations[networkControllerUIDAnnotation] {
+		namespace = installationNamespace
+	}
+	return []ctrl.Request{{NamespacedName: client.ObjectKey{Namespace: namespace, Name: name}}}
 }
 
 // specOrDeletionChangedPredicate prevents status-only writes from every
@@ -1095,7 +1207,7 @@ func specOrDeletionChangedPredicate() predicate.Predicate {
 			if update.ObjectOld == nil || update.ObjectNew == nil {
 				return true
 			}
-			return update.ObjectOld.GetGeneration() != update.ObjectNew.GetGeneration() ||
+			return configLifecycleStatusChanged(update.ObjectOld, update.ObjectNew) || update.ObjectOld.GetGeneration() != update.ObjectNew.GetGeneration() ||
 				!reflect.DeepEqual(update.ObjectOld.GetDeletionTimestamp(), update.ObjectNew.GetDeletionTimestamp()) ||
 				!reflect.DeepEqual(update.ObjectOld.GetFinalizers(), update.ObjectNew.GetFinalizers())
 		},
@@ -1122,10 +1234,14 @@ func (r *NetworkControllerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	); err != nil {
 		return fmt.Errorf("index NetworkControllerConfig controllerRef: %w", err)
 	}
+	controllerPredicate := specOrDeletionChangedPredicate()
+	if r.ManageConfigurationReservations {
+		controllerPredicate = configurationReservationControllerPredicate()
+	}
 	workerHandler := handler.EnqueueRequestsFromMapFunc(networkControllerWorkerRequests)
 	endpointPeerHandler := handler.EnqueueRequestsFromMapFunc(r.networkControllerEndpointPeerRequests)
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&ciskov1.NetworkController{}, builder.WithPredicates(specOrDeletionChangedPredicate())).
+	b := ctrl.NewControllerManagedBy(mgr).
+		For(&ciskov1.NetworkController{}, builder.WithPredicates(controllerPredicate)).
 		Watches(&ciskov1.NetworkController{}, endpointPeerHandler, builder.WithPredicates(specOrDeletionChangedPredicate())).
 		Watches(&appsv1.Deployment{}, workerHandler).
 		Watches(&corev1.ConfigMap{}, workerHandler).
@@ -1142,6 +1258,9 @@ func (r *NetworkControllerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					Name:      config.Spec.ControllerRef.Name,
 				}}}
 			},
-		), builder.WithPredicates(specOrDeletionChangedPredicate())).
-		Complete(r)
+		), builder.WithPredicates(specOrDeletionChangedPredicate()))
+	if r.ManageConfigurationReservations {
+		b = b.Watches(&opsv1alpha1.ControllerConfigurationReservation{}, handler.EnqueueRequestsFromMapFunc(configurationReservationControllerRequests)).Watches(&rbacv1.ClusterRoleBinding{}, workerHandler)
+	}
+	return b.Complete(r)
 }

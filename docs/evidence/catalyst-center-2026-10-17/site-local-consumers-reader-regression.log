@@ -1,0 +1,1364 @@
+=== RUN   TestAAANetworkPreflightRefusesPartialApply
+=== RUN   TestAAANetworkPreflightRefusesPartialApply/aaa-ownership
+=== RUN   TestAAANetworkPreflightRefusesPartialApply/network-response
+=== RUN   TestAAANetworkPreflightRefusesPartialApply/aaa-registration
+--- PASS: TestAAANetworkPreflightRefusesPartialApply (0.04s)
+    --- PASS: TestAAANetworkPreflightRefusesPartialApply/aaa-ownership (0.02s)
+    --- PASS: TestAAANetworkPreflightRefusesPartialApply/network-response (0.01s)
+    --- PASS: TestAAANetworkPreflightRefusesPartialApply/aaa-registration (0.01s)
+=== RUN   TestAAANetworkBindingSplitPreservesSharedProfile
+--- PASS: TestAAANetworkBindingSplitPreservesSharedProfile (0.00s)
+=== RUN   TestAAASettingsRequireRegisteredServers
+=== RUN   TestAAASettingsRequireRegisteredServers/valid
+=== RUN   TestAAASettingsRequireRegisteredServers/dual-protocol
+=== RUN   TestAAASettingsRequireRegisteredServers/missing
+=== RUN   TestAAASettingsRequireRegisteredServers/wrong-protocol
+=== RUN   TestAAASettingsRequireRegisteredServers/ise-record
+=== RUN   TestAAASettingsRequireRegisteredServers/unknown-type
+=== RUN   TestAAASettingsRequireRegisteredServers/secondary-missing
+=== RUN   TestAAASettingsRequireRegisteredServers/reader-failure
+=== RUN   TestAAASettingsRequireRegisteredServers/replacement-before-submit
+--- PASS: TestAAASettingsRequireRegisteredServers (0.10s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/valid (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/dual-protocol (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/missing (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/wrong-protocol (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/ise-record (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/unknown-type (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/secondary-missing (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/reader-failure (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/replacement-before-submit (0.01s)
+=== RUN   TestAAASettingsVerificationRefusesMissingRegistration
+--- PASS: TestAAASettingsVerificationRefusesMissingRegistration (0.01s)
+=== RUN   TestAAASettingsApplyParser
+--- PASS: TestAAASettingsApplyParser (0.00s)
+=== RUN   TestAAASettingsExecutorLifecycle
+=== RUN   TestAAASettingsExecutorLifecycle/initial
+=== RUN   TestAAASettingsExecutorLifecycle/noop
+=== RUN   TestAAASettingsExecutorLifecycle/rotate
+=== RUN   TestAAASettingsExecutorLifecycle/metadata
+=== RUN   TestAAASettingsExecutorLifecycle/remove-secondary
+=== RUN   TestAAASettingsExecutorLifecycle/foreign
+=== RUN   TestAAASettingsExecutorLifecycle/replaced
+=== RUN   TestAAASettingsExecutorLifecycle/rollback
+=== RUN   TestAAASettingsExecutorLifecycle/remapped
+=== RUN   TestAAASettingsExecutorLifecycle/duplicate
+=== RUN   TestAAASettingsExecutorLifecycle/readback-missing
+=== RUN   TestAAASettingsExecutorLifecycle/bad-task
+--- PASS: TestAAASettingsExecutorLifecycle (0.16s)
+    --- PASS: TestAAASettingsExecutorLifecycle/initial (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/noop (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/rotate (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/metadata (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/remove-secondary (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/foreign (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/replaced (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/rollback (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/remapped (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/duplicate (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/readback-missing (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/bad-task (0.01s)
+=== RUN   TestAAASettingsManifestRotateRestart
+=== RUN   TestAAASettingsManifestRotateRestart/root/combined=false
+=== RUN   TestAAASettingsManifestRotateRestart/root/combined=true
+=== RUN   TestAAASettingsManifestRotateRestart/area/combined=false
+=== RUN   TestAAASettingsManifestRotateRestart/area/combined=true
+--- PASS: TestAAASettingsManifestRotateRestart (3.32s)
+    --- PASS: TestAAASettingsManifestRotateRestart/root/combined=false (0.81s)
+    --- PASS: TestAAASettingsManifestRotateRestart/root/combined=true (1.12s)
+    --- PASS: TestAAASettingsManifestRotateRestart/area/combined=false (0.23s)
+    --- PASS: TestAAASettingsManifestRotateRestart/area/combined=true (1.16s)
+=== RUN   TestAAAResetShapesRemainDistinct
+--- PASS: TestAAAResetShapesRemainDistinct (0.00s)
+=== RUN   TestAAAReporting
+=== RUN   TestAAAReporting/match
+=== RUN   TestAAAReporting/changed
+=== RUN   TestAAAReporting/inherited
+=== RUN   TestAAAReporting/unset
+=== RUN   TestAAAReporting/missing-group
+=== RUN   TestAAAReporting/bad-type
+=== RUN   TestAAAReporting/missing-pan
+=== RUN   TestAAAReporting/null-primary
+=== RUN   TestAAAReporting/partial
+--- PASS: TestAAAReporting (0.10s)
+    --- PASS: TestAAAReporting/match (0.01s)
+    --- PASS: TestAAAReporting/changed (0.01s)
+    --- PASS: TestAAAReporting/inherited (0.01s)
+    --- PASS: TestAAAReporting/unset (0.01s)
+    --- PASS: TestAAAReporting/missing-group (0.01s)
+    --- PASS: TestAAAReporting/bad-type (0.01s)
+    --- PASS: TestAAAReporting/missing-pan (0.01s)
+    --- PASS: TestAAAReporting/null-primary (0.01s)
+    --- PASS: TestAAAReporting/partial (0.01s)
+=== RUN   TestAAAIntentRejected
+--- PASS: TestAAAIntentRejected (0.00s)
+=== RUN   TestAAAConfigReportScope
+=== RUN   TestAAAConfigReportScope/report
+=== RUN   TestAAAConfigReportScope/secret
+=== RUN   TestAAAConfigReportScope/apply
+--- PASS: TestAAAConfigReportScope (0.06s)
+    --- PASS: TestAAAConfigReportScope/report (0.03s)
+    --- PASS: TestAAAConfigReportScope/secret (0.02s)
+    --- PASS: TestAAAConfigReportScope/apply (0.02s)
+=== RUN   TestNetworkApplications
+=== RUN   TestNetworkApplications/ntp/complete
+=== RUN   TestNetworkApplications/ntp/unknown
+=== RUN   TestNetworkApplications/ntp/replace
+=== RUN   TestNetworkApplications/ntp/target-replaced
+=== RUN   TestNetworkApplications/ntp/duplicate
+=== RUN   TestNetworkApplications/ntp/logical-duplicate
+=== RUN   TestNetworkApplications/ntp/legacy
+=== RUN   TestNetworkApplications/ntp/generic-verified
+=== RUN   TestNetworkApplications/ntp/drop-receipt
+=== RUN   TestNetworkApplications/ntp/drop-seal
+=== RUN   TestNetworkApplications/ntp/drop-companion
+=== RUN   TestNetworkApplications/ntp/lost-ack
+=== RUN   TestNetworkApplications/ntp/history-race
+=== RUN   TestNetworkApplications/ntp/preflight-history
+=== RUN   TestNetworkApplications/ntp/preflight-history-read-failure
+=== RUN   TestNetworkApplications/ntp/replace-full
+=== RUN   TestNetworkApplications/ntp/drop-row-prefix
+=== RUN   TestNetworkApplications/dhcp/complete
+=== RUN   TestNetworkApplications/dhcp/unknown
+=== RUN   TestNetworkApplications/dhcp/replace
+=== RUN   TestNetworkApplications/dhcp/target-replaced
+=== RUN   TestNetworkApplications/dhcp/duplicate
+=== RUN   TestNetworkApplications/dhcp/logical-duplicate
+=== RUN   TestNetworkApplications/dhcp/legacy
+=== RUN   TestNetworkApplications/dhcp/generic-verified
+=== RUN   TestNetworkApplications/dhcp/drop-receipt
+=== RUN   TestNetworkApplications/dhcp/drop-seal
+=== RUN   TestNetworkApplications/dhcp/drop-companion
+=== RUN   TestNetworkApplications/dhcp/lost-ack
+=== RUN   TestNetworkApplications/dhcp/history-race
+=== RUN   TestNetworkApplications/dhcp/preflight-history
+=== RUN   TestNetworkApplications/dhcp/preflight-history-read-failure
+=== RUN   TestNetworkApplications/dhcp/replace-full
+=== RUN   TestNetworkApplications/dhcp/drop-row-prefix
+=== RUN   TestNetworkApplications/dns/complete
+=== RUN   TestNetworkApplications/dns/unknown
+=== RUN   TestNetworkApplications/dns/replace
+=== RUN   TestNetworkApplications/dns/target-replaced
+=== RUN   TestNetworkApplications/dns/duplicate
+=== RUN   TestNetworkApplications/dns/logical-duplicate
+=== RUN   TestNetworkApplications/dns/legacy
+=== RUN   TestNetworkApplications/dns/generic-verified
+=== RUN   TestNetworkApplications/dns/drop-receipt
+=== RUN   TestNetworkApplications/dns/drop-seal
+=== RUN   TestNetworkApplications/dns/drop-companion
+=== RUN   TestNetworkApplications/dns/lost-ack
+=== RUN   TestNetworkApplications/dns/history-race
+=== RUN   TestNetworkApplications/dns/preflight-history
+=== RUN   TestNetworkApplications/dns/preflight-history-read-failure
+=== RUN   TestNetworkApplications/dns/replace-full
+=== RUN   TestNetworkApplications/dns/drop-row-prefix
+=== RUN   TestNetworkApplications/timezone/complete
+=== RUN   TestNetworkApplications/timezone/unknown
+=== RUN   TestNetworkApplications/timezone/replace
+=== RUN   TestNetworkApplications/timezone/target-replaced
+=== RUN   TestNetworkApplications/timezone/duplicate
+=== RUN   TestNetworkApplications/timezone/logical-duplicate
+=== RUN   TestNetworkApplications/timezone/legacy
+=== RUN   TestNetworkApplications/timezone/generic-verified
+=== RUN   TestNetworkApplications/timezone/drop-receipt
+=== RUN   TestNetworkApplications/timezone/drop-seal
+=== RUN   TestNetworkApplications/timezone/drop-companion
+=== RUN   TestNetworkApplications/timezone/lost-ack
+=== RUN   TestNetworkApplications/timezone/history-race
+=== RUN   TestNetworkApplications/timezone/preflight-history
+=== RUN   TestNetworkApplications/timezone/preflight-history-read-failure
+=== RUN   TestNetworkApplications/timezone/replace-full
+=== RUN   TestNetworkApplications/timezone/drop-row-prefix
+=== RUN   TestNetworkApplications/banner/complete
+=== RUN   TestNetworkApplications/banner/unknown
+=== RUN   TestNetworkApplications/banner/replace
+=== RUN   TestNetworkApplications/banner/target-replaced
+=== RUN   TestNetworkApplications/banner/duplicate
+=== RUN   TestNetworkApplications/banner/logical-duplicate
+=== RUN   TestNetworkApplications/banner/legacy
+=== RUN   TestNetworkApplications/banner/generic-verified
+=== RUN   TestNetworkApplications/banner/drop-receipt
+=== RUN   TestNetworkApplications/banner/drop-seal
+=== RUN   TestNetworkApplications/banner/drop-companion
+=== RUN   TestNetworkApplications/banner/lost-ack
+=== RUN   TestNetworkApplications/banner/history-race
+=== RUN   TestNetworkApplications/banner/preflight-history
+=== RUN   TestNetworkApplications/banner/preflight-history-read-failure
+=== RUN   TestNetworkApplications/banner/replace-full
+=== RUN   TestNetworkApplications/banner/drop-row-prefix
+=== RUN   TestNetworkApplications/telemetry/complete
+=== RUN   TestNetworkApplications/telemetry/unknown
+=== RUN   TestNetworkApplications/telemetry/replace
+=== RUN   TestNetworkApplications/telemetry/target-replaced
+=== RUN   TestNetworkApplications/telemetry/duplicate
+=== RUN   TestNetworkApplications/telemetry/logical-duplicate
+=== RUN   TestNetworkApplications/telemetry/legacy
+=== RUN   TestNetworkApplications/telemetry/generic-verified
+=== RUN   TestNetworkApplications/telemetry/drop-receipt
+=== RUN   TestNetworkApplications/telemetry/drop-seal
+=== RUN   TestNetworkApplications/telemetry/drop-companion
+=== RUN   TestNetworkApplications/telemetry/lost-ack
+=== RUN   TestNetworkApplications/telemetry/history-race
+=== RUN   TestNetworkApplications/telemetry/preflight-history
+=== RUN   TestNetworkApplications/telemetry/preflight-history-read-failure
+=== RUN   TestNetworkApplications/telemetry/replace-full
+=== RUN   TestNetworkApplications/telemetry/drop-row-prefix
+--- PASS: TestNetworkApplications (21.96s)
+    --- PASS: TestNetworkApplications/ntp/complete (0.10s)
+    --- PASS: TestNetworkApplications/ntp/unknown (0.10s)
+    --- PASS: TestNetworkApplications/ntp/replace (0.18s)
+    --- PASS: TestNetworkApplications/ntp/target-replaced (0.16s)
+    --- PASS: TestNetworkApplications/ntp/duplicate (0.14s)
+    --- PASS: TestNetworkApplications/ntp/logical-duplicate (0.14s)
+    --- PASS: TestNetworkApplications/ntp/legacy (0.09s)
+    --- PASS: TestNetworkApplications/ntp/generic-verified (0.11s)
+    --- PASS: TestNetworkApplications/ntp/drop-receipt (0.07s)
+    --- PASS: TestNetworkApplications/ntp/drop-seal (0.09s)
+    --- PASS: TestNetworkApplications/ntp/drop-companion (0.08s)
+    --- PASS: TestNetworkApplications/ntp/lost-ack (0.10s)
+    --- PASS: TestNetworkApplications/ntp/history-race (0.07s)
+    --- PASS: TestNetworkApplications/ntp/preflight-history (0.06s)
+    --- PASS: TestNetworkApplications/ntp/preflight-history-read-failure (0.05s)
+    --- PASS: TestNetworkApplications/ntp/replace-full (2.02s)
+    --- PASS: TestNetworkApplications/ntp/drop-row-prefix (0.07s)
+    --- PASS: TestNetworkApplications/dhcp/complete (0.10s)
+    --- PASS: TestNetworkApplications/dhcp/unknown (0.10s)
+    --- PASS: TestNetworkApplications/dhcp/replace (0.17s)
+    --- PASS: TestNetworkApplications/dhcp/target-replaced (0.15s)
+    --- PASS: TestNetworkApplications/dhcp/duplicate (0.14s)
+    --- PASS: TestNetworkApplications/dhcp/logical-duplicate (0.14s)
+    --- PASS: TestNetworkApplications/dhcp/legacy (0.09s)
+    --- PASS: TestNetworkApplications/dhcp/generic-verified (0.10s)
+    --- PASS: TestNetworkApplications/dhcp/drop-receipt (0.07s)
+    --- PASS: TestNetworkApplications/dhcp/drop-seal (0.08s)
+    --- PASS: TestNetworkApplications/dhcp/drop-companion (0.08s)
+    --- PASS: TestNetworkApplications/dhcp/lost-ack (0.10s)
+    --- PASS: TestNetworkApplications/dhcp/history-race (0.07s)
+    --- PASS: TestNetworkApplications/dhcp/preflight-history (0.06s)
+    --- PASS: TestNetworkApplications/dhcp/preflight-history-read-failure (0.06s)
+    --- PASS: TestNetworkApplications/dhcp/replace-full (1.96s)
+    --- PASS: TestNetworkApplications/dhcp/drop-row-prefix (0.07s)
+    --- PASS: TestNetworkApplications/dns/complete (0.11s)
+    --- PASS: TestNetworkApplications/dns/unknown (0.11s)
+    --- PASS: TestNetworkApplications/dns/replace (0.18s)
+    --- PASS: TestNetworkApplications/dns/target-replaced (0.18s)
+    --- PASS: TestNetworkApplications/dns/duplicate (0.15s)
+    --- PASS: TestNetworkApplications/dns/logical-duplicate (0.24s)
+    --- PASS: TestNetworkApplications/dns/legacy (0.09s)
+    --- PASS: TestNetworkApplications/dns/generic-verified (0.10s)
+    --- PASS: TestNetworkApplications/dns/drop-receipt (0.07s)
+    --- PASS: TestNetworkApplications/dns/drop-seal (0.07s)
+    --- PASS: TestNetworkApplications/dns/drop-companion (0.08s)
+    --- PASS: TestNetworkApplications/dns/lost-ack (0.10s)
+    --- PASS: TestNetworkApplications/dns/history-race (0.08s)
+    --- PASS: TestNetworkApplications/dns/preflight-history (0.06s)
+    --- PASS: TestNetworkApplications/dns/preflight-history-read-failure (0.06s)
+    --- PASS: TestNetworkApplications/dns/replace-full (2.09s)
+    --- PASS: TestNetworkApplications/dns/drop-row-prefix (0.08s)
+    --- PASS: TestNetworkApplications/timezone/complete (0.10s)
+    --- PASS: TestNetworkApplications/timezone/unknown (0.10s)
+    --- PASS: TestNetworkApplications/timezone/replace (0.18s)
+    --- PASS: TestNetworkApplications/timezone/target-replaced (0.16s)
+    --- PASS: TestNetworkApplications/timezone/duplicate (0.14s)
+    --- PASS: TestNetworkApplications/timezone/logical-duplicate (0.14s)
+    --- PASS: TestNetworkApplications/timezone/legacy (0.09s)
+    --- PASS: TestNetworkApplications/timezone/generic-verified (0.10s)
+    --- PASS: TestNetworkApplications/timezone/drop-receipt (0.07s)
+    --- PASS: TestNetworkApplications/timezone/drop-seal (0.07s)
+    --- PASS: TestNetworkApplications/timezone/drop-companion (0.08s)
+    --- PASS: TestNetworkApplications/timezone/lost-ack (0.10s)
+    --- PASS: TestNetworkApplications/timezone/history-race (0.07s)
+    --- PASS: TestNetworkApplications/timezone/preflight-history (0.06s)
+    --- PASS: TestNetworkApplications/timezone/preflight-history-read-failure (0.06s)
+    --- PASS: TestNetworkApplications/timezone/replace-full (1.98s)
+    --- PASS: TestNetworkApplications/timezone/drop-row-prefix (0.07s)
+    --- PASS: TestNetworkApplications/banner/complete (0.10s)
+    --- PASS: TestNetworkApplications/banner/unknown (0.11s)
+    --- PASS: TestNetworkApplications/banner/replace (0.18s)
+    --- PASS: TestNetworkApplications/banner/target-replaced (0.16s)
+    --- PASS: TestNetworkApplications/banner/duplicate (0.14s)
+    --- PASS: TestNetworkApplications/banner/logical-duplicate (0.14s)
+    --- PASS: TestNetworkApplications/banner/legacy (0.09s)
+    --- PASS: TestNetworkApplications/banner/generic-verified (0.10s)
+    --- PASS: TestNetworkApplications/banner/drop-receipt (0.07s)
+    --- PASS: TestNetworkApplications/banner/drop-seal (0.07s)
+    --- PASS: TestNetworkApplications/banner/drop-companion (0.08s)
+    --- PASS: TestNetworkApplications/banner/lost-ack (0.10s)
+    --- PASS: TestNetworkApplications/banner/history-race (0.07s)
+    --- PASS: TestNetworkApplications/banner/preflight-history (0.06s)
+    --- PASS: TestNetworkApplications/banner/preflight-history-read-failure (0.05s)
+    --- PASS: TestNetworkApplications/banner/replace-full (1.97s)
+    --- PASS: TestNetworkApplications/banner/drop-row-prefix (0.07s)
+    --- PASS: TestNetworkApplications/telemetry/complete (0.11s)
+    --- PASS: TestNetworkApplications/telemetry/unknown (0.12s)
+    --- PASS: TestNetworkApplications/telemetry/replace (0.21s)
+    --- PASS: TestNetworkApplications/telemetry/target-replaced (0.19s)
+    --- PASS: TestNetworkApplications/telemetry/duplicate (0.17s)
+    --- PASS: TestNetworkApplications/telemetry/logical-duplicate (0.17s)
+    --- PASS: TestNetworkApplications/telemetry/legacy (0.10s)
+    --- PASS: TestNetworkApplications/telemetry/generic-verified (0.11s)
+    --- PASS: TestNetworkApplications/telemetry/drop-receipt (0.08s)
+    --- PASS: TestNetworkApplications/telemetry/drop-seal (0.08s)
+    --- PASS: TestNetworkApplications/telemetry/drop-companion (0.09s)
+    --- PASS: TestNetworkApplications/telemetry/lost-ack (0.11s)
+    --- PASS: TestNetworkApplications/telemetry/history-race (0.09s)
+    --- PASS: TestNetworkApplications/telemetry/preflight-history (0.06s)
+    --- PASS: TestNetworkApplications/telemetry/preflight-history-read-failure (0.06s)
+    --- PASS: TestNetworkApplications/telemetry/replace-full (1.98s)
+    --- PASS: TestNetworkApplications/telemetry/drop-row-prefix (0.09s)
+=== RUN   TestNetworkApplicationWholeCohortCapacity
+--- PASS: TestNetworkApplicationWholeCohortCapacity (0.39s)
+=== RUN   TestNetworkApplicationCohortSeal
+--- PASS: TestNetworkApplicationCohortSeal (0.00s)
+=== RUN   TestNetworkApplicationExistingConvergenceIsUnowned
+=== RUN   TestNetworkApplicationExistingConvergenceIsUnowned/ntp
+=== RUN   TestNetworkApplicationExistingConvergenceIsUnowned/dhcp
+=== RUN   TestNetworkApplicationExistingConvergenceIsUnowned/dns
+=== RUN   TestNetworkApplicationExistingConvergenceIsUnowned/timezone
+=== RUN   TestNetworkApplicationExistingConvergenceIsUnowned/banner
+=== RUN   TestNetworkApplicationExistingConvergenceIsUnowned/telemetry
+--- PASS: TestNetworkApplicationExistingConvergenceIsUnowned (0.25s)
+    --- PASS: TestNetworkApplicationExistingConvergenceIsUnowned/ntp (0.04s)
+    --- PASS: TestNetworkApplicationExistingConvergenceIsUnowned/dhcp (0.04s)
+    --- PASS: TestNetworkApplicationExistingConvergenceIsUnowned/dns (0.04s)
+    --- PASS: TestNetworkApplicationExistingConvergenceIsUnowned/timezone (0.04s)
+    --- PASS: TestNetworkApplicationExistingConvergenceIsUnowned/banner (0.04s)
+    --- PASS: TestNetworkApplicationExistingConvergenceIsUnowned/telemetry (0.05s)
+=== RUN   TestNetworkApplicationCompositionSelection
+=== RUN   TestNetworkApplicationCompositionSelection/direct
+=== RUN   TestNetworkApplicationCompositionSelection/section
+=== RUN   TestNetworkApplicationCompositionSelection/credentials
+=== RUN   TestNetworkApplicationCompositionSelection/aaa
+=== RUN   TestNetworkApplicationCompositionSelection/aaa-credentials
+--- PASS: TestNetworkApplicationCompositionSelection (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/direct (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/section (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/credentials (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/aaa (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/aaa-credentials (0.00s)
+=== RUN   TestNetworkCredentialDependencyPreflight
+=== RUN   TestNetworkCredentialDependencyPreflight/declared-pending
+=== RUN   TestNetworkCredentialDependencyPreflight/undeclared-pending
+=== RUN   TestNetworkCredentialDependencyPreflight/missing-site
+=== RUN   TestNetworkCredentialDependencyPreflight/incomplete-site-read
+--- PASS: TestNetworkCredentialDependencyPreflight (0.05s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/declared-pending (0.01s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/undeclared-pending (0.01s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/missing-site (0.01s)
+    --- PASS: TestNetworkCredentialDependencyPreflight/incomplete-site-read (0.01s)
+=== RUN   TestNetworkCredentialProjectionPreservesUnsupportedIntent
+--- PASS: TestNetworkCredentialProjectionPreservesUnsupportedIntent (0.00s)
+=== RUN   TestNetworkDNSOptionalPublicLifecycle
+=== RUN   TestNetworkDNSOptionalPublicLifecycle/omitted
+=== RUN   TestNetworkDNSOptionalPublicLifecycle/null
+=== RUN   TestNetworkDNSOptionalPublicLifecycle/clear
+=== RUN   TestNetworkDNSOptionalPublicLifecycle/inherited
+=== RUN   TestNetworkDNSOptionalPublicLifecycle/match
+--- PASS: TestNetworkDNSOptionalPublicLifecycle (0.43s)
+    --- PASS: TestNetworkDNSOptionalPublicLifecycle/omitted (0.10s)
+    --- PASS: TestNetworkDNSOptionalPublicLifecycle/null (0.10s)
+    --- PASS: TestNetworkDNSOptionalPublicLifecycle/clear (0.10s)
+    --- PASS: TestNetworkDNSOptionalPublicLifecycle/inherited (0.10s)
+    --- PASS: TestNetworkDNSOptionalPublicLifecycle/match (0.04s)
+=== RUN   TestNetworkDNSOptionalPreflightPreservation
+--- PASS: TestNetworkDNSOptionalPreflightPreservation (0.01s)
+=== RUN   TestNetworkDNSOptionalObservation
+=== RUN   TestNetworkDNSOptionalObservation/omitted
+=== RUN   TestNetworkDNSOptionalObservation/null
+=== RUN   TestNetworkDNSOptionalObservation/empty
+=== RUN   TestNetworkDNSOptionalObservation/wrong-type
+=== RUN   TestNetworkDNSOptionalObservation/invalid-address
+=== RUN   TestNetworkDNSOptionalObservation/null-domain
+=== RUN   TestNetworkDNSOptionalObservation/missing-domain
+--- PASS: TestNetworkDNSOptionalObservation (0.07s)
+    --- PASS: TestNetworkDNSOptionalObservation/omitted (0.01s)
+    --- PASS: TestNetworkDNSOptionalObservation/null (0.01s)
+    --- PASS: TestNetworkDNSOptionalObservation/empty (0.01s)
+    --- PASS: TestNetworkDNSOptionalObservation/wrong-type (0.01s)
+    --- PASS: TestNetworkDNSOptionalObservation/invalid-address (0.01s)
+    --- PASS: TestNetworkDNSOptionalObservation/null-domain (0.01s)
+    --- PASS: TestNetworkDNSOptionalObservation/missing-domain (0.01s)
+=== RUN   TestNetworkDNSOptionalIntentMask
+=== RUN   TestNetworkDNSOptionalIntentMask/omitted
+=== RUN   TestNetworkDNSOptionalIntentMask/null
+=== RUN   TestNetworkDNSOptionalIntentMask/clear
+--- PASS: TestNetworkDNSOptionalIntentMask (0.00s)
+    --- PASS: TestNetworkDNSOptionalIntentMask/omitted (0.00s)
+    --- PASS: TestNetworkDNSOptionalIntentMask/null (0.00s)
+    --- PASS: TestNetworkDNSOptionalIntentMask/clear (0.00s)
+=== RUN   TestNetworkEmptyPublicLifecycle
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/complete
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/parent-nonempty
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/inherited
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/preflight-race
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/lost-ack
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/native-race
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/malformed-read
+=== RUN   TestNetworkEmptyPublicLifecycle/ntp/already-clear
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/complete
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/parent-nonempty
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/inherited
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/preflight-race
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/lost-ack
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/native-race
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/malformed-read
+=== RUN   TestNetworkEmptyPublicLifecycle/dhcp/already-clear
+--- PASS: TestNetworkEmptyPublicLifecycle (2.88s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/complete (0.27s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/parent-nonempty (0.29s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/inherited (0.28s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/preflight-race (0.28s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/lost-ack (0.08s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/native-race (0.11s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/malformed-read (0.10s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/ntp/already-clear (0.03s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/complete (0.28s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/parent-nonempty (0.27s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/inherited (0.28s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/preflight-race (0.28s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/lost-ack (0.08s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/native-race (0.11s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/malformed-read (0.10s)
+    --- PASS: TestNetworkEmptyPublicLifecycle/dhcp/already-clear (0.03s)
+=== RUN   TestNetworkEmptyConvergenceBoundaries
+--- PASS: TestNetworkEmptyConvergenceBoundaries (0.00s)
+=== RUN   TestNetworkExecutionManifestConvergesAcrossRestarts
+--- PASS: TestNetworkExecutionManifestConvergesAcrossRestarts (0.57s)
+=== RUN   TestNetworkExecutionPreflightAndCompleteObservation
+=== RUN   TestNetworkExecutionPreflightAndCompleteObservation/unsupported-aaa
+=== RUN   TestNetworkExecutionPreflightAndCompleteObservation/late-read-failure
+=== RUN   TestNetworkExecutionPreflightAndCompleteObservation/missing-site
+=== RUN   TestNetworkExecutionPreflightAndCompleteObservation/replaced-site
+--- PASS: TestNetworkExecutionPreflightAndCompleteObservation (0.04s)
+    --- PASS: TestNetworkExecutionPreflightAndCompleteObservation/unsupported-aaa (0.00s)
+    --- PASS: TestNetworkExecutionPreflightAndCompleteObservation/late-read-failure (0.01s)
+    --- PASS: TestNetworkExecutionPreflightAndCompleteObservation/missing-site (0.01s)
+    --- PASS: TestNetworkExecutionPreflightAndCompleteObservation/replaced-site (0.01s)
+=== RUN   TestNetworkPayloadUsesNativeResetAndResolverOrder
+--- PASS: TestNetworkPayloadUsesNativeResetAndResolverOrder (0.00s)
+=== RUN   TestNetworkExecutionResolvesOnlyVerifiedAncestors
+=== RUN   TestNetworkExecutionResolvesOnlyVerifiedAncestors/inherited-match
+=== RUN   TestNetworkExecutionResolvesOnlyVerifiedAncestors/inherited-drift
+=== RUN   TestNetworkExecutionResolvesOnlyVerifiedAncestors/ancestor-failure
+=== RUN   TestNetworkExecutionResolvesOnlyVerifiedAncestors/wrong-parent
+--- PASS: TestNetworkExecutionResolvesOnlyVerifiedAncestors (0.04s)
+    --- PASS: TestNetworkExecutionResolvesOnlyVerifiedAncestors/inherited-match (0.01s)
+    --- PASS: TestNetworkExecutionResolvesOnlyVerifiedAncestors/inherited-drift (0.01s)
+    --- PASS: TestNetworkExecutionResolvesOnlyVerifiedAncestors/ancestor-failure (0.01s)
+    --- PASS: TestNetworkExecutionResolvesOnlyVerifiedAncestors/wrong-parent (0.01s)
+=== RUN   TestNetworkExportSiteSelection
+=== RUN   TestNetworkExportSiteSelection/default
+=== RUN   TestNetworkExportSiteSelection/global
+=== RUN   TestNetworkExportSiteSelection/prefix
+=== RUN   TestNetworkExportSiteSelection/exact
+=== RUN   TestNetworkExportSiteSelection/floor
+=== RUN   TestNetworkExportSiteSelection/combined
+--- PASS: TestNetworkExportSiteSelection (0.07s)
+    --- PASS: TestNetworkExportSiteSelection/default (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/global (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/prefix (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/exact (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/floor (0.01s)
+    --- PASS: TestNetworkExportSiteSelection/combined (0.01s)
+=== RUN   TestNetworkExportSiteSelectionZeroAndRefusal
+--- PASS: TestNetworkExportSiteSelectionZeroAndRefusal (0.05s)
+=== RUN   TestNetworkExportSelectionRetainedLifecycle
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/ntp/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dhcp/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/dns/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/timezone/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/banner/missing-site
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/reselect
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/accepted-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/unknown-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/verified-null
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/corrupt-history
+=== RUN   TestNetworkExportSelectionRetainedLifecycle/telemetry/missing-site
+--- PASS: TestNetworkExportSelectionRetainedLifecycle (4.01s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/reselect (0.18s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/unknown-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/corrupt-history (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/ntp/missing-site (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/reselect (0.20s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/unknown-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dhcp/missing-site (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/reselect (0.19s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/unknown-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/dns/missing-site (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/reselect (0.19s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/unknown-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/timezone/missing-site (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/reselect (0.18s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/accepted-null (0.07s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/unknown-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/verified-null (0.10s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/corrupt-history (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/banner/missing-site (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/reselect (0.21s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/accepted-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/unknown-null (0.08s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/verified-null (0.11s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/corrupt-history (0.12s)
+    --- PASS: TestNetworkExportSelectionRetainedLifecycle/telemetry/missing-site (0.12s)
+=== RUN   TestNetworkNativeComparisonPublic
+=== RUN   TestNetworkNativeComparisonPublic/complete
+=== RUN   TestNetworkNativeComparisonPublic/companion
+=== RUN   TestNetworkNativeComparisonPublic/restore-companion
+=== RUN   TestNetworkNativeComparisonPublic/key
+=== RUN   TestNetworkNativeComparisonPublic/restore-key
+=== RUN   TestNetworkNativeComparisonPublic/missing-key
+=== RUN   TestNetworkNativeComparisonPublic/proof
+=== RUN   TestNetworkNativeComparisonPublic/downgrade
+=== RUN   TestNetworkNativeComparisonPublic/lost-ack
+=== RUN   TestNetworkNativeComparisonPublic/noop
+=== RUN   TestNetworkNativeComparisonPublic/drift
+=== RUN   TestNetworkNativeComparisonPublic/drop-key
+=== RUN   TestNetworkNativeComparisonPublic/legacy
+=== RUN   TestNetworkNativeComparisonPublic/replace
+=== RUN   TestNetworkNativeComparisonPublic/retarget
+=== RUN   TestNetworkNativeComparisonPublic/missing-state
+=== RUN   TestNetworkNativeComparisonPublic/unapproved-key
+--- PASS: TestNetworkNativeComparisonPublic (2.66s)
+    --- PASS: TestNetworkNativeComparisonPublic/complete (0.14s)
+    --- PASS: TestNetworkNativeComparisonPublic/companion (0.15s)
+    --- PASS: TestNetworkNativeComparisonPublic/restore-companion (0.24s)
+    --- PASS: TestNetworkNativeComparisonPublic/key (0.14s)
+    --- PASS: TestNetworkNativeComparisonPublic/restore-key (0.24s)
+    --- PASS: TestNetworkNativeComparisonPublic/missing-key (0.09s)
+    --- PASS: TestNetworkNativeComparisonPublic/proof (0.15s)
+    --- PASS: TestNetworkNativeComparisonPublic/downgrade (0.14s)
+    --- PASS: TestNetworkNativeComparisonPublic/lost-ack (0.10s)
+    --- PASS: TestNetworkNativeComparisonPublic/noop (0.03s)
+    --- PASS: TestNetworkNativeComparisonPublic/drift (0.15s)
+    --- PASS: TestNetworkNativeComparisonPublic/drop-key (0.18s)
+    --- PASS: TestNetworkNativeComparisonPublic/legacy (0.24s)
+    --- PASS: TestNetworkNativeComparisonPublic/replace (0.30s)
+    --- PASS: TestNetworkNativeComparisonPublic/retarget (0.25s)
+    --- PASS: TestNetworkNativeComparisonPublic/missing-state (0.08s)
+    --- PASS: TestNetworkNativeComparisonPublic/unapproved-key (0.04s)
+=== RUN   TestNetworkNativeMACBindings
+=== RUN   TestNetworkNativeMACBindings/same
+=== RUN   TestNetworkNativeMACBindings/companion
+=== RUN   TestNetworkNativeMACBindings/target
+=== RUN   TestNetworkNativeMACBindings/ancestor
+=== RUN   TestNetworkNativeMACBindings/cohort
+=== RUN   TestNetworkNativeMACBindings/key
+=== RUN   TestNetworkNativeMACBindings/scope
+=== RUN   TestNetworkNativeMACBindings/invalid-key-id
+--- PASS: TestNetworkNativeMACBindings (0.01s)
+    --- PASS: TestNetworkNativeMACBindings/same (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/companion (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/target (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/ancestor (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/cohort (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/key (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/scope (0.00s)
+    --- PASS: TestNetworkNativeMACBindings/invalid-key-id (0.00s)
+=== RUN   TestNetworkNativeComparisonExample
+--- PASS: TestNetworkNativeComparisonExample (0.02s)
+=== RUN   TestNetworkProfileIntentValidation
+--- PASS: TestNetworkProfileIntentValidation (0.00s)
+=== RUN   TestNetworkProfileTemplateResolution
+--- PASS: TestNetworkProfileTemplateResolution (0.00s)
+=== RUN   TestNetworkProfileExecutionAndIdentity
+=== RUN   TestNetworkProfileExecutionAndIdentity/create
+=== RUN   TestNetworkProfileExecutionAndIdentity/update
+=== RUN   TestNetworkProfileExecutionAndIdentity/missing-receipt
+=== RUN   TestNetworkProfileExecutionAndIdentity/missing-later-dependency
+=== RUN   TestNetworkProfileExecutionAndIdentity/replacement
+=== RUN   TestNetworkProfileExecutionAndIdentity/template-replacement
+=== RUN   TestNetworkProfileExecutionAndIdentity/unknown-attributes
+=== RUN   TestNetworkProfileExecutionAndIdentity/assigned-update
+--- PASS: TestNetworkProfileExecutionAndIdentity (0.13s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/create (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/update (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/missing-receipt (0.01s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/missing-later-dependency (0.01s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/replacement (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/template-replacement (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/unknown-attributes (0.01s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/assigned-update (0.02s)
+=== RUN   TestNetworkProfileEmptyGroups
+--- PASS: TestNetworkProfileEmptyGroups (0.00s)
+=== RUN   TestNetworkProfileSiteAssignment
+=== RUN   TestNetworkProfileSiteAssignment/assign
+=== RUN   TestNetworkProfileSiteAssignment/missing-site
+=== RUN   TestNetworkProfileSiteAssignment/replacement-site
+=== RUN   TestNetworkProfileSiteAssignment/replacement-profile
+--- PASS: TestNetworkProfileSiteAssignment (0.06s)
+    --- PASS: TestNetworkProfileSiteAssignment/assign (0.02s)
+    --- PASS: TestNetworkProfileSiteAssignment/missing-site (0.01s)
+    --- PASS: TestNetworkProfileSiteAssignment/replacement-site (0.02s)
+    --- PASS: TestNetworkProfileSiteAssignment/replacement-profile (0.01s)
+=== RUN   TestNetworkProfileMissingSiteBlocksEarlierCreate
+--- PASS: TestNetworkProfileMissingSiteBlocksEarlierCreate (0.01s)
+=== RUN   TestNetworkProfilePopulatedReadIsRequired
+--- PASS: TestNetworkProfilePopulatedReadIsRequired (0.01s)
+=== RUN   TestNetworkProfileSiteSettingsExcludedFromDependencyHash
+--- PASS: TestNetworkProfileSiteSettingsExcludedFromDependencyHash (0.00s)
+=== RUN   TestNetworkScalarSettings
+=== RUN   TestNetworkScalarSettings/timezone_match
+=== RUN   TestNetworkScalarSettings/timezone_changed
+=== RUN   TestNetworkScalarSettings/timezone_inherited
+=== RUN   TestNetworkScalarSettings/timezone_unset
+=== RUN   TestNetworkScalarSettings/timezone_missing
+=== RUN   TestNetworkScalarSettings/timezone_null
+=== RUN   TestNetworkScalarSettings/banner_match
+=== RUN   TestNetworkScalarSettings/banner_changed
+=== RUN   TestNetworkScalarSettings/banner_builtin
+=== RUN   TestNetworkScalarSettings/banner_empty_explicit
+=== RUN   TestNetworkScalarSettings/banner_empty_unset
+=== RUN   TestNetworkScalarSettings/banner_inherited
+=== RUN   TestNetworkScalarSettings/banner_missing_message
+=== RUN   TestNetworkScalarSettings/banner_null_message
+=== RUN   TestNetworkScalarSettings/banner_unknown_type
+--- PASS: TestNetworkScalarSettings (0.15s)
+    --- PASS: TestNetworkScalarSettings/timezone_match (0.01s)
+    --- PASS: TestNetworkScalarSettings/timezone_changed (0.01s)
+    --- PASS: TestNetworkScalarSettings/timezone_inherited (0.01s)
+    --- PASS: TestNetworkScalarSettings/timezone_unset (0.01s)
+    --- PASS: TestNetworkScalarSettings/timezone_missing (0.01s)
+    --- PASS: TestNetworkScalarSettings/timezone_null (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_match (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_changed (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_builtin (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_empty_explicit (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_empty_unset (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_inherited (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_missing_message (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_null_message (0.01s)
+    --- PASS: TestNetworkScalarSettings/banner_unknown_type (0.01s)
+=== RUN   TestNetworkScalarInvalidIntent
+--- PASS: TestNetworkScalarInvalidIntent (0.00s)
+=== RUN   TestNetworkScalarNullSelectsNothing
+--- PASS: TestNetworkScalarNullSelectsNothing (0.00s)
+=== RUN   TestNetworkSelectionNoNativeDependencies
+=== RUN   TestNetworkSelectionNoNativeDependencies/omitted
+=== RUN   TestNetworkSelectionNoNativeDependencies/null
+=== RUN   TestNetworkSelectionNoNativeDependencies/dns-unselected
+--- PASS: TestNetworkSelectionNoNativeDependencies (0.01s)
+    --- PASS: TestNetworkSelectionNoNativeDependencies/omitted (0.00s)
+    --- PASS: TestNetworkSelectionNoNativeDependencies/null (0.00s)
+    --- PASS: TestNetworkSelectionNoNativeDependencies/dns-unselected (0.00s)
+=== RUN   TestNetworkSelectionCountsAndValidation
+=== RUN   TestNetworkSelectionCountsAndValidation/ntp_servers
+=== RUN   TestNetworkSelectionCountsAndValidation/dhcp_servers
+=== RUN   TestNetworkSelectionCountsAndValidation/domain_name
+=== RUN   TestNetworkSelectionCountsAndValidation/timezone
+=== RUN   TestNetworkSelectionCountsAndValidation/banner
+=== RUN   TestNetworkSelectionCountsAndValidation/unknown_field
+--- PASS: TestNetworkSelectionCountsAndValidation (0.00s)
+    --- PASS: TestNetworkSelectionCountsAndValidation/ntp_servers (0.00s)
+    --- PASS: TestNetworkSelectionCountsAndValidation/dhcp_servers (0.00s)
+    --- PASS: TestNetworkSelectionCountsAndValidation/domain_name (0.00s)
+    --- PASS: TestNetworkSelectionCountsAndValidation/timezone (0.00s)
+    --- PASS: TestNetworkSelectionCountsAndValidation/banner (0.00s)
+    --- PASS: TestNetworkSelectionCountsAndValidation/unknown_field (0.00s)
+=== RUN   TestNetworkSelectionRetainedLifecycle
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/omitted
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/null
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/dns-unselected
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/missing-site
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/reselect
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/accepted-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/unknown-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/verified-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/ntp/corrupt-history
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/omitted
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/dns-unselected
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/missing-site
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/reselect
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/accepted-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/unknown-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/verified-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dhcp/corrupt-history
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/omitted
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/dns-unselected
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/missing-site
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/reselect
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/accepted-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/unknown-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/verified-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/dns/corrupt-history
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/omitted
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/null
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/dns-unselected
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/missing-site
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/reselect
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/accepted-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/unknown-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/verified-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/timezone/corrupt-history
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/omitted
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/null
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/dns-unselected
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/missing-site
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/reselect
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/accepted-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/unknown-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/verified-null
+=== RUN   TestNetworkSelectionRetainedLifecycle/banner/corrupt-history
+--- PASS: TestNetworkSelectionRetainedLifecycle (4.88s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/omitted (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/null (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/dns-unselected (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/missing-site (0.12s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/reselect (0.18s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/accepted-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/unknown-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/verified-null (0.09s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/ntp/corrupt-history (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/omitted (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/null (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/dns-unselected (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/missing-site (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/reselect (0.19s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/accepted-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/unknown-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/verified-null (0.09s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dhcp/corrupt-history (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/omitted (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/null (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/dns-unselected (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/missing-site (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/reselect (0.19s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/accepted-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/unknown-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/verified-null (0.10s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/dns/corrupt-history (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/omitted (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/null (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/dns-unselected (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/missing-site (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/reselect (0.19s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/accepted-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/unknown-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/verified-null (0.09s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/timezone/corrupt-history (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/omitted (0.12s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/null (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/dns-unselected (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/missing-site (0.11s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/reselect (0.19s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/accepted-null (0.07s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/unknown-null (0.08s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/verified-null (0.10s)
+    --- PASS: TestNetworkSelectionRetainedLifecycle/banner/corrupt-history (0.11s)
+=== RUN   TestNetworkSettingsModel
+=== RUN   TestNetworkSettingsModel/valid
+=== RUN   TestNetworkSettingsModel/undefined
+=== RUN   TestNetworkSettingsModel/unsupported
+=== RUN   TestNetworkSettingsModel/null
+=== RUN   TestNetworkSettingsModel/duplicate
+=== RUN   TestNetworkSettingsModel/dns-unselected
+=== RUN   TestNetworkSettingsModel/dns
+=== RUN   TestNetworkSettingsModel/unused
+--- PASS: TestNetworkSettingsModel (0.00s)
+    --- PASS: TestNetworkSettingsModel/valid (0.00s)
+    --- PASS: TestNetworkSettingsModel/undefined (0.00s)
+    --- PASS: TestNetworkSettingsModel/unsupported (0.00s)
+    --- PASS: TestNetworkSettingsModel/null (0.00s)
+    --- PASS: TestNetworkSettingsModel/duplicate (0.00s)
+    --- PASS: TestNetworkSettingsModel/dns-unselected (0.00s)
+    --- PASS: TestNetworkSettingsModel/dns (0.00s)
+    --- PASS: TestNetworkSettingsModel/unused (0.00s)
+=== RUN   TestNetworkSettingsObservation
+=== RUN   TestNetworkSettingsObservation/explicit
+=== RUN   TestNetworkSettingsObservation/inherited
+=== RUN   TestNetworkSettingsObservation/unset
+=== RUN   TestNetworkSettingsObservation/missing
+=== RUN   TestNetworkSettingsObservation/partial
+=== RUN   TestNetworkSettingsObservation/null-servers
+=== RUN   TestNetworkSettingsObservation/wrong-type
+=== RUN   TestNetworkSettingsObservation/effective-inheritance
+--- PASS: TestNetworkSettingsObservation (0.08s)
+    --- PASS: TestNetworkSettingsObservation/explicit (0.01s)
+    --- PASS: TestNetworkSettingsObservation/inherited (0.01s)
+    --- PASS: TestNetworkSettingsObservation/unset (0.01s)
+    --- PASS: TestNetworkSettingsObservation/missing (0.01s)
+    --- PASS: TestNetworkSettingsObservation/partial (0.01s)
+    --- PASS: TestNetworkSettingsObservation/null-servers (0.01s)
+    --- PASS: TestNetworkSettingsObservation/wrong-type (0.01s)
+    --- PASS: TestNetworkSettingsObservation/effective-inheritance (0.01s)
+=== RUN   TestNetworkSettingsConfigReport
+=== RUN   TestNetworkSettingsConfigReport/match
+=== RUN   TestNetworkSettingsConfigReport/inherited
+=== RUN   TestNetworkSettingsConfigReport/failure
+=== RUN   TestNetworkSettingsConfigReport/apply
+=== RUN   TestNetworkSettingsConfigReport/malformed
+--- PASS: TestNetworkSettingsConfigReport (0.11s)
+    --- PASS: TestNetworkSettingsConfigReport/match (0.02s)
+    --- PASS: TestNetworkSettingsConfigReport/inherited (0.02s)
+    --- PASS: TestNetworkSettingsConfigReport/failure (0.02s)
+    --- PASS: TestNetworkSettingsConfigReport/apply (0.03s)
+    --- PASS: TestNetworkSettingsConfigReport/malformed (0.01s)
+=== RUN   TestNetworkSettingsOrderingAndAtomicFailure
+--- PASS: TestNetworkSettingsOrderingAndAtomicFailure (0.01s)
+=== RUN   TestNetworkSettingsDNSAndDHCP
+=== RUN   TestNetworkSettingsDNSAndDHCP/dns{"domainName":"example.test","dnsServers":["192.0.2.2","192.0.2.1"]}
+=== RUN   TestNetworkSettingsDNSAndDHCP/dns{"dnsServers":["192.0.2.1"]}
+=== RUN   TestNetworkSettingsDNSAndDHCP/dns{"domainName":"example.test","dnsServers":null}
+=== RUN   TestNetworkSettingsDNSAndDHCP/dhcp{"servers":["192.0.2.2","192.0.2.1"]}
+=== RUN   TestNetworkSettingsDNSAndDHCP/dhcp{"servers":["dhcp.example.test"]}
+--- PASS: TestNetworkSettingsDNSAndDHCP (0.05s)
+    --- PASS: TestNetworkSettingsDNSAndDHCP/dns{"domainName":"example.test","dnsServers":["192.0.2.2","192.0.2.1"]} (0.01s)
+    --- PASS: TestNetworkSettingsDNSAndDHCP/dns{"dnsServers":["192.0.2.1"]} (0.01s)
+    --- PASS: TestNetworkSettingsDNSAndDHCP/dns{"domainName":"example.test","dnsServers":null} (0.01s)
+    --- PASS: TestNetworkSettingsDNSAndDHCP/dhcp{"servers":["192.0.2.2","192.0.2.1"]} (0.01s)
+    --- PASS: TestNetworkSettingsDNSAndDHCP/dhcp{"servers":["dhcp.example.test"]} (0.01s)
+=== RUN   TestNetworkSubmissionPublicRecovery
+=== RUN   TestNetworkSubmissionPublicRecovery/ntp/complete
+=== RUN   TestNetworkSubmissionPublicRecovery/ntp/read-error
+=== RUN   TestNetworkSubmissionPublicRecovery/ntp/stale
+=== RUN   TestNetworkSubmissionPublicRecovery/ntp/lost-ack
+=== RUN   TestNetworkSubmissionPublicRecovery/dhcp/complete
+=== RUN   TestNetworkSubmissionPublicRecovery/dhcp/read-error
+=== RUN   TestNetworkSubmissionPublicRecovery/dhcp/stale
+=== RUN   TestNetworkSubmissionPublicRecovery/dhcp/lost-ack
+=== RUN   TestNetworkSubmissionPublicRecovery/dns/complete
+=== RUN   TestNetworkSubmissionPublicRecovery/dns/read-error
+=== RUN   TestNetworkSubmissionPublicRecovery/dns/stale
+=== RUN   TestNetworkSubmissionPublicRecovery/dns/lost-ack
+=== RUN   TestNetworkSubmissionPublicRecovery/timezone/complete
+=== RUN   TestNetworkSubmissionPublicRecovery/timezone/read-error
+=== RUN   TestNetworkSubmissionPublicRecovery/timezone/stale
+=== RUN   TestNetworkSubmissionPublicRecovery/timezone/lost-ack
+=== RUN   TestNetworkSubmissionPublicRecovery/banner/complete
+=== RUN   TestNetworkSubmissionPublicRecovery/banner/read-error
+=== RUN   TestNetworkSubmissionPublicRecovery/banner/stale
+=== RUN   TestNetworkSubmissionPublicRecovery/banner/lost-ack
+=== RUN   TestNetworkSubmissionPublicRecovery/telemetry/complete
+=== RUN   TestNetworkSubmissionPublicRecovery/telemetry/read-error
+=== RUN   TestNetworkSubmissionPublicRecovery/telemetry/stale
+=== RUN   TestNetworkSubmissionPublicRecovery/telemetry/lost-ack
+--- PASS: TestNetworkSubmissionPublicRecovery (2.97s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/ntp/complete (0.14s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/ntp/read-error (0.14s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/ntp/stale (0.12s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/ntp/lost-ack (0.10s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dhcp/complete (0.13s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dhcp/read-error (0.14s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dhcp/stale (0.11s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dhcp/lost-ack (0.10s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dns/complete (0.13s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dns/read-error (0.14s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dns/stale (0.11s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/dns/lost-ack (0.10s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/timezone/complete (0.13s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/timezone/read-error (0.13s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/timezone/stale (0.11s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/timezone/lost-ack (0.10s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/banner/complete (0.13s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/banner/read-error (0.14s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/banner/stale (0.11s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/banner/lost-ack (0.10s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/telemetry/complete (0.15s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/telemetry/read-error (0.16s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/telemetry/stale (0.14s)
+    --- PASS: TestNetworkSubmissionPublicRecovery/telemetry/lost-ack (0.12s)
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/unchanged
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/late-local
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/late-peer
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/inherited
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/explicit-provenance
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/ancestor
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/second-read
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/read-error
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/unrelated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/caller-mutated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/lost-ack
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/ntp/concurrent
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/unchanged
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/late-local
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/late-peer
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/inherited
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/explicit-provenance
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/ancestor
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/second-read
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/read-error
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/unrelated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/caller-mutated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/lost-ack
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dhcp/concurrent
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/unchanged
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/late-local
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/late-peer
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/inherited
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/explicit-provenance
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/ancestor
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/second-read
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/read-error
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/unrelated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/caller-mutated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/lost-ack
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/dns/concurrent
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/unchanged
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/late-local
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/late-peer
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/inherited
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/explicit-provenance
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/ancestor
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/second-read
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/read-error
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/unrelated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/caller-mutated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/lost-ack
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/timezone/concurrent
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/unchanged
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/late-local
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/late-peer
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/inherited
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/explicit-provenance
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/ancestor
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/second-read
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/read-error
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/unrelated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/caller-mutated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/lost-ack
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/banner/concurrent
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/unchanged
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/late-local
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/late-peer
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/inherited
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/explicit-provenance
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/ancestor
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/second-read
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/read-error
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/unrelated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/caller-mutated
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/lost-ack
+=== RUN   TestNetworkSubmissionFrozenCompleteSelection/telemetry/concurrent
+--- PASS: TestNetworkSubmissionFrozenCompleteSelection (1.13s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/unchanged (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/late-local (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/late-peer (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/inherited (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/explicit-provenance (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/ancestor (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/second-read (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/read-error (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/unrelated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/caller-mutated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/lost-ack (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/ntp/concurrent (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/unchanged (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/late-local (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/late-peer (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/inherited (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/explicit-provenance (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/ancestor (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/second-read (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/read-error (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/unrelated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/caller-mutated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/lost-ack (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dhcp/concurrent (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/unchanged (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/late-local (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/late-peer (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/inherited (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/explicit-provenance (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/ancestor (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/second-read (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/read-error (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/unrelated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/caller-mutated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/lost-ack (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/dns/concurrent (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/unchanged (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/late-local (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/late-peer (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/inherited (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/explicit-provenance (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/ancestor (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/second-read (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/read-error (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/unrelated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/caller-mutated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/lost-ack (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/timezone/concurrent (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/unchanged (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/late-local (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/late-peer (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/inherited (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/explicit-provenance (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/ancestor (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/second-read (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/read-error (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/unrelated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/caller-mutated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/lost-ack (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/banner/concurrent (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/unchanged (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/late-local (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/late-peer (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/inherited (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/explicit-provenance (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/ancestor (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/second-read (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/read-error (0.01s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/unrelated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/caller-mutated (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/lost-ack (0.02s)
+    --- PASS: TestNetworkSubmissionFrozenCompleteSelection/telemetry/concurrent (0.02s)
+=== RUN   TestNetworkAcknowledgedTaskRecovery
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/complete
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/root-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/root-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/foreign-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/stale-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/child-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/child-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/disconnected
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/foreign-tree
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/missing-task
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/undeclared
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/wrong-action
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/wrong-target
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/native-mismatch
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/propagation
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/native-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/replacement-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/source-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/owner-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/journal-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/configmap
+=== RUN   TestNetworkAcknowledgedTaskRecovery/ntp/configmap-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/complete
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/root-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/root-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/foreign-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/stale-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/child-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/child-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/disconnected
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/foreign-tree
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/missing-task
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/undeclared
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/wrong-action
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/wrong-target
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/native-mismatch
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/propagation
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/native-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/replacement-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/source-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/owner-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/journal-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/configmap
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dhcp/configmap-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/complete
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/root-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/root-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/foreign-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/stale-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/child-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/child-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/disconnected
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/foreign-tree
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/missing-task
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/undeclared
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/wrong-action
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/wrong-target
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/native-mismatch
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/propagation
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/native-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/replacement-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/source-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/owner-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/journal-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/configmap
+=== RUN   TestNetworkAcknowledgedTaskRecovery/dns/configmap-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/complete
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/root-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/root-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/foreign-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/stale-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/child-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/child-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/disconnected
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/foreign-tree
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/missing-task
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/undeclared
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/wrong-action
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/wrong-target
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/native-mismatch
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/propagation
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/native-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/replacement-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/source-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/owner-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/journal-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/configmap
+=== RUN   TestNetworkAcknowledgedTaskRecovery/timezone/configmap-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/complete
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/root-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/root-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/foreign-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/stale-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/child-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/child-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/disconnected
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/foreign-tree
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/missing-task
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/undeclared
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/wrong-action
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/wrong-target
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/native-mismatch
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/propagation
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/native-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/replacement-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/source-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/owner-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/journal-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/configmap
+=== RUN   TestNetworkAcknowledgedTaskRecovery/banner/configmap-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/complete
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/root-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/root-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/foreign-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/stale-root
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/child-running
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/child-failed
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/disconnected
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/foreign-tree
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/missing-task
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/undeclared
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/wrong-action
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/wrong-target
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/native-mismatch
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/propagation
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/native-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/replacement-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/source-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/owner-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/journal-race
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/configmap
+=== RUN   TestNetworkAcknowledgedTaskRecovery/telemetry/configmap-race
+--- PASS: TestNetworkAcknowledgedTaskRecovery (7.66s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/complete (0.09s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/root-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/root-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/foreign-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/stale-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/child-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/child-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/disconnected (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/foreign-tree (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/missing-task (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/undeclared (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/wrong-action (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/wrong-target (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/native-mismatch (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/propagation (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/native-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/replacement-race (0.06s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/source-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/owner-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/journal-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/configmap (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/ntp/configmap-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/complete (0.09s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/root-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/root-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/foreign-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/stale-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/child-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/child-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/disconnected (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/foreign-tree (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/missing-task (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/undeclared (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/wrong-action (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/wrong-target (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/native-mismatch (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/propagation (0.11s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/native-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/replacement-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/source-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/owner-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/journal-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/configmap (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dhcp/configmap-race (0.16s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/complete (0.11s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/root-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/root-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/foreign-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/stale-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/child-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/child-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/disconnected (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/foreign-tree (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/missing-task (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/undeclared (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/wrong-action (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/wrong-target (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/native-mismatch (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/propagation (0.11s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/native-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/replacement-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/source-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/owner-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/journal-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/configmap (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/dns/configmap-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/complete (0.09s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/root-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/root-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/foreign-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/stale-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/child-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/child-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/disconnected (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/foreign-tree (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/missing-task (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/undeclared (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/wrong-action (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/wrong-target (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/native-mismatch (0.06s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/propagation (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/native-race (0.06s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/replacement-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/source-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/owner-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/journal-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/configmap (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/timezone/configmap-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/complete (0.09s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/root-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/root-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/foreign-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/stale-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/child-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/child-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/disconnected (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/foreign-tree (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/missing-task (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/undeclared (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/wrong-action (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/wrong-target (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/native-mismatch (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/propagation (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/native-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/replacement-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/source-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/owner-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/journal-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/configmap (0.10s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/banner/configmap-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/complete (0.11s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/root-running (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/root-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/foreign-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/stale-root (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/child-running (0.06s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/child-failed (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/disconnected (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/foreign-tree (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/missing-task (0.06s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/undeclared (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/wrong-action (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/wrong-target (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/native-mismatch (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/propagation (0.12s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/native-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/replacement-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/source-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/owner-race (0.06s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/journal-race (0.05s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/configmap (0.12s)
+    --- PASS: TestNetworkAcknowledgedTaskRecovery/telemetry/configmap-race (0.06s)
+=== RUN   TestNetworkTaskRecoveryEnvelope
+=== RUN   TestNetworkTaskRecoveryEnvelope/valid
+=== RUN   TestNetworkTaskRecoveryEnvelope/undeclared
+=== RUN   TestNetworkTaskRecoveryEnvelope/no-time
+=== RUN   TestNetworkTaskRecoveryEnvelope/no-task
+=== RUN   TestNetworkTaskRecoveryEnvelope/bad-id
+=== RUN   TestNetworkTaskRecoveryEnvelope/accepted
+=== RUN   TestNetworkTaskRecoveryEnvelope/create
+=== RUN   TestNetworkTaskRecoveryEnvelope/parent
+=== RUN   TestNetworkTaskRecoveryEnvelope/physical
+=== RUN   TestNetworkTaskRecoveryEnvelope/credentials
+=== RUN   TestNetworkTaskRecoveryEnvelope/history
+=== RUN   TestNetworkTaskRecoveryEnvelope/cancelled
+=== RUN   TestNetworkTaskRecoveryEnvelope/wrong-kind
+--- PASS: TestNetworkTaskRecoveryEnvelope (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/valid (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/undeclared (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/no-time (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/no-task (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/bad-id (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/accepted (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/create (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/parent (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/physical (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/credentials (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/history (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/cancelled (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/wrong-kind (0.00s)
+=== RUN   TestGlobalSiteCredentialParsing
+--- PASS: TestGlobalSiteCredentialParsing (0.00s)
+=== RUN   TestSiteCredentialParsing
+--- PASS: TestSiteCredentialParsing (0.00s)
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate/global=false
+=== RUN   TestSiteCredentialManifestRestartAndRemovalGate/global=true
+--- PASS: TestSiteCredentialManifestRestartAndRemovalGate (0.51s)
+    --- PASS: TestSiteCredentialManifestRestartAndRemovalGate/global=false (0.26s)
+    --- PASS: TestSiteCredentialManifestRestartAndRemovalGate/global=true (0.25s)
+=== RUN   TestSiteCredentialReadAndDependencyFailures
+=== RUN   TestSiteCredentialReadAndDependencyFailures/partial
+=== RUN   TestSiteCredentialReadAndDependencyFailures/disabled
+=== RUN   TestSiteCredentialReadAndDependencyFailures/inherited
+=== RUN   TestSiteCredentialReadAndDependencyFailures/wrong-type
+=== RUN   TestSiteCredentialReadAndDependencyFailures/replacement
+=== RUN   TestSiteCredentialReadAndDependencyFailures/missing-credential
+--- PASS: TestSiteCredentialReadAndDependencyFailures (0.06s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/partial (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/disabled (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/inherited (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/wrong-type (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/replacement (0.01s)
+    --- PASS: TestSiteCredentialReadAndDependencyFailures/missing-credential (0.01s)
+=== RUN   TestSiteCredentialReportProjectionAndPreflight
+--- PASS: TestSiteCredentialReportProjectionAndPreflight (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	57.209s

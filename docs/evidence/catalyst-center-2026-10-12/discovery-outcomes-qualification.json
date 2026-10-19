@@ -1,0 +1,31 @@
+{
+  "recordedAt": "2026-10-12T19:58:22.872816+00:00",
+  "qualification": "native read-only discovery outcome enumeration",
+  "test": "TestLiveDiscoveryOutcomes",
+  "result": "PASS",
+  "binarySHA256": "bce0ed2612fb0028f209acde576d812097dccb8714730de13a5dfd225d954900",
+  "discovery": {
+    "name": "Switches",
+    "id": "1",
+    "condition": "Complete",
+    "status": "Inactive"
+  },
+  "targets": [
+    "198.51.100.100",
+    "198.51.100.101",
+    "198.51.100.103"
+  ],
+  "observations": {
+    "devices": 3,
+    "cliSuccessful": 3,
+    "snmpSuccessful": 3,
+    "netconfSuccessful": 3,
+    "managedReachable": 3
+  },
+  "mutations": false,
+  "limitations": [
+    "Existing job results; no fresh authentication attempt",
+    "Native client qualification, not deployed-worker reporting",
+    "Outcomes do not change configuration convergence or authorize discovery reruns"
+  ]
+}

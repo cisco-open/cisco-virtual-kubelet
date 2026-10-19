@@ -1,0 +1,19 @@
+# Offline input for controller-export-network; this is not a Kubernetes object.
+# Site references are existing targets; no site creation is requested here.
+catalyst_center:
+  sites:
+    areas:
+      - name: CVK-Lab
+        parent_name: Global
+        network_settings:
+          network: lab-network
+          telemetry: lab-telemetry
+  network_settings:
+    network:
+      - name: lab-network
+        domain_name: example.test
+    telemetry:
+      - name: lab-telemetry
+        wired_data_collection: false
+        snmp_servers: []
+        syslog_servers: []

@@ -1,0 +1,76 @@
+=== RUN   TestEnvtestNetworkExportSelection
+=== RUN   TestEnvtestNetworkExportSelection/ntp/reselect
+=== RUN   TestEnvtestNetworkExportSelection/ntp/accepted-null
+=== RUN   TestEnvtestNetworkExportSelection/ntp/unknown-null
+=== RUN   TestEnvtestNetworkExportSelection/ntp/verified-null
+=== RUN   TestEnvtestNetworkExportSelection/ntp/corrupt-history
+=== RUN   TestEnvtestNetworkExportSelection/ntp/missing-site
+=== RUN   TestEnvtestNetworkExportSelection/dhcp/reselect
+=== RUN   TestEnvtestNetworkExportSelection/dhcp/accepted-null
+=== RUN   TestEnvtestNetworkExportSelection/dhcp/unknown-null
+=== RUN   TestEnvtestNetworkExportSelection/dhcp/verified-null
+=== RUN   TestEnvtestNetworkExportSelection/dhcp/corrupt-history
+=== RUN   TestEnvtestNetworkExportSelection/dhcp/missing-site
+=== RUN   TestEnvtestNetworkExportSelection/dns/reselect
+=== RUN   TestEnvtestNetworkExportSelection/dns/accepted-null
+=== RUN   TestEnvtestNetworkExportSelection/dns/unknown-null
+=== RUN   TestEnvtestNetworkExportSelection/dns/verified-null
+=== RUN   TestEnvtestNetworkExportSelection/dns/corrupt-history
+=== RUN   TestEnvtestNetworkExportSelection/dns/missing-site
+=== RUN   TestEnvtestNetworkExportSelection/timezone/reselect
+=== RUN   TestEnvtestNetworkExportSelection/timezone/accepted-null
+=== RUN   TestEnvtestNetworkExportSelection/timezone/unknown-null
+=== RUN   TestEnvtestNetworkExportSelection/timezone/verified-null
+=== RUN   TestEnvtestNetworkExportSelection/timezone/corrupt-history
+=== RUN   TestEnvtestNetworkExportSelection/timezone/missing-site
+=== RUN   TestEnvtestNetworkExportSelection/banner/reselect
+=== RUN   TestEnvtestNetworkExportSelection/banner/accepted-null
+=== RUN   TestEnvtestNetworkExportSelection/banner/unknown-null
+=== RUN   TestEnvtestNetworkExportSelection/banner/verified-null
+=== RUN   TestEnvtestNetworkExportSelection/banner/corrupt-history
+=== RUN   TestEnvtestNetworkExportSelection/banner/missing-site
+=== RUN   TestEnvtestNetworkExportSelection/telemetry/reselect
+=== RUN   TestEnvtestNetworkExportSelection/telemetry/accepted-null
+=== RUN   TestEnvtestNetworkExportSelection/telemetry/unknown-null
+=== RUN   TestEnvtestNetworkExportSelection/telemetry/verified-null
+=== RUN   TestEnvtestNetworkExportSelection/telemetry/corrupt-history
+=== RUN   TestEnvtestNetworkExportSelection/telemetry/missing-site
+--- PASS: TestEnvtestNetworkExportSelection (18.47s)
+    --- PASS: TestEnvtestNetworkExportSelection/ntp/reselect (3.22s)
+    --- PASS: TestEnvtestNetworkExportSelection/ntp/accepted-null (0.20s)
+    --- PASS: TestEnvtestNetworkExportSelection/ntp/unknown-null (0.21s)
+    --- PASS: TestEnvtestNetworkExportSelection/ntp/verified-null (0.27s)
+    --- PASS: TestEnvtestNetworkExportSelection/ntp/corrupt-history (0.33s)
+    --- PASS: TestEnvtestNetworkExportSelection/ntp/missing-site (0.35s)
+    --- PASS: TestEnvtestNetworkExportSelection/dhcp/reselect (0.60s)
+    --- PASS: TestEnvtestNetworkExportSelection/dhcp/accepted-null (0.20s)
+    --- PASS: TestEnvtestNetworkExportSelection/dhcp/unknown-null (0.21s)
+    --- PASS: TestEnvtestNetworkExportSelection/dhcp/verified-null (0.27s)
+    --- PASS: TestEnvtestNetworkExportSelection/dhcp/corrupt-history (0.32s)
+    --- PASS: TestEnvtestNetworkExportSelection/dhcp/missing-site (0.35s)
+    --- PASS: TestEnvtestNetworkExportSelection/dns/reselect (0.58s)
+    --- PASS: TestEnvtestNetworkExportSelection/dns/accepted-null (0.19s)
+    --- PASS: TestEnvtestNetworkExportSelection/dns/unknown-null (0.21s)
+    --- PASS: TestEnvtestNetworkExportSelection/dns/verified-null (0.27s)
+    --- PASS: TestEnvtestNetworkExportSelection/dns/corrupt-history (0.33s)
+    --- PASS: TestEnvtestNetworkExportSelection/dns/missing-site (0.34s)
+    --- PASS: TestEnvtestNetworkExportSelection/timezone/reselect (0.58s)
+    --- PASS: TestEnvtestNetworkExportSelection/timezone/accepted-null (0.20s)
+    --- PASS: TestEnvtestNetworkExportSelection/timezone/unknown-null (0.21s)
+    --- PASS: TestEnvtestNetworkExportSelection/timezone/verified-null (0.27s)
+    --- PASS: TestEnvtestNetworkExportSelection/timezone/corrupt-history (0.32s)
+    --- PASS: TestEnvtestNetworkExportSelection/timezone/missing-site (0.35s)
+    --- PASS: TestEnvtestNetworkExportSelection/banner/reselect (0.60s)
+    --- PASS: TestEnvtestNetworkExportSelection/banner/accepted-null (0.20s)
+    --- PASS: TestEnvtestNetworkExportSelection/banner/unknown-null (0.20s)
+    --- PASS: TestEnvtestNetworkExportSelection/banner/verified-null (0.28s)
+    --- PASS: TestEnvtestNetworkExportSelection/banner/corrupt-history (0.31s)
+    --- PASS: TestEnvtestNetworkExportSelection/banner/missing-site (0.34s)
+    --- PASS: TestEnvtestNetworkExportSelection/telemetry/reselect (0.62s)
+    --- PASS: TestEnvtestNetworkExportSelection/telemetry/accepted-null (0.20s)
+    --- PASS: TestEnvtestNetworkExportSelection/telemetry/unknown-null (0.21s)
+    --- PASS: TestEnvtestNetworkExportSelection/telemetry/verified-null (0.27s)
+    --- PASS: TestEnvtestNetworkExportSelection/telemetry/corrupt-history (0.33s)
+    --- PASS: TestEnvtestNetworkExportSelection/telemetry/missing-site (0.35s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	20.650s

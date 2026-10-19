@@ -1,0 +1,14 @@
+=== RUN   TestCompositeTemplatePublicSettlingSurvivesRestart
+=== RUN   TestCompositeTemplatePublicSettlingSurvivesRestart/settled
+=== RUN   TestCompositeTemplatePublicSettlingSurvivesRestart/source-changed
+=== RUN   TestCompositeTemplatePublicSettlingSurvivesRestart/lost-receipt
+=== RUN   TestCompositeTemplatePublicSettlingSurvivesRestart/member-race
+=== RUN   TestCompositeTemplatePublicSettlingSurvivesRestart/member-drift
+--- PASS: TestCompositeTemplatePublicSettlingSurvivesRestart (1.27s)
+    --- PASS: TestCompositeTemplatePublicSettlingSurvivesRestart/settled (0.82s)
+    --- PASS: TestCompositeTemplatePublicSettlingSurvivesRestart/source-changed (0.06s)
+    --- PASS: TestCompositeTemplatePublicSettlingSurvivesRestart/lost-receipt (0.08s)
+    --- PASS: TestCompositeTemplatePublicSettlingSurvivesRestart/member-race (0.25s)
+    --- PASS: TestCompositeTemplatePublicSettlingSurvivesRestart/member-drift (0.06s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.613s

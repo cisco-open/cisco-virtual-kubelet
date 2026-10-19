@@ -81,10 +81,15 @@ type NetworkControllerRef struct {
 	Name string `json:"name"`
 }
 
-// NetworkControllerSecretRef injects one Secret key at an RFC 6901-style path
-// below a managed Network as Code section. Resolvers must not persist the
-// injected value in status, revisions, logs, or events.
+// NetworkControllerSecretRef supplies an approved Secret key at a managed
+// section path. Value is the default use; an adapter may explicitly advertise
+// private input comparison instead. Material must never enter status or logs.
 type NetworkControllerSecretRef struct {
+	// Use selects value injection (the default) or a private comparison key.
+	// Comparison keys remain operational metadata outside the resolved model.
+	// +kubebuilder:validation:Enum=Value;PrivateComparisonKey
+	// +optional
+	Use string `json:"use,omitempty"`
 	// Section must name one of spec.managedSections.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
@@ -92,8 +97,8 @@ type NetworkControllerSecretRef struct {
 	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9_]*$`
 	Section string `json:"section"`
 
-	// Path is the JSON pointer within the section at which the Secret value is
-	// injected.
+	// Path identifies the value destination, or the adapter-qualified comparison
+	// scope for PrivateComparisonKey. It never grants arbitrary field access.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=1024
@@ -223,7 +228,7 @@ type NetworkControllerConfigSpec struct {
 	// +kubebuilder:validation:Required
 	ModelSource NetworkControllerNetAsCodeModelSource `json:"modelSource"`
 
-	// SecretRefs injects sensitive leaf values after resolving Source. Each
+	// SecretRefs supplies approved values or private comparison keys. Each
 	// entry selects only an alias from the target NetworkController's
 	// intentSecretSources allow-list; it cannot authorize a new Secret.
 	// +kubebuilder:validation:MaxItems=128

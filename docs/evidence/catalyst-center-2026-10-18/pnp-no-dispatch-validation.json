@@ -1,0 +1,105 @@
+{
+  "scope": "PnP registration whole-cohort pre-dispatch proof retirement and fresh replanning",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/config_dispatch.go": "2fac2b14110a75c6b07183761738c72fcdc0c1b8e76bab488689ac0ecbc90330",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "17508512ea7937061259bae2a500d9791d521d52f5a77f1c0a1a24dde09e88a8",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "af773180bbf7bd5bc4553b6fee8ac0ab36a4eacd4554129ccc000033a51856cf",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage.go": "e97e043c0d390c6f767df0c121b23b6c2c5195d58638fd724750b27c0f5a9055",
+    "internal/controlleradapter/catalystcenter/pnp_registration_public.go": "dfd94199824ad08a55f899774c8f681ca03ab86c3f3932238421f0ce84ea26bc",
+    "internal/controlleradapter/catalystcenter/pnp_registration.go": "85fc1a1d254a74b7976e2ef1cc16fb0fcac325578fed0d59580abdff49d6764f",
+    "internal/controlleradapter/catalystcenter/pnp_registration_journal.go": "eff9540506b28e12deaf58a00081f15dc4c42c344e620c174cae979cf5f7d1b0",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch_test.go": "6afa42c741a3f0c04e4bcea1329a0e2d86692780553b5b4e8a82d3381b663e63",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage_test.go": "6b714ab6d7b0f14e95dc459d178da32ac41cb6b264f7784e89819c0cbea2887a",
+    "internal/controlleradapter/catalystcenter/pnp_registration_no_dispatch_test.go": "3454d34f7f1c2be47304abbebad766c8a4053667781514022681c830a11db8e0",
+    "internal/controlleradapter/catalystcenter/pnp_registration_no_dispatch_envtest_test.go": "5685dae3ce200f739abf312af43c868033e8df7fc7ba44d0ec7f3df705ed8c89",
+    "internal/controlleradapter/catalystcenter/pnp_registration_stage_live_test.go": "034acf1e90e37da5633e85abf7078f46e6edec4ac0eeccfa79249cb237d98ef0"
+  },
+  "gates": {
+    "regression": {
+      "families": 32,
+      "subcases": 610,
+      "seconds": 21.815
+    },
+    "api": {
+      "cases": 6,
+      "seconds": 11.742
+    },
+    "native": {
+      "seconds": 10.711,
+      "testSeconds": 8.27
+    },
+    "nd": {
+      "seconds": 4.541
+    },
+    "providerUpgrades": {
+      "seconds": 14.532
+    },
+    "controllerUpgrades": {
+      "seconds": 6.451
+    }
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-pnp-registration-3019634181",
+    "retiredOperation": {
+      "id": "72f8aa8ee7969d4cd29bee17ecd8acd9",
+      "configName": "sites",
+      "configUID": "config",
+      "configGeneration": 1,
+      "controllerGeneration": 1,
+      "section": "inventory",
+      "resource": "pnp-register:3ed0b7fd1925d40473711f363b04c6098531f3c7b8cc7334c4781dad45cd6064",
+      "action": "Create",
+      "phase": "Submitting",
+      "submittedAt": "2026-10-18T00:26:20Z"
+    },
+    "newOperationID": "eb694249662dc741558e733fef3c10ce",
+    "createdUUID": "6ad4122d0bc0186771caf0c8",
+    "preDispatchPOSTs": 0,
+    "freshRegistrationPOSTs": 1,
+    "exactGeneratedUUIDRemoved": true,
+    "pnpAndNetworkBaselinesRestored": true,
+    "kubernetesPersistence": "simulated",
+    "installed": false
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-pnp-no-dispatch",
+    "sha256": "cc8266d7fd278c0dd0894a34b61480f841705c873b1e10e5a9722aa0bcc5e00e",
+    "installed": false
+  },
+  "logs": {
+    "regression": {
+      "file": "pnp-no-dispatch-regression.log",
+      "sha256": "a1b8ed30dd8bace9db24a3b9d62e1e0aed11f964928b9ec63ba5ea3ed9875c5f"
+    },
+    "api": {
+      "file": "pnp-no-dispatch-api.log",
+      "sha256": "197a396d38d7d33c8ce8b53a23f30592de9f1744ddc165162bd0aad97b034358"
+    },
+    "native": {
+      "file": "pnp-no-dispatch-native.log",
+      "sha256": "8a8d70ef77bee3e8eb139c601cd25f3f058260a7c1b17c7b534e6dc0801c0108"
+    },
+    "nd": {
+      "file": "pnp-no-dispatch-nd.log",
+      "sha256": "1cdb3b3d5254ae0842c044e50792c6765504c146f239d7c6c26cd77ce62055e6"
+    },
+    "provider-upgrades": {
+      "file": "pnp-no-dispatch-provider-upgrades.log",
+      "sha256": "e8eebdfdcf941b652561053cbddc245f279160f613475e54b7a02986836fa5b4"
+    },
+    "controller-upgrades": {
+      "file": "pnp-no-dispatch-controller-upgrades.log",
+      "sha256": "e8de1d1f91947e702869f577fcfc718254372cab40885ac6c6b2af790ced470a"
+    },
+    "build": {
+      "file": "pnp-no-dispatch-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "limits": [
+    "Proof covers the outer whole-manifest source/owner/cohort preflight before calling the registration primitive. Errors inside the primitive or after POST entry remain Unknown without this proof.",
+    "Existing legacy Unknown or taskless lost acknowledgements cannot be cleared by native serial matching or reconstructed proof.",
+    "Native run injects a local transport read failure with real inventory and registration/cleanup; Kubernetes journal persistence is simulated. Real API qualification uses simulated native responses.",
+    "No physical claim/reset/onboarding, preview, prune/delete, mixed-state inventory or installed-worker qualification is added. Full 93-resource parity remains incomplete."
+  ]
+}

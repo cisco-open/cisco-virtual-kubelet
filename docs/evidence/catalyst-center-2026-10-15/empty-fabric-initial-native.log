@@ -1,0 +1,11 @@
+=== RUN   TestLiveFabricAuthenticationEmptyExecution
+=== RUN   TestLiveFabricAuthenticationEmptyExecution/Closed_Authentication
+    fabric_authentication_empty_live_test.go:163: private recovery baseline saved /private/tmp/cvk-auth-template-baseline-2321263848/baseline.json
+    fabric_authentication_empty_live_test.go:163: isolated operation POST /dna/intent/api/v1/areas 01a1406e-aa13-7947-aad6-152abc106ec9
+    fabric_authentication_empty_live_test.go:163: isolated operation uncertain; retain exact fixture POST /dna/intent/api/v1/sda/fabricSites REST POST /dna/intent/api/v1/sda/fabricSites failed with status Bad Request
+    fabric_authentication_empty_live_test.go:207: retained isolated fixture; inspect before any further write Global/CVK-Q-Auth-20261015-163915-000000000 e115620c-5e8d-43c8-ad75-c830d46ae1e7  terminal observation false
+--- FAIL: TestLiveFabricAuthenticationEmptyExecution (4.59s)
+    --- FAIL: TestLiveFabricAuthenticationEmptyExecution/Closed_Authentication (4.59s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	5.719s
+FAIL

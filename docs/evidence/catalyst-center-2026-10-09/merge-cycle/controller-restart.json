@@ -1,0 +1,354 @@
+{
+  "before": {
+    "at": "2026-10-09T13:15:44.177777+00:00",
+    "handoff": {
+      "apiVersion": "ops.cisco.vk/v1alpha1",
+      "kind": "CatalystCenterSWIMHandoff",
+      "metadata": {
+        "creationTimestamp": "2026-10-09T13:07:43Z",
+        "finalizers": [
+          "ops.cisco.vk/swim-handoff-evidence"
+        ],
+        "generation": 1,
+        "name": "swim-bc2e75fc810627ccd1309ad783fcb59e",
+        "namespace": "cvk-live",
+        "resourceVersion": "11581961",
+        "uid": "49bb216a-e2ec-491c-94da-c3adf95c99a1"
+      },
+      "spec": {
+        "controllerGeneration": 2,
+        "controllerUsername": "system:serviceaccount:cvk-live:catc-controller-worker",
+        "deviceName": "cat9k-lab-101",
+        "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "deviceWorkerPodUID": "268c83ec-a6f8-4ea2-b6ab-985b2d0f69c8",
+        "deviceWorkerUsername": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "serial": "FOC2520L6H1",
+        "source": {
+          "controllerName": "catc",
+          "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+          "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+          "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+          "imageVersion": "17.18.04.0.759",
+          "standardReloadProfile": "CatalystCenter323",
+          "transferFallbackAddress": "192.0.2.254"
+        },
+        "targetVersion": "17.18.04",
+        "upgradeName": "catc-merge-baseline-20261009-101-r2-cat9k-lab-101-b21fe44f",
+        "upgradeUID": "2daf3d2c-311e-459a-9866-7b6794a7fc61"
+      },
+      "status": {
+        "activationClaim": "09213ff5-c559-4d7c-8f11-643834d8425b",
+        "activationNotBefore": "2026-10-09T13:13:09Z",
+        "activationTask": "01a120cc-d0af-7302-82d7-039ec5af7e46",
+        "distributionClaim": "ad46f409-2c13-4929-af00-deaf059c294a",
+        "distributionNotBefore": "2026-10-09T13:09:37Z",
+        "distributionTask": "01a120c9-91ad-7273-a62a-d145e1d0642a",
+        "phase": "Activating",
+        "readinessClaim": "635980f4-4d47-45e7-906e-ba6a67b0c384",
+        "readinessFor": "ReadyToActivate",
+        "readinessHistory": [
+          {
+            "claim": "e6bafc0d-6921-4e69-8171-647e92b13db7",
+            "stage": "ReadyToDistribute",
+            "submittedAt": "2026-10-09T13:07:43Z",
+            "task": "01a120c7-d676-7397-a2cc-fe04995cb9a8"
+          }
+        ],
+        "readinessNotBefore": "2026-10-09T13:11:11Z",
+        "readinessTask": "01a120cb-0343-73a4-afef-19993c09fcf6"
+      }
+    },
+    "pod": {
+      "metadata": {
+        "name": "catc-controller-worker-796984c77b-kbcq9",
+        "uid": "6d439f21-db5f-4472-a47f-29712c1d4fed",
+        "creationTimestamp": "2026-10-09T12:31:43Z"
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T12:31:45Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T12:31:43Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T12:31:56Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T12:31:56Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T12:31:43Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "containerd://9d85101dacaee698134168218ff6c60be6f39f6909ed8c80eda30f5b4046fc7f",
+            "image": "docker.io/library/cvk-catc-handoff:20261009-merge1",
+            "imageID": "sha256:766f71137f3e4023ee77f7c59cc237fc84816bec8da7404ff08932d2d7d32dd2",
+            "lastState": {},
+            "name": "controller-worker",
+            "ready": true,
+            "resources": {},
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2026-10-09T12:31:44Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 65532,
+                "supplementalGroups": [
+                  65532
+                ],
+                "uid": 65532
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/etc/cisco-vk/controller/controller.yaml",
+                "name": "bootstrap",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/var/run/secrets/cisco-vk/controller/credentials",
+                "name": "credentials",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/tmp",
+                "name": "tmp"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-m2pjs",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              }
+            ]
+          }
+        ],
+        "hostIP": "10.0.2.2",
+        "hostIPs": [
+          {
+            "ip": "10.0.2.2"
+          }
+        ],
+        "observedGeneration": 1,
+        "phase": "Running",
+        "podIP": "10.0.0.57",
+        "podIPs": [
+          {
+            "ip": "10.0.0.57"
+          }
+        ],
+        "qosClass": "BestEffort",
+        "startTime": "2026-10-09T12:31:43Z"
+      },
+      "images": [
+        "cvk-catc-handoff:20261009-merge1"
+      ]
+    }
+  },
+  "after": {
+    "at": "2026-10-09T13:16:36.750968+00:00",
+    "handoff": {
+      "apiVersion": "ops.cisco.vk/v1alpha1",
+      "kind": "CatalystCenterSWIMHandoff",
+      "metadata": {
+        "creationTimestamp": "2026-10-09T13:07:43Z",
+        "finalizers": [
+          "ops.cisco.vk/swim-handoff-evidence"
+        ],
+        "generation": 1,
+        "name": "swim-bc2e75fc810627ccd1309ad783fcb59e",
+        "namespace": "cvk-live",
+        "resourceVersion": "11581961",
+        "uid": "49bb216a-e2ec-491c-94da-c3adf95c99a1"
+      },
+      "spec": {
+        "controllerGeneration": 2,
+        "controllerUsername": "system:serviceaccount:cvk-live:catc-controller-worker",
+        "deviceName": "cat9k-lab-101",
+        "deviceUID": "20f3e68e-b127-4f2e-9a36-b66945135051",
+        "deviceWorkerPodUID": "268c83ec-a6f8-4ea2-b6ab-985b2d0f69c8",
+        "deviceWorkerUsername": "system:serviceaccount:cvk-live:cisco-vk-cisco-virtual-kubelet-network-management",
+        "serial": "FOC2520L6H1",
+        "source": {
+          "controllerName": "catc",
+          "controllerUID": "e4506c10-8a8f-40b2-89b7-4187940627fb",
+          "deviceID": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+          "imageID": "058d4e65-d4d7-41a4-9f6e-ee5ac63c9276",
+          "imageVersion": "17.18.04.0.759",
+          "standardReloadProfile": "CatalystCenter323",
+          "transferFallbackAddress": "192.0.2.254"
+        },
+        "targetVersion": "17.18.04",
+        "upgradeName": "catc-merge-baseline-20261009-101-r2-cat9k-lab-101-b21fe44f",
+        "upgradeUID": "2daf3d2c-311e-459a-9866-7b6794a7fc61"
+      },
+      "status": {
+        "activationClaim": "09213ff5-c559-4d7c-8f11-643834d8425b",
+        "activationNotBefore": "2026-10-09T13:13:09Z",
+        "activationTask": "01a120cc-d0af-7302-82d7-039ec5af7e46",
+        "distributionClaim": "ad46f409-2c13-4929-af00-deaf059c294a",
+        "distributionNotBefore": "2026-10-09T13:09:37Z",
+        "distributionTask": "01a120c9-91ad-7273-a62a-d145e1d0642a",
+        "phase": "Activating",
+        "readinessClaim": "635980f4-4d47-45e7-906e-ba6a67b0c384",
+        "readinessFor": "ReadyToActivate",
+        "readinessHistory": [
+          {
+            "claim": "e6bafc0d-6921-4e69-8171-647e92b13db7",
+            "stage": "ReadyToDistribute",
+            "submittedAt": "2026-10-09T13:07:43Z",
+            "task": "01a120c7-d676-7397-a2cc-fe04995cb9a8"
+          }
+        ],
+        "readinessNotBefore": "2026-10-09T13:11:11Z",
+        "readinessTask": "01a120cb-0343-73a4-afef-19993c09fcf6"
+      }
+    },
+    "pod": {
+      "metadata": {
+        "name": "catc-controller-worker-796984c77b-zq6lh",
+        "uid": "bafb7b58-00de-4f6c-9bd4-bb2f23e0a29f",
+        "creationTimestamp": "2026-10-09T13:15:44Z"
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T13:15:46Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodReadyToStartContainers"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T13:15:44Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T13:15:57Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T13:15:57Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastProbeTime": null,
+            "lastTransitionTime": "2026-10-09T13:15:44Z",
+            "observedGeneration": 1,
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "containerID": "containerd://4e9977ae8b6a1e7023bae7c8922622f1bcf858c9cd16b4e774a45f88e5a2a84a",
+            "image": "docker.io/library/cvk-catc-handoff:20261009-merge1",
+            "imageID": "sha256:766f71137f3e4023ee77f7c59cc237fc84816bec8da7404ff08932d2d7d32dd2",
+            "lastState": {},
+            "name": "controller-worker",
+            "ready": true,
+            "resources": {},
+            "restartCount": 0,
+            "started": true,
+            "state": {
+              "running": {
+                "startedAt": "2026-10-09T13:15:45Z"
+              }
+            },
+            "user": {
+              "linux": {
+                "gid": 65532,
+                "supplementalGroups": [
+                  65532
+                ],
+                "uid": 65532
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/etc/cisco-vk/controller/controller.yaml",
+                "name": "bootstrap",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/var/run/secrets/cisco-vk/controller/credentials",
+                "name": "credentials",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              },
+              {
+                "mountPath": "/tmp",
+                "name": "tmp"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "kube-api-access-mb5zn",
+                "readOnly": true,
+                "recursiveReadOnly": "Disabled"
+              }
+            ]
+          }
+        ],
+        "hostIP": "10.0.2.2",
+        "hostIPs": [
+          {
+            "ip": "10.0.2.2"
+          }
+        ],
+        "observedGeneration": 1,
+        "phase": "Running",
+        "podIP": "10.0.0.169",
+        "podIPs": [
+          {
+            "ip": "10.0.0.169"
+          }
+        ],
+        "qosClass": "BestEffort",
+        "startTime": "2026-10-09T13:15:44Z"
+      },
+      "images": [
+        "cvk-catc-handoff:20261009-merge1"
+      ]
+    }
+  }
+}

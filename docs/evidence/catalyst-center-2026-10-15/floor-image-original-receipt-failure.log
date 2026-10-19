@@ -1,0 +1,15 @@
+=== RUN   TestLiveCatalystCenterFloorImageManifest
+    site_execution_live_test.go:68: isolated qualification hierarchy: Global/CVK-Q-20261014-222854-000000000
+    site_execution_live_test.go:202: public manifest Create reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:214: bulk create task=01a13c88-6ccd-780f-9ff0-68f4e6be6d72
+    site_execution_live_test.go:240: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:269: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:276: submitted task=01a13c88-8d72-7c2c-a8a5-33e77efee8f0 at=2026-10-14T22:29:04Z
+    site_execution_live_test.go:294: verified Update floor
+    site_execution_live_test.go:303: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:305: public manifest did not converge; retain fixture
+    site_execution_live_test.go:112: retained uncertain hierarchy for inspection: Global/CVK-Q-20261014-222854-000000000
+--- FAIL: TestLiveCatalystCenterFloorImageManifest (138.18s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	138.848s
+FAIL

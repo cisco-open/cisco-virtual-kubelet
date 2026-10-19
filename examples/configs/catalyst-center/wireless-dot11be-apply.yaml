@@ -1,0 +1,31 @@
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-dot11be-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-dot11be-example-v1
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          dot11be_profiles:
+            - name: CVK_BE
+              ofdma_down_link: true
+              ofdma_up_link: true
+              mu_mimo_down_link: false
+              mu_mimo_up_link: false
+              ofdma_multi_ru: false

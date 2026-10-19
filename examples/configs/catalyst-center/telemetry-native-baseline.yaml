@@ -1,0 +1,42 @@
+# Apply to a new configuration owner, or use an independently qualified handoff.
+# Existing legacy v1 telemetry receipts cannot be silently adopted as v2 proof.
+# The controller must approve the comparison alias in intentSecretSources and
+# its existing worker must mount an independent 32-byte hex comparison key.
+# No key material belongs in this manifest or the resolved model.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-network-native-baseline
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  secretRefs:
+    - use: PrivateComparisonKey
+      section: network_settings
+      path: /network_settings
+      source: comparison
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-network-native-baseline-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: CVK-Lab
+              parent_name: Global
+              network_settings:
+                telemetry: lab-partial
+        network_settings:
+          telemetry:
+            - name: lab-partial
+              wired_data_collection: true
+              wireless_telemetry: null

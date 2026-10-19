@@ -600,3 +600,17 @@ Cross-field checks below mirror invariants that JSON Schema cannot express.
 {{- end -}}
 {{- end -}}
 {{- end }}
+
+{{/* Keep protocol prerequisites enforced even when JSON-schema validation is skipped. */}}
+{{- define "cisco-virtual-kubelet.validateConfigurationProtocol" -}}
+{{- if and .Values.topology.controllerMetadataHandoff (or (not .Values.topology.enabled) (not .Values.controller.leaderElect) .Values.aggregator.enabled (empty .Values.config.leaseNamespace)) -}}
+{{- fail "controller metadata handoff requires topology.enabled=true, isolated workers, leader election and an explicit config.leaseNamespace" -}}
+{{- end -}}
+{{- $protocol := .Values.topology.configurationReservationProtocol -}}
+{{- if not (or (eq $protocol "controller-configuration-v1") (eq $protocol "controller-configuration-group-v1")) -}}
+{{- fail "topology.configurationReservationProtocol must select a supported configuration protocol" -}}
+{{- end -}}
+{{- if and (eq $protocol "controller-configuration-group-v1") (or (not .Values.topology.enabled) (ne .Values.topology.workerAccounts.networkManagement.accessMode "readWrite")) -}}
+{{- fail "group configuration protocol requires topology.enabled=true and networkManagement.accessMode=readWrite" -}}
+{{- end -}}
+{{- end -}}

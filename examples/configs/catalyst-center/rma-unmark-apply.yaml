@@ -1,0 +1,36 @@
+# Update the SAME NetworkControllerConfig that created the mark; do not delete
+# and recreate it. The retained config UID and native record receipt authorize
+# cleanup. Keep every previously marked device explicitly declared and provisioned.
+# Removing the rma block with PrunePolicy Delete requests the owned unmark PUT.
+# Other devices may keep or add MARK_FOR_REPLACEMENT in the same model.
+# Foreign marks, whole-device removal, REPLACE and unrelated effects are refused.
+# InSync waits for manager reservation retirement and ownership finalization.
+# Real worker/device qualification is pending; this example is fixture-tested only.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-rma-mark
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Delete
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-rma-unmark-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          devices:
+            - name: edge
+              serial_number: FOC12345678
+              device_ip: 192.0.2.100
+              site: Global/Lab/Building
+              state: PROVISION

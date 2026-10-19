@@ -1,0 +1,144 @@
+[
+  {
+    "id": "db6c872b-fa4b-4ad0-bdd6-64a67954aa86",
+    "parentId": "01a11c66-b50a-7c8b-9b63-a0325bc9a6d9",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Startup config check",
+    "status": null,
+    "startTime": 1791477857538,
+    "endTime": 1791477878408,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": ""
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Startup configuration exist for this device"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "98723d26-97fe-46f2-9cd7-77adfa7623fc",
+    "parentId": "01a11c66-b50a-7c8b-9b63-a0325bc9a6d9",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Config register check",
+    "status": null,
+    "startTime": 1791477857351,
+    "endTime": 1791477877271,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "0x102,0x2102"
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Config-register verified successfully"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "ed9ee52d-6c8f-4d97-b48f-85fd80a98dd9",
+    "parentId": "01a11c66-b50a-7c8b-9b63-a0325bc9a6d9",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Flash check",
+    "status": null,
+    "startTime": 1791477857283,
+    "endTime": 1791477876708,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "2620 MB\n Available Free space is: 3129 MB [Install mode needs free space to 2.2 times of Image size]"
+      },
+      {
+        "key": "STATUS",
+        "value": "SUCCESS"
+      }
+    ]
+  },
+  {
+    "id": "cb9b9bf1-d982-4df2-9ada-8b6c316c000e",
+    "parentId": "01a11c66-b50a-7c8b-9b63-a0325bc9a6d9",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "File Transfer Check",
+    "status": null,
+    "startTime": 1791477857210,
+    "endTime": 1791477876497,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254. The Netconf transfer failed, likely because the device is unable to ping 192.0.2.254 through the default VRF."
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "HTTPS/SCP is reachable: 192.0.2.254/ Netconf transfer failed"
+      },
+      {
+        "key": "STATUS",
+        "value": "warning"
+      }
+    ]
+  },
+  {
+    "id": "b19eafad-1a16-41aa-96fc-3cc896b40406",
+    "parentId": "01a11c66-b50a-7c8b-9b63-a0325bc9a6d9",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "Image Version Support",
+    "status": null,
+    "startTime": 1791477857144,
+    "endTime": 1791477867157,
+    "details": [
+      {
+        "key": "DESCRIPTION",
+        "value": "The standard image is applicable to the device"
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  },
+  {
+    "id": "a0bb48fd-dca9-4a5d-9791-866267da4278",
+    "parentId": "01a11c66-b50a-7c8b-9b63-a0325bc9a6d9",
+    "networkDeviceId": "70601ab8-5104-46bc-a061-1ffbaf108c16",
+    "operationType": "READINESS_CHECK",
+    "type": "PRE_VALIDATION",
+    "name": "XFSU Compatibility Check",
+    "status": null,
+    "startTime": 1791477856945,
+    "endTime": 1791477866294,
+    "details": [
+      {
+        "key": "EXPECTED",
+        "value": ""
+      },
+      {
+        "key": "DESCRIPTION",
+        "value": "Device is eligible for xFSU upgrade."
+      },
+      {
+        "key": "STATUS",
+        "value": "success"
+      }
+    ]
+  }
+]

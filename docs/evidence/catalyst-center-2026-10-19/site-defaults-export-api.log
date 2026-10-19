@@ -1,0 +1,4 @@
+=== RUN   TestEnvtestSiteDefaultsManifestLifecycle
+--- PASS: TestEnvtestSiteDefaultsManifestLifecycle (9.21s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.094s

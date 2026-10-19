@@ -1,0 +1,34 @@
+# Offline source-selection example. Do not apply this unselected input to a lab.
+# Use controller-export-network --managed-sites '["Global/Lab"]'
+# --manage-specific-sites-only to retain only Lab's settings. Without exact mode,
+# the pinned module's literal startswith also selects Lab2 and Lab's descendants.
+catalyst_center:
+  sites:
+    global:
+      network_settings: {network: global}
+    areas:
+      - name: Lab
+        parent_name: Global
+        network_settings: {network: shared}
+      - name: Lab2
+        parent_name: Global
+        network_settings: {network: shared}
+      - name: Other
+        parent_name: Global
+        network_settings: {network: excluded}
+    buildings:
+      - name: Operations
+        parent_name: Global/Lab
+        network_settings: {network: shared}
+    floors:
+      - name: Control
+        parent_name: Global/Lab/Operations
+        network_settings: {network: shared}
+  network_settings:
+    network:
+      - name: global
+        banner: Example global banner
+      - name: shared
+        ntp_servers: [192.0.2.1]
+      - name: excluded
+        banner: Example excluded banner

@@ -1,0 +1,127 @@
+{
+  "status": "PASS protected manager seal CAS and recovery; automatic runtime/fence lifecycle remains disabled",
+  "fullModelComplete": false,
+  "source": {
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "cefdd689d4b12f3e25b9137926a2f3a38904c2098898af4be25e18cee0273933",
+      "productionSHA256": "7ac3948880ea4e91c5f8f7bf3c756cd2e6f5de4c950dee54db50e53473c29b37"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "eb32904d69c5427ac7151f98f4bcaea237eff5eaa6fdf468f232cee2e0251887",
+      "productionSHA256": "1b48d6df0e70225e71110709c8f7046da6527283fa5b94aa8aeca987f94ffda8"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1695,
+      "sha256": "d7702bcc675878effcad9702af055b3d85045024065bc9229e8d874988a33fdf",
+      "productionSHA256": "8fa742ad26d74340aa70e35431b7a1ba2840cf0e98a3d188f0f56c292e13af10"
+    },
+    "internal/controllerconfiguration": {
+      "files": 145,
+      "sha256": "c3b8e4f79200f9d331e9bf72197cd28aef0dd66bc11d68c7be9a9a47d4f84992",
+      "productionSHA256": "37359eaafb3b7f50dbb25a46fc91c8819d078911eee024afeea5557b1353b2ba"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "d5219d86e3bed19e7f0be7c39acd995529e69051b540de50dad692f4a94ca2b7",
+      "productionSHA256": "25ecea246bbda98c0dc2558afff6a1be208f75f86d4ca7a9ca30fc8a1b4b7ca3"
+    },
+    "manifests": {
+      "config/crd/cisco.vk_networkcontrollers.yaml": "da64015e7e6c2112d3f6cc3bc6fb06e80ae9c01e58493ebf37dbe66d1a5f0c45",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "da64015e7e6c2112d3f6cc3bc6fb06e80ae9c01e58493ebf37dbe66d1a5f0c45",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "2e0616553373699b57d05c95cf9c1bcd32ba40d9ad735dce4577b3d64205e9db"
+    }
+  },
+  "gates": {
+    "sealAndActorRealAPI": {
+      "result": "PASS",
+      "passingEvents": 54,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration": 23.813
+      },
+      "log": "/private/tmp/cvk-metadata-seal-final-api.log"
+    },
+    "apiAndFoundations": {
+      "result": "PASS",
+      "passingEvents": 3314,
+      "packages": 7,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1": 3.641,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter": 2.491,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard": 5.276,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance": 6.7059999999999995,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade": 14.869,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller": 35.762,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration": 37.219
+      },
+      "log": "/private/tmp/cvk-metadata-seal-foundation.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1049,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter": 61.818
+      },
+      "log": "/private/tmp/cvk-metadata-seal-compat.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-metadata-seal-cisco-vk"
+    },
+    "sourceAndFormat": {
+      "result": "PASS",
+      "runtimeAndManifestsFrozen": true
+    },
+    "strictDocumentationAndLedger": {
+      "result": "PASS",
+      "seconds": 7.16,
+      "branch": "pr/johalley/catc-support",
+      "uniquePinnedResourceRows": 93,
+      "log": "/private/tmp/cvk-metadata-seal-docs.log"
+    }
+  },
+  "implementation": {
+    "entryPoint": "EnsureMetadataHandoff",
+    "requiredRuntimeCheck": "MetadataHandoffRuntimeCheck",
+    "policyRequired": "ReadMetadataHandoffProtection exact compiled contract",
+    "actorSourceRequired": "ReadMetadataScopeWorker",
+    "managerRoute": "optional AuthorizeMetadataHandoff branch; nil remains read-only",
+    "sameRecordIdempotence": true,
+    "statusCASOnly": true,
+    "lostAcknowledgementRecovery": "fresh authoritative snapshot; no stale write retry",
+    "postCASReadbackAndRevalidation": true,
+    "nativeOrFenceWrite": false,
+    "compositionRootProvidesRuntimeCallback": false
+  },
+  "qualification": {
+    "controlledModes": [
+      "valid",
+      "mutating-check-arguments",
+      "missing-runtime",
+      "prewrite-denied",
+      "postcommit-denied",
+      "missing-policy",
+      "foreign-custody",
+      "lost-ack",
+      "conflict",
+      "pruned"
+    ],
+    "realAPI": "actual source, actor chain, protected manager status writer and retained seal; simulated lost response and fresh-snapshot recovery",
+    "simulated": [
+      "worker readiness",
+      "absent background compiler status publication",
+      "remaining fence settlement compatibility callback"
+    ],
+    "installedClusterRollout": false,
+    "nativeMutation": false
+  },
+  "remaining": [
+    "Compatible canonical retained-fence acquisition/claim/release and settlement admission",
+    "Production manager/worker compatibility callback and activation",
+    "Original verified absence or certified-refusal release with restart/lost-response recovery",
+    "Installed/native public lifecycle, complete consumers, CR/missing-source finalization and other pinned 93-resource execution/hardware gaps"
+  ]
+}

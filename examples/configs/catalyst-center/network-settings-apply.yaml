@@ -1,0 +1,41 @@
+# Requires matching journal CRDs, manager and worker.
+# Create the empty CVK-Lab area first using sites-apply.yaml; no devices are assigned.
+# This writes explicit settings to that area and retains them on manifest deletion.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-network-settings-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [network_settings]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 5m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-network-apply-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: CVK-Lab
+              parent_name: Global
+              network_settings:
+                network: lab-network
+        network_settings:
+          network:
+            - name: lab-network
+              ntp_servers: [192.0.2.10]
+              dhcp_servers: [192.0.2.20]
+              domain_name: example.test
+              dns_servers: [192.0.2.53]
+              timezone: Europe/Berlin
+              banner: |
+                Authorized lab access only.

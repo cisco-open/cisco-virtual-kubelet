@@ -1,0 +1,21 @@
+=== RUN   TestLiveCatalystCenterNetworkEmptyProbe
+    site_execution_live_test.go:111: isolated qualification hierarchy: Global/CVK-Q-20261017-040336-000000000
+    site_execution_live_test.go:452: submitted task=01a14807-8d31-7a99-92f2-10bd7c8d1cd2 at=2026-10-17T04:03:36.771143Z
+    site_execution_live_test.go:470: verified Create area
+    site_execution_live_test.go:452: submitted task=01a14807-93e5-723a-88b0-674c04fa91cf at=2026-10-17T04:03:38.477835Z
+    site_execution_live_test.go:470: verified Create building
+    site_execution_live_test.go:452: submitted task=01a14807-9690-77e2-a7b9-b3fc9747908c at=2026-10-17T04:03:39.122791Z
+    site_execution_live_test.go:470: verified Create floor
+    site_execution_live_test.go:452: submitted task=01a14807-9d4d-7574-b892-b2a486cf9f90 at=2026-10-17T04:03:40.829873Z
+    site_execution_live_test.go:470: verified Update floor
+    site_execution_live_test.go:479: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:516: isolated ntp encoding=0 original task=01a14807-a4af-7df4-b21e-ad1ef3cf0fdd native server shape=array
+    site_execution_live_test.go:516: isolated ntp encoding=1 HTTP400 rejected; no task accepted; native state unchanged
+    site_execution_live_test.go:516: isolated ntp encoding=2 original task=01a14807-acc1-74ba-8fd9-d95e01a50858 native server shape=absent
+    site_execution_live_test.go:516: isolated dhcp encoding=0 original task=01a14807-b2d6-7908-bf35-6e338551b6f0 native server shape=array
+    site_execution_live_test.go:516: isolated dhcp encoding=1 original task=01a14807-b8ed-72cc-9e1f-80a80c332543 native server shape=absent
+    site_execution_live_test.go:516: isolated dhcp encoding=2 original task=01a14807-bf03-7e94-bf81-6dc1834ee828 native server shape=absent
+    site_execution_live_test.go:225: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterNetworkEmptyProbe (21.23s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	23.620s

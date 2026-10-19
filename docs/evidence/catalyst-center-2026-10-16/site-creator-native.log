@@ -1,0 +1,23 @@
+=== RUN   TestLiveCatalystCenterSiteSingularManifest
+    site_execution_live_test.go:82: isolated qualification hierarchy: Global/CVK-Q-20261016-193937-000000000
+    site_execution_live_test.go:226: singular manifest create task 01a1463a-3122-789e-86ce-8c1ebd1d438a
+    site_execution_live_test.go:226: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:226: singular manifest create task 01a1463a-4a86-726a-bac7-f94e93d2a732
+    site_execution_live_test.go:226: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:226: singular manifest create task 01a1463a-644d-7b1b-9111-40bc13a129a4
+    site_execution_live_test.go:226: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:282: three original create-task result UUIDs bind exact native kind, path and parent; creator receipt identity independently verified
+    site_execution_live_test.go:294: three durable original-task site creator receipts retained through restarted reconciliation
+    site_execution_live_test.go:296: three singular manifest creates and complete native hierarchy verified
+    site_execution_live_test.go:383: public manifest step=0 status=Waiting operation=none task= reasons=[AdapterAvailable NativePreflightRefused NativePreflightRefused]
+    site_execution_live_test.go:383: retained acknowledged singular-site task as Unknown for restarted observation
+    site_execution_live_test.go:383: public manifest Update reached InSync across simulated worker restarts; journal cleared, owner retained, no-op verified
+    site_execution_live_test.go:390: submitted task=01a1463a-913a-7cee-a471-9717798d145f at=2026-10-16T19:40:04Z
+    site_execution_live_test.go:408: verified Update floor
+    site_execution_live_test.go:417: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:422: four acknowledged Unknown tasks recovered through restarted public reconciliation without resubmission
+    site_execution_live_test.go:428: four injected preflight failures retired without native effects; fresh public plans converged with four exact mutations and retained owners/history
+    site_execution_live_test.go:193: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSiteSingularManifest (41.30s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	43.457s

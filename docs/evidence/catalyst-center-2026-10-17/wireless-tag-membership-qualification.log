@@ -1,0 +1,120 @@
+=== RUN   TestEnvtestWirelessTagMembershipRemoval
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-retain
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-complete
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-retain
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-device
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer
+--- PASS: TestEnvtestWirelessTagMembershipRemoval (107.43s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-complete (8.22s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-retain (4.33s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof (4.04s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device (4.33s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-child-device (4.42s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-device-error (4.46s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp (4.43s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error (4.32s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (4.65s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer (4.78s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-complete (7.04s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-retain (4.97s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof (4.67s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device (5.95s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-child-device (5.48s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-device-error (5.39s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp (5.39s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error (5.58s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (5.68s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer (5.91s)
+=== RUN   TestWirelessTagMembershipExample
+--- PASS: TestWirelessTagMembershipExample (0.00s)
+=== RUN   TestWirelessTagMembershipScopeEnvelope
+=== RUN   TestWirelessTagMembershipScopeEnvelope/valid
+=== RUN   TestWirelessTagMembershipScopeEnvelope/empty
+=== RUN   TestWirelessTagMembershipScopeEnvelope/unsorted
+=== RUN   TestWirelessTagMembershipScopeEnvelope/duplicate
+=== RUN   TestWirelessTagMembershipScopeEnvelope/null
+=== RUN   TestWirelessTagMembershipScopeEnvelope/noncanonical
+=== RUN   TestWirelessTagMembershipScopeEnvelope/future
+=== RUN   TestWirelessTagMembershipScopeEnvelope/create
+=== RUN   TestWirelessTagMembershipScopeEnvelope/over-capacity
+=== RUN   TestWirelessTagMembershipScopeEnvelope/cohort
+--- PASS: TestWirelessTagMembershipScopeEnvelope (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/valid (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/empty (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/unsorted (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/duplicate (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/null (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/noncanonical (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/future (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/create (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/over-capacity (0.00s)
+    --- PASS: TestWirelessTagMembershipScopeEnvelope/cohort (0.00s)
+=== RUN   TestWirelessTagMembershipAffectedScopes
+=== RUN   TestWirelessTagMembershipAffectedScopes/site
+=== RUN   TestWirelessTagMembershipAffectedScopes/zone
+=== RUN   TestWirelessTagMembershipAffectedScopes/empty
+=== RUN   TestWirelessTagMembershipAffectedScopes/unchanged
+--- PASS: TestWirelessTagMembershipAffectedScopes (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/site (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/zone (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/empty (0.00s)
+    --- PASS: TestWirelessTagMembershipAffectedScopes/unchanged (0.00s)
+=== RUN   TestWirelessTagMembershipRemoval
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-retain
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-child-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-device-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-pnp
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-complete
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-retain
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-child-device
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-device-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-pnp
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer
+--- PASS: TestWirelessTagMembershipRemoval (39.25s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-complete (2.09s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-retain (1.67s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-missing-proof (1.48s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-device (1.63s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-child-device (1.63s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-device-error (1.66s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-pnp (1.63s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-pnp-error (1.65s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (1.78s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-post-task-consumer (1.84s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-complete (2.98s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-retain (2.04s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-missing-proof (1.98s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-device (2.09s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-child-device (2.10s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-device-error (2.13s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-pnp (2.11s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-pnp-error (2.11s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (2.28s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-post-task-consumer (2.37s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	148.884s

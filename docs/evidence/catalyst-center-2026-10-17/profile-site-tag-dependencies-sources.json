@@ -1,0 +1,108 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "toolchain": "go1.26.9",
+  "upstream": [
+    {
+      "path": "cc_network_profiles.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_profiles.tf",
+      "sha256": "f49a96dfababdbcdbaebda90d5a8d50e424d3b0c64727baf8de442bb67e1c6c3"
+    },
+    {
+      "path": "cc_wireless.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_wireless.tf",
+      "sha256": "55956a619e460b28e3a57a797b981ed5d3601513e2968793e3b565afa12f3322"
+    }
+  ],
+  "sourceSha256": {
+    "api/v1alpha1/networkcontroller_configuration_types.go": "d108fde7081cfebf219265c4d179efa4dab126de1a7930dd2f5bd27182083d02",
+    "examples/configs/catalyst-center/profile-site-tag-dependencies.yaml": "449d7a4d17fd3e4672fc738dfc6780aeb25df1dddae2abd62e7ecffa7e0ef1c9",
+    "examples/configs/catalyst-center/wireless-tag-baselines-apply.yaml": "04805b2ccd60eb87b3544a57076283b0dadaf0f8d2e377a607f6336afef1597e",
+    "examples/configs/catalyst-center/wireless-tag-membership-apply.yaml": "d22d374c31b1de10ba9ba1b63a18087acf6dfe9ac31f56c1f6e16bba62ae72fe",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "33e595f6c1fb707c9f44c54151da9ed439a5f25e16efd46897702f3160a8c82a",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "b2c7d55f1683f404cd8ac338c4d993ce5d015b9ebcc54cc3ef292410165748a2",
+    "internal/controlleradapter/catalystcenter/config_secrets.go": "ded98534a23909505c0e91311d72ea0b556e1b83ac96e037419ad147b8036e9c",
+    "internal/controlleradapter/catalystcenter/network_profile_configuration.go": "e40c642f2728ede9577fe15482fa4e5d58ef512f05adf2d3051b884931ac4f5f",
+    "internal/controlleradapter/catalystcenter/network_profile_recovery.go": "33ab82fc700673ced1306046bb2d1d682c804d1f2d4958830ec621556c11bbda",
+    "internal/controlleradapter/catalystcenter/profile_site_prune.go": "2ef661d3fc076bef5b570845b98882e1d99d5526268aa52ba53bcc9dbf8cb6be",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies.go": "37039fbfab520cdbc92c5d5ae461ee584cb37a155b2ca251bbf79e7323a7e242",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies_envtest_test.go": "4509c1a076341b2ed3ac9b72f669d00cfcb1b75a22474cbc98622360cf794d21",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies_example_test.go": "42714a2f7927fed3d7abb4c0bea96768ad100979959c2a601790c27a7899cb39",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies_test.go": "6d3effcbc511fac2f175cdedd3616606b06a514362732e99ff37d8378e5ec656",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_projection_test.go": "b0529d653e24905491ca45f4a0a2c7848b152761470cc9a8ed591f2d83d6dffb",
+    "internal/controlleradapter/catalystcenter/template_deployment_adapter_recovery.go": "3534b45daba35c4c91bd7ebca3f7931257bed96b37918428c5d10f03099fc149",
+    "internal/controlleradapter/catalystcenter/template_input_comparison.go": "fd175047db6c3acc548bbb6f17174cac44f3cf845371b75b4410d87ba2a49767",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "f2d13de47b11787901b5583f72bfbfbddfce4977ae09e1c561e7a066d59d121b",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "b63be2d982338cec91558756cf6bd2ceb85f6dfd40b16aaa717c2db7dd1865e6",
+    "internal/controlleradapter/catalystcenter/wireless_profile_fixture_cleanup_live_test.go": "18939ece794b59d35c2466e990c5a502f6178b4353b349c6d1dc1f08b048c0b5",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "6f6ade244995b5c4a8a78e40ba8e818bbc98b67ad0c100b931e3d62ec4925b6d",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_test.go": "ec03266a3047c0b471f59409f76965511b8eaca299140988ed31ba9007f8a05e",
+    "internal/controlleradapter/catalystcenter/wireless_profile_tag_execution.go": "d81c3f3042de09f478718c25b432c407c08bc70bb6f07ee1c05b3460d9c43c36",
+    "internal/controlleradapter/catalystcenter/wireless_profile_tag_inventory.go": "41d1404d842c8fb36fa710443b34ae667eae69806b1dc2b1e6624b14e780ae9b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership.go": "390a054ac7d0d7ebe7ec104cfc552dcb620971f687c7a840ec2416cfc9346900",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_envtest_test.go": "d9106763c063bf43b7ae147993623cea874ae08da3e549b2e762211d38a1a224",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_example_test.go": "280c07f42e744af0565d131290c54ef670436ae5dbc75028ef67770cdf221ce5",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_live_test.go": "57fd9bd8ad7b08e160bca4b7ba2764ec0b317b858c73ef651b0227be22c6c2b3",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_protocol_test.go": "b52bd36b9b51b58607e2009206b5411e140ba7f094f243716370e466b8a370fd",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_test.go": "0705c4627a026c5f0837d0667ffe189849f37407d467bc83114c0561ede9b75b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "f3ba49330b8d61bc0d343772cb558e0a987ee3baa1efdfbd4fca058fba4cef99",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_envtest_test.go": "4d105f7f9093a009ff6f09230a5f3ff386bae050603929c09016bf4528a8e196",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_example_test.go": "43ab89e35256bff806bb4673a3d081f91cd7e422c2c0ae3804d2415d29c34a19",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_protocol_test.go": "0cd753a9f2b5d54a5bd3a0143c9fa7ec6dcf4b2a269b540f9ef7c4e5f5f4b4a6",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_test.go": "1d809f7e5c464457c8b42959f2deaa51ec1ea72fd6172bee29e7fb5f56062f99"
+  },
+  "scope": "Current source/test/example fingerprints, not installed binary attestations. Native metadata API is real; native-harness Kubernetes actor/storage faults are simulated and separately qualified by temporary Kubernetes API tests. No physical device operation or WLC/AP qualification.",
+  "qualification": {
+    "localCompositionCases": 28,
+    "APICompositionCases": 28,
+    "multiCandidateProjectionCases": 9,
+    "exampleTests": 1,
+    "nativeStatus": "passed",
+    "regressionStatus": "passed",
+    "explicitRefusalRetirementLocalCases": 4,
+    "explicitRefusalRetirementAPICases": 4,
+    "regressionSeconds": 503.378,
+    "regressionCaseCounts": {
+      "TestProfileSitePrune": 82,
+      "TestEnvtestProfileSitePrune": 82,
+      "TestWirelessTagMembershipRemoval": 34,
+      "TestEnvtestWirelessTagMembershipRemoval": 34,
+      "TestWirelessTagReceipts": 44,
+      "TestEnvtestWirelessTagReceipts": 44
+    },
+    "ordinaryParentRefusalLocalCases": 2,
+    "ordinaryParentRefusalAPICases": 2,
+    "nativeSeconds": 1463.711,
+    "nativeWorkflowSeconds": [
+      585.33,
+      876.0
+    ],
+    "nativeOriginalTasks": 26,
+    "nativeMembershipUpdates": 5,
+    "nativeCombinedSourceUnassignments": 2,
+    "nativeLaterCleanupUnassignments": 2,
+    "nativeFinalPrivateTagRows": 9,
+    "nativeFinalPrivateMemberProofs": 10,
+    "nativeBaselinesRestored": 2,
+    "nativeOrderEvidence": [
+      {
+        "workflow": "TestLiveWirelessProfilePublicRecovery",
+        "verifiedMembershipTaskIDs": [
+          "01a14938-26e8-746a-9e5a-3d79f0740b59",
+          "01a14939-4ef5-7af9-bac4-13d75c700e39"
+        ],
+        "verifiedFollowingUnassignmentTaskID": "01a1493a-080d-77a7-99df-dbfaf44d1333"
+      },
+      {
+        "workflow": "TestLiveWirelessPolicyCohortPublicRecovery",
+        "verifiedMembershipTaskIDs": [
+          "01a14943-5005-730e-8bba-03d1448066fa",
+          "01a14944-c314-7e7e-97e2-151a21e7ea9e",
+          "01a14946-21f1-71e0-877d-cc019b186dce"
+        ],
+        "verifiedFollowingUnassignmentTaskID": "01a14947-0d89-7d61-8e0a-e1035f8de7f1"
+      }
+    ]
+  }
+}

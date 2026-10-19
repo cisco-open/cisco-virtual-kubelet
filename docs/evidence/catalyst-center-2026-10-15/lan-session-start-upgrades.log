@@ -1,0 +1,4 @@
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle	1.211s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade	14.546s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoi	5.297s
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/drivers/iosxe/gnoiruntime	5.336s

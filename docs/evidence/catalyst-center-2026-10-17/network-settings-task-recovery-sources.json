@@ -1,0 +1,40 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "upstream": [
+    {
+      "file": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/network_execution.go": "7528d8ebde0f656b892348061c764ae069781cea5ad9dc5afd24d4d0f527bca8",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "2e5b99dc2c7172a484633a6e1a12c847687a609d4b441b772943ef31ebe8a6b7",
+    "internal/controlleradapter/catalystcenter/network_settings.go": "236aaf0faf64970c162c3ad1492ef079fc3a42d2192d2f8c52eec8cd5c5ba5b5",
+    "internal/controlleradapter/catalystcenter/network_submission_test.go": "3153172422f24788a659ab0da266b3fecfb7961be54c27e72f5b1c1c970f1069",
+    "internal/controlleradapter/catalystcenter/network_submission_recovery_test.go": "2779c551bbc5afdc20fcfd09d8afb4430498741fc7d9dbb13eb442d8e24f2839",
+    "internal/controlleradapter/catalystcenter/network_submission_envtest_test.go": "b0e48c63f4e711d8b3c121d3413d7fdc150ea185dbba6aed09ed8038c12f8868",
+    "internal/controlleradapter/catalystcenter/network_execution_live_test.go": "e7f4ac0646b6b74ad0d72e36776dfc0db00ee4e54b1c2f3de701441c05d39030",
+    "internal/controlleradapter/catalystcenter/network_execution_test.go": "63aefa4208dda4f1e505ceaa776ab66ea83b13606ea8a64cd7b56c32d784cef1",
+    "internal/controlleradapter/catalystcenter/network_credential_configuration.go": "698ec4ccf72eee8eb01e0629896eef11900e0649c9bb9cbf6ceaf1148f65f7fc",
+    "internal/controlleradapter/catalystcenter/telemetry_settings.go": "35e986948bea38b9331d3387f4bd1ba60433f864dbe6aac269fcb61d02a44ffe",
+    "internal/controlleradapter/catalystcenter/ipam_execution.go": "c2995558f640885581906ed27a3cf6bb48cdf1c2116e9e5dc8b11c3d9835cce5",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "aa8bb03e712b91c24edb09b83222b3865848940586d4c6a11def5622381c626b",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch_test.go": "37cfda62325e4fb2c667336ae247f6a50e4122fd1bc61431ff6621f1451c2945",
+    "internal/controlleradapter/catalystcenter/config_dispatch.go": "fd798ca12493dac7ff996d963b610d0076e1c1e68f9d5756661f98bd78a85f09",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "6cb45055bc6402032d4f5f610f5a63f1b01961de47a9d3df5b9bfadf9c77c3f7",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "885ea32be0a3a1b664ffd90962ab324befb79175ef8a9e653788dbd58b129aa8",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "18d717fca13b92f3656b5e15dd6c562a48c560148f3529c870eacd3006886ecd",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "977e08f13e577a825f903e9e18f48f3bb5af7e7d5936ead6e7754c031181e7c8",
+    "internal/controlleradapter/catalystcenter/network_task_recovery.go": "861f7f9594c79d7510ce613687576eb2fab8af701d3cc21630c2eece23ac2013",
+    "internal/controlleradapter/catalystcenter/network_task_recovery_test.go": "11cebf8fc60dffaf0f8d22b3f95f9c51f7a03d856ad903e4a10c12cee0096201",
+    "internal/controlleradapter/catalystcenter/network_task_recovery_envtest_test.go": "4353f036a1d7c6c13cd7e9b4e6a8d92e5f5e853ba7e9883a58494b6e87af4098",
+    "internal/controlleradapter/catalystcenter/template_deployment_adapter_recovery.go": "aa0fb8ea923d5175577e6a864fc91ea85e0860bf43eda969e7655e209c874a6b",
+    "internal/controlleradapter/catalystcenter/config_completion.go": "9078f39218be187ade87e7f2236901b4972e77c2a1d82ae639caedd6685d2001",
+    "internal/controlleradapter/catalystcenter/config_task_tree.go": "2fa7f32e0e84c8e97342e824c2bf05a7a49a75feedeed77f64fd87443de935c1",
+    "internal/controlleradapter/catalystcenter/wireless_definition_recovery.go": "04dcf3c61f82c2b052e67524d145c8a60f33c3d93fe3dbcfdea5340fd12f59e4"
+  },
+  "scope": "Public original acknowledged Unknown task recovery for the six compiled NTP/DHCP/DNS/timezone/banner/telemetry Update identities. Reuses strict metadata envelope, shared source/owner/journal bracket, original task root/tree and exact target-only native observation before unchanged common phase transitions. Fixtures cover negative/racing evidence and ConfigMap identity; real API recovery matrix and real six-setting native no-resubmission lifecycle. Native run storage/restarts are simulated; no taskless or credential/IPAM/physical recovery expansion, creator/applied ownership, destructive lifecycle or full NetAsCode parity claim."
+}

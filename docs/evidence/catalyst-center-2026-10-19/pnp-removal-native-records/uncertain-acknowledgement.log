@@ -1,0 +1,6 @@
+=== RUN   TestLiveRetainedPnPRegistrationCleanup
+    pnp_registration_stage_live_test.go:618: retained guarded acknowledgement uncertain; no replay invalid Catalyst Center API response
+--- FAIL: TestLiveRetainedPnPRegistrationCleanup (1.53s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.975s
+FAIL

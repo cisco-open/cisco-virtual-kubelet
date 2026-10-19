@@ -1,0 +1,38 @@
+[
+  {
+    "status": 204,
+    "empty": true,
+    "filter": "context",
+    "count": null,
+    "fields": [],
+    "known_id_present": false
+  },
+  {
+    "status": 204,
+    "empty": true,
+    "filter": "description",
+    "count": null,
+    "fields": [],
+    "known_id_present": false
+  },
+  {
+    "status": 200,
+    "content_type": "application/json;charset=utf-8",
+    "resource": "interfaces",
+    "row_fields": [
+      "id",
+      "interfaceName",
+      "vlanId"
+    ]
+  },
+  {
+    "status": 200,
+    "content_type": "application/json;charset=utf-8",
+    "resource": "interface-detail",
+    "response_fields": [
+      "id",
+      "interfaceName",
+      "vlanId"
+    ]
+  }
+]

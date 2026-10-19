@@ -1,0 +1,138 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "scope": "Manifest-driven same-owner complete-producer tag recreation using existing Apply/Delete private-key manifests, journal, native executor and atomic receipt writer. Supported singleton/bulk fixture execution and failure paths pass; native qualification is active, not proven.",
+  "gates": [
+    {
+      "name": "local",
+      "log": "wireless-tag-recreate-execution-local.log",
+      "goSeconds": 82.062,
+      "passingRecreationCases": 17,
+      "skippedInapplicableSingletonPartialCohort": true,
+      "topLevelPassingTests": 5
+    },
+    {
+      "name": "api",
+      "log": "wireless-tag-recreate-execution-api.log",
+      "goSeconds": 210.925,
+      "passingRecreationCases": 17,
+      "skippedInapplicableSingletonPartialCohort": true,
+      "topLevelPassingTests": 28
+    },
+    {
+      "name": "compatibility",
+      "log": "wireless-tag-recreate-execution-compatibility.log",
+      "goSeconds": 2.388,
+      "passingRecreationCases": 0,
+      "skippedInapplicableSingletonPartialCohort": false,
+      "topLevelPassingTests": 23
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_execution.go": "11774015086946a36acb756aae53123210dbf66d9730f6e6865f7e2c25cda8c5",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_execution_test.go": "952f693d824740a4eead69f9fa2ff0f834e663710393e431144f170456cdc4fa",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_envtest_test.go": "754daf7cf113d73fecbcf9d407836e93c6bd627bf3aadc4e37878951ea42330e",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "d5c34d7612895f3fbe78a9d4a7fd3a673ae417cf31be2daf3d84a46550ae580c",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune.go": "484b8829b434212640d528390e0e97faed524c0de51cd6d2aad6b71184ecb5a8",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate.go": "e2d5fd149a667481eb2a51867977447c9ea8053414e99eaa356846e146655bbc",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings.go": "1dc3723659642478904533c930bab8e4dc1a6b328071105614e4ac4a0720efa7",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership.go": "435735a47426fa927b2b3adffc87f8683f9dcc7bcee4de82bc8581bdce8fc93b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_test.go": "0c542112bf4d6d1683ce57057e0ac27e438e06c45be3f06764f2452813204907",
+    "internal/controlleradapter/catalystcenter/wireless_tag_retired_test.go": "baa91e634a8d6949dda35f4a4c636a5aa25c3754c15883b4f89eac1e06bf0f57",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "50f1674113529df2710cfa481e6bf28eaa6abe526d79ad3a1a90d87e8a461af7",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_live_test.go": "017e1dd317ef061b27cb5a91c8b7f5007312279431d9cb6a7e1f8e56165e38f0",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "8f9b3fbd7d62d731e1099dda93065158151e42e07f24e580ffeb23fe1f2bcdfb",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_live_test.go": "b62f8f1d084b67948a15cdd07eaef4e8ad4affbe4c3eece9d2ec1f8d594788f1",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "95ad921530fb1aec372ea80e46cdf78a1178521fa68b6fa9907d059d2e171840",
+    "internal/controlleradapter/catalystcenter/client.go": "63ab17f41a36b676def48d597207272f9424549c3cbe81902669ce19b369739a",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "07b97bb02d7af7a78b2f567976916a90d15cd69b57125f2842b292d825f45209"
+  },
+  "activeJobs": {
+    "native": {
+      "session": 25539,
+      "log": "/private/tmp/cvk-tag-recreate-execution-native.log",
+      "audit": "/private/tmp/cvk-tag-recreate-native-audit.py",
+      "expectedOriginalTasks": 40,
+      "workflowTimeout": "45m",
+      "goTimeout": "100m"
+    },
+    "legacyAPI": {
+      "session": 22666,
+      "log": "/private/tmp/cvk-tag-recreate-legacy-api.log"
+    }
+  },
+  "nativeStatus": {
+    "status": "pending",
+    "test": "TestLiveWirelessTagRecreationPublicRecovery",
+    "completedWorkflows": [],
+    "verifiedTasksInActiveLog": 13,
+    "distinctCompletedTasks": 0
+  },
+  "nativeInitialFailure": "70m requested workflow timeout exceeded existing 45m harness bound; terminated before any lab operation. Retained separately. Corrected run uses 45m without changing that bound.",
+  "remaining": [
+    "Terminal native recreation/cleanup qualification",
+    "Terminal complete legacy gates against activated planner/writer",
+    "Repeated v5 update/member cycles and wider/mixed cohorts",
+    "Archive/key/owner handoff and retirement",
+    "Parent/config deletion and installed/physical qualification",
+    "Full 93-resource model parity"
+  ],
+  "legacyLifecycleAudit": [
+    {
+      "surface": "local",
+      "status": "passed",
+      "goSeconds": 272.683,
+      "families": [
+        {
+          "test": "TestWirelessTagMembershipRemoval",
+          "status": "pass",
+          "passingLifecycleCases": 34,
+          "expectedLifecycleCases": 34,
+          "seconds": 66.29
+        },
+        {
+          "test": "TestWirelessTagPrune",
+          "status": "pass",
+          "passingLifecycleCases": 60,
+          "expectedLifecycleCases": 60,
+          "seconds": 155.91
+        },
+        {
+          "test": "TestWirelessTagReceipts",
+          "status": "pass",
+          "passingLifecycleCases": 46,
+          "expectedLifecycleCases": 46,
+          "seconds": 48.08
+        }
+      ]
+    },
+    {
+      "surface": "api",
+      "status": "pending",
+      "goSeconds": null,
+      "families": [
+        {
+          "test": "TestEnvtestWirelessTagMembershipRemoval",
+          "status": "pass",
+          "passingLifecycleCases": 34,
+          "expectedLifecycleCases": 34,
+          "seconds": 175.01
+        },
+        {
+          "test": "TestEnvtestWirelessTagPrune",
+          "status": "pass",
+          "passingLifecycleCases": 60,
+          "expectedLifecycleCases": 60,
+          "seconds": 406.83
+        },
+        {
+          "test": "TestEnvtestWirelessTagReceipts",
+          "status": "pending",
+          "passingLifecycleCases": 0,
+          "expectedLifecycleCases": 46,
+          "seconds": null
+        }
+      ]
+    }
+  ],
+  "legacyAuditScript": "/private/tmp/cvk-tag-recreate-legacy-audit.py"
+}

@@ -1,0 +1,34 @@
+=== RUN   TestEnvtestSitePrivateCreatorBaseline
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/area-create/private-known
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/area-create/private-native-edit
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/area-create/private-key-change
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/area-create/private-option-loss
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/area-create/recover-private
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/building-create/private-known
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/building-create/private-native-edit
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/building-create/private-key-change
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/building-create/private-option-loss
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/building-create/recover-private
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/floor-create/private-known
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/floor-create/private-native-edit
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/floor-create/private-key-change
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/floor-create/private-option-loss
+=== RUN   TestEnvtestSitePrivateCreatorBaseline/floor-create/recover-private
+--- PASS: TestEnvtestSitePrivateCreatorBaseline (35.31s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/area-create/private-known (4.42s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/area-create/private-native-edit (1.99s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/area-create/private-key-change (1.93s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/area-create/private-option-loss (1.99s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/area-create/recover-private (1.80s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/building-create/private-known (1.75s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/building-create/private-native-edit (1.91s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/building-create/private-key-change (1.96s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/building-create/private-option-loss (1.85s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/building-create/recover-private (1.79s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/floor-create/private-known (1.81s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/floor-create/private-native-edit (1.98s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/floor-create/private-key-change (2.01s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/floor-create/private-option-loss (1.94s)
+    --- PASS: TestEnvtestSitePrivateCreatorBaseline/floor-create/recover-private (1.85s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	37.708s

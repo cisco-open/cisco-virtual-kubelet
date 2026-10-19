@@ -1,0 +1,15 @@
+/tmp/cvk-merge-admission-cisco-vk: go1.26.9
+	path	github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk
+	mod	github.com/cisco/virtual-kubelet-cisco	v0.0.0-20261009163230-4c6c529343c2
+	build	-buildmode=exe
+	build	-compiler=gc
+	build	-trimpath=true
+	build	CGO_ENABLED=0
+	build	GOARCH=amd64
+	build	GOOS=linux
+	build	GOAMD64=v1
+	build	vcs=git
+	build	vcs.revision=4c6c529343c24e224ba7ae7203349c9e5e37c0ea
+	build	vcs.time=2026-10-09T16:32:30Z
+	build	vcs.modified=false
+80b2b050d75497b66acf24e9077936f6d472d826c94f6a645afdd63bf66a0f7a  /tmp/cvk-merge-admission-cisco-vk

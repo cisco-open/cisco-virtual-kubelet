@@ -1,0 +1,14 @@
+=== RUN   TestEnvtestWirelessTagMembershipRemoval
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+--- PASS: TestEnvtestWirelessTagMembershipRemoval (18.76s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (7.72s)
+    --- PASS: TestEnvtestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (7.32s)
+=== RUN   TestWirelessTagMembershipRemoval
+=== RUN   TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer
+=== RUN   TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer
+--- PASS: TestWirelessTagMembershipRemoval (4.21s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-false/membership-preflight-consumer (1.86s)
+    --- PASS: TestWirelessTagMembershipRemoval/cohort-true/membership-preflight-consumer (2.34s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	25.177s

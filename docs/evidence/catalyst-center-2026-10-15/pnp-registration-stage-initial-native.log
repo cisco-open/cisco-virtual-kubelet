@@ -1,0 +1,8 @@
+=== RUN   TestLivePnPRegistrationStageExecution
+    pnp_registration_stage_live_test.go:118: private registration recovery directory /private/tmp/cvk-pnp-registration-1428771456
+    pnp_registration_stage_live_test.go:159: owned native registration 6ad1123f0bc0186771caae30 CVKEF6A2870
+    pnp_registration_stage_live_test.go:175: record is no longer the exact unclaimed fixture; cleanup refused
+--- FAIL: TestLivePnPRegistrationStageExecution (7.63s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.747s
+FAIL

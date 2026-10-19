@@ -1,0 +1,11 @@
+=== RUN   TestLiveCatalystCenterSiteBulkExecution
+    site_execution_live_test.go:50: isolated qualification hierarchy: Global/CVK-Q-20261014-142816-000000000
+    site_execution_live_test.go:188: bulk create task=01a13ad0-61c8-7375-bac1-f42e0f06a22f
+    site_execution_live_test.go:214: single native batch created all three site identities; retained member/anchor binding and task tree verified
+    site_execution_live_test.go:244: submitted task=01a13ad0-705b-7f84-8b41-b548992aaa2a at=2026-10-14T14:28:21.120386Z
+    site_execution_live_test.go:262: verified Update floor
+    site_execution_live_test.go:271: three creates, one floor update, and full hierarchy read-back verified
+    site_execution_live_test.go:161: isolated hierarchy cleanup verified
+--- PASS: TestLiveCatalystCenterSiteBulkExecution (10.72s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.566s

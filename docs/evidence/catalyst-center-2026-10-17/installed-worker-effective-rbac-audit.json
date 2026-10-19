@@ -1,0 +1,62 @@
+[
+  {
+    "account": "cisco-virtual-kubelet-controller",
+    "verb": "get",
+    "resource": "controllerconfigurationreservations.ops.cisco.vk",
+    "allowed": true
+  },
+  {
+    "account": "cisco-virtual-kubelet-controller",
+    "verb": "list",
+    "resource": "controllerconfigurationreservations.ops.cisco.vk",
+    "allowed": true
+  },
+  {
+    "account": "cisco-virtual-kubelet-controller",
+    "verb": "create",
+    "resource": "controllerconfigurationreservations.ops.cisco.vk",
+    "allowed": false
+  },
+  {
+    "account": "cisco-virtual-kubelet-controller",
+    "verb": "update",
+    "resource": "controllerconfigurationreservations.ops.cisco.vk",
+    "allowed": false
+  },
+  {
+    "account": "cisco-virtual-kubelet-controller",
+    "verb": "delete",
+    "resource": "controllerconfigurationreservations.ops.cisco.vk",
+    "allowed": false
+  },
+  {
+    "account": "catc-lab-controller-worker",
+    "verb": "get",
+    "resource": "secrets",
+    "allowed": false
+  },
+  {
+    "account": "catc-lab-controller-worker",
+    "verb": "get",
+    "resource": "configmaps",
+    "allowed": true
+  },
+  {
+    "account": "catc-lab-controller-worker",
+    "verb": "patch",
+    "resource": "networkcontrollerconfigs.config.cisco.vk",
+    "allowed": false
+  },
+  {
+    "account": "catc-lab-controller-worker",
+    "verb": "patch",
+    "resource": "networkcontrollerconfigs.config.cisco.vk/status",
+    "allowed": true
+  },
+  {
+    "account": "catc-lab-controller-worker",
+    "verb": "update",
+    "resource": "leases.coordination.k8s.io",
+    "allowed": false
+  }
+]

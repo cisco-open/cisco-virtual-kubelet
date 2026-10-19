@@ -1,0 +1,20 @@
+=== RUN   TestLiveWirelessPowerRules
+    wireless_power_rules_live_test.go:36: isolated power CVK_R_56557dc063c8d1d8
+    wireless_power_rules_live_test.go:122: task ETHERNET Create 01a13e0c-c65f-7618-94d0-56e90abe02ee
+    wireless_power_rules_live_test.go:136: owned power CVK_R_56557dc063c8d1d8 mdiYq1zl-x1jF-nty1-ntDK-yZa2m2m4zdfKoemWvJflmL8ZuJrF
+    wireless_power_rules_live_test.go:145: qualified ETHERNET same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:122: task RADIO Update 01a13e0c-cd73-717d-94e2-0c229b16066a
+    wireless_power_rules_live_test.go:145: qualified RADIO same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:122: task USB Update 01a13e0c-d495-73ca-804b-881d0ed8d72c
+    wireless_power_rules_live_test.go:145: qualified USB same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:122: task COMBINED Update 01a13e0c-dba7-7a78-b61c-96684e810148
+    wireless_power_rules_live_test.go:145: qualified COMBINED same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:122: task REORDERED Update 01a13e0c-e2d3-7ec3-b83b-430eb4ba308c
+    wireless_power_rules_live_test.go:145: qualified REORDERED same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:122: task DESCRIPTION Update 01a13e0c-ea1d-736d-b9da-efb3d2298626
+    wireless_power_rules_live_test.go:145: qualified DESCRIPTION same UUID, exact rules/description, no-op and baseline
+    wireless_power_rules_live_test.go:120: stage submission uncertain; retain CLEAR CVK_R_56557dc063c8d1d8 mdiYq1zl-x1jF-nty1-ntDK-yZa2m2m4zdfKoemWvJflmL8ZuJrF REST PUT /dna/intent/api/v1/wirelessSettings/powerProfiles/mdiYq1zl-x1jF-nty1-ntDK-yZa2m2m4zdfKoemWvJflmL8ZuJrF failed with status Bad Request
+--- FAIL: TestLiveWirelessPowerRules (11.60s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.584s
+FAIL

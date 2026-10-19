@@ -1,0 +1,22 @@
+{
+  "credentialDelivery": false,
+  "installedActors": false,
+  "nativeDevices": 3,
+  "nativeDiscoveryJobs": 1,
+  "nativeMutationAttempts": 0,
+  "nativeReadFailureInjected": true,
+  "operationRetired": true,
+  "originalPreparedOperation": {
+    "id": "0877d04103c68d59b3f17673e34f2cbc",
+    "configName": "sites",
+    "configUID": "9fc9fca8-d2fc-42f7-b07e-baaf9fd9042a",
+    "configGeneration": 2,
+    "controllerGeneration": 2,
+    "section": "inventory",
+    "resource": "discovery-credential-input:v4:3ea4405e97d42d82b5ba212f4cef2c59bceeca7e7bc46d1139accfa72aa0bc96:eef1c2b7b28fcae1d3874d2ccee3fa0334bfffd3e9296e87139f97df2114cc41:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945:e00f:e4cb1b22e9983f0190f22b8310902e1e4d8f4a271a0d5559c14e2f656369e4df:-",
+    "action": "Create",
+    "phase": "Prepared"
+  },
+  "provenUndispatchedOperationID": "bd0b9c126e712f1da9b7cca78cadae30",
+  "realIsolatedKubernetesAPI": true
+}

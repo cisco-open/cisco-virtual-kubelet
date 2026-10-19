@@ -1,0 +1,45 @@
+=== RUN   TestAuthenticationClassificationAndRedaction
+=== RUN   TestAuthenticationClassificationAndRedaction/401
+=== RUN   TestAuthenticationClassificationAndRedaction/403
+=== RUN   TestAuthenticationClassificationAndRedaction/500
+--- PASS: TestAuthenticationClassificationAndRedaction (0.03s)
+    --- PASS: TestAuthenticationClassificationAndRedaction/401 (0.01s)
+    --- PASS: TestAuthenticationClassificationAndRedaction/403 (0.01s)
+    --- PASS: TestAuthenticationClassificationAndRedaction/500 (0.01s)
+=== RUN   TestReadRefreshesOnlyUnauthorized
+=== RUN   TestReadRefreshesOnlyUnauthorized/401
+=== RUN   TestReadRefreshesOnlyUnauthorized/403
+--- PASS: TestReadRefreshesOnlyUnauthorized (0.03s)
+    --- PASS: TestReadRefreshesOnlyUnauthorized/401 (0.02s)
+    --- PASS: TestReadRefreshesOnlyUnauthorized/403 (0.01s)
+=== RUN   TestRedirectsNeverForwardCredentialsOrReplay
+=== RUN   TestRedirectsNeverForwardCredentialsOrReplay//dna/system/api/v1/auth/token
+=== RUN   TestRedirectsNeverForwardCredentialsOrReplay//dna/intent/api/v1/network-device
+=== RUN   TestRedirectsNeverForwardCredentialsOrReplay//dna/intent/api/v1/image/distribution
+--- PASS: TestRedirectsNeverForwardCredentialsOrReplay (0.03s)
+    --- PASS: TestRedirectsNeverForwardCredentialsOrReplay//dna/system/api/v1/auth/token (0.01s)
+    --- PASS: TestRedirectsNeverForwardCredentialsOrReplay//dna/intent/api/v1/network-device (0.01s)
+    --- PASS: TestRedirectsNeverForwardCredentialsOrReplay//dna/intent/api/v1/image/distribution (0.01s)
+=== RUN   TestSWIMMutationsAreNeverReplayed
+=== RUN   TestSWIMMutationsAreNeverReplayed/401
+=== RUN   TestSWIMMutationsAreNeverReplayed/403
+=== RUN   TestSWIMMutationsAreNeverReplayed/429
+=== RUN   TestSWIMMutationsAreNeverReplayed/500
+--- PASS: TestSWIMMutationsAreNeverReplayed (0.04s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/401 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/403 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/429 (0.01s)
+    --- PASS: TestSWIMMutationsAreNeverReplayed/500 (0.01s)
+=== RUN   TestStaleSessionInvalidationPreservesNewSession
+--- PASS: TestStaleSessionInvalidationPreservesNewSession (0.00s)
+=== RUN   TestCredentialRotationReloadsMaterial
+--- PASS: TestCredentialRotationReloadsMaterial (0.02s)
+=== RUN   TestTLSVerificationIsEnabledUnlessExplicitlyDisabled
+2026/10/17 13:06:38 http: TLS handshake error from 127.0.0.1:59270: remote error: tls: bad certificate
+--- PASS: TestTLSVerificationIsEnabledUnlessExplicitlyDisabled (0.01s)
+=== RUN   TestClientAuthenticatesAndReadsInventory
+--- PASS: TestClientAuthenticatesAndReadsInventory (0.01s)
+=== RUN   TestSWIMClientContracts
+--- PASS: TestSWIMClientContracts (0.01s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.591s

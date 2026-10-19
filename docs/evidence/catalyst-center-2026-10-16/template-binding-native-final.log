@@ -1,0 +1,38 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-183533 01a145ff-85b5-76be-886e-9e536485afc2
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-183533 01a145ff-9747-726a-8bdd-5f128555475e
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-183533#CVK-Commit-Qualification 01a145ff-b4d3-74c9-a42c-cc9e8a2baa09
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-183533#CVK-Commit-Qualification 01a145ff-e9f3-799f-af2e-6133be0f2df2
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-183533#CVK-Commit-Qualification 01a14600-342d-7b24-b58f-dd791aea24f5
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-183533#CVK-Commit-Qualification 01a14600-7325-7f1c-bbbf-16e04c013928
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified a3a61673-568c-4de5-9f36-bac4126eec87
+    template_projects_live_test.go:166: generated template metadata task runtime-binding 01a14600-b3a6-7df9-bbe1-f00f4649ba41
+    template_projects_live_test.go:166: generated template metadata task runtime-binding 01a14600-db34-729c-8a93-7252202f94ac
+    template_binding_metadata_live_test.go:64: native choice-map count runtime-binding 0
+    template_binding_metadata_live_test.go:64: native choice-map count runtime-binding 0
+    template_projects_live_test.go:166: native binding metadata transition verified runtime-binding
+    template_projects_live_test.go:166: generated template metadata task updated-filter 01a14601-119d-7659-9dfc-57f07f8202a5
+    template_projects_live_test.go:166: generated template metadata task updated-filter 01a14601-3b45-797b-a957-5acc20f203df
+    template_binding_metadata_live_test.go:64: native choice-map count updated-filter 0
+    template_binding_metadata_live_test.go:64: native choice-map count updated-filter 0
+    template_projects_live_test.go:166: native binding metadata transition verified updated-filter
+    template_binding_metadata_live_test.go:64: native choice-map count binding-noop 0
+    template_binding_metadata_live_test.go:64: native choice-map count binding-noop 0
+    template_projects_live_test.go:166: native binding metadata transition verified binding-noop
+    template_projects_live_test.go:166: generated template metadata task clear-binding 01a14601-8957-7b5b-b149-47d19d92830e
+    template_projects_live_test.go:166: generated template metadata task clear-binding 01a14601-b4d0-7432-a940-c9c64f838d0c
+    template_binding_metadata_live_test.go:64: native choice-map count clear-binding 0
+    template_binding_metadata_live_test.go:64: native choice-map count clear-binding 0
+    template_projects_live_test.go:166: native binding metadata transition verified clear-binding
+    template_projects_live_test.go:166: generated template metadata task restore-binding 01a14601-ef42-7293-86c4-bca19988d2bb
+    template_projects_live_test.go:166: generated template metadata task restore-binding 01a14602-12cc-73d8-85c5-77b30bc0b2b9
+    template_binding_metadata_live_test.go:64: native choice-map count restore-binding 0
+    template_binding_metadata_live_test.go:64: native choice-map count restore-binding 0
+    template_projects_live_test.go:166: native binding metadata transition verified restore-binding
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a14602-37ea-7430-a499-1f98b2238e99
+    template_commit_live_test.go:95: template fixture cleanup verified a3a61673-568c-4de5-9f36-bac4126eec87
+    template_projects_live_test.go:112: isolated project cleanup verified db94efc8-768e-4c6c-986d-5b10ab1a942e
+--- PASS: TestLiveCatalystCenterTemplateProject (182.82s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	185.259s

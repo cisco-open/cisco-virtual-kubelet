@@ -1,0 +1,28 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:138: submitted Create CVK-Q-Project-20261016-182700 01a145f7-b100-7119-80d6-3db57f86bb26
+    template_projects_live_test.go:138: submitted Update CVK-Q-Project-20261016-182700 01a145f7-c28d-79cb-9aa3-98ef3d700bea
+    template_projects_live_test.go:164: project create and description update verified
+    template_projects_live_test.go:166: native template operation Create draft:CVK-Q-Project-20261016-182700#CVK-Commit-Qualification 01a145f7-e014-7f0f-bda4-ea53331f58bc
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-182700#CVK-Commit-Qualification 01a145f8-1bb5-7c41-a4fc-0ce6a4d482b0
+    template_projects_live_test.go:166: native template operation Update draft:CVK-Q-Project-20261016-182700#CVK-Commit-Qualification 01a145f8-65b5-72ac-8aa2-f71110a4052d
+    template_projects_live_test.go:166: native template operation Update commit:CVK-Q-Project-20261016-182700#CVK-Commit-Qualification 01a145f8-ab42-7cad-a790-58f11a24355b
+    template_projects_live_test.go:166: native draft create/update and two committed versions verified 7d417bdb-f0a0-498c-840d-6c6465894c9f
+    template_projects_live_test.go:166: generated template metadata task runtime-binding 01a145f8-e79c-7946-a74e-180cb16a8c7b
+    template_projects_live_test.go:166: generated template metadata task runtime-binding 01a145f9-0f39-77a7-a43c-5d2b331536a8
+    template_projects_live_test.go:166: native binding metadata transition verified runtime-binding
+    template_projects_live_test.go:166: generated template metadata task updated-filter 01a145f9-4a4f-7ab9-8da2-8287ab2806fe
+    template_projects_live_test.go:166: generated template metadata task updated-filter 01a145f9-6dbc-7cf9-855e-ce6b66536b3f
+    template_projects_live_test.go:166: native binding metadata transition verified updated-filter
+    template_projects_live_test.go:166: native binding metadata transition verified binding-noop
+    template_projects_live_test.go:166: generated template metadata task clear-binding 01a145f9-b7b4-731c-9637-a57fe8911252
+    template_projects_live_test.go:166: generated template metadata task clear-binding 01a145f9-db19-79b3-beef-063d9522ae0d
+    template_projects_live_test.go:166: native binding metadata transition verified clear-binding
+    template_projects_live_test.go:166: generated template metadata task restore-binding 01a145fa-13ca-7a7d-8970-7cc49846b671
+    template_projects_live_test.go:166: generated template metadata task restore-binding 01a145fa-374b-7485-9a34-27d07ff70e6a
+    template_projects_live_test.go:166: native binding metadata transition verified restore-binding
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a145fa-5c1c-7950-bacd-fed7d688de2b
+    template_commit_live_test.go:95: template fixture cleanup verified 7d417bdb-f0a0-498c-840d-6c6465894c9f
+    template_projects_live_test.go:112: isolated project cleanup verified 1a7fc5f1-6419-4154-af94-2c094aa0a3ea
+--- PASS: TestLiveCatalystCenterTemplateProject (181.08s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	183.605s

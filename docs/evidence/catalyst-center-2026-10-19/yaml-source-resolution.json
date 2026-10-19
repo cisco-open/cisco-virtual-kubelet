@@ -1,0 +1,200 @@
+{
+  "scope": "explicit offline YAML references/tags and allowlisted environment source bindings",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "utilsVersion": "2.0.0",
+  "utilsRevision": "a383caa57652edc7952f3bd596f9a75719480643",
+  "fullModelComplete": false,
+  "fullYAMLLoaderEquivalence": false,
+  "installedSourceCompositionQualified": false,
+  "runtimeSourceParsingChanged": false,
+  "newProjectYAMLDependency": false,
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "c3212264be9680007d250c2b5b4a283e88852c19834e4efcef51554ada88d0c0",
+    "internal/controlleradapter/catalystcenter/nacmodel": "1827e09b755df6480bf7d80a78e51ed4ccd8ef02a4bf923ac460e7262dd96b82",
+    "tools/cvk-netascode-migrate": "49e5e6ea5ef31b4c3204a5fec1714a6a2e410f36046031692dc0905e4e046ed4"
+  },
+  "oracle": {
+    "independentRunner": "immutable utils 2.0.0 decode/resolve/merge helpers in a private module, goccy/go-yaml 1.19.2; no CVK dependency added",
+    "fixture": "internal/controlleradapter/catalystcenter/nacmodel/testdata/utils-2.0.0-yaml-sources.json",
+    "fixtureCount": 38,
+    "sha256": "4d5663b40c3f069299a18884bf286384a5e3d1c1f44ff371b61716a45b7be412"
+  },
+  "gates": {
+    "modelExporterRace": {
+      "exitCode": 0,
+      "passingTestEvents": 146,
+      "log": "yaml-source-resolution-modelExporterRace.log",
+      "sha256": "bef22d42c8c45a905df8476ac9714e6b641038cc95012ee1897b2458af16defd"
+    },
+    "publicDesignRace": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "yaml-source-resolution-publicDesignRace.log",
+      "sha256": "be01365389147bc472fddd3bec01fa674d83da3f9bc2ecb063b6e8ae61a8c8ad"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 2,
+      "log": "yaml-source-resolution-temporaryAPI.log",
+      "sha256": "6a85b28912539f0d350ea86a312eae5c1f6dbe475daf4cacdabb4527ed624a1d"
+    },
+    "native": {
+      "exitCode": 0,
+      "passingTestEvents": 1,
+      "log": "yaml-source-resolution-native.log",
+      "sha256": "3836081612584df717baa5fe1d3f75d6ca5d7b601e6e760be414c5457e134adb"
+    },
+    "foundationRegression": {
+      "exitCode": 0,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration"
+      ],
+      "passingTestEvents": 2278,
+      "log": "/private/tmp/cvk-yaml-source-foundation-regression.log",
+      "sha256": "6b56d1cd7b95d1845fec1f9eab5ce22c002f62c784bdd8071b1ad1b28822f66e"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-yaml-source-final-production-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "migrationBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-yaml-source-final-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-yaml-source-docs.log",
+      "sha256": "59f1607e96567c7febcfdd9cee3d55c977320137106def4fdd934b6f6c17d50d"
+    }
+  },
+  "native": {
+    "activeOperation": false,
+    "baselineRestored": true,
+    "generatedPath": "Global/CVK-Q-20261019-125119-000000000",
+    "installed": false,
+    "managedSiteSelection": true,
+    "mergedSource": true,
+    "modelAndAssetSnapshot": true,
+    "originalTaskRecoveries": 8,
+    "retainedActionRows": 6,
+    "sourceDefaultsExport": true,
+    "yamlSourceResolved": true
+  },
+  "nativePersistence": "simulated Kubernetes; real temporary API gate is separate",
+  "nativeDesignMutations": 6,
+  "synchronousImageUploads": 2,
+  "siteSetupMutations": 4,
+  "baselineRestored": true,
+  "remainingGeneratedFixtures": [],
+  "earlierCompletedCheckpoint": "/private/tmp/cvk-site-default-design-195303775",
+  "exampleProvenance": {
+    "model": {
+      "yamlSourceResolved": true,
+      "effectiveInputsSHA256": [
+        "c25c8a846497d5ec808ae6c7261a768b5af19ea4221a2df7cd333d6464fd28f8"
+      ],
+      "inputSnapshotSHA256": "6aa33d0ffabc4b8413891892765665550cbe28691f456ed5a15c48af3646b695",
+      "environmentBindings": 1,
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "utilsVersion": "2.0.0",
+      "utilsRevision": "a383caa57652edc7952f3bd596f9a75719480643",
+      "policySHA256": "a8cccc0ed10db320a291f57d0275246538d81954c5491761a8818dad0c4f9888",
+      "inputsSHA256": [
+        "bfd4d17d57d50f1df58ec256b590f4fb70dffd790b45966dabe3167af5efcb85"
+      ],
+      "orderedInputsSHA256": "fa7a9323ecf9212f8f1aa06c1ebcc724ed211133912b4d3325abdbf9a82c0296",
+      "outputSHA256": "2245ac9b79b57469f40e9de5b91af73e212764ef2700962d40e473464d4438cb",
+      "component": "model",
+      "resolved": false,
+      "configurationParity": false,
+      "limitations": [
+        "Offline merge is not defaults resolution, schema validation or execution parity. Use the existing section exporter and runtime ownership/recovery path.",
+        "Explicit offline YAML references/tags are resolved with caller-authorized bindings only. Duplicate canonical keys, cycles, invalid tags, nonfinite values and expansion beyond existing bounds refuse; runtime parsing remains strict.",
+        "The module permits utils >= 2.0.0; CVK pins the merge algorithm to 2.0.0, not arbitrary later provider semantics."
+      ]
+    },
+    "defaults": {
+      "yamlSourceResolved": true,
+      "effectiveInputsSHA256": [
+        "c25c8a846497d5ec808ae6c7261a768b5af19ea4221a2df7cd333d6464fd28f8"
+      ],
+      "inputSnapshotSHA256": "6aa33d0ffabc4b8413891892765665550cbe28691f456ed5a15c48af3646b695",
+      "environmentBindings": 1,
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "utilsVersion": "2.0.0",
+      "utilsRevision": "a383caa57652edc7952f3bd596f9a75719480643",
+      "policySHA256": "a8cccc0ed10db320a291f57d0275246538d81954c5491761a8818dad0c4f9888",
+      "inputsSHA256": [
+        "bfd4d17d57d50f1df58ec256b590f4fb70dffd790b45966dabe3167af5efcb85"
+      ],
+      "orderedInputsSHA256": "fa7a9323ecf9212f8f1aa06c1ebcc724ed211133912b4d3325abdbf9a82c0296",
+      "outputSHA256": "e4f1be6966d802b927cc098386b03370665bf219c8dfc218cc16fa9819111858",
+      "component": "defaults",
+      "resolved": false,
+      "configurationParity": false,
+      "limitations": [
+        "Offline merge is not defaults resolution, schema validation or execution parity. Use the existing section exporter and runtime ownership/recovery path.",
+        "Explicit offline YAML references/tags are resolved with caller-authorized bindings only. Duplicate canonical keys, cycles, invalid tags, nonfinite values and expansion beyond existing bounds refuse; runtime parsing remains strict.",
+        "The module permits utils >= 2.0.0; CVK pins the merge algorithm to 2.0.0, not arbitrary later provider semantics."
+      ]
+    },
+    "resolved": {
+      "exporter": "cvk-site-defaults-v1:policy-sha256:8522906cc771391cfbdec4e71271b57d7662248f0012e2f30755d2e217fb8f9a",
+      "executionSyntaxValidated": true,
+      "leafSchemaValidated": false,
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "policySHA256": "8522906cc771391cfbdec4e71271b57d7662248f0012e2f30755d2e217fb8f9a",
+      "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+      "inputSHA256": "2245ac9b79b57469f40e9de5b91af73e212764ef2700962d40e473464d4438cb",
+      "overridesSHA256": "e4f1be6966d802b927cc098386b03370665bf219c8dfc218cc16fa9819111858",
+      "outputSHA256": "e1b4adc7d5c465c581983c9f8767fdf9a2d9d8129f47e8a06d5b1d1bee2d5352",
+      "resolutionScope": "sites-design-snapshot",
+      "configurationParity": false,
+      "limitations": [
+        "One already-selected sites-only model; no file merging, managed-site filtering or other sections. Images require an explicit same-ConfigMap model/index/BinaryData snapshot; no model path is opened.",
+        "Pinned site defaults and supported overrides only; numeric null fallback follows upstream try expressions, while unsupported unresolved values refuse.",
+        "Singular area parents stay explicit; bulk omitted parent uses literal Global, matching the pinned resource map.",
+        "No nested schema/parity attestation, native AP/antenna catalogue validation, API request, ownership transfer or change to runtime defaulting. Runtime revalidates source assets and native state independently."
+      ],
+      "siteExpressionsSHA256": "8d7f003049677a761a8206e1c1a8fa49f5871886fef61c5e46316c433b88cba9",
+      "useBulkAPI": false,
+      "resources": 3,
+      "defaultedFields": 1,
+      "plannedAccessPoints": 1,
+      "assetsValidated": false
+    }
+  },
+  "remaining": [
+    "unqualified compound/extension YAML tags and other provider parser edge cases; duplicate canonical keys and unsafe expansions intentionally refuse",
+    "per-resource scalar/default coercion, complete leaf/native catalogue capability coverage",
+    "installed source producer/default/selection/projection composition and recovery",
+    "other resource-specific creator/adoption/destructive and physical/bulk gaps across the 93-row model",
+    "partial PnP acquisition cancellation original-manager quiescence proof"
+  ],
+  "history": [
+    "Independent reference fixtures exposed non-specific tag, custom mapping-key and explicit flow-timestamp semantics; corrected compatibility behavior before qualification.",
+    "Final review bounded expanded mapping keys and scalar tag text before allocation/encoding, then reran the model/exporter, API and native gates. Both generated native design cycles cleaned and restored baselines."
+  ],
+  "resourceCoverage": {
+    "inventoryRows": 93,
+    "uniqueResourceRows": 93,
+    "sourceEnvelopeSections": 11,
+    "nativeExecutionScope": "existing singular site/image/planned-AP composition",
+    "fullResourceParity": false
+  }
+}

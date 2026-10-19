@@ -1,0 +1,22 @@
+=== RUN   TestLiveWirelessProfileCustomZones
+    wireless_profile_execution_live_test.go:79: existing RF references HIGH mda0seLh-seGW-stfh-mKGZ-sdrjnuC2sdDioeK5rZeWsdeXsdeY LOW mdaZte9x-tdbp-mvCY-tdnp-nfC1tdzpn1C4tdLpmtbxmtfmmtjp
+    wireless_profile_execution_live_test.go:82: isolated names CVK_N_0e29eeb0583fe81c CVK_S_33a493149d2a569a
+    wireless_profile_execution_live_test.go:228: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_33a493149d2a569a Create 01a13e55-b494-720f-a89a-ce2300d37208
+    wireless_profile_execution_live_test.go:237: owned SSID CVK_S_33a493149d2a569a mdiYq1zl-x1nF-mZnH-ndKZ-mtq5zdjHnty5yumWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:289: task wireless/wireless-profile:CVK_N_0e29eeb0583fe81c:30dd7e95c159b0909dee0727db348b24083bc51500a27c02dc6cffb3c38dff9f Create 01a13e55-c187-7ce7-b16d-c4516a63ffe4
+    wireless_profile_execution_live_test.go:298: owned profile CVK_N_0e29eeb0583fe81c 2c5e9b34-f623-4403-b035-4b499c9f0322
+    wireless_profile_execution_live_test.go:309: task wireless/wireless-profile:CVK_N_0e29eeb0583fe81c:30dd7e95c159b0909dee0727db348b24083bc51500a27c02dc6cffb3c38dff9f Update 01a13e55-d9ce-7bc3-9d3b-ea00be68ce67
+    wireless_profile_execution_live_test.go:332: task Global/CVK_N_0e29eeb0583fe81c_A Create 01a13e55-e9cc-7ff9-b659-4fb216e21144
+    wireless_profile_execution_live_test.go:345: owned empty area Global/CVK_N_0e29eeb0583fe81c_A 841159a0-3d4b-422c-b0f2-ecb6c6d2db8c
+    wireless_profile_execution_live_test.go:353: task wireless-sites/CVK_N_0e29eeb0583fe81c/9069c535c96803aadc372a6b62d5900b425995f2346423bb576f082efa8a1f6b Update 01a13e55-f679-73b0-8082-c615353d2937
+    wireless_profile_execution_live_test.go:332: task Global/CVK_N_0e29eeb0583fe81c_B Create 01a13e55-ff4e-74b3-aa0f-34ce5a8038d0
+    wireless_profile_execution_live_test.go:345: owned empty area Global/CVK_N_0e29eeb0583fe81c_B fe669226-ae67-41ee-85de-523665d51ed2
+    wireless_profile_execution_live_test.go:353: task wireless-sites/CVK_N_0e29eeb0583fe81c/32f80a4a4024331a2a87dcebd02e2fa1ca6823290b4db5126758c7e71bd6b2cb Update 01a13e56-0838-7425-a91b-faf886a4975c
+    wireless_profile_execution_live_test.go:394: task wireless-site-tags/site-tag:69ea317436685c5e565acba61851e88b13f2069dfca81b5846921ad60d6ee7b1:2bdf59bda28225b67732d7c043b4839ea53f322ca3713866f1c9078fef8d4f1f Create 01a13e56-2456-77d8-b48c-904f279116ce
+    wireless_profile_execution_live_test.go:394: task wireless-policy-tags/policy-tag:5aeea6dbc093bdb3e70eb0b0f33e58578c1c4fe101814b30df333efead2f9f59:9dfd17a9a0865f124e76467de21cfed0458a19615aaedb11149cbfa182c31e47 Create 01a13e56-4f6f-7ede-8e07-a8034d07463f
+    wireless_profile_execution_live_test.go:394: task wireless-policy-tags/policy-tag:ce4e5a5cb71e6d25ed346e8f2dddaa76d57ba2a96e6d9d6313694e471989d9c2:be533da37e68e1ec7fb4368b63478c615f20fdd8b51292c369317484227a60c5 Create 01a13e56-700f-701c-8339-f5e58f507357
+    wireless_profile_execution_live_test.go:399: tag compiler did not converge <nil>
+--- FAIL: TestLiveWirelessProfileCustomZones (57.60s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	58.491s
+FAIL

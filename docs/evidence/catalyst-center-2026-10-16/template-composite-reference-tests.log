@@ -1,0 +1,42 @@
+=== RUN   TestTemplateCompositeReferenceHistory
+=== RUN   TestTemplateCompositeReferenceHistory/empty
+=== RUN   TestTemplateCompositeReferenceHistory/draft-base
+=== RUN   TestTemplateCompositeReferenceHistory/old-version
+=== RUN   TestTemplateCompositeReferenceHistory/current-version
+=== RUN   TestTemplateCompositeReferenceHistory/cross-project
+=== RUN   TestTemplateCompositeReferenceHistory/unrelated-text
+=== RUN   TestTemplateCompositeReferenceHistory/target-replaced
+=== RUN   TestTemplateCompositeReferenceHistory/missing-kind
+=== RUN   TestTemplateCompositeReferenceHistory/missing-members
+=== RUN   TestTemplateCompositeReferenceHistory/null-members
+=== RUN   TestTemplateCompositeReferenceHistory/duplicate-members
+=== RUN   TestTemplateCompositeReferenceHistory/bad-member
+=== RUN   TestTemplateCompositeReferenceHistory/regular-members
+=== RUN   TestTemplateCompositeReferenceHistory/missing-history
+=== RUN   TestTemplateCompositeReferenceHistory/foreign-version-parent
+=== RUN   TestTemplateCompositeReferenceHistory/late-member-same-count
+=== RUN   TestTemplateCompositeReferenceHistory/late-old-version
+=== RUN   TestTemplateCompositeReferenceHistory/late-target-version
+=== RUN   TestTemplateCompositeReferenceHistory/consumer-removed
+--- PASS: TestTemplateCompositeReferenceHistory (0.30s)
+    --- PASS: TestTemplateCompositeReferenceHistory/empty (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/draft-base (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/old-version (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/current-version (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/cross-project (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/unrelated-text (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/target-replaced (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/missing-kind (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/missing-members (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/null-members (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/duplicate-members (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/bad-member (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/regular-members (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/missing-history (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/foreign-version-parent (0.01s)
+    --- PASS: TestTemplateCompositeReferenceHistory/late-member-same-count (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/late-old-version (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/late-target-version (0.02s)
+    --- PASS: TestTemplateCompositeReferenceHistory/consumer-removed (0.02s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.652s

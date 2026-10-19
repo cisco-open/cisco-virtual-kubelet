@@ -1,0 +1,1590 @@
+=== RUN   TestConfigurationNoDispatchProof
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/refuse
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/read-error
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/cancel
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/conflict
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/tag-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/tag-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/tag-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/tag-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/tag-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/tag-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/tag-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/tag-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/tag-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/tag-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/tag-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/tag-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/tag-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/tag-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/tag-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/tag-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/tag-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/tag-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/tag-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/tag-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/tag-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/tag-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/wireless/refuse
+=== RUN   TestConfigurationNoDispatchProof/wireless/read-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/wireless/cancel
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/wireless/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/wireless/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/wireless/feature-scope
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-dns/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-dns/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-dns/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-dns/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-dns/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-dns/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-dns/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-dns/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dns/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-dns/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-banner/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-banner/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-banner/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-banner/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-banner/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-banner/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-banner/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-banner/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-banner/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-banner/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/switching-custody-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/switching-profile-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/refuse
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/read-error
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/cancel
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/conflict
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-preparation
+--- PASS: TestConfigurationNoDispatchProof (15.36s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/refuse (0.63s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-preparation (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/read-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/unknown-phase (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/feature-scope (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/lost-ack (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-operation (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-generation (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/refuse (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/cancel (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/lost-ack (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-preparation (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/unknown-phase (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/cancel (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-generation (0.08s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/refuse (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/read-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/unknown-phase (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/conflict (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/conflict-exhausted (0.37s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/foreign-proof (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-generation (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/foreign-proof (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-owner (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/read-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-owner (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-parent (0.08s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/read-error (0.09s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-custody-create/changed-preparation (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/read-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/unknown-phase (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/conflict (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/recorded-receipt (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/switching-profile-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/refuse (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/conflict (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/conflict-exhausted (0.36s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/ordinary-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/refuse (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/ordinary-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/replayed-proof (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-receipt (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-preparation (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/refuse (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/read-error (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/unknown-phase (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict-exhausted (0.38s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/ordinary-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-operation (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict-exhausted (0.36s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/lost-ack (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-operation (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-owner (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-preparation (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/read-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/ordinary-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/lost-ack (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-owner (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-preparation (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/refuse (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/read-error (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted (0.36s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/ordinary-error (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-preparation (0.02s)
+=== RUN   TestSwitchingProfileSubmissionGuards
+=== RUN   TestSwitchingProfileSubmissionGuards/stable
+=== RUN   TestSwitchingProfileSubmissionGuards/project-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/late-project-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/profile-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/later-profile-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/template-replaced
+=== RUN   TestSwitchingProfileSubmissionGuards/inherited-changed
+=== RUN   TestSwitchingProfileSubmissionGuards/inherited-precision-changed
+=== RUN   TestSwitchingProfileSubmissionGuards/inherited-reordered
+=== RUN   TestSwitchingProfileSubmissionGuards/attribute-order
+=== RUN   TestSwitchingProfileSubmissionGuards/opaque-value-order
+=== RUN   TestSwitchingProfileSubmissionGuards/caller-mutated
+=== RUN   TestSwitchingProfileSubmissionGuards/unrelated
+=== RUN   TestSwitchingProfileSubmissionGuards/lost-ack
+--- PASS: TestSwitchingProfileSubmissionGuards (0.40s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/stable (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/project-replaced (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/late-project-replaced (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/profile-replaced (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/later-profile-replaced (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/template-replaced (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/inherited-changed (0.02s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/inherited-precision-changed (0.04s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/inherited-reordered (0.04s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/attribute-order (0.04s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/opaque-value-order (0.04s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/caller-mutated (0.03s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/unrelated (0.04s)
+    --- PASS: TestSwitchingProfileSubmissionGuards/lost-ack (0.05s)
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/stable
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/project-replaced
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/legacy
+=== RUN   TestSwitchingProfileProjectBindingSurvivesRestart/legacy-empty
+--- PASS: TestSwitchingProfileProjectBindingSurvivesRestart (0.18s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/stable (0.05s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/project-replaced (0.05s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/legacy (0.04s)
+    --- PASS: TestSwitchingProfileProjectBindingSurvivesRestart/legacy-empty (0.04s)
+=== RUN   TestSwitchingProfileLegacyVerifiedBoundary
+=== RUN   TestSwitchingProfileLegacyVerifiedBoundary/empty=false
+=== RUN   TestSwitchingProfileLegacyVerifiedBoundary/empty=true
+--- PASS: TestSwitchingProfileLegacyVerifiedBoundary (0.05s)
+    --- PASS: TestSwitchingProfileLegacyVerifiedBoundary/empty=false (0.02s)
+    --- PASS: TestSwitchingProfileLegacyVerifiedBoundary/empty=true (0.04s)
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/stable
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/missing-later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/mid-read-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/became-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/caller-mutated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/unrelated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/lost-ack
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=false/read-error
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/stable
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-profile
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/missing-later-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/mid-read-site
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/became-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-present
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/caller-mutated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/unrelated
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/lost-ack
+=== RUN   TestProfileSitePlansRevalidateCompleteSelection/wireless=true/read-error
+--- PASS: TestProfileSitePlansRevalidateCompleteSelection (0.71s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/stable (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-profile (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-profile (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/first-site (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-site (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/missing-later-site (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/mid-read-site (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/became-present (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/later-present (0.05s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/caller-mutated (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/unrelated (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/lost-ack (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=false/read-error (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/stable (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-profile (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-profile (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/first-site (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-site (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/missing-later-site (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/mid-read-site (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/became-present (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/later-present (0.02s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/caller-mutated (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/unrelated (0.04s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/lost-ack (0.03s)
+    --- PASS: TestProfileSitePlansRevalidateCompleteSelection/wireless=true/read-error (0.03s)
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=false
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=true
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=false
+=== RUN   TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=true
+--- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair (0.08s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=false (0.02s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=false/late-replace=true (0.03s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=false (0.02s)
+    --- PASS: TestProfileSiteRecoveryReadsOnlyAcknowledgedPair/wireless=true/late-replace=true (0.02s)
+=== RUN   TestProfileSiteDuplicateSelectionRefused
+--- PASS: TestProfileSiteDuplicateSelectionRefused (0.02s)
+=== RUN   TestProfileSitePublicRecovery
+=== RUN   TestProfileSitePublicRecovery/wireless-false/complete
+=== RUN   TestProfileSitePublicRecovery/wireless-false/no-dispatch
+=== RUN   TestProfileSitePublicRecovery/wireless-false/lost-ack
+=== RUN   TestProfileSitePublicRecovery/wireless-false/child-failed
+=== RUN   TestProfileSitePublicRecovery/wireless-false/child-pending
+=== RUN   TestProfileSitePublicRecovery/wireless-false/tree-missing
+=== RUN   TestProfileSitePublicRecovery/wireless-false/foreign-root
+=== RUN   TestProfileSitePublicRecovery/wireless-false/removed
+=== RUN   TestProfileSitePublicRecovery/wireless-false/site-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-false/profile-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-false/mid-tree-site
+=== RUN   TestProfileSitePublicRecovery/wireless-false/source
+=== RUN   TestProfileSitePublicRecovery/wireless-false/owner
+=== RUN   TestProfileSitePublicRecovery/wireless-false/controller
+=== RUN   TestProfileSitePublicRecovery/wireless-false/accepted-partial
+=== RUN   TestProfileSitePublicRecovery/wireless-false/pending-peer
+=== RUN   TestProfileSitePublicRecovery/wireless-false/slash-name
+=== RUN   TestProfileSitePublicRecovery/wireless-true/complete
+=== RUN   TestProfileSitePublicRecovery/wireless-true/no-dispatch
+=== RUN   TestProfileSitePublicRecovery/wireless-true/lost-ack
+=== RUN   TestProfileSitePublicRecovery/wireless-true/child-failed
+=== RUN   TestProfileSitePublicRecovery/wireless-true/child-pending
+=== RUN   TestProfileSitePublicRecovery/wireless-true/tree-missing
+=== RUN   TestProfileSitePublicRecovery/wireless-true/foreign-root
+=== RUN   TestProfileSitePublicRecovery/wireless-true/removed
+=== RUN   TestProfileSitePublicRecovery/wireless-true/site-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-true/profile-replaced
+=== RUN   TestProfileSitePublicRecovery/wireless-true/mid-tree-site
+=== RUN   TestProfileSitePublicRecovery/wireless-true/source
+=== RUN   TestProfileSitePublicRecovery/wireless-true/owner
+=== RUN   TestProfileSitePublicRecovery/wireless-true/controller
+=== RUN   TestProfileSitePublicRecovery/wireless-true/accepted-partial
+=== RUN   TestProfileSitePublicRecovery/wireless-true/pending-peer
+=== RUN   TestProfileSitePublicRecovery/wireless-true/slash-name
+--- PASS: TestProfileSitePublicRecovery (4.71s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/complete (0.18s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/no-dispatch (0.20s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/lost-ack (0.13s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/child-failed (0.15s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/child-pending (0.11s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/tree-missing (0.13s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/foreign-root (0.11s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/removed (0.13s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/site-replaced (0.12s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/profile-replaced (0.11s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/mid-tree-site (0.11s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/source (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/owner (0.11s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/controller (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/accepted-partial (0.30s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/pending-peer (0.14s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-false/slash-name (0.16s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/complete (0.15s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/no-dispatch (0.26s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/lost-ack (0.07s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/child-failed (0.15s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/child-pending (0.18s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/tree-missing (0.15s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/foreign-root (0.17s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/removed (0.18s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/site-replaced (0.12s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/profile-replaced (0.11s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/mid-tree-site (0.14s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/source (0.10s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/owner (0.08s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/controller (0.06s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/accepted-partial (0.15s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/pending-peer (0.14s)
+    --- PASS: TestProfileSitePublicRecovery/wireless-true/slash-name (0.16s)
+=== RUN   TestNetworkProfileIntentValidation
+--- PASS: TestNetworkProfileIntentValidation (0.00s)
+=== RUN   TestNetworkProfileTemplateResolution
+--- PASS: TestNetworkProfileTemplateResolution (0.00s)
+=== RUN   TestNetworkProfileExecutionAndIdentity
+=== RUN   TestNetworkProfileExecutionAndIdentity/create
+=== RUN   TestNetworkProfileExecutionAndIdentity/update
+=== RUN   TestNetworkProfileExecutionAndIdentity/missing-receipt
+=== RUN   TestNetworkProfileExecutionAndIdentity/missing-later-dependency
+=== RUN   TestNetworkProfileExecutionAndIdentity/replacement
+=== RUN   TestNetworkProfileExecutionAndIdentity/template-replacement
+=== RUN   TestNetworkProfileExecutionAndIdentity/unknown-attributes
+=== RUN   TestNetworkProfileExecutionAndIdentity/assigned-update
+--- PASS: TestNetworkProfileExecutionAndIdentity (0.20s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/create (0.04s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/update (0.04s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/missing-receipt (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/missing-later-dependency (0.01s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/replacement (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/template-replacement (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/unknown-attributes (0.02s)
+    --- PASS: TestNetworkProfileExecutionAndIdentity/assigned-update (0.03s)
+=== RUN   TestNetworkProfileEmptyGroups
+--- PASS: TestNetworkProfileEmptyGroups (0.00s)
+=== RUN   TestNetworkProfileSiteAssignment
+=== RUN   TestNetworkProfileSiteAssignment/assign
+=== RUN   TestNetworkProfileSiteAssignment/missing-site
+=== RUN   TestNetworkProfileSiteAssignment/replacement-site
+=== RUN   TestNetworkProfileSiteAssignment/replacement-profile
+--- PASS: TestNetworkProfileSiteAssignment (0.10s)
+    --- PASS: TestNetworkProfileSiteAssignment/assign (0.04s)
+    --- PASS: TestNetworkProfileSiteAssignment/missing-site (0.01s)
+    --- PASS: TestNetworkProfileSiteAssignment/replacement-site (0.02s)
+    --- PASS: TestNetworkProfileSiteAssignment/replacement-profile (0.03s)
+=== RUN   TestNetworkProfileMissingSiteBlocksEarlierCreate
+--- PASS: TestNetworkProfileMissingSiteBlocksEarlierCreate (0.01s)
+=== RUN   TestNetworkProfilePopulatedReadIsRequired
+--- PASS: TestNetworkProfilePopulatedReadIsRequired (0.02s)
+=== RUN   TestNetworkProfileSiteSettingsExcludedFromDependencyHash
+--- PASS: TestNetworkProfileSiteSettingsExcludedFromDependencyHash (0.00s)
+=== RUN   TestProfileSiteApplications
+=== RUN   TestProfileSiteApplications/wireless-false/complete
+=== RUN   TestProfileSiteApplications/wireless-false/accepted
+=== RUN   TestProfileSiteApplications/wireless-false/import
+=== RUN   TestProfileSiteApplications/wireless-false/legacy
+=== RUN   TestProfileSiteApplications/wireless-false/repair
+=== RUN   TestProfileSiteApplications/wireless-false/capacity
+=== RUN   TestProfileSiteApplications/wireless-false/replace-at-capacity
+=== RUN   TestProfileSiteApplications/wireless-false/drop-verified-row
+=== RUN   TestProfileSiteApplications/wireless-false/corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-false/corrupt-commit
+=== RUN   TestProfileSiteApplications/wireless-false/settled-corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-false/duplicate
+=== RUN   TestProfileSiteApplications/wireless-false/history-race
+=== RUN   TestProfileSiteApplications/wireless-false/alias
+=== RUN   TestProfileSiteApplications/wireless-false/site-replaced
+=== RUN   TestProfileSiteApplications/wireless-false/parent-replaced
+=== RUN   TestProfileSiteApplications/wireless-false/deselect
+=== RUN   TestProfileSiteApplications/wireless-true/complete
+=== RUN   TestProfileSiteApplications/wireless-true/accepted
+=== RUN   TestProfileSiteApplications/wireless-true/import
+=== RUN   TestProfileSiteApplications/wireless-true/legacy
+=== RUN   TestProfileSiteApplications/wireless-true/repair
+=== RUN   TestProfileSiteApplications/wireless-true/capacity
+=== RUN   TestProfileSiteApplications/wireless-true/replace-at-capacity
+=== RUN   TestProfileSiteApplications/wireless-true/drop-verified-row
+=== RUN   TestProfileSiteApplications/wireless-true/corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-true/corrupt-commit
+=== RUN   TestProfileSiteApplications/wireless-true/settled-corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-true/duplicate
+=== RUN   TestProfileSiteApplications/wireless-true/history-race
+=== RUN   TestProfileSiteApplications/wireless-true/alias
+=== RUN   TestProfileSiteApplications/wireless-true/site-replaced
+=== RUN   TestProfileSiteApplications/wireless-true/parent-replaced
+=== RUN   TestProfileSiteApplications/wireless-true/deselect
+--- PASS: TestProfileSiteApplications (20.86s)
+    --- PASS: TestProfileSiteApplications/wireless-false/complete (0.16s)
+    --- PASS: TestProfileSiteApplications/wireless-false/accepted (0.20s)
+    --- PASS: TestProfileSiteApplications/wireless-false/import (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-false/legacy (0.19s)
+    --- PASS: TestProfileSiteApplications/wireless-false/repair (0.29s)
+    --- PASS: TestProfileSiteApplications/wireless-false/capacity (2.91s)
+    --- PASS: TestProfileSiteApplications/wireless-false/replace-at-capacity (6.58s)
+    --- PASS: TestProfileSiteApplications/wireless-false/drop-verified-row (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-false/corrupt-row (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-false/corrupt-commit (0.11s)
+    --- PASS: TestProfileSiteApplications/wireless-false/settled-corrupt-row (0.11s)
+    --- PASS: TestProfileSiteApplications/wireless-false/duplicate (0.11s)
+    --- PASS: TestProfileSiteApplications/wireless-false/history-race (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-false/alias (0.15s)
+    --- PASS: TestProfileSiteApplications/wireless-false/site-replaced (0.14s)
+    --- PASS: TestProfileSiteApplications/wireless-false/parent-replaced (0.16s)
+    --- PASS: TestProfileSiteApplications/wireless-false/deselect (0.14s)
+    --- PASS: TestProfileSiteApplications/wireless-true/complete (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-true/accepted (0.11s)
+    --- PASS: TestProfileSiteApplications/wireless-true/import (0.09s)
+    --- PASS: TestProfileSiteApplications/wireless-true/legacy (0.08s)
+    --- PASS: TestProfileSiteApplications/wireless-true/repair (0.22s)
+    --- PASS: TestProfileSiteApplications/wireless-true/capacity (1.60s)
+    --- PASS: TestProfileSiteApplications/wireless-true/replace-at-capacity (5.60s)
+    --- PASS: TestProfileSiteApplications/wireless-true/drop-verified-row (0.11s)
+    --- PASS: TestProfileSiteApplications/wireless-true/corrupt-row (0.11s)
+    --- PASS: TestProfileSiteApplications/wireless-true/corrupt-commit (0.11s)
+    --- PASS: TestProfileSiteApplications/wireless-true/settled-corrupt-row (0.13s)
+    --- PASS: TestProfileSiteApplications/wireless-true/duplicate (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-true/history-race (0.13s)
+    --- PASS: TestProfileSiteApplications/wireless-true/alias (0.14s)
+    --- PASS: TestProfileSiteApplications/wireless-true/site-replaced (0.16s)
+    --- PASS: TestProfileSiteApplications/wireless-true/parent-replaced (0.19s)
+    --- PASS: TestProfileSiteApplications/wireless-true/deselect (0.15s)
+=== RUN   TestProfileSitePruneExampleScope
+=== RUN   TestProfileSitePruneExampleScope/empty
+=== RUN   TestProfileSitePruneExampleScope/secret
+=== RUN   TestProfileSitePruneExampleScope/mixed
+=== RUN   TestProfileSitePruneExampleScope/cr-delete
+--- PASS: TestProfileSitePruneExampleScope (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/empty (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/secret (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/mixed (0.00s)
+    --- PASS: TestProfileSitePruneExampleScope/cr-delete (0.00s)
+=== RUN   TestProfileSitePrune
+=== RUN   TestProfileSitePrune/wireless-false/complete
+=== RUN   TestProfileSitePrune/wireless-false/unknown
+=== RUN   TestProfileSitePrune/wireless-false/import
+=== RUN   TestProfileSitePrune/wireless-false/retain
+=== RUN   TestProfileSitePrune/wireless-false/empty-source
+=== RUN   TestProfileSitePrune/wireless-false/capacity
+=== RUN   TestProfileSitePrune/wireless-false/recreate
+=== RUN   TestProfileSitePrune/wireless-false/absent-before
+=== RUN   TestProfileSitePrune/wireless-false/site-replaced
+=== RUN   TestProfileSitePrune/wireless-false/parent-replaced
+=== RUN   TestProfileSitePrune/wireless-false/rename
+=== RUN   TestProfileSitePrune/wireless-false/preflight-refusal
+=== RUN   TestProfileSitePrune/wireless-false/preflight-identity
+=== RUN   TestProfileSitePrune/wireless-false/lost-ack
+=== RUN   TestProfileSitePrune/wireless-false/source-change
+=== RUN   TestProfileSitePrune/wireless-false/owner-change
+=== RUN   TestProfileSitePrune/wireless-false/history-change
+=== RUN   TestProfileSitePrune/wireless-false/child-failed
+=== RUN   TestProfileSitePrune/wireless-false/tree-missing
+=== RUN   TestProfileSitePrune/wireless-false/drop-verified
+=== RUN   TestProfileSitePrune/wireless-false/edit-verified
+=== RUN   TestProfileSitePrune/wireless-false/edit-settled
+=== RUN   TestProfileSitePrune/wireless-false/reappear
+=== RUN   TestProfileSitePrune/wireless-false/device
+=== RUN   TestProfileSitePrune/wireless-false/child-device
+=== RUN   TestProfileSitePrune/wireless-false/device-read-error
+=== RUN   TestProfileSitePrune/wireless-false/task-site-replaced
+=== RUN   TestProfileSitePrune/wireless-false/task-parent-replaced
+=== RUN   TestProfileSitePrune/wireless-false/task-present
+=== RUN   TestProfileSitePrune/wireless-false/mid-tree-site
+=== RUN   TestProfileSitePrune/wireless-false/mid-tree-history
+=== RUN   TestProfileSitePrune/wireless-false/pnp
+=== RUN   TestProfileSitePrune/wireless-false/child-pnp
+=== RUN   TestProfileSitePrune/wireless-false/pnp-location
+=== RUN   TestProfileSitePrune/wireless-false/pnp-unbound
+=== RUN   TestProfileSitePrune/wireless-false/pnp-read-error
+=== RUN   TestProfileSitePrune/wireless-false/pnp-unknown-site
+=== RUN   TestProfileSitePrune/wireless-false/pnp-unclaimed
+=== RUN   TestProfileSitePrune/wireless-true/complete
+=== RUN   TestProfileSitePrune/wireless-true/unknown
+=== RUN   TestProfileSitePrune/wireless-true/import
+=== RUN   TestProfileSitePrune/wireless-true/retain
+=== RUN   TestProfileSitePrune/wireless-true/empty-source
+=== RUN   TestProfileSitePrune/wireless-true/capacity
+=== RUN   TestProfileSitePrune/wireless-true/recreate
+=== RUN   TestProfileSitePrune/wireless-true/absent-before
+=== RUN   TestProfileSitePrune/wireless-true/site-replaced
+=== RUN   TestProfileSitePrune/wireless-true/parent-replaced
+=== RUN   TestProfileSitePrune/wireless-true/rename
+=== RUN   TestProfileSitePrune/wireless-true/preflight-refusal
+=== RUN   TestProfileSitePrune/wireless-true/preflight-identity
+=== RUN   TestProfileSitePrune/wireless-true/lost-ack
+=== RUN   TestProfileSitePrune/wireless-true/source-change
+=== RUN   TestProfileSitePrune/wireless-true/owner-change
+=== RUN   TestProfileSitePrune/wireless-true/history-change
+=== RUN   TestProfileSitePrune/wireless-true/child-failed
+=== RUN   TestProfileSitePrune/wireless-true/tree-missing
+=== RUN   TestProfileSitePrune/wireless-true/drop-verified
+=== RUN   TestProfileSitePrune/wireless-true/edit-verified
+=== RUN   TestProfileSitePrune/wireless-true/edit-settled
+=== RUN   TestProfileSitePrune/wireless-true/reappear
+=== RUN   TestProfileSitePrune/wireless-true/device
+=== RUN   TestProfileSitePrune/wireless-true/child-device
+=== RUN   TestProfileSitePrune/wireless-true/device-read-error
+=== RUN   TestProfileSitePrune/wireless-true/task-site-replaced
+=== RUN   TestProfileSitePrune/wireless-true/task-parent-replaced
+=== RUN   TestProfileSitePrune/wireless-true/task-present
+=== RUN   TestProfileSitePrune/wireless-true/mid-tree-site
+=== RUN   TestProfileSitePrune/wireless-true/mid-tree-history
+=== RUN   TestProfileSitePrune/wireless-true/pnp
+=== RUN   TestProfileSitePrune/wireless-true/child-pnp
+=== RUN   TestProfileSitePrune/wireless-true/pnp-location
+=== RUN   TestProfileSitePrune/wireless-true/pnp-unbound
+=== RUN   TestProfileSitePrune/wireless-true/pnp-read-error
+=== RUN   TestProfileSitePrune/wireless-true/pnp-unknown-site
+=== RUN   TestProfileSitePrune/wireless-true/pnp-unclaimed
+=== RUN   TestProfileSitePrune/wireless-true/site-tag
+=== RUN   TestProfileSitePrune/wireless-true/policy-tag
+=== RUN   TestProfileSitePrune/wireless-true/child-tag
+=== RUN   TestProfileSitePrune/wireless-true/unknown-tag
+=== RUN   TestProfileSitePrune/wireless-true/tag-read-error
+=== RUN   TestProfileSitePrune/wireless-true/post-task-tag
+--- PASS: TestProfileSitePrune (25.00s)
+    --- PASS: TestProfileSitePrune/wireless-false/complete (0.20s)
+    --- PASS: TestProfileSitePrune/wireless-false/unknown (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-false/import (0.06s)
+    --- PASS: TestProfileSitePrune/wireless-false/retain (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/empty-source (0.22s)
+    --- PASS: TestProfileSitePrune/wireless-false/capacity (4.88s)
+    --- PASS: TestProfileSitePrune/wireless-false/recreate (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/absent-before (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-false/site-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-false/parent-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-false/rename (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-false/preflight-refusal (0.23s)
+    --- PASS: TestProfileSitePrune/wireless-false/preflight-identity (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/lost-ack (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/source-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/owner-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/history-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-false/child-failed (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-false/tree-missing (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-false/drop-verified (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-false/edit-verified (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-false/edit-settled (0.18s)
+    --- PASS: TestProfileSitePrune/wireless-false/reappear (0.20s)
+    --- PASS: TestProfileSitePrune/wireless-false/device (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-false/child-device (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-false/device-read-error (0.25s)
+    --- PASS: TestProfileSitePrune/wireless-false/task-site-replaced (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/task-parent-replaced (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/task-present (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-false/mid-tree-site (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/mid-tree-history (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-false/child-pnp (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-location (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-unbound (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-read-error (0.25s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-unknown-site (0.25s)
+    --- PASS: TestProfileSitePrune/wireless-false/pnp-unclaimed (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/complete (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/unknown (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/import (0.07s)
+    --- PASS: TestProfileSitePrune/wireless-true/retain (0.13s)
+    --- PASS: TestProfileSitePrune/wireless-true/empty-source (0.20s)
+    --- PASS: TestProfileSitePrune/wireless-true/capacity (4.75s)
+    --- PASS: TestProfileSitePrune/wireless-true/recreate (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/absent-before (0.13s)
+    --- PASS: TestProfileSitePrune/wireless-true/site-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-true/parent-replaced (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-true/rename (0.12s)
+    --- PASS: TestProfileSitePrune/wireless-true/preflight-refusal (0.24s)
+    --- PASS: TestProfileSitePrune/wireless-true/preflight-identity (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-true/lost-ack (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-true/source-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-true/owner-change (0.14s)
+    --- PASS: TestProfileSitePrune/wireless-true/history-change (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-failed (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-true/tree-missing (0.17s)
+    --- PASS: TestProfileSitePrune/wireless-true/drop-verified (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-true/edit-verified (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-true/edit-settled (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/reappear (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/device (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-device (0.27s)
+    --- PASS: TestProfileSitePrune/wireless-true/device-read-error (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/task-site-replaced (0.15s)
+    --- PASS: TestProfileSitePrune/wireless-true/task-parent-replaced (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-true/task-present (0.19s)
+    --- PASS: TestProfileSitePrune/wireless-true/mid-tree-site (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-true/mid-tree-history (0.16s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-pnp (0.27s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-location (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-unbound (0.27s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-read-error (0.27s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-unknown-site (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/pnp-unclaimed (0.21s)
+    --- PASS: TestProfileSitePrune/wireless-true/site-tag (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/policy-tag (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/child-tag (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/unknown-tag (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/tag-read-error (0.26s)
+    --- PASS: TestProfileSitePrune/wireless-true/post-task-tag (0.28s)
+=== RUN   TestProfileSiteTagDependencyExample
+--- PASS: TestProfileSiteTagDependencyExample (0.00s)
+=== RUN   TestProfileSiteTagDependencies
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-complete
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-retain
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-foreign-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-device
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-read-error
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-post-task-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-lost-ack
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-child-failed
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-source
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-owner
+=== RUN   TestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-complete
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-retain
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-foreign-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-device
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-read-error
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-post-task-foreign
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-lost-ack
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-child-failed
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-source
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-owner
+=== RUN   TestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change
+--- PASS: TestProfileSiteTagDependencies (67.71s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-complete (2.61s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-retain (1.61s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-foreign-tag (2.87s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-unselected-tag (2.68s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-device (1.72s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-read-error (1.69s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-preflight-consumer (1.87s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-late-foreign (3.08s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-post-task-foreign (2.69s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-lost-ack (1.59s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-child-failed (1.65s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-source (1.61s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-owner (1.59s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-false/membership-compose-parent-change (1.93s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-complete (3.63s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-retain (2.12s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-foreign-tag (3.78s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-unselected-tag (3.53s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-device (2.15s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-read-error (2.13s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-preflight-consumer (2.40s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-late-foreign (4.10s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-post-task-foreign (3.58s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-lost-ack (2.13s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-child-failed (2.20s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-source (2.14s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-owner (2.10s)
+    --- PASS: TestProfileSiteTagDependencies/cohort-true/membership-compose-parent-change (2.53s)
+=== RUN   TestProfileSiteTagProjectionScope
+=== RUN   TestProfileSiteTagProjectionScope/complete
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-device
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-pnp
+=== RUN   TestProfileSiteTagProjectionScope/other-candidate-error
+=== RUN   TestProfileSiteTagProjectionScope/foreign-tag
+=== RUN   TestProfileSiteTagProjectionScope/changed-projected-fields
+=== RUN   TestProfileSiteTagProjectionScope/replaced-tag
+=== RUN   TestProfileSiteTagProjectionScope/ancestor-reference
+=== RUN   TestProfileSiteTagProjectionScope/unknown-projection
+--- PASS: TestProfileSiteTagProjectionScope (0.12s)
+    --- PASS: TestProfileSiteTagProjectionScope/complete (0.02s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-device (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-pnp (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/other-candidate-error (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/foreign-tag (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/changed-projected-fields (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/replaced-tag (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/ancestor-reference (0.01s)
+    --- PASS: TestProfileSiteTagProjectionScope/unknown-projection (0.01s)
+=== RUN   TestSwitchingCreatorPublicCustody
+=== RUN   TestSwitchingCreatorPublicCustody/two-creates
+=== RUN   TestSwitchingCreatorPublicCustody/created
+=== RUN   TestSwitchingCreatorPublicCustody/capacity
+=== RUN   TestSwitchingCreatorPublicCustody/cohort-capacity
+=== RUN   TestSwitchingCreatorPublicCustody/last-slot
+=== RUN   TestSwitchingCreatorPublicCustody/missing-receipt
+=== RUN   TestSwitchingCreatorPublicCustody/corrupt-receipt
+=== RUN   TestSwitchingCreatorPublicCustody/duplicate-receipt
+=== RUN   TestSwitchingCreatorPublicCustody/foreign-receipt
+=== RUN   TestSwitchingCreatorPublicCustody/foreign-config-name
+=== RUN   TestSwitchingCreatorPublicCustody/replacement
+=== RUN   TestSwitchingCreatorPublicCustody/renamed-owned
+=== RUN   TestSwitchingCreatorPublicCustody/missing-native
+=== RUN   TestSwitchingCreatorPublicCustody/retain-reselect
+=== RUN   TestSwitchingCreatorPublicCustody/owned-update
+=== RUN   TestSwitchingCreatorPublicCustody/import
+=== RUN   TestSwitchingCreatorPublicCustody/wrong-result-uuid
+=== RUN   TestSwitchingCreatorPublicCustody/wrong-service
+=== RUN   TestSwitchingCreatorPublicCustody/taskless
+=== RUN   TestSwitchingCreatorPublicCustody/source-before-publication
+=== RUN   TestSwitchingCreatorPublicCustody/owner-before-publication
+=== RUN   TestSwitchingCreatorPublicCustody/publish-conflict
+=== RUN   TestSwitchingCreatorPublicCustody/publish-lost-response
+=== RUN   TestSwitchingCreatorPublicCustody/publish-pruned
+--- PASS: TestSwitchingCreatorPublicCustody (15.66s)
+    --- PASS: TestSwitchingCreatorPublicCustody/two-creates (0.25s)
+    --- PASS: TestSwitchingCreatorPublicCustody/created (0.20s)
+    --- PASS: TestSwitchingCreatorPublicCustody/capacity (3.33s)
+    --- PASS: TestSwitchingCreatorPublicCustody/cohort-capacity (3.31s)
+    --- PASS: TestSwitchingCreatorPublicCustody/last-slot (4.88s)
+    --- PASS: TestSwitchingCreatorPublicCustody/missing-receipt (0.16s)
+    --- PASS: TestSwitchingCreatorPublicCustody/corrupt-receipt (0.16s)
+    --- PASS: TestSwitchingCreatorPublicCustody/duplicate-receipt (0.17s)
+    --- PASS: TestSwitchingCreatorPublicCustody/foreign-receipt (0.15s)
+    --- PASS: TestSwitchingCreatorPublicCustody/foreign-config-name (0.16s)
+    --- PASS: TestSwitchingCreatorPublicCustody/replacement (0.23s)
+    --- PASS: TestSwitchingCreatorPublicCustody/renamed-owned (0.23s)
+    --- PASS: TestSwitchingCreatorPublicCustody/missing-native (0.22s)
+    --- PASS: TestSwitchingCreatorPublicCustody/retain-reselect (0.26s)
+    --- PASS: TestSwitchingCreatorPublicCustody/owned-update (0.30s)
+    --- PASS: TestSwitchingCreatorPublicCustody/import (0.25s)
+    --- PASS: TestSwitchingCreatorPublicCustody/wrong-result-uuid (0.21s)
+    --- PASS: TestSwitchingCreatorPublicCustody/wrong-service (0.18s)
+    --- PASS: TestSwitchingCreatorPublicCustody/taskless (0.15s)
+    --- PASS: TestSwitchingCreatorPublicCustody/source-before-publication (0.14s)
+    --- PASS: TestSwitchingCreatorPublicCustody/owner-before-publication (0.14s)
+    --- PASS: TestSwitchingCreatorPublicCustody/publish-conflict (0.21s)
+    --- PASS: TestSwitchingCreatorPublicCustody/publish-lost-response (0.20s)
+    --- PASS: TestSwitchingCreatorPublicCustody/publish-pruned (0.16s)
+=== RUN   TestSwitchingCreatorMandatoryReceiptRelease
+--- PASS: TestSwitchingCreatorMandatoryReceiptRelease (0.02s)
+=== RUN   TestSwitchingProfilePublicTaskRecovery
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-preflight-read-error
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-known
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-slash-name
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-legacy-empty
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-legacy-unbound
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-project-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-template-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-taskless
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-source
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-owner
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-tree-missing
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-foreign-root
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-mid-tree-inherited
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-inherited-reordered
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-preflight-read-error
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-known
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-slash-name
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-legacy-empty
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-legacy-unbound
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-project-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-template-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-taskless
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-source
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-owner
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-tree-missing
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-foreign-root
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-mid-tree-inherited
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-inherited-reordered
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-failed
+=== RUN   TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-pending
+=== RUN   TestSwitchingProfilePublicTaskRecovery/profile-replaced
+=== RUN   TestSwitchingProfilePublicTaskRecovery/mid-tree-profile
+--- PASS: TestSwitchingProfilePublicTaskRecovery (9.22s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-preflight-read-error (0.29s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-known (0.28s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-slash-name (0.28s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-legacy-empty (0.21s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-legacy-unbound (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-project-replaced (0.25s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-template-replaced (0.26s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-taskless (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-source (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-owner (0.18s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-child-failed (0.28s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-child-pending (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-tree-missing (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-foreign-root (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-mid-tree-inherited (0.32s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-inherited-reordered (0.28s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-failed (0.22s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-false-accepted-child-pending (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-preflight-read-error (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-known (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-slash-name (0.24s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-legacy-empty (0.22s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-legacy-unbound (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-project-replaced (0.25s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-template-replaced (0.25s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-taskless (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-source (0.19s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-owner (0.18s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-child-failed (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-child-pending (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-tree-missing (0.27s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-foreign-root (0.26s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-mid-tree-inherited (0.32s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-inherited-reordered (0.23s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-failed (0.22s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/update-true-accepted-child-pending (0.22s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/profile-replaced (0.25s)
+    --- PASS: TestSwitchingProfilePublicTaskRecovery/mid-tree-profile (0.26s)
+=== RUN   TestSwitchingProfileCreateResultGrammar
+=== RUN   TestSwitchingProfileCreateResultGrammar/known
+=== RUN   TestSwitchingProfileCreateResultGrammar/wrong-service
+=== RUN   TestSwitchingProfileCreateResultGrammar/wrong-task
+=== RUN   TestSwitchingProfileCreateResultGrammar/wrong-action
+=== RUN   TestSwitchingProfileCreateResultGrammar/leading
+=== RUN   TestSwitchingProfileCreateResultGrammar/trailing
+=== RUN   TestSwitchingProfileCreateResultGrammar/newline
+=== RUN   TestSwitchingProfileCreateResultGrammar/upper-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/nil-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/braced-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/extra-uuid
+=== RUN   TestSwitchingProfileCreateResultGrammar/json-progress
+=== RUN   TestSwitchingProfileCreateResultGrammar/object-progress
+=== RUN   TestSwitchingProfileCreateResultGrammar/missing-progress
+=== RUN   TestSwitchingProfileCreateResultGrammar/missing-start
+=== RUN   TestSwitchingProfileCreateResultGrammar/missing-error
+=== RUN   TestSwitchingProfileCreateResultGrammar/stale
+=== RUN   TestSwitchingProfileCreateResultGrammar/future-end
+=== RUN   TestSwitchingProfileCreateResultGrammar/pending
+=== RUN   TestSwitchingProfileCreateResultGrammar/failed
+=== RUN   TestSwitchingProfileCreateResultGrammar/invalid-task
+=== RUN   TestSwitchingProfileCreateResultGrammar/future-submission
+--- PASS: TestSwitchingProfileCreateResultGrammar (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/known (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/wrong-service (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/wrong-task (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/wrong-action (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/leading (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/trailing (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/newline (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/upper-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/nil-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/braced-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/extra-uuid (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/json-progress (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/object-progress (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/missing-progress (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/missing-start (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/missing-error (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/stale (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/future-end (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/pending (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/failed (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/invalid-task (0.00s)
+    --- PASS: TestSwitchingProfileCreateResultGrammar/future-submission (0.00s)
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/known
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/missing
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/replacement
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/wrong-name
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/wrong-namespace
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/drift
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/project-replaced
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/template-replaced
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/child-failed
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/child-pending
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/tree-missing
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/task-changed
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/native-replaced-between
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/inherited-changed
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/inherited-reordered
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/update
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/target
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/credentials
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/physical
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/taskless
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/undeclared
+=== RUN   TestSwitchingProfileCreatedResultNativeBinding/wrong-owner-envelope
+--- PASS: TestSwitchingProfileCreatedResultNativeBinding (0.22s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/known (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/missing (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/replacement (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/wrong-name (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/wrong-namespace (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/drift (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/project-replaced (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/template-replaced (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/child-failed (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/child-pending (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/tree-missing (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/task-changed (0.01s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/native-replaced-between (0.02s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/inherited-changed (0.02s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/inherited-reordered (0.02s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/update (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/target (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/credentials (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/physical (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/taskless (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/undeclared (0.00s)
+    --- PASS: TestSwitchingProfileCreatedResultNativeBinding/wrong-owner-envelope (0.00s)
+=== RUN   TestWirelessProfilePublicRecovery
+=== RUN   TestWirelessProfilePublicRecovery/cohort-false/complete
+=== RUN   TestWirelessProfilePublicRecovery/cohort-false/no-dispatch
+=== RUN   TestWirelessProfilePublicRecovery/cohort-true/complete
+=== RUN   TestWirelessProfilePublicRecovery/cohort-true/no-dispatch
+=== RUN   TestWirelessProfilePublicRecovery/profile/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/profile/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/profile/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/profile/pending
+=== RUN   TestWirelessProfilePublicRecovery/profile/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/profile/source
+=== RUN   TestWirelessProfilePublicRecovery/profile/owner
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/pending
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/source
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/owner
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/pending
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/source
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/owner
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/pending
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/source
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/owner
+--- PASS: TestWirelessProfilePublicRecovery (11.44s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-false/complete (0.80s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-false/no-dispatch (1.11s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-true/complete (1.00s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-true/no-dispatch (1.41s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/lost-ack (0.08s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/child-failed (0.11s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/tree-missing (0.10s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/pending (0.10s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/managed-drift (0.12s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/source (0.08s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/owner (0.08s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/lost-ack (0.22s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/child-failed (0.26s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/tree-missing (0.26s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/pending (0.26s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/managed-drift (0.29s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/source (0.23s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/owner (0.22s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/lost-ack (0.30s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/child-failed (0.33s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/tree-missing (0.33s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/pending (0.33s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/managed-drift (0.35s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/source (0.30s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/owner (0.29s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/lost-ack (0.32s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/child-failed (0.37s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/tree-missing (0.37s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/pending (0.36s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/managed-drift (0.40s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/source (0.35s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/owner (0.32s)
+=== RUN   TestWirelessProfileRecoveryEnvelope
+=== RUN   TestWirelessProfileRecoveryEnvelope/valid
+=== RUN   TestWirelessProfileRecoveryEnvelope/taskless
+=== RUN   TestWirelessProfileRecoveryEnvelope/no-parent
+=== RUN   TestWirelessProfileRecoveryEnvelope/wrong-parent-format
+=== RUN   TestWirelessProfileRecoveryEnvelope/wrong-section
+=== RUN   TestWirelessProfileRecoveryEnvelope/undeclared
+=== RUN   TestWirelessProfileRecoveryEnvelope/malformed-binding
+=== RUN   TestWirelessProfileRecoveryEnvelope/future
+=== RUN   TestWirelessProfileRecoveryEnvelope/physical
+=== RUN   TestWirelessProfileRecoveryEnvelope/prepared
+=== RUN   TestWirelessProfileRecoveryEnvelope/credential
+=== RUN   TestWirelessProfileRecoveryEnvelope/created-id
+=== RUN   TestWirelessProfileRecoveryEnvelope/missing-owner
+=== RUN   TestWirelessProfileRecoveryEnvelope/wrong-action
+=== RUN   TestWirelessProfileRecoveryEnvelope/update-targetless
+=== RUN   TestWirelessProfileRecoveryEnvelope/unknown-family
+--- PASS: TestWirelessProfileRecoveryEnvelope (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/valid (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/taskless (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/no-parent (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/wrong-parent-format (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/wrong-section (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/undeclared (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/malformed-binding (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/future (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/physical (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/prepared (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/credential (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/created-id (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/missing-owner (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/wrong-action (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/update-targetless (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/unknown-family (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	174.593s

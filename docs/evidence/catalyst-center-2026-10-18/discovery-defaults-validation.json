@@ -1,0 +1,199 @@
+{
+  "scope": "explicit non-secret discovery default overrides composed with pinned site selection and ordinary ownership execution",
+  "sourceSHA256": {
+    "internal/controlleradapter/catalystcenter/discovery_defaults_envtest_test.go": "58ba503276f922efa3e1f5a0c9803bd7cdedfb9a3a20d6ea731b2859b427acaa",
+    "internal/controlleradapter/catalystcenter/discovery_defaults_export.go": "ea0afeb5ce327412699d312cd3e6ced4e8b0550e174a7ffb7babf6716bd64813",
+    "internal/controlleradapter/catalystcenter/discovery_defaults_export_test.go": "df2d2cafb4e3d9be9505d1fe741c1cdf04849f9b3850ab1a7f225c85fa2628c3",
+    "internal/controlleradapter/catalystcenter/discovery_export_selection.go": "5307f5f9f9b33bdd83b8ca5d4db65890043a55c0fbce45195a69778bfb599418",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "b61f966cae534b8d86cfd9a72fec565cdbe13f1c7df05cc4d5c9b8f84c49c4cb",
+    "internal/controlleradapter/catalystcenter/discovery_test.go": "863dde869908f2d04bae29551a8004eb0b27509879bcc5aab69402f63181ab3d",
+    "internal/controlleradapter/catalystcenter/nacmodel/discovery_defaults.go": "20035a8cdd321a180199e35323ee5b9e7e40db3e28f2147e89365f95b47fa0a5",
+    "internal/controlleradapter/catalystcenter/nacmodel/discovery_defaults_test.go": "d07d73bf00a66d3574fca350516c04500d3bb291cf2b5d5e2b8c57027e9508e5",
+    "internal/controlleradapter/catalystcenter/nacmodel/document.go": "838587795d90b1c7cc0c68bb72ceac53ce520dfaf3cce4b6010e4d03e05dc27b",
+    "internal/controlleradapter/catalystcenter/nacmodel/upstream/0.5.0/NOTICE": "8e4a6ee83cc91e765fa4680f8bd7d582ed69763746850ca6803fc34eb420ba16",
+    "internal/controlleradapter/catalystcenter/nacmodel/upstream/0.5.0/cc_discovery.tf": "114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c",
+    "internal/controlleradapter/catalystcenter/nacmodel/upstream/0.5.0/defaults.yaml": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+    "tools/cvk-netascode-migrate/controller_export_discovery.go": "1ee078398b5ab9b325b931166fef6e2c1f2c7e49e90a6bd6ff05cd369a8c4700",
+    "tools/cvk-netascode-migrate/controller_export_discovery_test.go": "e7429b067ae0e73e660c9f3f3836a91e2465b347c801af4ecdfbdb041dba561f",
+    "examples/configs/catalyst-center/discovery-defaults.yaml": "e8247f160dfcc00a5c83e9021f6302c2d50f02b98936ce9e565e366c365a88b3",
+    "examples/configs/catalyst-center/discovery-defaults-input.yaml": "c2d78f1c57d11b243efab355f2082e61a601cba6e7c2af1769c8f5b419a19c24"
+  },
+  "upstream": {
+    "revision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+    "terraformSHA256": "114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c",
+    "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+    "pinnedDiscoveryDefaults": 0
+  },
+  "gates": {
+    "regression": {
+      "families": 48,
+      "subcases": 137,
+      "seconds": 17.238
+    },
+    "api": {
+      "seconds": 8.895,
+      "scope": "real persistence; simulated native service and retained-task uncertainty injection"
+    },
+    "parser": {
+      "seconds": 1.657
+    },
+    "cli": {
+      "seconds": 2.159
+    },
+    "native": {
+      "seconds": 70.302,
+      "testSeconds": 68.08
+    },
+    "nd": {
+      "seconds": 4.518
+    },
+    "providerUpgrades": {
+      "seconds": 14.569
+    },
+    "controllerUpgrades": {
+      "seconds": 6.96
+    }
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-discovery-owned-3948078742",
+    "name": "CVK_DISC_d8bf7e55aef99451",
+    "initialProvenance": {
+      "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+      "terraformSHA256": "114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c",
+      "overridesSHA256": "c132a7b13ac255eaba91a55e29afe5c2fdb9b39ec594888174bbe466ab941c44",
+      "appliedDefaultFields": 2,
+      "exporter": "cvk-discovery-defaults-v1:policy-sha256:55067aadf67c2fbf664ae134d5d2db1ea4fa9252cbf6eecc947cedd2597b690c",
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "policySHA256": "55067aadf67c2fbf664ae134d5d2db1ea4fa9252cbf6eecc947cedd2597b690c",
+      "inputSHA256": "b389a0d02591a106caafd891dc9f05723dc2b65b2f8fd033f72b53723c1b3244",
+      "outputSHA256": "13f690f7c0fe4285d34e2cbb5f40e76bcfca8ec27760e376f70940cef9ab16ed",
+      "optionsSHA256": "76b4300e915245833dc1ea4d410b146727989e8e997189c92e73da4db10cf688",
+      "declaredJobs": 1,
+      "selectedJobs": 1,
+      "perSiteMode": false,
+      "executionSyntaxValidated": true,
+      "leafSchemaValidated": false,
+      "configurationParity": false,
+      "limitations": [
+        "Scoped non-secret discovery defaults only; no inline credentials, identity/credential-name fallback, file merging or full schema/parity attestation.",
+        "Pinned bundle supplies no discovery defaults; explicit supported overrides precede missing leaf values only. Null and incompatible resolved combinations are refused.",
+        "All defaults, including unused/shadowed fields, and all expanded jobs validate before selection. Existing ownership, physical safeguards and native execution remain unchanged."
+      ]
+    },
+    "replacementProvenance": {
+      "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+      "terraformSHA256": "114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c",
+      "overridesSHA256": "75892c29c3661d43290f0e35fc13c9ca198cedd9941f0944bb654e166b90de98",
+      "appliedDefaultFields": 2,
+      "exporter": "cvk-discovery-defaults-v1:policy-sha256:55067aadf67c2fbf664ae134d5d2db1ea4fa9252cbf6eecc947cedd2597b690c",
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "policySHA256": "55067aadf67c2fbf664ae134d5d2db1ea4fa9252cbf6eecc947cedd2597b690c",
+      "inputSHA256": "b389a0d02591a106caafd891dc9f05723dc2b65b2f8fd033f72b53723c1b3244",
+      "outputSHA256": "2e67dbbdbd856ef4a72d5ce6464551a7d1a9d0665ded02f6c1d4fb762cbe251c",
+      "optionsSHA256": "76b4300e915245833dc1ea4d410b146727989e8e997189c92e73da4db10cf688",
+      "declaredJobs": 1,
+      "selectedJobs": 1,
+      "perSiteMode": false,
+      "executionSyntaxValidated": true,
+      "leafSchemaValidated": false,
+      "configurationParity": false,
+      "limitations": [
+        "Scoped non-secret discovery defaults only; no inline credentials, identity/credential-name fallback, file merging or full schema/parity attestation.",
+        "Pinned bundle supplies no discovery defaults; explicit supported overrides precede missing leaf values only. Null and incompatible resolved combinations are refused.",
+        "All defaults, including unused/shadowed fields, and all expanded jobs validate before selection. Existing ownership, physical safeguards and native execution remain unchanged."
+      ]
+    },
+    "posts": 2,
+    "deletes": 2,
+    "knownTaskRecoveries": 3,
+    "uncertaintyInjection": "Accepted restored as Unknown in simulated Kubernetes status",
+    "nativeService": "real",
+    "kubernetesPersistence": "simulated",
+    "cleanup": {
+      "deleteTaskId": "01a14c94-8161-724c-b7b2-31c5a169c10c",
+      "deleted": true,
+      "id": "148",
+      "name": "CVK_DISC_d8bf7e55aef99451"
+    },
+    "checkpointSourceFormatting": "minified by harness; pretty-normalized bytes match exporter output digest",
+    "installed": false,
+    "sameSparseInputDifferentDefaults": true
+  },
+  "example": {
+    "path": "/private/tmp/cvk-discovery-defaults-example-76w0lgc2",
+    "provenance": {
+      "defaultsSHA256": "8efb7f12853af1f8d2b182fb2b9e323e30ddf2330e61286dbb959a84fd5a505f",
+      "terraformSHA256": "114f165a3fabd312de99d37c79ed85fdc9119a145225152d949246161bcf246c",
+      "overridesSHA256": "e8247f160dfcc00a5c83e9021f6302c2d50f02b98936ce9e565e366c365a88b3",
+      "appliedDefaultFields": 2,
+      "exporter": "cvk-discovery-defaults-v1:policy-sha256:55067aadf67c2fbf664ae134d5d2db1ea4fa9252cbf6eecc947cedd2597b690c",
+      "format": "netascode-catalyst-center",
+      "modelVersion": "0.5.0",
+      "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+      "policySHA256": "55067aadf67c2fbf664ae134d5d2db1ea4fa9252cbf6eecc947cedd2597b690c",
+      "inputSHA256": "c2d78f1c57d11b243efab355f2082e61a601cba6e7c2af1769c8f5b419a19c24",
+      "outputSHA256": "eab72e081e21d39c8c9ddb0eb636f48ebc3216bf305e097d5bd3d055df60a743",
+      "optionsSHA256": "2d7af3fdf6ef6a75bf73c87ac76a593f588535bdd65f938a236913cadb206bc1",
+      "declaredJobs": 1,
+      "selectedJobs": 1,
+      "perSiteMode": false,
+      "executionSyntaxValidated": true,
+      "leafSchemaValidated": false,
+      "configurationParity": false,
+      "limitations": [
+        "Scoped non-secret discovery defaults only; no inline credentials, identity/credential-name fallback, file merging or full schema/parity attestation.",
+        "Pinned bundle supplies no discovery defaults; explicit supported overrides precede missing leaf values only. Null and incompatible resolved combinations are refused.",
+        "All defaults, including unused/shadowed fields, and all expanded jobs validate before selection. Existing ownership, physical safeguards and native execution remain unchanged."
+      ]
+    }
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-discovery-defaults-final",
+    "sha256": "b229fd4875e5690f69a58037a9744b14f0d94d7a8f81be382697b4e2d40c90e1",
+    "installed": false
+  },
+  "logs": {
+    "regression": {
+      "file": "discovery-defaults-regression.log",
+      "sha256": "da89b81032550ce10df022df698782ef0a5a94ab860751d8e22778044f5b74d4"
+    },
+    "api": {
+      "file": "discovery-defaults-api.log",
+      "sha256": "0fb5f7a0ab30bab0d645e1c8648f131ec1fa7c4f415c5549507016731769dfc5"
+    },
+    "native": {
+      "file": "discovery-defaults-native.log",
+      "sha256": "2d9851d965c537f2b04c319388ea20111d8c56c215ded54b34c7cccf51d80e4f"
+    },
+    "cli-parser": {
+      "file": "discovery-defaults-cli-parser.log",
+      "sha256": "f3a75216c49c35dea6a4c3afdd1a25e587acb08d01e5e803e350363d1167de44"
+    },
+    "nd": {
+      "file": "discovery-defaults-nd.log",
+      "sha256": "a6b41b50f987bfe73fd8cc19610d8e3d49abe711f920b810a933507e21d0cef0"
+    },
+    "provider-upgrades": {
+      "file": "discovery-defaults-provider-upgrades.log",
+      "sha256": "29581e324c5d671499c5b070a82831d162e277f188cba39c3eb4e1d8e872abb0"
+    },
+    "controller-upgrades": {
+      "file": "discovery-defaults-controller-upgrades.log",
+      "sha256": "4696158942571829bd0e75aa54992597b15f0b0319c7dc4af03095028dfb5602"
+    },
+    "build": {
+      "file": "discovery-defaults-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "limits": [
+    "No provider fallback is inferred: pinned bundle has zero discovery defaults. Nulls, inline credentials, identity/credential-reference defaults and create_per_site defaults are refused.",
+    "Only ten existing non-secret execution fields are resolved. Other discovery fields, full nested schema, multi-file/whole-model defaults and full parity remain incomplete.",
+    "Native flow qualifies type/protocol default resolution and protocol replacement; other default field validation is controlled/race coverage, not broad physical qualification.",
+    "Original-task uncertainty is fault-injected in simulated Kubernetes storage; no natural installed restart/crash is claimed. The production executor and shared transport are unchanged."
+  ]
+}

@@ -1,0 +1,32 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:125: submitted Create CVK-Q-Project-20261016-145355 01a14534-9d2d-788e-bf56-7128947d77dd
+    template_projects_live_test.go:125: submitted Update CVK-Q-Project-20261016-145355 01a14534-aebd-7c51-97cd-300eb49c44a0
+    template_projects_live_test.go:151: project create and description update verified
+    template_projects_live_test.go:153: native template operation Create draft:CVK-Q-Project-20261016-145355#CVK-Commit-Qualification 01a14534-cc39-7c28-b9ff-0b610336361c
+    template_projects_live_test.go:153: native template operation Update commit:CVK-Q-Project-20261016-145355#CVK-Commit-Qualification 01a14535-0162-786b-85ff-b09d07e4dcca
+    template_projects_live_test.go:153: native template operation Update draft:CVK-Q-Project-20261016-145355#CVK-Commit-Qualification 01a14535-4780-7897-b94e-2a969113e732
+    template_projects_live_test.go:153: native template operation Update commit:CVK-Q-Project-20261016-145355#CVK-Commit-Qualification 01a14535-8667-7375-8f6c-6f394435ba92
+    template_projects_live_test.go:153: native draft create/update and two committed versions verified baae5c9e-3192-4002-960f-cd58426b2908
+    template_projects_live_test.go:153: public profile operation Create profiles/CVK-Q-Profile-20261016-145507 01a14535-b5db-7d41-a735-a9fa0c93012f
+    template_projects_live_test.go:153: public profile source generation converged 2
+    template_projects_live_test.go:153: public profile operation Update profiles/CVK-Q-Profile-20261016-145507 01a14535-f18b-7072-b0f7-3d92310dc961
+    template_projects_live_test.go:153: public profile source generation converged 3
+    template_projects_live_test.go:153: reverse native profile reference shape 1 1 [id name] [id]
+    template_projects_live_test.go:153: profile qualification operation sites Create Global/CVK-Q-Profile-20261016-145507-Site 01a14536-3131-7055-912e-8fe7a2a75f40
+    template_projects_live_test.go:153: public profile operation Update sites/CVK-Q-Profile-20261016-145507/8ed28cb5e940179df0f232b8d9e2332fa40225a3e90cb0b59b3df0e5f9bf02d3 01a14536-5440-7b21-a262-d3f512ca9c64
+    template_projects_live_test.go:153: public profile source generation converged 4
+    template_projects_live_test.go:153: public profile operation Update profiles/CVK-Q-Profile-20261016-145507 01a14536-b01f-778d-94ac-42db7bfaaebd
+    template_projects_live_test.go:153: public profile source generation converged 5
+    template_projects_live_test.go:153: public profile operation Update profiles/CVK-Q-Profile-20261016-145507 01a14537-09c0-7022-ac21-5b6d83e62ff2
+    template_projects_live_test.go:153: public profile source generation converged 6
+    template_projects_live_test.go:153: native switching profile create, template update, isolated site assignment and restart readback verified e8acb7a2-7bb2-4af7-ac25-1b6db890b4b1 29c656dc-e9fa-416c-ad4e-3f84925a02a5
+    network_profiles_live_test.go:173: template mutation receipt DELETE 01a14537-6b7b-7dd7-a661-1fde11b8ab5b
+    network_profiles_live_test.go:180: template mutation receipt DELETE 01a14537-7152-7367-b2c7-a1eca8a49ba9
+    network_profiles_live_test.go:220: template mutation receipt DELETE 01a14537-7949-7bda-b6e7-aee96ecb5f13
+    network_profiles_live_test.go:235: profile, site assignment and isolated site cleanup verified e8acb7a2-7bb2-4af7-ac25-1b6db890b4b1 29c656dc-e9fa-416c-ad4e-3f84925a02a5
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a14537-80f3-79da-b249-7bc6d33fb9a5
+    template_commit_live_test.go:95: template fixture cleanup verified baae5c9e-3192-4002-960f-cd58426b2908
+    template_projects_live_test.go:99: isolated project cleanup verified 6e091114-012d-4742-9117-b3d27792871d
+--- PASS: TestLiveCatalystCenterTemplateProject (195.06s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	197.451s

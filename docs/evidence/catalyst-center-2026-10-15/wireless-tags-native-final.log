@@ -1,0 +1,32 @@
+=== RUN   TestLiveWirelessProfileSiteTagsExecution
+    wireless_profile_execution_live_test.go:53: isolated names CVK_N_4fff41df5efe0b02 CVK_S_2e2106bfb3276794
+    wireless_profile_execution_live_test.go:193: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_2e2106bfb3276794 Create 01a13e43-716f-7910-b1f6-956904733d28
+    wireless_profile_execution_live_test.go:202: owned SSID CVK_S_2e2106bfb3276794 mdiYq1zl-x1nF-mMuY-mta2-yMzImZi3nJC5nemWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:230: task wireless/wireless-profile:CVK_N_4fff41df5efe0b02:6cf23f8fc9a82a8a3c20addcd2980274e42d0efb81057b3fc1668b641dba6589 Create 01a13e43-7bea-7ec1-a9f6-72e72e0b5587
+    wireless_profile_execution_live_test.go:239: owned profile CVK_N_4fff41df5efe0b02 bdc04ea6-2703-42bd-8e76-d125a7ef277b
+    wireless_profile_execution_live_test.go:250: task wireless/wireless-profile:CVK_N_4fff41df5efe0b02:6cf23f8fc9a82a8a3c20addcd2980274e42d0efb81057b3fc1668b641dba6589 Update 01a13e43-910d-75df-a4c5-b6d98688e1d5
+    wireless_profile_execution_live_test.go:273: task Global/CVK_N_4fff41df5efe0b02_A Create 01a13e43-9c4e-7500-aaf3-64b16a1264cc
+    wireless_profile_execution_live_test.go:286: owned empty area Global/CVK_N_4fff41df5efe0b02_A ccd8f5bb-61e0-45c7-bfcf-20eb54eb3e53
+    wireless_profile_execution_live_test.go:294: task wireless-sites/CVK_N_4fff41df5efe0b02/df709b30248d48fa5d4d4cf50f1f554c937f97c3babbd9089f95a20b39b0faa9 Update 01a13e43-a7bc-77e4-9c5d-521e47832047
+    wireless_profile_execution_live_test.go:273: task Global/CVK_N_4fff41df5efe0b02_B Create 01a13e43-afc2-7201-b32e-d95b8aeb3a1f
+    wireless_profile_execution_live_test.go:286: owned empty area Global/CVK_N_4fff41df5efe0b02_B 5e03968c-7f76-433f-a977-30fc4ebe3c85
+    wireless_profile_execution_live_test.go:294: task wireless-sites/CVK_N_4fff41df5efe0b02/7722b332fca2095ba3de7dd7ec933aba79bfdc01411b6b1a8e5e6dee3a143633 Update 01a13e43-ba80-78a9-8c00-75d04252d90c
+    wireless_profile_execution_live_test.go:327: task wireless-site-tags/site-tag:9c3e08e6bedc57a4a12dbc4d2c21771bdc432adc873d92e4f2341872f358c66b:533d849a8df531199238803567a9830ed71ff1db275f5afc25bf5b123ad9f827 Create 01a13e43-c916-72bc-ac0d-ed00e3d8c4b4
+    wireless_profile_execution_live_test.go:327: task wireless-policy-tags/policy-tag:ae6199f252b4e0390b9c7ee0f3601b4c69ce4e812193306ad959c1155ad8bb35:c4fda0c2cc320d06f435bd9d29ec36864cc836ab42a05927599c0c4d4d5d3749 Create 01a13e43-e168-7bc5-923c-1ffd904e0442
+    wireless_profile_execution_live_test.go:334: original accepted operation verified with retained resource identity and unchanged tag inventory; no request replayed
+    wireless_profile_execution_live_test.go:327: task wireless-site-tags/site-tag:9c3e08e6bedc57a4a12dbc4d2c21771bdc432adc873d92e4f2341872f358c66b:ea19e2ec4996227eeef9038edd8a8979cd56a6f1a9b2ed892478e9548bbdd0ea Update 01a13e44-202c-7133-9883-1f19b0bccfea
+    wireless_profile_execution_live_test.go:327: task wireless-policy-tags/policy-tag:ae6199f252b4e0390b9c7ee0f3601b4c69ce4e812193306ad959c1155ad8bb35:6fc3a53e8f48429b30524f965c222b86efb5653ee6f26e7306ac1c9d51ace849 Update 01a13e44-3876-7378-9a31-5bb750067397
+    wireless_profile_execution_live_test.go:334: original accepted operation verified with retained resource identity and unchanged tag inventory; no request replayed
+    wireless_profile_execution_live_test.go:339: wireless empty-site assignment and site/policy tag create/additive-update/fresh-compiler/report verified
+    wireless_profile_execution_live_test.go:363: cleanup mdi0q1zl-x05F-ngzM-zJqX-zgy1zwzLmgiWmL9qqZbwmuSYxZno 01a13e44-6427-763d-bdc1-55ce28e2966c
+    wireless_profile_execution_live_test.go:363: cleanup mdi0q1zl-x05F-ngzM-zJqX-zgy1zwzLmgiWmL9tqZbwmuSYxZno 01a13e44-6bd2-74f8-ba95-be7de87da4d8
+    wireless_profile_execution_live_test.go:369: cleanup ccd8f5bb-61e0-45c7-bfcf-20eb54eb3e53 01a13e44-7415-7fe5-8b0a-5545ea248814
+    wireless_profile_execution_live_test.go:369: cleanup 5e03968c-7f76-433f-a977-30fc4ebe3c85 01a13e44-7b56-7ba9-bb0a-408a8c58f275
+    wireless_profile_execution_live_test.go:373: cleanup bdc04ea6-2703-42bd-8e76-d125a7ef277b 01a13e44-8271-79f9-8b43-1b79b222a0ca
+    wireless_profile_execution_live_test.go:379: cleanup mdiYq1zl-x1nF-mMuY-mta2-yMzImZi3nJC5nemWvJflmL8ZuZrF 01a13e44-88ca-7dde-acc1-9e1602a35104
+    wireless_profile_execution_live_test.go:384: cleanup ccd8f5bb-61e0-45c7-bfcf-20eb54eb3e53 01a13e44-8f30-7137-90f5-d6ad6e4be1b1
+    wireless_profile_execution_live_test.go:384: cleanup 5e03968c-7f76-433f-a977-30fc4ebe3c85 01a13e44-94e7-7e68-a7d6-92c5ed823172
+    wireless_profile_execution_live_test.go:389: baselines restored; no device assignment, provisioning or device operation submitted
+--- PASS: TestLiveWirelessProfileSiteTagsExecution (77.28s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	79.197s

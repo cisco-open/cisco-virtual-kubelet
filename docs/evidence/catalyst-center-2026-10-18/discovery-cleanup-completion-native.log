@@ -1,0 +1,11 @@
+=== RUN   TestLiveDiscoveryConfigCleanupCompletion
+    discovery_owned_live_test.go:277: isolated discovery name and private recovery evidence CVK_DISC_2b870f2725e0059d /private/tmp/cvk-discovery-owned-1555614391
+    discovery_owned_live_test.go:734: public manifest task/UUID receipt, JSON restart and no-op verified CVK_DISC_2b870f2725e0059d 178 01a14cd1-c5ba-74d8-b22d-d1d4ba5db4bd
+    discovery_owned_live_test.go:744: original native create task and UUID drained across simulated deletion generation; observation only 178
+    discovery_owned_live_test.go:744: initial cleanup ownership observation performed no mutation; public finalizer and installed API remain unchanged 178
+    discovery_owned_live_test.go:744: native-backed deletion-bound Prepared persisted in separate simulated API; submission blocked 178
+    discovery_owned_live_test.go:744: private deletion-bound exact delete, injected Unknown original-task recovery, absence receipt and journal settlement verified 178
+    discovery_owned_live_test.go:744: native closed and unowned completion proofs verified; status only, finalizers retained 178
+--- PASS: TestLiveDiscoveryConfigCleanupCompletion (32.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	35.258s

@@ -1,0 +1,44 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "providerVersion": "0.6.1",
+  "providerCommit": "01058637dd5ed4fca93e1b2a96dd7032aec2d3a1",
+  "scope": "Staged SDA Create execution/observation and managed-identity binding only. HTTP fixtures and a real private Kubernetes API; read-only lab prerequisites, zero product writes. No public SDA dispatch, ownership, completion receipt, reservation release, installed actor or native SDA creation/convergence claim.",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits.go": "1c2a6f3f4d5de06b13210b98e3ab0060098f487e12feeed5079fe6d2ac3c628b",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_test.go": "bafe5d2d7daae1dd0996d58a9b6b57758b2d5fbd2bbbdb5f9a5f15bd0ed43f50",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_envtest_test.go": "800cd6c81f70c9865017a4a64bf1e5db5b93920c3ee9820962b69f1e6c772c9d",
+    "internal/controlleradapter/catalystcenter/fabric_sda_transits_live_test.go": "337795d06cf812cb57ca5774af47433916c0fdc77883ed23cb5361bfa4ec9c7b",
+    "internal/controlleradapter/catalystcenter/config_group_resources.go": "f9b5d53df7785d933161f0cf102d94832cb78dd94cb19182563028c62e90fbb1",
+    "internal/controlleradapter/catalystcenter/fabric_transits.go": "c90a489d9223b69cf266493f9cb6adacab014d1460dd7f08ea4defda2e9531a5",
+    "internal/controlleradapter/catalystcenter/config_managed_observation.go": "8d325d8c88ecd0248e9d8df6b5ff2741309d9dc2daaec0c9d4d4193ce1844e0d",
+    "internal/controlleradapter/catalystcenter/config_managed_bindings.go": "414d8b1abf2dc55b6f112bff65c5902f30938ac96d9dd4f7ca522518f0cf4fd6",
+    "internal/controlleradapter/catalystcenter/config_device_identity.go": "262e4a61f695216f237045c322aef05f8d3f3353812bcb1c67830b8a643a594c",
+    "internal/controlleradapter/catalystcenter/wired_device_provision.go": "9cf629eca5c2463e59236376948e386ba095fa6f319aa3c81703d59a1ed205f7",
+    "internal/controlleradapter/catalystcenter/config_task_tree.go": "2fa7f32e0e84c8e97342e824c2bf05a7a49a75feedeed77f64fd87443de935c1",
+    "internal/controlleradapter/catalystcenter/client.go": "11226032ad970e09d818d4d988790854f8c29eef51f6e5b515428ff7973933e2"
+  },
+  "upstream": [
+    {
+      "file": "module/cc_fabric.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_fabric.tf",
+      "sha256": "2452e397e64d686bbe38f261bf7daba2787ba80268e94c2ff72a9c2af60d0b88"
+    },
+    {
+      "file": "module/cc_device_provision.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_device_provision.tf",
+      "sha256": "4f2b3ee65efe0c023b61112229abb45e45109d4329ee3691bc0fdd010590d7e3"
+    },
+    {
+      "file": "provider/resource_catalystcenter_transit_network.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/resource_catalystcenter_transit_network.go",
+      "sha256": "baaf3d4d69a58293f6ae5e43dfcbbbba0c4ddbd58f38352e1ca8a009a62c49db"
+    },
+    {
+      "file": "provider/model_catalystcenter_transit_network.go",
+      "url": "https://github.com/CiscoDevNet/terraform-provider-catalystcenter/blob/01058637dd5ed4fca93e1b2a96dd7032aec2d3a1/internal/provider/model_catalystcenter_transit_network.go",
+      "sha256": "dfb36643bb8e494d3cf918b76968dc02d965d3bb94d576b00f9ec61456022074"
+    }
+  ]
+}

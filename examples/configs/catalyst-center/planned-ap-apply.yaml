@@ -1,0 +1,53 @@
+# Local fixture-qualified only; lab qualification remains pending.
+# Global/Lab/Building must already exist. The floor is created before its
+# planned AP. This changes map design; it does not provision a physical AP.
+# The AP type and antenna must be supported by the appliance's map catalog.
+# Creation requires at least one radio. MAC, Z, band and other radio
+# attributes may be omitted; the controller supplies its own defaults.
+# AP coordinates use the native API's feet, independently of floor geometry.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-planned-ap
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [sites]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-planned-ap-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          floors:
+            - name: Floor
+              parent_name: Global/Lab/Building
+              floor_number: 1
+              rf_model: Free Space
+              width: 10
+              length: 15
+              height: 3
+              units_of_measure: meters
+              planned_access_points:
+                - name: Planned-AP1
+                  ap_type: AP9130I
+                  # Planned-position coordinates are feet, independently of floor units.
+                  position_x: 4.5
+                  position_y: 6
+                  position_z: 4
+                  mac_address: '02:00:00:00:00:01'
+                  radios:
+                    - band: 5
+                      channel: 36
+                      tx_power: 12
+                      antenna_name: Internal-9130-5GHz
+                      antenna_azimuth: 90
+                      antenna_elevation: -10

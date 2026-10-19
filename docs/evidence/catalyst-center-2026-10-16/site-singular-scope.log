@@ -1,0 +1,38 @@
+=== RUN   TestSiteNoDispatchScope
+=== RUN   TestSiteNoDispatchScope/create
+=== RUN   TestSiteNoDispatchScope/update
+=== RUN   TestSiteNoDispatchScope/delete
+=== RUN   TestSiteNoDispatchScope/root
+=== RUN   TestSiteNoDispatchScope/bulk
+=== RUN   TestSiteNoDispatchScope/image
+=== RUN   TestSiteNoDispatchScope/parent-missing
+=== RUN   TestSiteNoDispatchScope/self-parent
+=== RUN   TestSiteNoDispatchScope/create-target
+=== RUN   TestSiteNoDispatchScope/update-missing-target
+=== RUN   TestSiteNoDispatchScope/serial
+=== RUN   TestSiteNoDispatchScope/created-id
+=== RUN   TestSiteNoDispatchScope/prepared
+=== RUN   TestSiteNoDispatchScope/task
+=== RUN   TestSiteNoDispatchScope/canceled
+=== RUN   TestSiteNoDispatchScope/section
+=== RUN   TestSiteNoDispatchScope/operation-id
+--- PASS: TestSiteNoDispatchScope (0.00s)
+    --- PASS: TestSiteNoDispatchScope/create (0.00s)
+    --- PASS: TestSiteNoDispatchScope/update (0.00s)
+    --- PASS: TestSiteNoDispatchScope/delete (0.00s)
+    --- PASS: TestSiteNoDispatchScope/root (0.00s)
+    --- PASS: TestSiteNoDispatchScope/bulk (0.00s)
+    --- PASS: TestSiteNoDispatchScope/image (0.00s)
+    --- PASS: TestSiteNoDispatchScope/parent-missing (0.00s)
+    --- PASS: TestSiteNoDispatchScope/self-parent (0.00s)
+    --- PASS: TestSiteNoDispatchScope/create-target (0.00s)
+    --- PASS: TestSiteNoDispatchScope/update-missing-target (0.00s)
+    --- PASS: TestSiteNoDispatchScope/serial (0.00s)
+    --- PASS: TestSiteNoDispatchScope/created-id (0.00s)
+    --- PASS: TestSiteNoDispatchScope/prepared (0.00s)
+    --- PASS: TestSiteNoDispatchScope/task (0.00s)
+    --- PASS: TestSiteNoDispatchScope/canceled (0.00s)
+    --- PASS: TestSiteNoDispatchScope/section (0.00s)
+    --- PASS: TestSiteNoDispatchScope/operation-id (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.361s

@@ -1,0 +1,145 @@
+{
+  "fullModelComplete": false,
+  "branch": "pr/johalley/catc-support",
+  "scope": "Original terminal metadata settlement intent, exact UID/RV fence release, manager retirement and worker finish; private native fresh/recovery cycles",
+  "source": {
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "768f409f8ae7f17180077aa6e74c59f87d692dc3ea5de35233eaad73ebb9ab9a"
+    },
+    "internal/controlleradapter": {
+      "files": 14,
+      "sha256": "56a3957004389d72271d3d7f1dc62492b372f77b594fbc448817840baaf9b52d"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1700,
+      "sha256": "771706da39005d96a60440afe35662217a896fb7e0401710676381fa640807ec"
+    },
+    "internal/controllerconfiguration": {
+      "files": 157,
+      "sha256": "c480ed0a816e02e626d6dbae3f9fa6922b920e4c09c5bb24d1b7d2fdef0bee8b"
+    },
+    "internal/controller": {
+      "files": 93,
+      "sha256": "5807e3a4b677409a5286eb35f17bfc0731252b90b09ac3d1ceef71a92d876bd8"
+    },
+    "manifests": {
+      "config/crd/cisco.vk_networkcontrollers.yaml": "380d7a1d6eca22bf1245c445b7cac99b1c219f1c4ecf0f5418509b24b24cf0f4",
+      "charts/cisco-virtual-kubelet/crds/cisco.vk_networkcontrollers.yaml": "380d7a1d6eca22bf1245c445b7cac99b1c219f1c4ecf0f5418509b24b24cf0f4",
+      "charts/cisco-virtual-kubelet/templates/metadata-handoff-admission.yaml": "1f0a9b9868fefdf33e291b2462c3824e835a007764da5b57cede8d67284c521b"
+    }
+  },
+  "gates": {
+    "typedSettlementRealAPI": {
+      "result": "PASS",
+      "passingEvents": 5,
+      "packages": 1,
+      "packageSeconds": 29.592,
+      "log": "/private/tmp/cvk-metadata-settle-final-api.log"
+    },
+    "foundationRealAPI": {
+      "result": "PASS",
+      "passingEvents": 81,
+      "packages": 1,
+      "packageSeconds": 23.038,
+      "log": "/private/tmp/cvk-metadata-settle-foundation-api.log"
+    },
+    "sharedFoundations": {
+      "result": "PASS",
+      "passingEvents": 3385,
+      "packages": 7,
+      "packageSeconds": 28.895,
+      "log": "/private/tmp/cvk-metadata-settle-qualified-foundation.log"
+    },
+    "PnPJournalSWIMCompatibility": {
+      "result": "PASS",
+      "passingEvents": 1233,
+      "packages": 1,
+      "packageSeconds": 23.223,
+      "log": "/private/tmp/cvk-metadata-settle-qualified-compat.log"
+    },
+    "managerSettlementRoute": {
+      "result": "PASS",
+      "passingEvents": 25,
+      "packages": 1,
+      "packageSeconds": 2.018,
+      "log": "/private/tmp/cvk-metadata-settle-manager.log"
+    },
+    "retainedOutcomeWithoutWorkerOrSource": {
+      "result": "PASS",
+      "passingEvents": 4,
+      "packages": 1,
+      "packageSeconds": 1.545,
+      "log": "/private/tmp/cvk-metadata-settle-retained-outcome.log"
+    },
+    "nativeRecovery": {
+      "result": "PASS",
+      "passingEvents": 2,
+      "packages": 1,
+      "packageSeconds": 16.217,
+      "log": "/private/tmp/cvk-metadata-settle-live-recovery.log"
+    },
+    "nativeFreshCycle": {
+      "result": "PASS",
+      "passingEvents": 2,
+      "packages": 1,
+      "packageSeconds": 28.497,
+      "log": "/private/tmp/cvk-metadata-settle-live-fresh.log"
+    }
+  },
+  "mainBuild": "PASS",
+  "chartRender": "PASS",
+  "sourceAndFormat": "PASS",
+  "pinnedGeneratedHandoffSchemas": "PASS",
+  "uniquePinnedResourceRows": 93,
+  "metadataProtectionDigest": "03e1b5142757c942d2959f26fb2569f073cb568660c1e0fcae37b1b499a273f5",
+  "productionActivation": false,
+  "nativeQualification": {
+    "appliance": "Catalyst Center at existing local tunnel",
+    "recovery": {
+      "records": [
+        {
+          "id": "6ad5ba550bc0186771cb159c",
+          "serial": "CVKED8687E8"
+        },
+        {
+          "id": "6ad5ba570bc0186771cb159d",
+          "serial": "CVKED8687E9"
+        }
+      ],
+      "newRegistrationsReplayed": 0,
+      "exactOriginalDeletes": 2,
+      "directory": "/private/tmp/cvk-pnp-cohort-254446370",
+      "baselineRestored": true
+    },
+    "fresh": {
+      "records": [
+        {
+          "id": "6ad5bbbd0bc0186771cb15bf",
+          "serial": "CVKEC82DBE0"
+        },
+        {
+          "id": "6ad5bbbf0bc0186771cb15c0",
+          "serial": "CVKEC82DBE1"
+        }
+      ],
+      "registrations": 2,
+      "preHTTPRefusalDeletes": 0,
+      "exactOriginalDeletes": 2,
+      "directory": "/private/tmp/cvk-pnp-cohort-4255197335",
+      "baselineRestored": true
+    },
+    "pnPCatalogEmpty": true,
+    "networkInventoryBaselineUnchanged": true,
+    "deviceMutations": false,
+    "kubernetesAndRuntimeAuthority": "simulated with JSON round trips; actual API proof separate",
+    "initialHarnessFailure": "snapshot persistence advanced resourceVersion between completed settlement and retirement; zero native Deletes; exact released no-dispatch state was recovered and original records cleaned"
+  },
+  "remaining": [
+    "Production manager/worker/enrollment/settlement compatibility and composition-root runtime wiring",
+    "Public new-prune routing, complete consumer protection and installed native end-to-end qualification",
+    "Changed controller generation/domain, CR/config deletion and full missing-source finalization",
+    "Wider pinned 93-resource execution/hardware gaps; full-model completion and merge readiness not yet established"
+  ],
+  "strictDocumentation": "PASS"
+}

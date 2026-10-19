@@ -1,0 +1,31 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "scope": "Read-only transitive RF/SSID identity collector implemented and qualified, not wired into persisted tag proofs or Apply/prune dispatch yet. Existing receipt encodings unchanged. Native test reuses generated disabled-SSID/profile lifecycle, reads existing RF definitions and restores inventories; no tag/site/physical action. Earlier milestone source inventories remain historical snapshots, not current-binary attestations.",
+  "qualification": {
+    "localCases": {
+      "TestWirelessProfileZoneBindings": 25,
+      "TestWirelessZoneBindingDetectsSameNameReplacement": 3
+    },
+    "localGoSeconds": 2.395,
+    "nativeSeconds": 24.81,
+    "nativeGoSeconds": 27.234,
+    "nativeBaselinesRestored": true
+  },
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_zone_bindings.go": "626851f040a66e1d86324e32deb6b668bb72144e9c900abffbc5d340137c5a2a",
+    "internal/controlleradapter/catalystcenter/wireless_zone_bindings_test.go": "914b48270fd21a7766f26668b87c94da75e85a522cea137f5147ee4691032061",
+    "internal/controlleradapter/catalystcenter/wireless_zone_bindings_live_test.go": "dfcd615a3e5bead777a64e053d83bfa3585751ac8af48b6b0abf456fc65639f9",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "37b6741e2a43785963d5fc56e8bcf7eeebae70546df641fd14e7a51db3cfb61b",
+    "internal/controlleradapter/catalystcenter/wireless_profile_inventory.go": "591b2ac5a6f36369e4cb7393e6111d94efd4f2be7cdbcec5315e97dd1649f3fc",
+    "internal/controlleradapter/catalystcenter/wireless_rf.go": "27c4f6059d36d581f39992e8ffe710474062509662fa67a8c4b4d383d088539d",
+    "internal/controlleradapter/catalystcenter/wireless_ssid_inventory.go": "5c22aea4704690e5678b859ab8814a8fa3d0f80db7f3c7bc1a209c3e4d8e9363",
+    "internal/controlleradapter/catalystcenter/wireless_ssid_execution.go": "8b545a42f02f36415f5aba5ba4b7b9338670f79f2bb4d0cd567e4da649c59aab",
+    "internal/controlleradapter/catalystcenter/sites.go": "e561cb50f4959a3e079bdddbd8629dd7fd3974a47aa49ca264c44dd4f937882a"
+  },
+  "upstream": {
+    "cc_wireless.tf": "55956a619e460b28e3a57a797b981ed5d3601513e2968793e3b565afa12f3322",
+    "cc_network_profiles.tf": "f49a96dfababdbcdbaebda90d5a8d50e424d3b0c64727baf8de442bb67e1c6c3"
+  }
+}

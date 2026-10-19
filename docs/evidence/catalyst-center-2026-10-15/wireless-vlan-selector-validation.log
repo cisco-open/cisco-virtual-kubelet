@@ -1,0 +1,5 @@
+=== RUN   TestLiveRetainedVLANSelectorValidation
+    zz_vlan_selector_probe_live_test.go:57: native named VLAN selector validation REST POST /dna/intent/api/v1/wirelessProfiles failed with status 406 Not Acceptable: {"response":{"errorCode":"NCND00002","message":"NCND00002: The Network Profile request has validation errors","detail":"[\"NCND01106: Interface configured is not present: CVK_N_95036d537ac3d02e_VG\"]"},"version":"1.0"}
+--- PASS: TestLiveRetainedVLANSelectorValidation (0.99s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.264s

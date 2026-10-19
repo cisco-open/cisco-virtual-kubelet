@@ -1,0 +1,173 @@
+=== RUN   TestEnvtestSiteSingularDispatch
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/area-create/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-create/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-create/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/building-update/lost-ack
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/native-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/source-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/owner-edit
+=== RUN   TestEnvtestSiteSingularDispatch/floor-update/lost-ack
+--- PASS: TestEnvtestSiteSingularDispatch (26.72s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/native-edit (3.73s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/source-edit (1.10s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/owner-edit (0.87s)
+    --- PASS: TestEnvtestSiteSingularDispatch/area-create/lost-ack (0.93s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/native-edit (1.12s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/source-edit (1.11s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/owner-edit (0.93s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-create/lost-ack (0.94s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/native-edit (1.15s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/source-edit (1.09s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/owner-edit (0.84s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-create/lost-ack (0.94s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/native-edit (1.02s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/source-edit (1.01s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/owner-edit (0.88s)
+    --- PASS: TestEnvtestSiteSingularDispatch/building-update/lost-ack (0.94s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/native-edit (1.07s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/source-edit (1.02s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/owner-edit (0.88s)
+    --- PASS: TestEnvtestSiteSingularDispatch/floor-update/lost-ack (0.96s)
+=== RUN   TestEnvtestSiteSingularTaskRecovery
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-pending
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-failed
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-foreign
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-unavailable
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-source
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-owner
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-readback
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-missing-result
+=== RUN   TestEnvtestSiteSingularTaskRecovery/area-create/recover-foreign-result
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-pending
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-failed
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-foreign
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-unavailable
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-source
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-owner
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-readback
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-missing-result
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-create/recover-foreign-result
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-pending
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-failed
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-foreign
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-unavailable
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-source
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-owner
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-readback
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-missing-result
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-create/recover-foreign-result
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover-pending
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover-failed
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover-foreign
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover-unavailable
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover-source
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover-owner
+=== RUN   TestEnvtestSiteSingularTaskRecovery/building-update/recover-readback
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover-pending
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover-failed
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover-foreign
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover-unavailable
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover-source
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover-owner
+=== RUN   TestEnvtestSiteSingularTaskRecovery/floor-update/recover-readback
+--- PASS: TestEnvtestSiteSingularTaskRecovery (53.36s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover (3.15s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-pending (0.95s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-failed (0.97s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-foreign (0.94s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-unavailable (0.95s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-source (0.94s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-owner (0.88s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-readback (1.37s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-missing-result (1.26s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/area-create/recover-foreign-result (1.34s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover (1.10s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-pending (0.97s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-failed (0.96s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-foreign (0.94s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-unavailable (0.94s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-source (0.91s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-owner (0.87s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-readback (1.37s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-missing-result (1.26s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-create/recover-foreign-result (1.36s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover (1.12s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-pending (0.98s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-failed (0.97s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-foreign (0.96s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-unavailable (0.97s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-source (0.94s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-owner (0.91s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-readback (1.31s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-missing-result (1.25s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-create/recover-foreign-result (1.29s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover (0.93s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover-pending (0.92s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover-failed (0.95s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover-foreign (0.95s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover-unavailable (0.94s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover-source (0.93s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover-owner (0.89s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/building-update/recover-readback (1.01s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover (0.99s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover-pending (0.98s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover-failed (0.99s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover-foreign (0.97s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover-unavailable (0.95s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover-source (0.92s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover-owner (0.90s)
+    --- PASS: TestEnvtestSiteSingularTaskRecovery/floor-update/recover-readback (1.03s)
+=== RUN   TestEnvtestSiteCreatorIdentityFence
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 39944 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc000a260c0, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x10a913668?, 0xc000a260c0?}, 0xc0000dfc00?}, {0x108113118, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000bec008)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc000766248, {0xc000909e30, 0x1, 0x1050047f8?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestSiteCreatorIdentityFence(0xc000766248)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/site_dispatch_envtest_test.go:38 +0x5c
+	>  testing.tRunner(0xc000766248, 0x10a8bacf8)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestSiteCreatorIdentityFence/area-create/creator-replaced
+=== RUN   TestEnvtestSiteCreatorIdentityFence/area-create/creator-missing
+=== RUN   TestEnvtestSiteCreatorIdentityFence/building-create/creator-replaced
+=== RUN   TestEnvtestSiteCreatorIdentityFence/building-create/creator-missing
+=== RUN   TestEnvtestSiteCreatorIdentityFence/floor-create/creator-replaced
+=== RUN   TestEnvtestSiteCreatorIdentityFence/floor-create/creator-missing
+--- PASS: TestEnvtestSiteCreatorIdentityFence (12.90s)
+    --- PASS: TestEnvtestSiteCreatorIdentityFence/area-create/creator-replaced (3.23s)
+    --- PASS: TestEnvtestSiteCreatorIdentityFence/area-create/creator-missing (1.17s)
+    --- PASS: TestEnvtestSiteCreatorIdentityFence/building-create/creator-replaced (1.18s)
+    --- PASS: TestEnvtestSiteCreatorIdentityFence/building-create/creator-missing (1.18s)
+    --- PASS: TestEnvtestSiteCreatorIdentityFence/floor-create/creator-replaced (1.21s)
+    --- PASS: TestEnvtestSiteCreatorIdentityFence/floor-create/creator-missing (1.19s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	95.172s

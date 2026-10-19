@@ -1,0 +1,15 @@
+=== RUN   TestLiveWirelessZoneIdentityBindings
+    wireless_profile_execution_live_test.go:133: existing RF references HIGH mda0seLh-seGW-stfh-mKGZ-sdrjnuC2sdDioeK5rZeWsdeXsdeY LOW mdaZte9x-tdbp-mvCY-tdnp-nfC1tdzpn1C4tdLpmtbxmtfmmtjp
+    wireless_profile_execution_live_test.go:136: isolated names CVK_N_58487aeccaa6d38b CVK_S_fa551cdd01c1c98a
+    wireless_profile_execution_live_test.go:293: task ssid:8995b7da-5b82-40fd-a706-82150affe92d:CVK_S_fa551cdd01c1c98a Create 01a149a4-f4c7-72c6-bd0b-4c031b1d4099
+    wireless_profile_execution_live_test.go:302: owned SSID CVK_S_fa551cdd01c1c98a mdiYq1zl-x1nF-zMe1-ntfJ-zgqWmwmXyZK4yumWvJflmL8ZuZrF
+    wireless_profile_execution_live_test.go:376: task wireless/wireless-profile:CVK_N_58487aeccaa6d38b:66f52877eeaa0196333ffa1578bffc4fb392478361d4f8568f0f9683b18fa39a Create 01a149a5-050d-7223-acb9-e1169ac331e7
+    wireless_profile_execution_live_test.go:385: owned profile CVK_N_58487aeccaa6d38b fe83d790-6be2-4b49-b3b9-e31fdfab0705
+    wireless_profile_execution_live_test.go:402: task wireless/wireless-profile:CVK_N_58487aeccaa6d38b:66f52877eeaa0196333ffa1578bffc4fb392478361d4f8568f0f9683b18fa39a Update 01a149a5-2177-7692-9872-235fd0f1dab3
+    wireless_profile_execution_live_test.go:408: two complete-parent and per-zone native identity snapshots matched original RF/SSID UUIDs; collector performs no mutation; receipt-version integration remains separate
+    wireless_profile_execution_live_test.go:670: cleanup fe83d790-6be2-4b49-b3b9-e31fdfab0705 01a149a5-4536-700d-88cd-b126c0e196c5
+    wireless_profile_execution_live_test.go:676: cleanup mdiYq1zl-x1nF-zMe1-ntfJ-zgqWmwmXyZK4yumWvJflmL8ZuZrF 01a149a5-49e4-7b74-aa55-d7f5483e10c8
+    wireless_profile_execution_live_test.go:686: baselines restored; no device assignment, provisioning or device operation submitted
+--- PASS: TestLiveWirelessZoneIdentityBindings (24.81s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	27.234s

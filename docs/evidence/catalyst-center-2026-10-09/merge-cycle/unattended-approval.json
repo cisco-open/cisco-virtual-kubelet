@@ -1,0 +1,21 @@
+[
+  {
+    "op": "test",
+    "path": "/metadata/uid",
+    "value": "c668b953-90bf-4ceb-82a3-a2dda381a5fa"
+  },
+  {
+    "op": "test",
+    "path": "/status/frozenPlan/hash",
+    "value": "sha256:013c1e20c007f28bcd1b29c5154d6356c30f2c8c850676ffeb6d1ad13b756461"
+  },
+  {
+    "op": "add",
+    "path": "/spec/approval",
+    "value": {
+      "planHash": "sha256:013c1e20c007f28bcd1b29c5154d6356c30f2c8c850676ffeb6d1ad13b756461",
+      "approvedBy": "system:admin",
+      "approvedAt": "2026-10-09T16:53:26.185493+00:00"
+    }
+  }
+]

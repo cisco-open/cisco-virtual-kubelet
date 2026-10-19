@@ -1,0 +1,102 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "scope": "Private incarnation lineage proofs for v5 create/update/member/delete preparation. Existing v1-v4 semantics preserved. Recreation planner activation and atomic publication remain pending.",
+  "focusedGates": [
+    {
+      "name": "local",
+      "log": "wireless-tag-lineage-private-local.log",
+      "goSeconds": 10.784,
+      "historyScenarios": 84,
+      "archiveScenarios": 84,
+      "nativeReadbackScenarios": 34,
+      "topLevelPassingTests": 27
+    },
+    {
+      "name": "api",
+      "log": "wireless-tag-lineage-private-api.log",
+      "goSeconds": 27.831,
+      "historyScenarios": 84,
+      "archiveScenarios": 84,
+      "nativeReadbackScenarios": 34,
+      "topLevelPassingTests": 27
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate.go": "e2d5fd149a667481eb2a51867977447c9ea8053414e99eaa356846e146655bbc",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "85537403f5124ba280af6bb1ad4416d900d9a31d355843da6afdff395b08d551",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings.go": "1dc3723659642478904533c930bab8e4dc1a6b328071105614e4ac4a0720efa7",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune.go": "9c4767af274d3190c40ecbd335b4fe8bd082caa5e4c09e1c01814a75f55fedb6",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership.go": "435735a47426fa927b2b3adffc87f8683f9dcc7bcee4de82bc8581bdce8fc93b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_retired_test.go": "f50a9978d5f23c8121716ddc19178a1d82a097c46420f2772bab1899cb35299e",
+    "internal/controlleradapter/catalystcenter/wireless_tag_lineage_proof_test.go": "4143404e0550da5554f5d3a104c0a6b30bfc738b8709ec4390e77a013270285d",
+    "internal/controlleradapter/catalystcenter/wireless_tag_bindings_readback_test.go": "b3de3ea54798489c749fca62d4d140e9209c8c2f04cd5f2f3fc0d2992edd4bbb"
+  },
+  "legacyLifecycleStatus": "passed before recreation activation: 140 local cases (270.058s) and 140 temporary-API cases (707.580s)",
+  "legacyLifecycleSessions": {},
+  "legacyLifecycleLogs": {
+    "local": "/private/tmp/cvk-tag-lineage-legacy-local.log",
+    "api": "/private/tmp/cvk-tag-lineage-legacy-api.log"
+  },
+  "initialFailure": "The new lineage digest displaced the affected-site scope in the decoder; fixed before qualification. The failed gate is retained separately.",
+  "nativeQualification": "HTTP fixtures only for this phase; no new lab operation or installed-worker qualification.",
+  "legacyLifecycleAudit": [
+    {
+      "surface": "local",
+      "status": "passed",
+      "goSeconds": 270.058,
+      "families": [
+        {
+          "test": "TestWirelessTagMembershipRemoval",
+          "status": "pass",
+          "passingLifecycleCases": 34,
+          "expectedLifecycleCases": 34,
+          "seconds": 66.36
+        },
+        {
+          "test": "TestWirelessTagPrune",
+          "status": "pass",
+          "passingLifecycleCases": 60,
+          "expectedLifecycleCases": 60,
+          "seconds": 153.48
+        },
+        {
+          "test": "TestWirelessTagReceipts",
+          "status": "pass",
+          "passingLifecycleCases": 46,
+          "expectedLifecycleCases": 46,
+          "seconds": 48.13
+        }
+      ]
+    },
+    {
+      "surface": "api",
+      "status": "passed",
+      "goSeconds": 707.58,
+      "families": [
+        {
+          "test": "TestEnvtestWirelessTagMembershipRemoval",
+          "status": "pass",
+          "passingLifecycleCases": 34,
+          "expectedLifecycleCases": 34,
+          "seconds": 176.13
+        },
+        {
+          "test": "TestEnvtestWirelessTagPrune",
+          "status": "pass",
+          "passingLifecycleCases": 60,
+          "expectedLifecycleCases": 60,
+          "seconds": 400.0
+        },
+        {
+          "test": "TestEnvtestWirelessTagReceipts",
+          "status": "pass",
+          "passingLifecycleCases": 46,
+          "expectedLifecycleCases": 46,
+          "seconds": 129.39
+        }
+      ]
+    }
+  ],
+  "legacyAuditScript": "/private/tmp/cvk-tag-lineage-legacy-audit.py",
+  "sourceSnapshotNote": "Historical private-lineage proof qualification snapshot. Subsequent recreation planner/writer integration changes are separately qualified."
+}

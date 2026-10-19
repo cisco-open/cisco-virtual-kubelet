@@ -1,0 +1,31 @@
+# Global definition only; no fabric or device association is requested.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-ssid-report
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: report
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-ssid-example-v1
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          ssids:
+            - name: CVK_SSID
+              auth_type: OPEN
+              wlan_type: Enterprise
+              ssid_radio_type: 5GHz
+              enabled: false
+              client_exclusion_timeout: 180

@@ -1,0 +1,18 @@
+{
+  "baselineDigest": "c2aa1fe47345e5965fd6640b0f9fc334d6ef46dc57563098a2e92298dcaae70b",
+  "configDeletionTimestamp": null,
+  "configFinalizers": [
+    "config.cisco.vk/catalyst-center-tag-cleanup",
+    "example.com/other"
+  ],
+  "configStatus": {},
+  "configUID": "e9d5e381-c234-4e8c-a950-a10157253f2f",
+  "configuration": null,
+  "deletes": 0,
+  "generation": 2,
+  "nativeID": "",
+  "phase": "before-create",
+  "posts": 0,
+  "puts": 0,
+  "tagName": "CVK-Q-Tag-Prune-1792369017369429000"
+}

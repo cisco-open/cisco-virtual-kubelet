@@ -32,6 +32,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/yaml"
 
 	opsv1alpha1 "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
 )
@@ -86,6 +87,32 @@ func TestEnvtest_RolloutLeafSpecIsAPIRoundTripStable(t *testing.T) {
 	}
 	if !reflect.DeepEqual(stored.Spec, expected) {
 		t.Fatalf("API-round-tripped leaf spec differs from generated spec:\n stored: %#v\nexpected: %#v", stored.Spec, expected)
+	}
+	target.Source.CatalystCenter = &opsv1alpha1.CatalystCenterImageSource{ControllerName: "catc", ControllerUID: "controller-uid", DeviceID: "device-id", ImageID: "image-id", ImageVersion: "17.18.04.0.759", StandardReloadProfile: "CatalystCenter323"}
+	target.Source.URL = ""
+	target.Source.SecretName = ""
+	target.Source.SecretUID = ""
+	noRollback := false
+	rollout.Spec.Plan.RollbackOnFailure = &noRollback
+	expected = expectedLeafSpec(rollout, target)
+	ccLeaf := &opsv1alpha1.IOSXESoftwareUpgrade{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "swim-leaf"}, Spec: expected}
+	if err := apiClient.Create(ctx, ccLeaf); err != nil {
+		t.Fatalf("controller leaf rejected: %v", err)
+	}
+	if !reflect.DeepEqual(ccLeaf.Spec, expected) {
+		t.Fatal("controller source changed on API round trip")
+	}
+	raw, err := os.ReadFile(filepath.Join(filepath.Dir(filepath.Dir(findControllerCRDPath(t))), "examples/configs/catalyst-center/swim-rollout.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var campaign opsv1alpha1.IOSXESoftwareRollout
+	if err := yaml.Unmarshal(raw, &campaign); err != nil {
+		t.Fatal(err)
+	}
+	campaign.Namespace = namespace
+	if err := apiClient.Create(ctx, &campaign); err != nil {
+		t.Fatalf("controller rollout example rejected: %v", err)
 	}
 }
 

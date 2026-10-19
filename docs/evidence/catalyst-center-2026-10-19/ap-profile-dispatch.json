@@ -1,0 +1,201 @@
+{
+  "scope": "AP-profile typed native/dependency dispatch guard and metadata known-task recovery",
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "installedAPDispatchQualified": false,
+  "creatorOwnershipAdded": false,
+  "credentialRecoveryAuthorityExpanded": false,
+  "nativePersistence": "simulated Kubernetes; real temporary API test separate",
+  "sourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "7c98af95ac9e0b16728d6edd4307c5f50ec1e5043c5e0cec329ae4e44209fe6d",
+    "internal/controlleradapter/catalystcenter/nacmodel": "3b43f32720303e2587c09a77f25b1c3a3e9d031838e4c8638d0b9f18273fe8d0",
+    "tools/cvk-netascode-migrate": "795c622f7e924ee81759a3940822bebd2b97d25057805c7d36d4aa276106641b"
+  },
+  "gates": {
+    "focusedRace": {
+      "exitCode": 0,
+      "passingTestEvents": 813,
+      "log": "ap-profile-dispatch-focusedRace.log",
+      "sha256": "19d8755cf13c0329bc1e6013435c76f57240244e9f0b725acf1e118747a9f9aa"
+    },
+    "temporaryAPI": {
+      "exitCode": 0,
+      "passingTestEvents": 15,
+      "log": "ap-profile-dispatch-temporaryAPI.log",
+      "sha256": "2eb8a4b9aa2b444d89cb45382bfad4f31627f7454b5d87f7fb1e4c2ef0079b34"
+    },
+    "native": {
+      "exitCode": 0,
+      "passingTestEvents": 3,
+      "log": "ap-profile-dispatch-native.log",
+      "sha256": "332104156d8d7690787e9fb55ce2e5721ee9d883255cbcbcc9e164c891cbd0ea"
+    },
+    "productionBuild": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-ap-dispatch-effective-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "strictDocs": {
+      "exitCode": 0,
+      "log": "/private/tmp/cvk-ap-dispatch-effective-docs.log",
+      "sha256": "d5dd7119fd05b0618ef33e694db4ad21dab04f670afcc87d4ccc242f394d541f"
+    },
+    "regression": {
+      "exitCode": 0,
+      "passingTestEvents": 19528,
+      "passingPackages": [
+        "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/api/v1alpha1",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter",
+        "github.com/cisco/virtual-kubelet-cisco/internal/managedprotocol",
+        "github.com/cisco/virtual-kubelet-cisco/internal/softwarelifecycle",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard",
+        "github.com/cisco/virtual-kubelet-cisco/internal/aggregator",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter/nacmodel",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance",
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration",
+        "github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate",
+        "github.com/cisco/virtual-kubelet-cisco/cmd/cisco-vk",
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter"
+      ],
+      "log": "/private/tmp/cvk-ap-dispatch-effective-regression.log",
+      "sha256": "afc7f428989fe9145cf401c762c28fa0a75f2942da50bf3f9e4ab7bb991b5ccf"
+    }
+  },
+  "native": {
+    "attempts": 3,
+    "cleaned": true,
+    "deletes": 1,
+    "id": "mde5q1zl-x0rs-xZK4-nZK5-odyXmJaWmemWvJflmL8Zrdrsnv82",
+    "name": "CVK_DR_987998612000",
+    "noDispatchRetired": true,
+    "posts": 1,
+    "puts": 1,
+    "recoveredUnknown": true,
+    "staleRefused": true,
+    "tasks": {
+      "Create": "01a15414-7110-7c77-b606-307aed69c538",
+      "Delete": "01a15414-7f0a-7cf8-b927-bfd1695ad116",
+      "Update": "01a15414-7716-7a49-b4d5-97a567f2a8cd"
+    }
+  },
+  "nativeCreateAndUpdateUnknownRecovered": true,
+  "activeOperation": false,
+  "baselineRestored": true,
+  "remainingGeneratedFixtures": [],
+  "remaining": [
+    "The qualified AP Create/Update root tasks and complete trees do not contain the captured profile ID; investigate authoritative creation lineage before producing creator custody or destructive authority.",
+    "AP creator UUID ownership, adoption policy and source/config deletion lifecycle",
+    "installed AP calendar/dependency/credential worker flows and physical AP behavior",
+    "credential-bearing no-dispatch automatic retirement and stronger credential task recovery remain separate existing protocols",
+    "complete model/schema/native catalogue and other 93-resource execution gaps",
+    "partial PnP acquisition cancellation original-manager quiescence proof",
+    "Normal accepted AP Create completion retains its earlier contract; do not describe it as complete-tree creator custody."
+  ],
+  "history": [
+    "Initial new absent-collection fixture encoded null instead of an empty array; corrected to test actual absence.",
+    "Existing AP calendar fixture answered only root task reads. Updated it to the shared complete-tree fixture after adding AP metadata to the declared task selector. No root-only fallback was added.",
+    "Final review extended dependency binding to the effective merged native/desired payload, including omitted-but-retained static and calendar references. New replacement tests pass; final race/API gates and fresh native AP dispatch/calendar qualification passed. Earlier 16-package regression passed before that extension; the final full regression also passed 19,528 test events across all 16 packages with no failures."
+  ],
+  "resourceCoverage": {
+    "inventoryRows": 93,
+    "uniqueRows": 93,
+    "newlyQualifiedResource": "catalystcenter_ap_profile",
+    "fullResourceParity": false
+  },
+  "nativeTaskIdentityObservation": {
+    "Create": {
+      "taskFields": [
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "version"
+      ],
+      "progressType": "str",
+      "progressJSONKeys": [],
+      "progressContainsCapturedProfileID": false,
+      "treeContainsCapturedProfileID": false,
+      "treeResponseType": "list"
+    },
+    "Update": {
+      "taskFields": [
+        "endTime",
+        "id",
+        "instanceTenantId",
+        "isError",
+        "progress",
+        "serviceType",
+        "startTime",
+        "version"
+      ],
+      "progressType": "str",
+      "progressJSONKeys": [],
+      "progressContainsCapturedProfileID": false,
+      "treeContainsCapturedProfileID": false,
+      "treeResponseType": "list"
+    }
+  },
+  "earlierSourceFingerprints": {
+    "internal/controlleradapter/catalystcenter": "08e177d65a57241a4ae9e744ac59cfabfa3f13b33699b2c9a7577f03d641c527",
+    "internal/controlleradapter/catalystcenter/nacmodel": "3b43f32720303e2587c09a77f25b1c3a3e9d031838e4c8638d0b9f18273fe8d0",
+    "tools/cvk-netascode-migrate": "795c622f7e924ee81759a3940822bebd2b97d25057805c7d36d4aa276106641b"
+  },
+  "nativeTaskIdentityProbeCycle": {
+    "nativeProfileID": "mde5q1zl-x0rs-xZqX-ntGX-mJK0mJaWmemWvJflmL8Zrdrsnv82",
+    "tasks": {
+      "Create": "01a1540b-b60f-780a-b875-957266d45021",
+      "Delete": "01a1540b-c580-73b3-b370-fcab2e1da275",
+      "Update": "01a1540b-bd33-73ed-b361-ea879fb67e30"
+    },
+    "observation": "Read-only root/tree inspection of the earlier isolated cycle, before retained-reference review."
+  },
+  "nativeCalendar": {
+    "baselineRestored": true,
+    "schedules": [
+      "DAILY",
+      "WEEKLY",
+      "MONTHLY",
+      "MULTIPLE",
+      "REORDERED",
+      "CLEAR"
+    ],
+    "persistence": "compiled executor; no installed worker claim",
+    "definitionTasks": 8,
+    "cleanupTasks": 3,
+    "assignedOrProvisionedAP": false
+  },
+  "inventoryIdentityFieldSample": {
+    "sampleRows": 1,
+    "topLevelFieldNames": [
+      "apPowerProfileName",
+      "apProfileName",
+      "awipsEnabled",
+      "awipsForensicEnabled",
+      "calendarPowerProfiles",
+      "clientLimit",
+      "countryCode",
+      "description",
+      "id",
+      "managementSetting",
+      "meshEnabled",
+      "meshSetting",
+      "pmfDenialEnabled",
+      "remoteWorkerEnabled",
+      "rogueDetectionSetting",
+      "timeZone",
+      "timeZoneOffsetHour",
+      "timeZoneOffsetMinutes"
+    ],
+    "candidateCreationOrTaskFields": [],
+    "valuesRecorded": false
+  }
+}

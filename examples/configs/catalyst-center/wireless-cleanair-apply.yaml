@@ -1,0 +1,33 @@
+# Global definition only; no fabric or device association is requested.
+# Changing radio_band among 2.4GHz, 5GHz and 6GHz updates the same definition UUID.
+# Apply preserves omitted description/interferer settings; source pruning stays Retain.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-cleanair-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [feature_templates]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-cleanair-example-v1
+  source:
+    inline:
+      catalyst_center:
+        feature_templates:
+          wireless:
+            cleanair:
+              - name: CVK_CLEANAIR
+                radio_band: 2.4GHz
+                enable: false
+                device_reporting: false
+                persistent_device_propagation: false

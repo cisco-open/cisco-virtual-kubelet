@@ -1,0 +1,356 @@
+{
+  "response": [
+    {
+      "id": "builtin-rf-0",
+      "rfProfileName": "LOW",
+      "defaultRfProfile": false,
+      "enableRadioTypeA": true,
+      "enableRadioTypeB": true,
+      "enableRadioType6GHz": true,
+      "enableCustom": false,
+      "radioTypeAProperties": {
+        "parentProfile": "LOW",
+        "radioChannels": "36,40,44,48,52,56,60,64,149,153,157,161",
+        "dataRates": "6,9,12,18,24,36,48,54",
+        "mandatoryDataRates": "6,12,24",
+        "powerThresholdV1": -60,
+        "rxSopThreshold": "LOW",
+        "minPowerLevel": -10,
+        "maxPowerLevel": 30,
+        "channelWidth": "best",
+        "maxRadioClients": 200,
+        "fraPropertiesA": {
+          "clientAware": false,
+          "clientSelect": 50,
+          "clientReset": 5
+        },
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        },
+        "preamblePuncture": false,
+        "zeroWaitDfsEnable": false
+      },
+      "radioTypeBProperties": {
+        "parentProfile": "LOW",
+        "radioChannels": "1,6,11",
+        "dataRates": "1,2,5.5,6,9,11,12,18,24,36,48,54",
+        "mandatoryDataRates": "1,2,5.5,11",
+        "powerThresholdV1": -65,
+        "rxSopThreshold": "LOW",
+        "minPowerLevel": -10,
+        "maxPowerLevel": 30,
+        "maxRadioClients": 200,
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        }
+      },
+      "radioType6GHzProperties": {
+        "parentProfile": "LOW",
+        "radioChannels": "5,21,37,53,69,85,101,117,133,149,165,181,197,213,229",
+        "dataRates": "6,9,12,18,24,36,48,54",
+        "mandatoryDataRates": "6,12,24",
+        "powerThresholdV1": -70,
+        "rxSopThreshold": "AUTO",
+        "minPowerLevel": -10,
+        "maxPowerLevel": 30,
+        "enableStandardPowerService": false,
+        "minDbsWidth": 20,
+        "maxDbsWidth": 160,
+        "maxRadioClients": 200,
+        "multiBssidProperties": {
+          "dot11axParameters": {
+            "muMimoDownLink": true,
+            "muMimoUpLink": true,
+            "ofdmaDownLink": true,
+            "ofdmaUpLink": true
+          },
+          "dot11beParameters": {
+            "muMimoDownLink": false,
+            "muMimoUpLink": false,
+            "ofdmaDownLink": true,
+            "ofdmaUpLink": true,
+            "ofdmaMultiRu": false
+          },
+          "twtBroadcastSupport": false,
+          "targetWakeTime": false
+        },
+        "fraPropertiesC": {
+          "clientResetCount": 1,
+          "clientUtilizationThreshold": 5
+        },
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        },
+        "preamblePuncture": false,
+        "pscEnforcingEnabled": false,
+        "discoveryFrames6GHz": "None",
+        "broadcastProbeResponseInterval": 20
+      }
+    },
+    {
+      "id": "builtin-rf-1",
+      "rfProfileName": "HIGH",
+      "defaultRfProfile": false,
+      "enableRadioTypeA": true,
+      "enableRadioTypeB": true,
+      "enableRadioType6GHz": true,
+      "enableCustom": false,
+      "radioTypeAProperties": {
+        "parentProfile": "HIGH",
+        "radioChannels": "36,40,44,48,52,56,60,64,149,153,157,161",
+        "dataRates": "12,18,24,36,48,54",
+        "mandatoryDataRates": "12,24",
+        "powerThresholdV1": -65,
+        "rxSopThreshold": "MEDIUM",
+        "minPowerLevel": 7,
+        "maxPowerLevel": 30,
+        "channelWidth": "best",
+        "maxRadioClients": 200,
+        "fraPropertiesA": {
+          "clientAware": false,
+          "clientSelect": 50,
+          "clientReset": 5
+        },
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        },
+        "preamblePuncture": false,
+        "zeroWaitDfsEnable": false
+      },
+      "radioTypeBProperties": {
+        "parentProfile": "HIGH",
+        "radioChannels": "1,6,11",
+        "dataRates": "9,12,18,24,36,48,54",
+        "mandatoryDataRates": "12",
+        "powerThresholdV1": -70,
+        "rxSopThreshold": "MEDIUM",
+        "minPowerLevel": 7,
+        "maxPowerLevel": 30,
+        "maxRadioClients": 200,
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        }
+      },
+      "radioType6GHzProperties": {
+        "parentProfile": "HIGH",
+        "radioChannels": "5,21,37,53,69,85,101,117,133,149,165,181,197,213,229",
+        "dataRates": "6,9,12,18,24,36,48,54",
+        "mandatoryDataRates": "6,12,24",
+        "powerThresholdV1": -70,
+        "rxSopThreshold": "AUTO",
+        "minPowerLevel": -10,
+        "maxPowerLevel": 30,
+        "enableStandardPowerService": false,
+        "minDbsWidth": 20,
+        "maxDbsWidth": 160,
+        "maxRadioClients": 200,
+        "multiBssidProperties": {
+          "dot11axParameters": {
+            "muMimoDownLink": true,
+            "muMimoUpLink": true,
+            "ofdmaDownLink": true,
+            "ofdmaUpLink": true
+          },
+          "dot11beParameters": {
+            "muMimoDownLink": false,
+            "muMimoUpLink": false,
+            "ofdmaDownLink": true,
+            "ofdmaUpLink": true,
+            "ofdmaMultiRu": false
+          },
+          "twtBroadcastSupport": false,
+          "targetWakeTime": false
+        },
+        "fraPropertiesC": {
+          "clientResetCount": 1,
+          "clientUtilizationThreshold": 5
+        },
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        },
+        "preamblePuncture": false,
+        "pscEnforcingEnabled": false,
+        "discoveryFrames6GHz": "None",
+        "broadcastProbeResponseInterval": 20
+      }
+    },
+    {
+      "id": "builtin-rf-2",
+      "rfProfileName": "TYPICAL",
+      "defaultRfProfile": false,
+      "enableRadioTypeA": true,
+      "enableRadioTypeB": true,
+      "enableRadioType6GHz": true,
+      "enableCustom": false,
+      "radioTypeAProperties": {
+        "parentProfile": "TYPICAL",
+        "radioChannels": "36,40,44,48,52,56,60,64,149,153,157,161",
+        "dataRates": "6,9,12,18,24,36,48,54",
+        "mandatoryDataRates": "6,12,24",
+        "powerThresholdV1": -70,
+        "rxSopThreshold": "AUTO",
+        "minPowerLevel": -10,
+        "maxPowerLevel": 30,
+        "channelWidth": "best",
+        "maxRadioClients": 200,
+        "fraPropertiesA": {
+          "clientAware": false,
+          "clientSelect": 50,
+          "clientReset": 5
+        },
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        },
+        "preamblePuncture": false,
+        "zeroWaitDfsEnable": false
+      },
+      "radioTypeBProperties": {
+        "parentProfile": "TYPICAL",
+        "radioChannels": "1,6,11",
+        "dataRates": "9,12,18,24,36,48,54",
+        "mandatoryDataRates": "12",
+        "powerThresholdV1": -70,
+        "rxSopThreshold": "AUTO",
+        "minPowerLevel": -10,
+        "maxPowerLevel": 30,
+        "maxRadioClients": 200,
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        }
+      },
+      "radioType6GHzProperties": {
+        "parentProfile": "TYPICAL",
+        "radioChannels": "5,21,37,53,69,85,101,117,133,149,165,181,197,213,229",
+        "dataRates": "6,9,12,18,24,36,48,54",
+        "mandatoryDataRates": "6,12,24",
+        "powerThresholdV1": -70,
+        "rxSopThreshold": "AUTO",
+        "minPowerLevel": -10,
+        "maxPowerLevel": 30,
+        "enableStandardPowerService": false,
+        "minDbsWidth": 20,
+        "maxDbsWidth": 160,
+        "maxRadioClients": 200,
+        "multiBssidProperties": {
+          "dot11axParameters": {
+            "muMimoDownLink": true,
+            "muMimoUpLink": true,
+            "ofdmaDownLink": true,
+            "ofdmaUpLink": true
+          },
+          "dot11beParameters": {
+            "muMimoDownLink": false,
+            "muMimoUpLink": false,
+            "ofdmaDownLink": true,
+            "ofdmaUpLink": true,
+            "ofdmaMultiRu": false
+          },
+          "twtBroadcastSupport": false,
+          "targetWakeTime": false
+        },
+        "fraPropertiesC": {
+          "clientResetCount": 1,
+          "clientUtilizationThreshold": 5
+        },
+        "coverageHoleDetectionProperties": {
+          "chdClientLevel": 3,
+          "chdDataRssiThreshold": -80,
+          "chdVoiceRssiThreshold": -80,
+          "chdExceptionLevel": 25
+        },
+        "spatialReuseProperties": {
+          "dot11axNonSrgObssPacketDetect": false,
+          "dot11axNonSrgObssPacketDetectMaxThreshold": -62,
+          "dot11axSrgObssPacketDetect": false,
+          "dot11axSrgObssPacketDetectMinThreshold": -82,
+          "dot11axSrgObssPacketDetectMaxThreshold": -62
+        },
+        "preamblePuncture": false,
+        "pscEnforcingEnabled": false,
+        "discoveryFrames6GHz": "None",
+        "broadcastProbeResponseInterval": 20
+      }
+    }
+  ],
+  "version": "1.1"
+}

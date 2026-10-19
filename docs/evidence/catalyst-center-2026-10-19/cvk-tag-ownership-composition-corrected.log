@@ -1,0 +1,70 @@
+=== RUN   TestEnvtestDiscoveryMixedOwnership
+=== RUN   TestEnvtestDiscoveryMixedOwnership/0
+=== RUN   TestEnvtestDiscoveryMixedOwnership/1
+=== RUN   TestEnvtestDiscoveryMixedOwnership/2
+=== RUN   TestEnvtestDiscoveryMixedOwnership/3
+--- PASS: TestEnvtestDiscoveryMixedOwnership (11.14s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/0 (3.77s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/1 (1.13s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/2 (1.10s)
+    --- PASS: TestEnvtestDiscoveryMixedOwnership/3 (1.13s)
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unchanged
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/foreign-id
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/changed-footprint
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/active-job
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/credential-replaced
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/lost-ack
+=== RUN   TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unowned
+--- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay (0.08s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unchanged (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/foreign-id (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/changed-footprint (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/active-job (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/credential-replaced (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/lost-ack (0.01s)
+    --- PASS: TestDiscoveryOwnedReplacementRefusesDriftAndReplay/unowned (0.01s)
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/stable
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/inventory-owner-pruned
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/template-owner-pruned
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/foreign-inventory-owner
+=== RUN   TestDiscoveryMixedDispatchRequiresAllOwners/receipt-pruned
+--- PASS: TestDiscoveryMixedDispatchRequiresAllOwners (0.17s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/stable (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/inventory-owner-pruned (0.04s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/template-owner-pruned (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/foreign-inventory-owner (0.03s)
+    --- PASS: TestDiscoveryMixedDispatchRequiresAllOwners/receipt-pruned (0.03s)
+=== RUN   TestDiscoveryMixedNamespaceAndCallbackDelegation
+--- PASS: TestDiscoveryMixedNamespaceAndCallbackDelegation (0.01s)
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/false
+=== RUN   TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/true
+--- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner (0.06s)
+    --- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/false (0.03s)
+    --- PASS: TestDiscoveryPureDispatchHonorsOverlappingTemplateOwner/true (0.03s)
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=false
+=== RUN   TestDiscoveryManifestCreateRestartAndNoOp/combined=true
+--- PASS: TestDiscoveryManifestCreateRestartAndNoOp (0.29s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=false (0.11s)
+    --- PASS: TestDiscoveryManifestCreateRestartAndNoOp/combined=true (0.18s)
+=== RUN   TestDiscoveryLegacyAcceptedRecovery
+--- PASS: TestDiscoveryLegacyAcceptedRecovery (0.11s)
+=== RUN   TestDiscoveryOwnedReplacementCycle
+--- PASS: TestDiscoveryOwnedReplacementCycle (0.25s)
+=== RUN   TestDiscoveryMixedOwnedReplacement
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true
+=== RUN   TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false
+--- PASS: TestDiscoveryMixedOwnedReplacement (1.09s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=false (0.36s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=false/reversed=true (0.36s)
+    --- PASS: TestDiscoveryMixedOwnedReplacement/inventoryOnly=true/reversed=false (0.37s)
+=== RUN   TestDiscoveryPureToMixedOwnership
+--- PASS: TestDiscoveryPureToMixedOwnership (0.36s)
+=== RUN   TestDiscoveryMixedLegacyAcceptedRecovery
+--- PASS: TestDiscoveryMixedLegacyAcceptedRecovery (0.18s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	16.099s

@@ -129,6 +129,7 @@ func (r *CiscoDeviceReconciler) resolveManagedDrainIntent(
 		status:    metav1.ConditionTrue,
 		reason:    "DrainSessionAcknowledged", message: session.Message,
 	}
+	decision.releaseCancelledDrainTaint = cancelledDrainTaintReleaseRequested(device, leaf, session, drain, r.now())
 	if phase == ciskov1.DeviceMaintenanceSessionRecovering {
 		decision.reason = "DrainRecovering"
 		decision.message = "drain side effects are closed; restoring only session-owned scheduling guards"
@@ -465,6 +466,14 @@ func reconcileManagedDrainTaint(
 		node.Spec.Taints = upsertTaint(node.Spec.Taints, taint)
 		return managedTaints, nil
 	}
+	// Explicit infrastructure-owner recovery request, validated while the
+	// canonical lease is idle. It authorizes only this otherwise unowned guard;
+	// no mutation claim, reservation, session or worker identity is changed.
+	if owner == "" && maintenance.releaseCancelledDrainTaint {
+		if existing, found := taintByIdentity(node.Spec.Taints, identity); found && existing.Value == taint.Value {
+			node.Spec.Taints = deleteTaint(node.Spec.Taints, identity)
+		}
+	}
 	if owner == token {
 		if existing, found := taintByIdentity(node.Spec.Taints, identity); found && existing.Value != taint.Value {
 			return managedTaints, fmt.Errorf("drain-owned Node maintenance taint changed before recovery")
@@ -484,4 +493,33 @@ func taintByIdentity(taints []corev1.Taint, identity string) (corev1.Taint, bool
 		}
 	}
 	return corev1.Taint{}, false
+}
+
+const cancelledDrainTaintReleaseAnnotation = "operations.cisco.vk/cancelled-drain-taint-release"
+
+// Called only by resolveManagedDrainIntent after exact intent validation and
+// proof that the canonical mutation lease is wholly idle and request-free.
+func cancelledDrainTaintReleaseRequested(device *ciskov1.CiscoDevice, leaf *opsv1alpha1.IOSXESoftwareUpgrade, session *ciskov1.DeviceMaintenanceSessionStatus, drain *opsv1alpha1.UpgradeManagerDrainStatus, now time.Time) bool {
+	if device == nil || leaf == nil || session == nil || drain == nil || session.SessionToken == "" || session.Operation.UID == "" {
+		return false
+	}
+	if device.Annotations[cancelledDrainTaintReleaseAnnotation] != session.Operation.UID+"/"+session.SessionToken ||
+		session.Purpose != ciskov1.DeviceMaintenancePurposeWorkloadDrain || session.Phase != ciskov1.DeviceMaintenanceSessionRecovering ||
+		drain.State != opsv1alpha1.UpgradeManagerDrainRecovering || drain.MaintenanceTaintPresentBefore ||
+		drain.RecoveryDeadline == nil || !drain.RecoveryDeadline.After(now) ||
+		leaf.Status.ManagerControl == nil || !leaf.Status.ManagerControl.Cancel ||
+		len(leaf.Status.ManagedMutationClaims) != 0 || leaf.Status.StagingRequested || leaf.Status.PrimarySupervisorActivationRequested || leaf.Status.ControllerHandoff != nil {
+		return false
+	}
+	for _, p := range drain.Pods {
+		if p.Phase != opsv1alpha1.UpgradeDrainPodComplete {
+			return false
+		}
+	}
+	for _, taint := range device.Spec.Taints {
+		if taintIdentity(taint) == taintIdentity(maintenanceGuardTaint()) {
+			return false
+		}
+	}
+	return true
 }

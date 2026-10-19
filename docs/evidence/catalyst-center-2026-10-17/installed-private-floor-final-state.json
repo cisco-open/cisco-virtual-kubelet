@@ -1,0 +1,9 @@
+{
+  "controllerUID": "c57240be-3ee6-4e2f-86cb-6d72a5b903b4",
+  "phase": "Ready",
+  "outstandingOperation": false,
+  "retainedOwners": 1,
+  "retainedActionRows": 4,
+  "activeIntentCount": 0,
+  "boundary": "Retain keeps custody/history; public retirement and site Delete are not attested."
+}

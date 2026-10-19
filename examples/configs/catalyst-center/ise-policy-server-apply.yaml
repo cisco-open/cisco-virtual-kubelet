@@ -1,0 +1,60 @@
+# Requires matching manager/worker builds and the credential-receipt CRD.
+# Administrator prerequisite on NetworkController catc:
+#   intentSecretSources:
+#     - alias: lab-ise
+#       name: lab-ise-credentials
+#       key: shared-secret
+#     - alias: lab-ise-password
+#       name: lab-ise-credentials
+#       key: password
+# Create that Secret separately. Its selected key contains a JSON object with
+# exactly "version" (1 here) and "value" (the credential). Keep both in ONE key
+# so kubelet projection lag cannot associate old bytes with a newer version.
+# Do not put the credential in the model or Git. Bare secret strings are rejected.
+# Requires a reachable ISE instance with suitable integration credentials.
+# Registration is followed by UUID-correlated certificate acceptance and integration.
+# This does not enable Catalyst Center external login.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-ise-policy-server
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [system_settings]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-system-example-v1
+  secretRefs:
+    - section: system_settings
+      path: /authentication_and_policy_servers/ise/shared_secret
+      source: lab-ise
+    - section: system_settings
+      path: /authentication_and_policy_servers/ise/password
+      source: lab-ise-password
+  source:
+    inline:
+      catalyst_center:
+        system_settings:
+          authentication_and_policy_servers:
+            ise:
+              ip_address: 192.0.2.44
+              fqdn: ise.example.test
+              username: admin
+              pxgrid_enabled: true
+              use_catc_cert_for_pxgrid: true
+              protocols:
+                radius:
+                  authentication_port: 1812
+                  accounting_port: 1813
+              retries: 1
+              timeout: 5
+              shared_secret_version: 1
+              password_version: 1

@@ -1,0 +1,146 @@
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/match
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind
+=== RUN   TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind
+--- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/match (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/split-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/domain-alias (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/canonical-ipv6 (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-hostname (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-ntp (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/ntp-options (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-order (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-dns (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-vrf (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/wrong-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/extra-domain (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/dns-option (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/cli-error (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/missing-output (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/unsupported-kind (0.00s)
+    --- PASS: TestWiredBulkNetworkCLIRequiresExactScopedIntent/duplicate-kind (0.00s)
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/matching
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/different-device-policy
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/nonsemantic-output
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/mixed-matching
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-drift
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-incomplete
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/banner-redacted
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/timezone-drift
+=== RUN   TestWiredBulkDeclaredNetworkWorkerComparison/timezone-dst
+--- PASS: TestWiredBulkDeclaredNetworkWorkerComparison (4.67s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/matching (1.10s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/different-device-policy (0.42s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/nonsemantic-output (0.41s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/mixed-matching (0.46s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-drift (0.46s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-incomplete (0.46s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/banner-redacted (0.44s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/timezone-drift (0.46s)
+    --- PASS: TestWiredBulkDeclaredNetworkWorkerComparison/timezone-dst (0.46s)
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/inline
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/multiline
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/crlf
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/raw-control
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/printable
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/whitespace
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/empty
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/different
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/trimmed
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/extra-newline
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/missing-close
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/duplicate
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/trailing-cli
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/wrong-kind
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/partial
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/unicode-delimiter
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/unsupported-caret
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/invalid-utf8
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/builtin
+=== RUN   TestWiredBulkBannerCLIRequiresCompleteExactBody/nul-source
+--- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/inline (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/multiline (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/crlf (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/raw-control (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/printable (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/whitespace (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/empty (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/different (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/trimmed (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/extra-newline (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/missing-close (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/duplicate (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/trailing-cli (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/wrong-kind (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/partial (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/unicode-delimiter (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/unsupported-caret (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/invalid-utf8 (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/builtin (0.00s)
+    --- PASS: TestWiredBulkBannerCLIRequiresCompleteExactBody/nul-source (0.00s)
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/utc
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-utc
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/gmt
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-gmt
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/minutes
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/regional-zone
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/seasonal-alias
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-offset
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-minutes
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-label
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/recurring-summer
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/dated-summer
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/missing
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/duplicate
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/bad-fields
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/unrelated-clock
+=== RUN   TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/status-only
+--- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/utc (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-utc (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/gmt (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/etc-gmt (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/minutes (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/regional-zone (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/seasonal-alias (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-offset (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-minutes (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/wrong-label (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/recurring-summer (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/dated-summer (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/missing (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/duplicate (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/bad-fields (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/unrelated-clock (0.00s)
+    --- PASS: TestWiredBulkUTCClockRejectsImplicitOrSeasonalEquivalence/status-only (0.00s)
+=== RUN   TestWiredBulkNetworkQueriesUseExistingWorkerPolicy
+--- PASS: TestWiredBulkNetworkQueriesUseExistingWorkerPolicy (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	7.092s

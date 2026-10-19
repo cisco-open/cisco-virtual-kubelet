@@ -1,0 +1,5 @@
+Pinned NetAsCode Catalyst Center 0.5.0 cc_*.tf inventory: 93 distinct resource types.
+Ledger: 93 unique matching rows; missing/extra types: none.
+91 Catalyst Center types plus terraform_data/time_sleep.
+Private creator protection applies only to new singular area/building/floor creates.
+Inventory count is not proof of execution or full lifecycle parity.

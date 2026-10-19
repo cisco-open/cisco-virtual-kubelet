@@ -1,0 +1,193 @@
+{
+  "status": "Native tag section handoff qualified within static tag limits",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1678,
+    "sha256": "ef9aa4ea6fbc310de958d762df468cbc494b171e579924ff9c37133ae3abcf5f",
+    "productionSHA256": "eb396217788a8b857637e5405a517815f36262ae7dde4329877d2b7759223239"
+  },
+  "gates": {
+    "controlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 114,
+      "seconds": 216.824,
+      "sectionPairPasses": 18,
+      "log": "/private/tmp/cvk-tag-section-api.log"
+    },
+    "foundations": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-tag-section-foundations.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-tag-section-cisco-vk",
+      "log": "/private/tmp/cvk-tag-section-build.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 2390,
+      "seconds": 450.201,
+      "log": "/private/tmp/cvk-tag-section-compat.log",
+      "selection": "Test(Tag|Configuration|ConfigApply|Discovery|ApplyExamples|Descriptor|SWIM|ModernSWIM|StandardReload|NormalReload|XFSU|TransferFallback)",
+      "raceEnabled": true
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.93,
+      "log": "/private/tmp/cvk-tag-section-docs-final.log"
+    },
+    "formatSourceAndLedger": {
+      "result": "PASS",
+      "uniqueResourceRows": 93,
+      "sourceUnchanged": true
+    },
+    "finalExamples": {
+      "result": "PASS",
+      "passingEvents": 88,
+      "seconds": 3.207,
+      "log": "/private/tmp/cvk-tag-section-examples.log"
+    }
+  },
+  "native": [
+    {
+      "case": "i-t-i",
+      "sequence": [
+        "inventory",
+        "templates",
+        "inventory"
+      ],
+      "result": "PASS",
+      "seconds": 90.41252517700195,
+      "mutations": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "distinctNativeUUIDs": [
+        "f1a9d116-1f54-411a-8170-ee0370a726f8",
+        "c766fc65-87da-4bbb-9393-78b542fafa60",
+        "bafe6e00-7b95-416d-9d27-d9d7da6ee5c4"
+      ],
+      "originalTasksRecovered": 9,
+      "configMapUIDs": [
+        "4cad687b-818d-4dcf-8f22-1382677a4668",
+        "6468d1ee-2357-4f52-9715-5329e9a4edf6",
+        "665a2120-add5-4437-9231-3b22b0341b22"
+      ],
+      "modelRevisions": 6,
+      "staleSourceRefusals": 3,
+      "finalCRAbsent": true,
+      "baselineRestored": true,
+      "records": "tag-section-native-records/i-t-i"
+    },
+    {
+      "case": "i-b-t",
+      "sequence": [
+        "inventory",
+        "combined",
+        "templates"
+      ],
+      "result": "PASS",
+      "seconds": 54.259774923324585,
+      "mutations": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "distinctNativeUUIDs": [
+        "2aaaee11-4e55-4e38-be34-084a59aaf848",
+        "1f0d54e7-de32-47d1-a3ff-e29375b74104",
+        "740b4b5a-3daf-4c1e-a489-31e6de633200"
+      ],
+      "originalTasksRecovered": 9,
+      "configMapUIDs": [
+        "b9ba21ea-c4d9-47d3-9e2f-f17e8160fe0d",
+        "be125506-635f-4aa4-b5c6-7858c3a51c43",
+        "cfe9acac-6111-4d05-ab0e-b57287669c2b"
+      ],
+      "modelRevisions": 6,
+      "staleSourceRefusals": 3,
+      "finalCRAbsent": true,
+      "baselineRestored": true,
+      "records": "tag-section-native-records/i-b-t"
+    },
+    {
+      "case": "t-b-i",
+      "sequence": [
+        "templates",
+        "combined",
+        "inventory"
+      ],
+      "result": "PASS",
+      "seconds": 54.951016902923584,
+      "mutations": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "distinctNativeUUIDs": [
+        "4979c874-300f-409e-b707-c39f13d7e630",
+        "f143cf8a-6ff5-4074-9c87-4439129e4f15",
+        "9c3d5b2b-6259-4655-baeb-898753fe1e5c"
+      ],
+      "originalTasksRecovered": 9,
+      "configMapUIDs": [
+        "21bc9c6d-eebb-478e-b8a1-6d957c4387d2",
+        "51129c3f-496d-4145-8885-d0cfe3b85a17",
+        "ab3049f5-7549-4fd1-a3f8-8b8a02e5e8b5"
+      ],
+      "modelRevisions": 6,
+      "staleSourceRefusals": 3,
+      "finalCRAbsent": true,
+      "baselineRestored": true,
+      "records": "tag-section-native-records/t-b-i"
+    }
+  ],
+  "qualifiedDirectionalTransitions": [
+    [
+      "combined",
+      "inventory"
+    ],
+    [
+      "combined",
+      "templates"
+    ],
+    [
+      "inventory",
+      "combined"
+    ],
+    [
+      "inventory",
+      "templates"
+    ],
+    [
+      "templates",
+      "combined"
+    ],
+    [
+      "templates",
+      "inventory"
+    ]
+  ],
+  "implementation": [
+    "Existing shared journal and transport, no new schema/executor",
+    "Old UID absence, durable full closure and sealed original-scope receipts",
+    "Atomic full old-claim replacement, preserving unrelated owners",
+    "Current source/controller rechecks, native absence/catalog stability, status CAS",
+    "Fresh successor UUID and original-task recovery; no native dispatch during handoff"
+  ],
+  "limitations": [
+    "No active-owner in-place scope edits or split tag custody",
+    "Installed actors not qualified",
+    "Legacy owners without durable cleanup evidence remain fenced",
+    "Owned dynamic native lifecycle, finalization after source-prune recreation and other combinations remain pending",
+    "All 93 pinned resource types remain in scope; full model not complete"
+  ]
+}

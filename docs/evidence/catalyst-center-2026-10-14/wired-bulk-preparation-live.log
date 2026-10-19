@@ -1,0 +1,7 @@
+=== RUN   TestLiveCatalystCenterOwnedWiredBulkRefusal
+    wired_bulk_owned_live_test.go:158: three live native identities prepared in simulated Kubernetes; missing permit/restarted preparation refused; no native task or reservation created
+    wired_bulk_owned_live_test.go:177: public pruned/untrusted bulk status refused before acknowledged-task observation; no valid task/claim invented
+    wired_bulk_owned_live_test.go:193: owned source planning passed for three live identities; missing journal/proof and public pruned-status recovery refused; no claims, receipts or provisioning writes; Kubernetes state simulated
+--- PASS: TestLiveCatalystCenterOwnedWiredBulkRefusal (14.43s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.261s

@@ -1,0 +1,111 @@
+// Copyright 2026 Cisco Systems Inc.
+// SPDX-License-Identifier: Apache-2.0
+package catalystcenter
+
+import (
+	"context"
+	"strings"
+	"testing"
+
+	configapi "github.com/cisco/virtual-kubelet-cisco/api/config/v1alpha1"
+	ops "github.com/cisco/virtual-kubelet-cisco/api/ops/v1alpha1"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+func TestFabricHandoffReport(t *testing.T) {
+	for _, mode := range []string{"matching", "missing", "conflict-l2", "last-dependency", "changing-readback"} {
+		t.Run(mode, func(t *testing.T) {
+			present := [3]bool{true, true, true}
+			if mode == "missing" {
+				present = [3]bool{}
+			}
+			a, config, managed, posts := mixedHandoffFixture(t, present, mode)
+			ctx := context.Background()
+			// Report must work without managed-device objects, Nodes or reservation
+			// configuration. Native dependencies are observed without physical authority.
+			for _, member := range managed {
+				for _, obj := range []ctrlclient.Object{member.device, member.node} {
+					if err := a.statusWriter.Delete(ctx, obj); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			config.Spec.Mode = configapi.NetworkControllerApplyModeReport
+			if err := a.statusWriter.Update(ctx, config); err != nil {
+				t.Fatal(err)
+			}
+			retained := journalState(t, a)
+			if _, err := (&configReconciler{a: a}).Reconcile(ctx, ctrl.Request{NamespacedName: ctrlclient.ObjectKeyFromObject(config)}); err != nil {
+				t.Fatal(err)
+			}
+			if err := a.statusReader.Get(ctx, ctrlclient.ObjectKeyFromObject(config), config); err != nil {
+				t.Fatal(err)
+			}
+			invalid := mode == "last-dependency" || mode == "changing-readback"
+			condition := meta.FindStatusCondition(config.Status.Conditions, configapi.NetworkControllerConfigConditionIntentValid)
+			if condition == nil {
+				t.Fatal("missing report condition")
+			}
+			if invalid {
+				if condition.Reason != "ObservationFailed" || len(config.Status.Drift) != 0 || config.Status.Phase == configapi.NetworkControllerConfigPhaseInSync {
+					t.Fatal("incomplete evidence published as drift/compliance", config.Status)
+				}
+			} else {
+				expected := 0
+				if mode == "missing" {
+					expected = 3
+				}
+				if mode == "conflict-l2" {
+					expected = 1
+				}
+				if len(config.Status.Drift) != expected {
+					t.Fatal("drift count", config.Status.Drift)
+				}
+				if len(config.Status.SectionStatus) != 1 || config.Status.SectionStatus[0].ResourceCount != 3 {
+					t.Fatal("missing handoff count", config.Status.SectionStatus)
+				}
+				if (config.Status.Phase == configapi.NetworkControllerConfigPhaseInSync) != (expected == 0) {
+					t.Fatal("report phase", config.Status.Phase)
+				}
+				for _, entry := range config.Status.Drift {
+					change := configapi.NetworkControllerDriftChangeAdd
+					if mode == "conflict-l2" {
+						change = configapi.NetworkControllerDriftChangeUpdate
+					}
+					if entry.Section != "fabric" || entry.Change != change {
+						t.Fatal("drift classification", entry)
+					}
+				}
+			}
+			if len(*posts) != 0 {
+				t.Fatal("report submitted native mutation", *posts)
+			}
+			if after := journalState(t, a); (retained == nil) != (after == nil) || after != nil && (after.Operation != nil || len(after.Owners) != 0) {
+				t.Fatal("report acquired ownership")
+			}
+			var reservations ops.ControllerConfigurationReservationList
+			if err := a.statusReader.List(ctx, &reservations); err != nil || len(reservations.Items) != 0 {
+				t.Fatal("report created reservation", err)
+			}
+			var nodes core.NodeList
+			if err := a.statusReader.List(ctx, &nodes); err != nil || len(nodes.Items) != 0 {
+				t.Fatal("report unexpectedly requires nodes", err)
+			}
+		})
+	}
+}
+
+func TestFabricHandoffReportRejectsUnconsumedIntent(t *testing.T) {
+	for _, raw := range []string{
+		strings.Replace(mixedFabricHandoffModel, `"inventory":`, `"sites":{"areas":[]},"inventory":`, 1),
+		strings.Replace(mixedFabricHandoffModel, `"sda_transit":"SDA"`, `"sda_transit":"SDA","unknown":true`, 1),
+		strings.Replace(mixedFabricHandoffModel, `"state":"PROVISION"`, `"state":"ASSIGN"`, 1),
+	} {
+		if _, err := (&client{}).compileConfigReports([]byte(raw), []string{"fabric"}); err == nil {
+			t.Fatal("unconsumed or unsupported intent compiled")
+		}
+	}
+}

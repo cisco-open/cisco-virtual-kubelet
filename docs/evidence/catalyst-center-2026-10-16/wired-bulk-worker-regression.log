@@ -1,0 +1,1732 @@
+=== RUN   TestConfigurationAtomicCompletionHook
+=== RUN   TestConfigurationAtomicCompletionHook/complete
+=== RUN   TestConfigurationAtomicCompletionHook/error
+=== RUN   TestConfigurationAtomicCompletionHook/no-write
+=== RUN   TestConfigurationAtomicCompletionHook/missing-receipt
+=== RUN   TestConfigurationAtomicCompletionHook/changed-operation
+=== RUN   TestConfigurationAtomicCompletionHook/duplicate-receipt
+=== RUN   TestConfigurationAtomicCompletionHook/wrong-phase
+=== RUN   TestConfigurationAtomicCompletionHook/wrong-section
+=== RUN   TestConfigurationAtomicCompletionHook/missing-hook
+=== RUN   TestConfigurationAtomicCompletionHook/local-copy
+=== RUN   TestConfigurationAtomicCompletionHook/stale-operation
+--- PASS: TestConfigurationAtomicCompletionHook (0.75s)
+    --- PASS: TestConfigurationAtomicCompletionHook/complete (0.61s)
+    --- PASS: TestConfigurationAtomicCompletionHook/error (0.01s)
+    --- PASS: TestConfigurationAtomicCompletionHook/no-write (0.01s)
+    --- PASS: TestConfigurationAtomicCompletionHook/missing-receipt (0.01s)
+    --- PASS: TestConfigurationAtomicCompletionHook/changed-operation (0.02s)
+    --- PASS: TestConfigurationAtomicCompletionHook/duplicate-receipt (0.02s)
+    --- PASS: TestConfigurationAtomicCompletionHook/wrong-phase (0.01s)
+    --- PASS: TestConfigurationAtomicCompletionHook/wrong-section (0.01s)
+    --- PASS: TestConfigurationAtomicCompletionHook/missing-hook (0.01s)
+    --- PASS: TestConfigurationAtomicCompletionHook/local-copy (0.02s)
+    --- PASS: TestConfigurationAtomicCompletionHook/stale-operation (0.01s)
+=== RUN   TestConfigurationReceiptCompletion
+=== RUN   TestConfigurationReceiptCompletion/generic
+=== RUN   TestConfigurationReceiptCompletion/deployment
+=== RUN   TestConfigurationReceiptCompletion/pending
+=== RUN   TestConfigurationReceiptCompletion/error
+=== RUN   TestConfigurationReceiptCompletion/wrong-phase
+=== RUN   TestConfigurationReceiptCompletion/wrong-section
+=== RUN   TestConfigurationReceiptCompletion/missing-time
+=== RUN   TestConfigurationReceiptCompletion/future-time
+=== RUN   TestConfigurationReceiptCompletion/missing-receipt
+--- PASS: TestConfigurationReceiptCompletion (0.05s)
+    --- PASS: TestConfigurationReceiptCompletion/generic (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/deployment (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/pending (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/error (0.01s)
+    --- PASS: TestConfigurationReceiptCompletion/wrong-phase (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/wrong-section (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/missing-time (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/future-time (0.00s)
+    --- PASS: TestConfigurationReceiptCompletion/missing-receipt (0.00s)
+=== RUN   TestConfigurationWriteRequiresDeviceAdmission
+--- PASS: TestConfigurationWriteRequiresDeviceAdmission (0.02s)
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Prepared
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Submitting
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Accepted
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Verifying
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Verified
+=== RUN   TestConfigurationDeviceRecoveryRetainsJournal/Unknown
+--- PASS: TestConfigurationDeviceRecoveryRetainsJournal (0.08s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Prepared (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Submitting (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Accepted (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Verifying (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Verified (0.01s)
+    --- PASS: TestConfigurationDeviceRecoveryRetainsJournal/Unknown (0.01s)
+=== RUN   TestConfigurationReservationClaimRequiresRuntimeIdentity
+--- PASS: TestConfigurationReservationClaimRequiresRuntimeIdentity (0.01s)
+=== RUN   TestConfigurationJournalOrdersPhysicalAdmission
+=== RUN   TestConfigurationJournalOrdersPhysicalAdmission/accepted
+=== RUN   TestConfigurationJournalOrdersPhysicalAdmission/claim_rejected
+=== RUN   TestConfigurationJournalOrdersPhysicalAdmission/missing_permit
+=== RUN   TestConfigurationJournalOrdersPhysicalAdmission/permit_rejected
+=== RUN   TestConfigurationJournalOrdersPhysicalAdmission/remote_uncertain
+--- PASS: TestConfigurationJournalOrdersPhysicalAdmission (0.07s)
+    --- PASS: TestConfigurationJournalOrdersPhysicalAdmission/accepted (0.01s)
+    --- PASS: TestConfigurationJournalOrdersPhysicalAdmission/claim_rejected (0.01s)
+    --- PASS: TestConfigurationJournalOrdersPhysicalAdmission/missing_permit (0.01s)
+    --- PASS: TestConfigurationJournalOrdersPhysicalAdmission/permit_rejected (0.01s)
+    --- PASS: TestConfigurationJournalOrdersPhysicalAdmission/remote_uncertain (0.01s)
+=== RUN   TestConfigurationManagedDeviceBinding
+--- PASS: TestConfigurationManagedDeviceBinding (0.00s)
+=== RUN   TestConfigurationManagedNodeRejectsReplacement
+--- PASS: TestConfigurationManagedNodeRejectsReplacement (0.00s)
+=== RUN   TestConfigurationDeviceIdentity
+=== RUN   TestConfigurationDeviceIdentity/fqdn
+=== RUN   TestConfigurationDeviceIdentity/ip
+=== RUN   TestConfigurationDeviceIdentity/serial
+=== RUN   TestConfigurationDeviceIdentity/conflict
+=== RUN   TestConfigurationDeviceIdentity/stale-ip
+=== RUN   TestConfigurationDeviceIdentity/stale-serial
+=== RUN   TestConfigurationDeviceIdentity/ap-ip
+=== RUN   TestConfigurationDeviceIdentity/ap-name
+=== RUN   TestConfigurationDeviceIdentity/ap-serial
+=== RUN   TestConfigurationDeviceIdentity/invalid-ip
+--- PASS: TestConfigurationDeviceIdentity (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/fqdn (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ip (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/serial (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/conflict (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/stale-ip (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/stale-serial (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ap-ip (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ap-name (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/ap-serial (0.00s)
+    --- PASS: TestConfigurationDeviceIdentity/invalid-ip (0.00s)
+=== RUN   TestLANDeviceProofEnvelopeRetainsLegacyIdentity
+--- PASS: TestLANDeviceProofEnvelopeRetainsLegacyIdentity (0.00s)
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Prepared
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Submitting
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Accepted
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Verifying
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Verified
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Unknown
+=== RUN   TestConfigurationGroupRecoveryRetainsJournal/Cancelling
+--- PASS: TestConfigurationGroupRecoveryRetainsJournal (0.10s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Prepared (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Submitting (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Accepted (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Verifying (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Verified (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Unknown (0.01s)
+    --- PASS: TestConfigurationGroupRecoveryRetainsJournal/Cancelling (0.01s)
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/async-heartbeat
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/async-replaced
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-heartbeat
+=== RUN   TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-replaced
+--- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission (0.11s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/async-heartbeat (0.03s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/async-replaced (0.03s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-heartbeat (0.03s)
+    --- PASS: TestConfigurationReceiptConflictDoesNotReplaySubmission/sync-replaced (0.03s)
+=== RUN   TestConfigurationReceiptConflictExhaustionRetainsFence
+--- PASS: TestConfigurationReceiptConflictExhaustionRetainsFence (0.34s)
+=== RUN   TestConfigurationJournalRecoveryAndOwnership
+--- PASS: TestConfigurationJournalRecoveryAndOwnership (0.02s)
+=== RUN   TestConfigurationJournalConcurrentSubmissionPermit
+--- PASS: TestConfigurationJournalConcurrentSubmissionPermit (0.03s)
+=== RUN   TestConfigurationJournalConcurrentReservations
+--- PASS: TestConfigurationJournalConcurrentReservations (0.03s)
+=== RUN   TestConfigurationJournalRejectsChangedSource
+--- PASS: TestConfigurationJournalRejectsChangedSource (0.02s)
+=== RUN   TestConfigurationJournalTaskReceiptDoesNotReleaseFence
+--- PASS: TestConfigurationJournalTaskReceiptDoesNotReleaseFence (0.02s)
+=== RUN   TestConfigurationJournalDeletionRetainsUncertainty
+--- PASS: TestConfigurationJournalDeletionRetainsUncertainty (0.01s)
+=== RUN   TestConfigurationJournalLostPermitAcknowledgementNeverRetries
+--- PASS: TestConfigurationJournalLostPermitAcknowledgementNeverRetries (0.01s)
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/accepted
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/request-timeout
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/empty-receipt
+=== RUN   TestConfigurationSubmissionPersistsReceiptOrUncertainty/receipt-write-timeout
+--- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty (0.06s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/accepted (0.02s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/request-timeout (0.01s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/empty-receipt (0.01s)
+    --- PASS: TestConfigurationSubmissionPersistsReceiptOrUncertainty/receipt-write-timeout (0.02s)
+=== RUN   TestConfigurationRevisionChangeReleasesOnlySafeBoundaries
+=== RUN   TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Prepared
+=== RUN   TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Submitting
+=== RUN   TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Accepted
+=== RUN   TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Verified
+--- PASS: TestConfigurationRevisionChangeReleasesOnlySafeBoundaries (0.06s)
+    --- PASS: TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Prepared (0.01s)
+    --- PASS: TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Submitting (0.01s)
+    --- PASS: TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Accepted (0.01s)
+    --- PASS: TestConfigurationRevisionChangeReleasesOnlySafeBoundaries/Verified (0.02s)
+=== RUN   TestConfigurationJournalRejectsChangedTemplateAsset
+--- PASS: TestConfigurationJournalRejectsChangedTemplateAsset (0.01s)
+=== RUN   TestConfigurationJournalPreservesPhysicalIdentity
+--- PASS: TestConfigurationJournalPreservesPhysicalIdentity (0.02s)
+=== RUN   TestConfigurationJournalRejectsInvalidPhysicalBinding
+--- PASS: TestConfigurationJournalRejectsInvalidPhysicalBinding (0.03s)
+=== RUN   TestConfigurationPermitRequiresPersistedResourceIdentity
+--- PASS: TestConfigurationPermitRequiresPersistedResourceIdentity (0.04s)
+=== RUN   TestConfigurationSubmissionRefusesPrunedBinding
+--- PASS: TestConfigurationSubmissionRefusesPrunedBinding (0.01s)
+=== RUN   TestConfigurationSubmissionRefusesBindingPrunedWithPermit
+--- PASS: TestConfigurationSubmissionRefusesBindingPrunedWithPermit (0.01s)
+=== RUN   TestConfigurationNoDispatchProof
+=== RUN   TestConfigurationNoDispatchProof/refuse
+=== RUN   TestConfigurationNoDispatchProof/read-error
+=== RUN   TestConfigurationNoDispatchProof/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/cancel
+=== RUN   TestConfigurationNoDispatchProof/conflict
+=== RUN   TestConfigurationNoDispatchProof/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/feature-scope
+--- PASS: TestConfigurationNoDispatchProof (0.59s)
+    --- PASS: TestConfigurationNoDispatchProof/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/feature-scope (0.02s)
+=== RUN   TestConfigurationReservationRuntimeInstallation
+--- PASS: TestConfigurationReservationRuntimeInstallation (0.00s)
+=== RUN   TestConfigurationGroupRuntimeIsolation
+--- PASS: TestConfigurationGroupRuntimeIsolation (0.00s)
+=== RUN   TestConfigurationSecretProjectionAndInjection
+--- PASS: TestConfigurationSecretProjectionAndInjection (0.00s)
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/revoked
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/remapped_key
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/remapped_name
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/duplicate_alias
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/paused
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/controller_replaced
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/controller_generation
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/config_replaced
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/config_generation
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/namespace
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/config_name
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/controller_ref
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/changed_destination
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/unmanaged_section
+=== RUN   TestConfigurationSecretAuthorizationAndIdentity/duplicate_ref
+--- PASS: TestConfigurationSecretAuthorizationAndIdentity (0.02s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/revoked (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/remapped_key (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/remapped_name (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/duplicate_alias (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/paused (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/controller_replaced (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/controller_generation (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/config_replaced (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/config_generation (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/namespace (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/config_name (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/controller_ref (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/changed_destination (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/unmanaged_section (0.00s)
+    --- PASS: TestConfigurationSecretAuthorizationAndIdentity/duplicate_ref (0.00s)
+=== RUN   TestConfigurationSecretAtomicProjectionRotation
+--- PASS: TestConfigurationSecretAtomicProjectionRotation (0.00s)
+=== RUN   TestConfigurationSecretProjectionRejectsInvalidMaterial
+=== RUN   TestConfigurationSecretProjectionRejectsInvalidMaterial/escaping_symlink
+--- PASS: TestConfigurationSecretProjectionRejectsInvalidMaterial (0.01s)
+    --- PASS: TestConfigurationSecretProjectionRejectsInvalidMaterial/escaping_symlink (0.00s)
+=== RUN   TestConfigurationSecretPointerAndLeafIsolation
+--- PASS: TestConfigurationSecretPointerAndLeafIsolation (0.00s)
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/missing
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/before-prepare
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Prepared
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Submitting
+=== RUN   TestConfigurationSecretJournalChecksBeforeAndAfterPermit/unchanged
+--- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit (0.06s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/missing (0.01s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/before-prepare (0.01s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Prepared (0.01s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/Submitting (0.01s)
+    --- PASS: TestConfigurationSecretJournalChecksBeforeAndAfterPermit/unchanged (0.02s)
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length9
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length9#01
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length9#02
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length0
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length13
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length23
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length24
+=== RUN   TestConfigurationTaskFailureSanitizesAndCorrelates/length10000
+--- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates (0.08s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length9 (0.01s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length9#01 (0.01s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length9#02 (0.01s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length0 (0.01s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length13 (0.01s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length23 (0.01s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length24 (0.01s)
+    --- PASS: TestConfigurationTaskFailureSanitizesAndCorrelates/length10000 (0.01s)
+=== RUN   TestConfigurationTaskTreeCompletion
+=== RUN   TestConfigurationTaskTreeCompletion/valid
+=== RUN   TestConfigurationTaskTreeCompletion/running
+=== RUN   TestConfigurationTaskTreeCompletion/failed-child
+=== RUN   TestConfigurationTaskTreeCompletion/failed-orphan
+=== RUN   TestConfigurationTaskTreeCompletion/failed-missing-root
+=== RUN   TestConfigurationTaskTreeCompletion/failed-future-end
+=== RUN   TestConfigurationTaskTreeCompletion/duplicate
+=== RUN   TestConfigurationTaskTreeCompletion/orphan
+=== RUN   TestConfigurationTaskTreeCompletion/cycle
+=== RUN   TestConfigurationTaskTreeCompletion/foreign-root
+=== RUN   TestConfigurationTaskTreeCompletion/missing-root
+=== RUN   TestConfigurationTaskTreeCompletion/missing-error
+=== RUN   TestConfigurationTaskTreeCompletion/old-child
+=== RUN   TestConfigurationTaskTreeCompletion/future-end
+=== RUN   TestConfigurationTaskTreeCompletion/partial
+=== RUN   TestConfigurationTaskTreeCompletion/empty
+=== RUN   TestConfigurationTaskTreeCompletion/root-without-root-id
+--- PASS: TestConfigurationTaskTreeCompletion (0.17s)
+    --- PASS: TestConfigurationTaskTreeCompletion/valid (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/running (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/failed-child (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/failed-orphan (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/failed-missing-root (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/failed-future-end (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/duplicate (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/orphan (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/cycle (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/foreign-root (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/missing-root (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/missing-error (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/old-child (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/future-end (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/partial (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/empty (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletion/root-without-root-id (0.01s)
+=== RUN   TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary
+=== RUN   TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/complete
+=== RUN   TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/running
+=== RUN   TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/failed
+=== RUN   TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/foreign
+=== RUN   TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/future-within-skew
+--- PASS: TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary (0.05s)
+    --- PASS: TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/complete (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/running (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/failed (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/foreign (0.01s)
+    --- PASS: TestConfigurationTaskTreeCompletionSuppliesLatestChildBoundary/future-within-skew (0.01s)
+=== RUN   TestConfigurationJournalRejectsChangedFloorImageAsset
+--- PASS: TestConfigurationJournalRejectsChangedFloorImageAsset (0.01s)
+=== RUN   TestLANLinkAddOwnedResultAdmission
+=== RUN   TestLANLinkAddOwnedResultAdmission/unchanged
+=== RUN   TestLANLinkAddOwnedResultAdmission/exhausted
+=== RUN   TestLANLinkAddOwnedResultAdmission/topology-refresh
+=== RUN   TestLANLinkAddOwnedResultAdmission/task-pruned
+=== RUN   TestLANLinkAddOwnedResultAdmission/changed-addresses
+=== RUN   TestLANLinkAddOwnedResultAdmission/changed-routing
+=== RUN   TestLANLinkAddOwnedResultAdmission/legacy
+=== RUN   TestLANLinkAddOwnedResultAdmission/foreign-owner
+=== RUN   TestLANLinkAddOwnedResultAdmission/missing-owner
+=== RUN   TestLANLinkAddOwnedResultAdmission/duplicate
+=== RUN   TestLANLinkAddOwnedResultAdmission/replaced-node
+=== RUN   TestLANLinkAddOwnedResultAdmission/new-source-generation
+=== RUN   TestLANLinkAddOwnedResultAdmission/next-link
+=== RUN   TestLANLinkAddOwnedResultAdmission/next-link-invalid
+--- PASS: TestLANLinkAddOwnedResultAdmission (5.82s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/unchanged (0.43s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/exhausted (0.42s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/topology-refresh (0.42s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/task-pruned (0.42s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/changed-addresses (0.41s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/changed-routing (0.42s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/legacy (0.40s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/foreign-owner (0.40s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/missing-owner (0.40s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/duplicate (0.42s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/replaced-node (0.41s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/new-source-generation (0.41s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/next-link (0.45s)
+    --- PASS: TestLANLinkAddOwnedResultAdmission/next-link-invalid (0.42s)
+=== RUN   TestLANLinkPublicApplyPreparation
+=== RUN   TestLANLinkPublicApplyPreparation/prepare
+=== RUN   TestLANLinkPublicApplyPreparation/no-grants
+=== RUN   TestLANLinkPublicApplyPreparation/missing-runtime
+=== RUN   TestLANLinkPublicApplyPreparation/mixed-delete
+=== RUN   TestLANLinkPublicApplyPreparation/invalid-later
+=== RUN   TestLANLinkPublicApplyPreparation/addressed
+=== RUN   TestLANLinkPublicApplyPreparation/changed-generation
+--- PASS: TestLANLinkPublicApplyPreparation (0.85s)
+    --- PASS: TestLANLinkPublicApplyPreparation/prepare (0.17s)
+    --- PASS: TestLANLinkPublicApplyPreparation/no-grants (0.23s)
+    --- PASS: TestLANLinkPublicApplyPreparation/missing-runtime (0.03s)
+    --- PASS: TestLANLinkPublicApplyPreparation/mixed-delete (0.07s)
+    --- PASS: TestLANLinkPublicApplyPreparation/invalid-later (0.07s)
+    --- PASS: TestLANLinkPublicApplyPreparation/addressed (0.07s)
+    --- PASS: TestLANLinkPublicApplyPreparation/changed-generation (0.21s)
+=== RUN   TestLANLinkPublicApplyDispatch
+=== RUN   TestLANLinkPublicApplyDispatch/accepted
+=== RUN   TestLANLinkPublicApplyDispatch/denied
+=== RUN   TestLANLinkPublicApplyDispatch/lost
+=== RUN   TestLANLinkPublicApplyDispatch/active
+--- PASS: TestLANLinkPublicApplyDispatch (1.78s)
+    --- PASS: TestLANLinkPublicApplyDispatch/accepted (0.60s)
+    --- PASS: TestLANLinkPublicApplyDispatch/denied (0.44s)
+    --- PASS: TestLANLinkPublicApplyDispatch/lost (0.54s)
+    --- PASS: TestLANLinkPublicApplyDispatch/active (0.21s)
+=== RUN   TestLANLinkPublicApplyCycle
+--- PASS: TestLANLinkPublicApplyCycle (0.96s)
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/accepted
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/unknown
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/running
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/failed
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/future-task
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/changed-source
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/changed-pool
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/replaced-port
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/replaced-peer
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/revoked
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/lost
+=== RUN   TestLANLinkAddPublicAcknowledgedRecovery/pruned-group
+--- PASS: TestLANLinkAddPublicAcknowledgedRecovery (4.55s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/accepted (0.44s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/unknown (0.44s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/running (0.38s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/failed (0.37s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/future-task (0.38s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/changed-source (0.35s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/changed-pool (0.39s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/replaced-port (0.37s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/replaced-peer (0.37s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/revoked (0.36s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/lost (0.34s)
+    --- PASS: TestLANLinkAddPublicAcknowledgedRecovery/pruned-group (0.35s)
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/record
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/exhausted-after
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/missing-proof
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/denied-proof
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/native-result-missing
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/native-race
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/managed-race
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/source-race
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/completion-race
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/future-end
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/authorization-denied
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/missing-member
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/lost-response
+=== RUN   TestLANLinkAddAtomicApplicationRequiresDeviceProof/publish-completion
+--- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof (5.22s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/record (0.39s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/exhausted-after (0.39s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/missing-proof (0.34s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/denied-proof (0.36s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/native-result-missing (0.35s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/native-race (0.38s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/managed-race (0.37s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/source-race (0.35s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/completion-race (0.37s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/future-end (0.35s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/authorization-denied (0.38s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/missing-member (0.37s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/lost-response (0.40s)
+    --- PASS: TestLANLinkAddAtomicApplicationRequiresDeviceProof/publish-completion (0.41s)
+=== RUN   TestLANLinkAddLegacyCompletionRemainsFenced
+--- PASS: TestLANLinkAddLegacyCompletionRemainsFenced (0.30s)
+=== RUN   TestLANLinkStalePreparationCancellation
+=== RUN   TestLANLinkStalePreparationCancellation/usage
+=== RUN   TestLANLinkStalePreparationCancellation/topology
+=== RUN   TestLANLinkStalePreparationCancellation/partial-claim
+=== RUN   TestLANLinkStalePreparationCancellation/ungranted
+=== RUN   TestLANLinkStalePreparationCancellation/unchanged
+=== RUN   TestLANLinkStalePreparationCancellation/software
+=== RUN   TestLANLinkStalePreparationCancellation/source-generation
+=== RUN   TestLANLinkStalePreparationCancellation/denied
+=== RUN   TestLANLinkStalePreparationCancellation/missing-member
+=== RUN   TestLANLinkStalePreparationCancellation/changed-member
+=== RUN   TestLANLinkStalePreparationCancellation/full-history
+=== RUN   TestLANLinkStalePreparationCancellation/late-source
+=== RUN   TestLANLinkStalePreparationCancellation/late-native
+=== RUN   TestLANLinkStalePreparationCancellation/late-member
+=== RUN   TestLANLinkStalePreparationCancellation/late-submitting
+=== RUN   TestLANLinkStalePreparationCancellation/lost-response
+=== RUN   TestLANLinkStalePreparationCancellation/private-callback-copy
+--- PASS: TestLANLinkStalePreparationCancellation (4.66s)
+    --- PASS: TestLANLinkStalePreparationCancellation/usage (0.31s)
+    --- PASS: TestLANLinkStalePreparationCancellation/topology (0.32s)
+    --- PASS: TestLANLinkStalePreparationCancellation/partial-claim (0.32s)
+    --- PASS: TestLANLinkStalePreparationCancellation/ungranted (0.32s)
+    --- PASS: TestLANLinkStalePreparationCancellation/unchanged (0.18s)
+    --- PASS: TestLANLinkStalePreparationCancellation/software (0.18s)
+    --- PASS: TestLANLinkStalePreparationCancellation/source-generation (0.19s)
+    --- PASS: TestLANLinkStalePreparationCancellation/denied (0.27s)
+    --- PASS: TestLANLinkStalePreparationCancellation/missing-member (0.27s)
+    --- PASS: TestLANLinkStalePreparationCancellation/changed-member (0.27s)
+    --- PASS: TestLANLinkStalePreparationCancellation/full-history (0.25s)
+    --- PASS: TestLANLinkStalePreparationCancellation/late-source (0.28s)
+    --- PASS: TestLANLinkStalePreparationCancellation/late-native (0.31s)
+    --- PASS: TestLANLinkStalePreparationCancellation/late-member (0.28s)
+    --- PASS: TestLANLinkStalePreparationCancellation/late-submitting (0.27s)
+    --- PASS: TestLANLinkStalePreparationCancellation/lost-response (0.32s)
+    --- PASS: TestLANLinkStalePreparationCancellation/private-callback-copy (0.32s)
+=== RUN   TestLANLinkPublicStalePreparationCancellation
+--- PASS: TestLANLinkPublicStalePreparationCancellation (0.33s)
+=== RUN   TestLANLinkPublicReplanAfterCancellationSettlement
+--- PASS: TestLANLinkPublicReplanAfterCancellationSettlement (0.57s)
+=== RUN   TestLANLinkNativeResultAddressEvidence
+=== RUN   TestLANLinkNativeResultAddressEvidence/point-to-point-31
+=== RUN   TestLANLinkNativeResultAddressEvidence/point-to-point-30
+=== RUN   TestLANLinkNativeResultAddressEvidence/duplicate
+=== RUN   TestLANLinkNativeResultAddressEvidence/outside-pool
+=== RUN   TestLANLinkNativeResultAddressEvidence/different-subnets
+=== RUN   TestLANLinkNativeResultAddressEvidence/network-address
+=== RUN   TestLANLinkNativeResultAddressEvidence/broadcast
+=== RUN   TestLANLinkNativeResultAddressEvidence/noncontiguous-mask
+=== RUN   TestLANLinkNativeResultAddressEvidence/wider-than-pool
+=== RUN   TestLANLinkNativeResultAddressEvidence/management-alias
+=== RUN   TestLANLinkNativeResultAddressEvidence/down-port
+=== RUN   TestLANLinkNativeResultAddressEvidence/down-link
+=== RUN   TestLANLinkNativeResultAddressEvidence/topology-disagrees
+--- PASS: TestLANLinkNativeResultAddressEvidence (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/point-to-point-31 (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/point-to-point-30 (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/duplicate (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/outside-pool (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/different-subnets (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/network-address (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/broadcast (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/noncontiguous-mask (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/wider-than-pool (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/management-alias (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/down-port (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/down-link (0.00s)
+    --- PASS: TestLANLinkNativeResultAddressEvidence/topology-disagrees (0.00s)
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/addressed-port
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/late-native-prerequisite
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/mixed-delete
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/prepare
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/unsupported-delete
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/invalid-source
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/unknown-link
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/no-runtime
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/prune-delete
+=== RUN   TestLANLinkAddPreparationUsesReservedGroupJournal/unresolved-model
+--- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal (0.48s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/addressed-port (0.06s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/late-native-prerequisite (0.07s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/mixed-delete (0.03s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/prepare (0.13s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/unsupported-delete (0.03s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/invalid-source (0.03s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/unknown-link (0.06s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/no-runtime (0.03s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/prune-delete (0.03s)
+    --- PASS: TestLANLinkAddPreparationUsesReservedGroupJournal/unresolved-model (0.03s)
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/accepted
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/missing-permit
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/denied
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/lost
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/revoked-after-acceptance
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/changed-source
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/exhausted
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/active
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/replaced-peer
+=== RUN   TestLANLinkAddDispatchUsesSharedOneUsePermit/pruned-group
+--- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit (2.17s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/accepted (0.30s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/missing-permit (0.16s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/denied (0.29s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/lost (0.30s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/revoked-after-acceptance (0.30s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/changed-source (0.15s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/exhausted (0.17s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/active (0.16s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/replaced-peer (0.19s)
+    --- PASS: TestLANLinkAddDispatchUsesSharedOneUsePermit/pruned-group (0.16s)
+=== RUN   TestLANLinkAddGroupFamilyMalformed
+--- PASS: TestLANLinkAddGroupFamilyMalformed (0.00s)
+=== RUN   TestLANLinkAdjacencyManagedRevalidation
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/unchanged
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/link-replaced
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/new-neighbor
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/port-replaced
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/interface-config
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/managed-peer-replaced
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/managed-peer-missing
+=== RUN   TestLANLinkAdjacencyManagedRevalidation/native-race
+--- PASS: TestLANLinkAdjacencyManagedRevalidation (0.25s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/unchanged (0.04s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/link-replaced (0.04s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/new-neighbor (0.03s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/port-replaced (0.03s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/interface-config (0.03s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/managed-peer-replaced (0.03s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/managed-peer-missing (0.02s)
+    --- PASS: TestLANLinkAdjacencyManagedRevalidation/native-race (0.03s)
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/record
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/exhausted-after
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/missing-proof
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/denied-proof
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/native-result-missing
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/native-race
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/managed-race
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/source-race
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/completion-race
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/future-end
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/authorization-denied
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/missing-member
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/lost-response
+=== RUN   TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/publish-completion
+--- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof (15.02s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/record (0.92s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/exhausted-after (0.90s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/missing-proof (0.85s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/denied-proof (0.86s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/native-result-missing (0.87s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/native-race (0.87s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/managed-race (0.89s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/source-race (0.87s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/completion-race (0.88s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/future-end (0.89s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/authorization-denied (1.10s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/missing-member (0.92s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/lost-response (0.92s)
+    --- PASS: TestLANLinkDeleteAtomicApplicationRequiresDeviceProof/publish-completion (3.28s)
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/valid
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/up-port
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/description
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/empty
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/missing-no-address
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/remaining-address
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/remaining-isis
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/remaining-ipv6-isis
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/other-interface
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/multiple-interfaces
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/missing-end
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/extra-end
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/after-end
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/unsupported
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/error
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/duplicate-no-address
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/wrong-serial
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/duplicate-serial
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/bad-header
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/no-interface
+=== RUN   TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/outside-no-address
+--- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/valid (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/up-port (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/description (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/empty (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/missing-no-address (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/remaining-address (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/remaining-isis (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/remaining-ipv6-isis (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/other-interface (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/multiple-interfaces (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/missing-end (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/extra-end (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/after-end (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/unsupported (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/error (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/duplicate-no-address (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/wrong-serial (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/duplicate-serial (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/bad-header (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/no-interface (0.00s)
+    --- PASS: TestLANLinkDeleteCLIRequiresCompleteDeconfiguration/outside-no-address (0.00s)
+=== RUN   TestLANLinkDeletedStateOwnership
+=== RUN   TestLANLinkDeletedStateOwnership/owned
+=== RUN   TestLANLinkDeletedStateOwnership/down-link
+=== RUN   TestLANLinkDeletedStateOwnership/absent-neighbor
+=== RUN   TestLANLinkDeletedStateOwnership/retained-settled-members
+=== RUN   TestLANLinkDeletedStateOwnership/unowned
+=== RUN   TestLANLinkDeletedStateOwnership/missing-interface
+=== RUN   TestLANLinkDeletedStateOwnership/partial-address
+=== RUN   TestLANLinkDeletedStateOwnership/replaced-port
+=== RUN   TestLANLinkDeletedStateOwnership/replaced-node
+=== RUN   TestLANLinkDeletedStateOwnership/changed-source
+=== RUN   TestLANLinkDeletedStateOwnership/foreign-owner
+=== RUN   TestLANLinkDeletedStateOwnership/newer-effect
+=== RUN   TestLANLinkDeletedStateOwnership/newer-reversed-effect
+=== RUN   TestLANLinkDeletedStateOwnership/same-operation-effect
+--- PASS: TestLANLinkDeletedStateOwnership (16.31s)
+    --- PASS: TestLANLinkDeletedStateOwnership/owned (1.19s)
+    --- PASS: TestLANLinkDeletedStateOwnership/down-link (1.08s)
+    --- PASS: TestLANLinkDeletedStateOwnership/absent-neighbor (1.11s)
+    --- PASS: TestLANLinkDeletedStateOwnership/retained-settled-members (1.07s)
+    --- PASS: TestLANLinkDeletedStateOwnership/unowned (1.08s)
+    --- PASS: TestLANLinkDeletedStateOwnership/missing-interface (1.12s)
+    --- PASS: TestLANLinkDeletedStateOwnership/partial-address (1.53s)
+    --- PASS: TestLANLinkDeletedStateOwnership/replaced-port (1.11s)
+    --- PASS: TestLANLinkDeletedStateOwnership/replaced-node (1.08s)
+    --- PASS: TestLANLinkDeletedStateOwnership/changed-source (1.07s)
+    --- PASS: TestLANLinkDeletedStateOwnership/foreign-owner (1.08s)
+    --- PASS: TestLANLinkDeletedStateOwnership/newer-effect (1.15s)
+    --- PASS: TestLANLinkDeletedStateOwnership/newer-reversed-effect (1.52s)
+    --- PASS: TestLANLinkDeletedStateOwnership/same-operation-effect (1.11s)
+=== RUN   TestLANLinkReAddRequiresRetiredDelete
+=== RUN   TestLANLinkReAddRequiresRetiredDelete/retired
+=== RUN   TestLANLinkReAddRequiresRetiredDelete/retained-members
+=== RUN   TestLANLinkReAddRequiresRetiredDelete/changed-native
+=== RUN   TestLANLinkReAddRequiresRetiredDelete/foreign-owner
+--- PASS: TestLANLinkReAddRequiresRetiredDelete (4.89s)
+    --- PASS: TestLANLinkReAddRequiresRetiredDelete/retired (1.21s)
+    --- PASS: TestLANLinkReAddRequiresRetiredDelete/retained-members (1.11s)
+    --- PASS: TestLANLinkReAddRequiresRetiredDelete/changed-native (1.08s)
+    --- PASS: TestLANLinkReAddRequiresRetiredDelete/foreign-owner (1.50s)
+=== RUN   TestLANLinkDeleteOwnedPreflight
+=== RUN   TestLANLinkDeleteOwnedPreflight/owned
+=== RUN   TestLANLinkDeleteOwnedPreflight/optional-pool
+=== RUN   TestLANLinkDeleteOwnedPreflight/exhausted
+=== RUN   TestLANLinkDeleteOwnedPreflight/down-link
+=== RUN   TestLANLinkDeleteOwnedPreflight/no-neighbor
+=== RUN   TestLANLinkDeleteOwnedPreflight/unreachable
+=== RUN   TestLANLinkDeleteOwnedPreflight/retained-members
+=== RUN   TestLANLinkDeleteOwnedPreflight/unowned
+=== RUN   TestLANLinkDeleteOwnedPreflight/foreign-owner
+=== RUN   TestLANLinkDeleteOwnedPreflight/changed-config
+=== RUN   TestLANLinkDeleteOwnedPreflight/changed-native
+=== RUN   TestLANLinkDeleteOwnedPreflight/active
+=== RUN   TestLANLinkDeleteOwnedPreflight/wrong-pool
+=== RUN   TestLANLinkDeleteOwnedPreflight/undeclared-target
+=== RUN   TestLANLinkDeleteOwnedPreflight/changed-node
+--- PASS: TestLANLinkDeleteOwnedPreflight (8.34s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/owned (0.57s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/optional-pool (0.58s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/exhausted (0.57s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/down-link (0.58s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/no-neighbor (0.56s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/unreachable (0.54s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/retained-members (0.53s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/unowned (0.55s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/foreign-owner (0.55s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/changed-config (0.55s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/changed-native (0.56s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/active (0.55s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/wrong-pool (0.55s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/undeclared-target (0.54s)
+    --- PASS: TestLANLinkDeleteOwnedPreflight/changed-node (0.55s)
+=== RUN   TestLANLinkDeleteFrozenMutation
+=== RUN   TestLANLinkDeleteFrozenMutation/submit
+=== RUN   TestLANLinkDeleteFrozenMutation/optional-pool
+=== RUN   TestLANLinkDeleteFrozenMutation/denied
+=== RUN   TestLANLinkDeleteFrozenMutation/changed-port
+=== RUN   TestLANLinkDeleteFrozenMutation/missing-runtime
+=== RUN   TestLANLinkDeleteFrozenMutation/lost
+--- PASS: TestLANLinkDeleteFrozenMutation (3.51s)
+    --- PASS: TestLANLinkDeleteFrozenMutation/submit (0.59s)
+    --- PASS: TestLANLinkDeleteFrozenMutation/optional-pool (0.61s)
+    --- PASS: TestLANLinkDeleteFrozenMutation/denied (0.60s)
+    --- PASS: TestLANLinkDeleteFrozenMutation/changed-port (0.57s)
+    --- PASS: TestLANLinkDeleteFrozenMutation/missing-runtime (0.54s)
+    --- PASS: TestLANLinkDeleteFrozenMutation/lost (0.60s)
+=== RUN   TestLANLinkDeleteRejectsPrunedJournal
+--- PASS: TestLANLinkDeleteRejectsPrunedJournal (0.58s)
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/verified
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/settled
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/settled-workers
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/pending
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/failed
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/old-generation
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/not-ready
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/stale-result
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/before-task
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/future-result
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/truncated
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/redacted
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/wrong-command
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/wrong-owner
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/wrong-worker
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/wrong-serial
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/wrong-address
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/remaining-isis
+=== RUN   TestLANLinkDeleteDeviceOperationProofBridge/denied
+--- PASS: TestLANLinkDeleteDeviceOperationProofBridge (28.52s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/verified (0.95s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/settled (5.54s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/settled-workers (6.08s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/pending (0.94s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/failed (0.92s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/old-generation (0.92s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/not-ready (0.93s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/stale-result (1.36s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/before-task (0.97s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/future-result (0.97s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/truncated (1.09s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/redacted (1.16s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/wrong-command (0.99s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/wrong-owner (0.97s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/wrong-worker (0.94s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/wrong-serial (0.93s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/wrong-address (0.99s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/remaining-isis (0.93s)
+    --- PASS: TestLANLinkDeleteDeviceOperationProofBridge/denied (0.93s)
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/accepted
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/unknown
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/running
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/failed
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/future-task
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/changed-source
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/changed-pool
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/replaced-port
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/replaced-peer
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/revoked
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/lost
+=== RUN   TestLANLinkDeletePublicAcknowledgedRecovery/pruned-group
+--- PASS: TestLANLinkDeletePublicAcknowledgedRecovery (11.28s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/accepted (1.03s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/unknown (0.99s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/running (0.91s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/failed (1.00s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/future-task (0.92s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/changed-source (0.89s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/changed-pool (0.96s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/replaced-port (0.95s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/replaced-peer (0.97s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/revoked (0.92s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/lost (0.88s)
+    --- PASS: TestLANLinkDeletePublicAcknowledgedRecovery/pruned-group (0.89s)
+=== RUN   TestLANLinkDeletePublicApplyCycle
+=== RUN   TestLANLinkDeletePublicApplyCycle/explicit-pool
+=== RUN   TestLANLinkDeletePublicApplyCycle/omitted-pool
+--- PASS: TestLANLinkDeletePublicApplyCycle (3.96s)
+    --- PASS: TestLANLinkDeletePublicApplyCycle/explicit-pool (1.96s)
+    --- PASS: TestLANLinkDeletePublicApplyCycle/omitted-pool (1.99s)
+=== RUN   TestLANLinkDeleteAcknowledgedVerification
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/configured
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/deconfigured
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/no-neighbor
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/lost
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/partial
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/stale-topology
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/replaced-port
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/replaced-peer
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/unreachable
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/active
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/failed-task
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/denied
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/foreign-owner
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/lost-predecessor
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/changed-source
+=== RUN   TestLANLinkDeleteAcknowledgedVerification/pruned-group
+--- PASS: TestLANLinkDeleteAcknowledgedVerification (13.63s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/configured (0.84s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/deconfigured (0.87s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/no-neighbor (0.88s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/lost (0.82s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/partial (0.88s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/stale-topology (0.85s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/replaced-port (0.85s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/replaced-peer (0.85s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/unreachable (0.85s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/active (0.86s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/failed-task (0.85s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/denied (0.85s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/foreign-owner (0.83s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/lost-predecessor (0.84s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/changed-source (0.86s)
+    --- PASS: TestLANLinkDeleteAcknowledgedVerification/pruned-group (0.86s)
+=== RUN   TestLANLinkDeleteCannotUseAddOnlyCompiler
+--- PASS: TestLANLinkDeleteCannotUseAddOnlyCompiler (0.55s)
+=== RUN   TestLANLinkDeleteStalePreparationCancellation
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/topology
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/down-link
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/partial-claim
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/ungranted
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/unchanged
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/source-generation
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/denied
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/missing-member
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/changed-member
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/full-history
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/late-source
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/late-native
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/late-member
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/late-submitting
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/lost-response
+=== RUN   TestLANLinkDeleteStalePreparationCancellation/private-callback-copy
+--- PASS: TestLANLinkDeleteStalePreparationCancellation (13.04s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/topology (0.86s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/down-link (0.86s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/partial-claim (0.86s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/ungranted (0.87s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/unchanged (0.72s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/source-generation (0.71s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/denied (0.79s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/missing-member (0.79s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/changed-member (0.80s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/full-history (0.78s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/late-source (0.80s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/late-native (0.85s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/late-member (0.81s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/late-submitting (0.80s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/lost-response (0.86s)
+    --- PASS: TestLANLinkDeleteStalePreparationCancellation/private-callback-copy (0.86s)
+=== RUN   TestLANLinkDeletePublicReplanAfterCancellationSettlement
+--- PASS: TestLANLinkDeletePublicReplanAfterCancellationSettlement (1.13s)
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/topology
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/unchanged
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/native-drift
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/software
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/pool
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/source
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/active
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/missing-member
+=== RUN   TestLANLinkDeletePublicReplanRefusesUnknownScope/submitting
+--- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope (6.90s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/topology (0.86s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/unchanged (1.03s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/native-drift (0.68s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/software (0.69s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/pool (0.70s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/source (0.72s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/active (0.72s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/missing-member (0.82s)
+    --- PASS: TestLANLinkDeletePublicReplanRefusesUnknownScope/submitting (0.68s)
+=== RUN   TestLANLinkDeleteVersionedDeclarationBindings
+--- PASS: TestLANLinkDeleteVersionedDeclarationBindings (0.00s)
+=== RUN   TestLANLinkDeleteCompletedPoolDeclarationMigration
+=== RUN   TestLANLinkDeleteCompletedPoolDeclarationMigration/explicit-to-omitted
+=== RUN   TestLANLinkDeleteCompletedPoolDeclarationMigration/omitted-to-explicit
+=== RUN   TestLANLinkDeleteCompletedPoolDeclarationMigration/wrong-pool
+=== RUN   TestLANLinkDeleteCompletedPoolDeclarationMigration/changed-interface
+--- PASS: TestLANLinkDeleteCompletedPoolDeclarationMigration (5.67s)
+    --- PASS: TestLANLinkDeleteCompletedPoolDeclarationMigration/explicit-to-omitted (1.56s)
+    --- PASS: TestLANLinkDeleteCompletedPoolDeclarationMigration/omitted-to-explicit (1.10s)
+    --- PASS: TestLANLinkDeleteCompletedPoolDeclarationMigration/wrong-pool (1.89s)
+    --- PASS: TestLANLinkDeleteCompletedPoolDeclarationMigration/changed-interface (1.11s)
+=== RUN   TestLANLinkDeleteScopedBindingDoesNotMigrateInFlightSource
+=== RUN   TestLANLinkDeleteScopedBindingDoesNotMigrateInFlightSource/generation
+=== RUN   TestLANLinkDeleteScopedBindingDoesNotMigrateInFlightSource/source-version-only
+--- PASS: TestLANLinkDeleteScopedBindingDoesNotMigrateInFlightSource (1.76s)
+    --- PASS: TestLANLinkDeleteScopedBindingDoesNotMigrateInFlightSource/generation (0.90s)
+    --- PASS: TestLANLinkDeleteScopedBindingDoesNotMigrateInFlightSource/source-version-only (0.86s)
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/accepted
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/missing-permit
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/denied
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/lost
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/revoked-after-acceptance
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/changed-source
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/active
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/replaced-peer
+=== RUN   TestLANLinkDeleteDispatchUsesSharedOneUsePermit/pruned-group
+--- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit (6.83s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/accepted (0.87s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/missing-permit (0.67s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/denied (0.83s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/lost (0.87s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/revoked-after-acceptance (0.83s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/changed-source (0.67s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/active (0.69s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/replaced-peer (0.71s)
+    --- PASS: TestLANLinkDeleteDispatchUsesSharedOneUsePermit/pruned-group (0.68s)
+=== RUN   TestLANLinkDeletePreparationRequiresCompleteOwnedModel
+=== RUN   TestLANLinkDeletePreparationRequiresCompleteOwnedModel/owned
+=== RUN   TestLANLinkDeletePreparationRequiresCompleteOwnedModel/retained-predecessor
+=== RUN   TestLANLinkDeletePreparationRequiresCompleteOwnedModel/missing-runtime
+=== RUN   TestLANLinkDeletePreparationRequiresCompleteOwnedModel/unknown-link
+=== RUN   TestLANLinkDeletePreparationRequiresCompleteOwnedModel/unowned-second-link
+=== RUN   TestLANLinkDeletePreparationRequiresCompleteOwnedModel/mixed-actions
+--- PASS: TestLANLinkDeletePreparationRequiresCompleteOwnedModel (3.50s)
+    --- PASS: TestLANLinkDeletePreparationRequiresCompleteOwnedModel/owned (0.64s)
+    --- PASS: TestLANLinkDeletePreparationRequiresCompleteOwnedModel/retained-predecessor (0.59s)
+    --- PASS: TestLANLinkDeletePreparationRequiresCompleteOwnedModel/missing-runtime (0.56s)
+    --- PASS: TestLANLinkDeletePreparationRequiresCompleteOwnedModel/unknown-link (0.57s)
+    --- PASS: TestLANLinkDeletePreparationRequiresCompleteOwnedModel/unowned-second-link (0.58s)
+    --- PASS: TestLANLinkDeletePreparationRequiresCompleteOwnedModel/mixed-actions (0.55s)
+=== RUN   TestLANLinkCompleteDependencyFootprint
+=== RUN   TestLANLinkCompleteDependencyFootprint/unchanged
+=== RUN   TestLANLinkCompleteDependencyFootprint/pool-race
+=== RUN   TestLANLinkCompleteDependencyFootprint/origin-race
+=== RUN   TestLANLinkCompleteDependencyFootprint/topology-during-pool
+=== RUN   TestLANLinkCompleteDependencyFootprint/delete-without-pool
+--- PASS: TestLANLinkCompleteDependencyFootprint (0.16s)
+    --- PASS: TestLANLinkCompleteDependencyFootprint/unchanged (0.04s)
+    --- PASS: TestLANLinkCompleteDependencyFootprint/pool-race (0.03s)
+    --- PASS: TestLANLinkCompleteDependencyFootprint/origin-race (0.03s)
+    --- PASS: TestLANLinkCompleteDependencyFootprint/topology-during-pool (0.03s)
+    --- PASS: TestLANLinkCompleteDependencyFootprint/delete-without-pool (0.03s)
+=== RUN   TestLANLinkDeviceCLIProof
+=== RUN   TestLANLinkDeviceCLIProof/valid
+=== RUN   TestLANLinkDeviceCLIProof/abbreviated
+=== RUN   TestLANLinkDeviceCLIProof/l1-and-l2
+=== RUN   TestLANLinkDeviceCLIProof/wrong-serial
+=== RUN   TestLANLinkDeviceCLIProof/ambiguous-serial
+=== RUN   TestLANLinkDeviceCLIProof/wrong-address
+=== RUN   TestLANLinkDeviceCLIProof/secondary-address
+=== RUN   TestLANLinkDeviceCLIProof/wrong-interface
+=== RUN   TestLANLinkDeviceCLIProof/shutdown
+=== RUN   TestLANLinkDeviceCLIProof/missing-isis
+=== RUN   TestLANLinkDeviceCLIProof/duplicate-isis
+=== RUN   TestLANLinkDeviceCLIProof/missing-end
+=== RUN   TestLANLinkDeviceCLIProof/wrong-peer
+=== RUN   TestLANLinkDeviceCLIProof/neighbor-down
+=== RUN   TestLANLinkDeviceCLIProof/wrong-neighbor-port
+=== RUN   TestLANLinkDeviceCLIProof/duplicate-neighbor
+=== RUN   TestLANLinkDeviceCLIProof/missing-header
+=== RUN   TestLANLinkDeviceCLIProof/unknown-format
+=== RUN   TestLANLinkDeviceCLIProof/command-error
+--- PASS: TestLANLinkDeviceCLIProof (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/valid (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/abbreviated (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/l1-and-l2 (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/wrong-serial (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/ambiguous-serial (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/wrong-address (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/secondary-address (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/wrong-interface (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/shutdown (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/missing-isis (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/duplicate-isis (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/missing-end (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/wrong-peer (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/neighbor-down (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/wrong-neighbor-port (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/duplicate-neighbor (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/missing-header (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/unknown-format (0.00s)
+    --- PASS: TestLANLinkDeviceCLIProof/command-error (0.00s)
+=== RUN   TestLANLinkDeviceOperationProofBridge
+=== RUN   TestLANLinkDeviceOperationProofBridge/verified
+=== RUN   TestLANLinkDeviceOperationProofBridge/pending
+=== RUN   TestLANLinkDeviceOperationProofBridge/failed
+=== RUN   TestLANLinkDeviceOperationProofBridge/old-generation
+=== RUN   TestLANLinkDeviceOperationProofBridge/not-ready
+=== RUN   TestLANLinkDeviceOperationProofBridge/stale-result
+=== RUN   TestLANLinkDeviceOperationProofBridge/before-task
+=== RUN   TestLANLinkDeviceOperationProofBridge/future-result
+=== RUN   TestLANLinkDeviceOperationProofBridge/truncated
+=== RUN   TestLANLinkDeviceOperationProofBridge/redacted
+=== RUN   TestLANLinkDeviceOperationProofBridge/wrong-command
+=== RUN   TestLANLinkDeviceOperationProofBridge/wrong-owner
+=== RUN   TestLANLinkDeviceOperationProofBridge/wrong-worker
+=== RUN   TestLANLinkDeviceOperationProofBridge/wrong-serial
+=== RUN   TestLANLinkDeviceOperationProofBridge/wrong-address
+=== RUN   TestLANLinkDeviceOperationProofBridge/down-neighbor
+=== RUN   TestLANLinkDeviceOperationProofBridge/denied
+--- PASS: TestLANLinkDeviceOperationProofBridge (7.63s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/verified (0.47s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/pending (0.50s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/failed (0.44s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/old-generation (0.45s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/not-ready (0.44s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/stale-result (0.46s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/before-task (0.43s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/future-result (0.43s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/truncated (0.47s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/redacted (0.48s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/wrong-command (0.43s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/wrong-owner (0.44s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/wrong-worker (0.43s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/wrong-serial (0.43s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/wrong-address (0.46s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/down-neighbor (0.44s)
+    --- PASS: TestLANLinkDeviceOperationProofBridge/denied (0.44s)
+=== RUN   TestLANLinkEffectHistoryOrdering
+=== RUN   TestLANLinkEffectHistoryOrdering/add-delete-add
+=== RUN   TestLANLinkEffectHistoryOrdering/latest-delete
+=== RUN   TestLANLinkEffectHistoryOrdering/reordered
+=== RUN   TestLANLinkEffectHistoryOrdering/tie
+=== RUN   TestLANLinkEffectHistoryOrdering/duplicate-key
+=== RUN   TestLANLinkEffectHistoryOrdering/duplicate-operation
+=== RUN   TestLANLinkEffectHistoryOrdering/foreign-owner
+=== RUN   TestLANLinkEffectHistoryOrdering/future-generation
+=== RUN   TestLANLinkEffectHistoryOrdering/bad-delete-binding
+=== RUN   TestLANLinkEffectHistoryOrdering/legacy
+=== RUN   TestLANLinkEffectHistoryOrdering/publication-tie
+=== RUN   TestLANLinkEffectHistoryOrdering/publication-after
+--- PASS: TestLANLinkEffectHistoryOrdering (6.63s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/add-delete-add (0.54s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/latest-delete (0.54s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/reordered (0.56s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/tie (0.54s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/duplicate-key (0.55s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/duplicate-operation (0.57s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/foreign-owner (0.55s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/future-generation (0.55s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/bad-delete-binding (0.55s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/legacy (0.56s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/publication-tie (0.55s)
+    --- PASS: TestLANLinkEffectHistoryOrdering/publication-after (0.55s)
+=== RUN   TestLANLinkPhysicalIdentity
+=== RUN   TestLANLinkPhysicalIdentity/valid
+=== RUN   TestLANLinkPhysicalIdentity/missing
+=== RUN   TestLANLinkPhysicalIdentity/ip-alias
+=== RUN   TestLANLinkPhysicalIdentity/serial-alias
+=== RUN   TestLANLinkPhysicalIdentity/no-serial
+=== RUN   TestLANLinkPhysicalIdentity/access-point
+--- PASS: TestLANLinkPhysicalIdentity (0.00s)
+    --- PASS: TestLANLinkPhysicalIdentity/valid (0.00s)
+    --- PASS: TestLANLinkPhysicalIdentity/missing (0.00s)
+    --- PASS: TestLANLinkPhysicalIdentity/ip-alias (0.00s)
+    --- PASS: TestLANLinkPhysicalIdentity/serial-alias (0.00s)
+    --- PASS: TestLANLinkPhysicalIdentity/no-serial (0.00s)
+    --- PASS: TestLANLinkPhysicalIdentity/access-point (0.00s)
+=== RUN   TestLANLinkInterfaceInventory
+=== RUN   TestLANLinkInterfaceInventory/valid
+=== RUN   TestLANLinkInterfaceInventory/empty
+=== RUN   TestLANLinkInterfaceInventory/virtual
+=== RUN   TestLANLinkInterfaceInventory/unknown-status
+=== RUN   TestLANLinkInterfaceInventory/duplicate-id
+=== RUN   TestLANLinkInterfaceInventory/duplicate-name
+=== RUN   TestLANLinkInterfaceInventory/duplicate-index
+=== RUN   TestLANLinkInterfaceInventory/foreign-device
+=== RUN   TestLANLinkInterfaceInventory/missing-id
+=== RUN   TestLANLinkInterfaceInventory/missing-index
+=== RUN   TestLANLinkInterfaceInventory/invalid-index
+=== RUN   TestLANLinkInterfaceInventory/invalid-name
+=== RUN   TestLANLinkInterfaceInventory/null
+=== RUN   TestLANLinkInterfaceInventory/partial
+=== RUN   TestLANLinkInterfaceInventory/no-content
+--- PASS: TestLANLinkInterfaceInventory (0.15s)
+    --- PASS: TestLANLinkInterfaceInventory/valid (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/empty (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/virtual (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/unknown-status (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/duplicate-id (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/duplicate-name (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/duplicate-index (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/foreign-device (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/missing-id (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/missing-index (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/invalid-index (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/invalid-name (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/null (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/partial (0.01s)
+    --- PASS: TestLANLinkInterfaceInventory/no-content (0.01s)
+=== RUN   TestLANLinkEndpointRevalidation
+=== RUN   TestLANLinkEndpointRevalidation/unchanged
+=== RUN   TestLANLinkEndpointRevalidation/port-replaced
+=== RUN   TestLANLinkEndpointRevalidation/port-config
+=== RUN   TestLANLinkEndpointRevalidation/device-replaced
+=== RUN   TestLANLinkEndpointRevalidation/serial-alias
+=== RUN   TestLANLinkEndpointRevalidation/disappeared
+--- PASS: TestLANLinkEndpointRevalidation (0.07s)
+    --- PASS: TestLANLinkEndpointRevalidation/unchanged (0.01s)
+    --- PASS: TestLANLinkEndpointRevalidation/port-replaced (0.01s)
+    --- PASS: TestLANLinkEndpointRevalidation/port-config (0.01s)
+    --- PASS: TestLANLinkEndpointRevalidation/device-replaced (0.01s)
+    --- PASS: TestLANLinkEndpointRevalidation/serial-alias (0.01s)
+    --- PASS: TestLANLinkEndpointRevalidation/disappeared (0.01s)
+=== RUN   TestLANLinkMixedPublicCycle
+=== RUN   TestLANLinkMixedPublicCycle/explicit-pool
+=== RUN   TestLANLinkMixedPublicCycle/omitted-pool
+=== RUN   TestLANLinkMixedPublicCycle/shared-name
+--- PASS: TestLANLinkMixedPublicCycle (11.56s)
+    --- PASS: TestLANLinkMixedPublicCycle/explicit-pool (3.75s)
+    --- PASS: TestLANLinkMixedPublicCycle/omitted-pool (3.95s)
+    --- PASS: TestLANLinkMixedPublicCycle/shared-name (3.85s)
+=== RUN   TestLANLinkMixedWholeSourceAdmission
+=== RUN   TestLANLinkMixedWholeSourceAdmission/valid
+=== RUN   TestLANLinkMixedWholeSourceAdmission/missing-add-port
+=== RUN   TestLANLinkMixedWholeSourceAdmission/unowned-delete
+=== RUN   TestLANLinkMixedWholeSourceAdmission/unknown-field
+=== RUN   TestLANLinkMixedWholeSourceAdmission/shared-port
+=== RUN   TestLANLinkMixedWholeSourceAdmission/late-source
+--- PASS: TestLANLinkMixedWholeSourceAdmission (3.50s)
+    --- PASS: TestLANLinkMixedWholeSourceAdmission/valid (0.72s)
+    --- PASS: TestLANLinkMixedWholeSourceAdmission/missing-add-port (0.56s)
+    --- PASS: TestLANLinkMixedWholeSourceAdmission/unowned-delete (0.59s)
+    --- PASS: TestLANLinkMixedWholeSourceAdmission/unknown-field (0.55s)
+    --- PASS: TestLANLinkMixedWholeSourceAdmission/shared-port (0.54s)
+    --- PASS: TestLANLinkMixedWholeSourceAdmission/late-source (0.53s)
+=== RUN   TestLANLinkRepeatedPublicCycle
+=== RUN   TestLANLinkRepeatedPublicCycle/new-allocation
+=== RUN   TestLANLinkRepeatedPublicCycle/same-allocation
+=== RUN   TestLANLinkRepeatedPublicCycle/omitted-delete-pool
+--- PASS: TestLANLinkRepeatedPublicCycle (10.54s)
+    --- PASS: TestLANLinkRepeatedPublicCycle/new-allocation (3.46s)
+    --- PASS: TestLANLinkRepeatedPublicCycle/same-allocation (3.91s)
+    --- PASS: TestLANLinkRepeatedPublicCycle/omitted-delete-pool (3.17s)
+=== RUN   TestLANLinkModelAndWireMapping
+=== RUN   TestLANLinkModelAndWireMapping/ADD_LINK
+=== RUN   TestLANLinkModelAndWireMapping/DELETE_LINK
+--- PASS: TestLANLinkModelAndWireMapping (0.00s)
+    --- PASS: TestLANLinkModelAndWireMapping/ADD_LINK (0.00s)
+    --- PASS: TestLANLinkModelAndWireMapping/DELETE_LINK (0.00s)
+=== RUN   TestLANLinkRejectsAmbiguousIntent
+=== RUN   TestLANLinkRejectsAmbiguousIntent/missing-name
+=== RUN   TestLANLinkRejectsAmbiguousIntent/missing-action
+=== RUN   TestLANLinkRejectsAmbiguousIntent/missing-ip_pool_name
+=== RUN   TestLANLinkRejectsAmbiguousIntent/missing-primary_device_management_ip_address
+=== RUN   TestLANLinkRejectsAmbiguousIntent/missing-primary_device_interface_name
+=== RUN   TestLANLinkRejectsAmbiguousIntent/missing-secondary_device_management_ip_address
+=== RUN   TestLANLinkRejectsAmbiguousIntent/missing-secondary_device_interface_name
+=== RUN   TestLANLinkRejectsAmbiguousIntent/duplicate-name
+=== RUN   TestLANLinkRejectsAmbiguousIntent/shared-port
+=== RUN   TestLANLinkRejectsAmbiguousIntent/reverse-conflict
+=== RUN   TestLANLinkRejectsAmbiguousIntent/distinct
+--- PASS: TestLANLinkRejectsAmbiguousIntent (0.01s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/missing-name (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/missing-action (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/missing-ip_pool_name (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/missing-primary_device_management_ip_address (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/missing-primary_device_interface_name (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/missing-secondary_device_management_ip_address (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/missing-secondary_device_interface_name (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/duplicate-name (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/shared-port (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/reverse-conflict (0.00s)
+    --- PASS: TestLANLinkRejectsAmbiguousIntent/distinct (0.00s)
+=== RUN   TestLANLinkDiscoveryPoolBinding
+=== RUN   TestLANLinkDiscoveryPoolBinding/unchanged
+=== RUN   TestLANLinkDiscoveryPoolBinding/reordered
+=== RUN   TestLANLinkDiscoveryPoolBinding/missing-origin
+=== RUN   TestLANLinkDiscoveryPoolBinding/serial-alias
+=== RUN   TestLANLinkDiscoveryPoolBinding/address-changed
+=== RUN   TestLANLinkDiscoveryPoolBinding/ambiguous-origin
+=== RUN   TestLANLinkDiscoveryPoolBinding/site-replaced
+=== RUN   TestLANLinkDiscoveryPoolBinding/pool-replaced
+=== RUN   TestLANLinkDiscoveryPoolBinding/pool-parent-changed
+=== RUN   TestLANLinkDiscoveryPoolBinding/pool-owner-changed
+=== RUN   TestLANLinkDiscoveryPoolBinding/missing-pool
+=== RUN   TestLANLinkDiscoveryPoolBinding/not-lan
+=== RUN   TestLANLinkDiscoveryPoolBinding/unknown-session-state
+=== RUN   TestLANLinkDiscoveryPoolBinding/seed-only
+--- PASS: TestLANLinkDiscoveryPoolBinding (0.21s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/unchanged (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/reordered (0.02s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/missing-origin (0.02s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/serial-alias (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/address-changed (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/ambiguous-origin (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/site-replaced (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/pool-replaced (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/pool-parent-changed (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/pool-owner-changed (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/missing-pool (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/not-lan (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/unknown-session-state (0.01s)
+    --- PASS: TestLANLinkDiscoveryPoolBinding/seed-only (0.01s)
+=== RUN   TestLANLinkPreflightManagedSnapshot
+=== RUN   TestLANLinkPreflightManagedSnapshot/idle
+=== RUN   TestLANLinkPreflightManagedSnapshot/active
+=== RUN   TestLANLinkPreflightManagedSnapshot/disabled
+=== RUN   TestLANLinkPreflightManagedSnapshot/active-race
+=== RUN   TestLANLinkPreflightManagedSnapshot/usage-race
+=== RUN   TestLANLinkPreflightManagedSnapshot/missing-usage
+=== RUN   TestLANLinkPreflightManagedSnapshot/exhausted
+=== RUN   TestLANLinkPreflightManagedSnapshot/one-left
+=== RUN   TestLANLinkPreflightManagedSnapshot/delete
+=== RUN   TestLANLinkPreflightManagedSnapshot/managed-replaced
+--- PASS: TestLANLinkPreflightManagedSnapshot (0.32s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/idle (0.05s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/active (0.02s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/disabled (0.02s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/active-race (0.03s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/usage-race (0.05s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/missing-usage (0.03s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/exhausted (0.03s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/one-left (0.03s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/delete (0.04s)
+    --- PASS: TestLANLinkPreflightManagedSnapshot/managed-replaced (0.03s)
+=== RUN   TestLANLinkAdjacencyBinding
+=== RUN   TestLANLinkAdjacencyBinding/forward
+=== RUN   TestLANLinkAdjacencyBinding/reverse
+=== RUN   TestLANLinkAdjacencyBinding/absent
+=== RUN   TestLANLinkAdjacencyBinding/unknown-state
+=== RUN   TestLANLinkAdjacencyBinding/wrong-neighbor
+=== RUN   TestLANLinkAdjacencyBinding/wrong-port-id
+=== RUN   TestLANLinkAdjacencyBinding/wrong-port-name
+=== RUN   TestLANLinkAdjacencyBinding/duplicate-adjacency
+=== RUN   TestLANLinkAdjacencyBinding/second-neighbor
+=== RUN   TestLANLinkAdjacencyBinding/foreign-port-id
+=== RUN   TestLANLinkAdjacencyBinding/wrong-node-ip
+=== RUN   TestLANLinkAdjacencyBinding/host-node
+=== RUN   TestLANLinkAdjacencyBinding/grey-node
+=== RUN   TestLANLinkAdjacencyBinding/grey-link
+=== RUN   TestLANLinkAdjacencyBinding/missing-node
+=== RUN   TestLANLinkAdjacencyBinding/unrelated-link
+--- PASS: TestLANLinkAdjacencyBinding (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/forward (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/reverse (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/absent (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/unknown-state (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/wrong-neighbor (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/wrong-port-id (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/wrong-port-name (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/duplicate-adjacency (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/second-neighbor (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/foreign-port-id (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/wrong-node-ip (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/host-node (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/grey-node (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/grey-link (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/missing-node (0.00s)
+    --- PASS: TestLANLinkAdjacencyBinding/unrelated-link (0.00s)
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/complete
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-ahead
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-behind
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/running
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/wrong-id
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/old
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/future
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/missing-error
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/failed
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/end-before-start
+=== RUN   TestConfigurationTaskRequiresCorrelatedTerminalReceipt/partial
+--- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt (0.11s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/complete (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-ahead (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/clock-behind (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/running (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/wrong-id (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/old (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/future (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/missing-error (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/failed (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/end-before-start (0.01s)
+    --- PASS: TestConfigurationTaskRequiresCorrelatedTerminalReceipt/partial (0.01s)
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-accepted
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-unknown
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-running
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-failed
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-partial
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-owner
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-source
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/record
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-proof
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/proof-denied
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/native-proof-race
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/source-proof-race
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/authorization-denied
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/revoked-during-authorization
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-member
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/lost-response
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/undeclared
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/future-task-end
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/completion-proof-race
+=== RUN   TestWiredBulkApplicationUsesSharedAtomicReceipt/subsecond-unrepresentable-end
+--- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt (1.26s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-accepted (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-unknown (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-running (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-failed (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-partial (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-owner (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/recover-source (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/record (0.24s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-proof (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/proof-denied (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/native-proof-race (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/source-proof-race (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/authorization-denied (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/revoked-during-authorization (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/missing-member (0.06s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/lost-response (0.07s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/undeclared (0.04s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/future-task-end (0.05s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/completion-proof-race (0.06s)
+    --- PASS: TestWiredBulkApplicationUsesSharedAtomicReceipt/subsecond-unrepresentable-end (0.05s)
+=== RUN   TestWiredBulkPrivateCycleUsesSharedLifecycle
+=== RUN   TestWiredBulkPrivateCycleUsesSharedLifecycle/provision
+=== RUN   TestWiredBulkPrivateCycleUsesSharedLifecycle/reprovision
+=== RUN   TestWiredBulkPrivateCycleUsesSharedLifecycle/source-provision
+=== RUN   TestWiredBulkPrivateCycleUsesSharedLifecycle/source-reprovision
+--- PASS: TestWiredBulkPrivateCycleUsesSharedLifecycle (1.27s)
+    --- PASS: TestWiredBulkPrivateCycleUsesSharedLifecycle/provision (0.30s)
+    --- PASS: TestWiredBulkPrivateCycleUsesSharedLifecycle/reprovision (0.32s)
+    --- PASS: TestWiredBulkPrivateCycleUsesSharedLifecycle/source-provision (0.32s)
+    --- PASS: TestWiredBulkPrivateCycleUsesSharedLifecycle/source-reprovision (0.33s)
+=== RUN   TestWiredBulkDeviceWorkerEvidence
+=== RUN   TestWiredBulkDeviceWorkerEvidence/observed
+=== RUN   TestWiredBulkDeviceWorkerEvidence/pending
+=== RUN   TestWiredBulkDeviceWorkerEvidence/missing-member
+=== RUN   TestWiredBulkDeviceWorkerEvidence/missing-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/extra-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/identity-only
+=== RUN   TestWiredBulkDeviceWorkerEvidence/bad-query
+=== RUN   TestWiredBulkDeviceWorkerEvidence/failed
+=== RUN   TestWiredBulkDeviceWorkerEvidence/old-generation
+=== RUN   TestWiredBulkDeviceWorkerEvidence/unbound
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-worker
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-owner
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-command
+=== RUN   TestWiredBulkDeviceWorkerEvidence/wrong-serial
+=== RUN   TestWiredBulkDeviceWorkerEvidence/truncated
+=== RUN   TestWiredBulkDeviceWorkerEvidence/redacted
+=== RUN   TestWiredBulkDeviceWorkerEvidence/artifact
+=== RUN   TestWiredBulkDeviceWorkerEvidence/before-task
+=== RUN   TestWiredBulkDeviceWorkerEvidence/future-result
+=== RUN   TestWiredBulkDeviceWorkerEvidence/stale-result
+=== RUN   TestWiredBulkDeviceWorkerEvidence/duplicate-ready
+=== RUN   TestWiredBulkDeviceWorkerEvidence/source-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/native-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/completion-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/authority-revoked
+=== RUN   TestWiredBulkDeviceWorkerEvidence/journal-race
+=== RUN   TestWiredBulkDeviceWorkerEvidence/query-change
+=== RUN   TestWiredBulkDeviceWorkerEvidence/foreign-section-owner
+--- PASS: TestWiredBulkDeviceWorkerEvidence (7.95s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/observed (0.33s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/pending (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/missing-member (0.27s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/missing-query (0.26s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/extra-query (0.28s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/identity-only (0.26s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/bad-query (0.27s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/failed (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/old-generation (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/unbound (0.29s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-worker (0.29s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-owner (0.28s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-command (0.28s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/wrong-serial (0.28s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/truncated (0.28s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/redacted (0.28s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/artifact (0.28s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/before-task (0.29s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/future-result (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/stale-result (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/duplicate-ready (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/source-race (0.27s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/native-race (0.29s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/completion-race (0.27s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/authority-revoked (0.27s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/journal-race (0.27s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/query-change (0.30s)
+    --- PASS: TestWiredBulkDeviceWorkerEvidence/foreign-section-owner (0.27s)
+=== RUN   TestWiredBulkDispatchUsesSharedPermit
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/accepted
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/create
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/partial-create
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/partial
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/lost
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/denied
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/missing-permit
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/receipt-revoked
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/changed-source
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/replaced-device
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/foreign-owner
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/pruned-group
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/changed-controller-after-claim
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/late-device-replacement
+=== RUN   TestWiredBulkDispatchUsesSharedPermit/late-source-change
+--- PASS: TestWiredBulkDispatchUsesSharedPermit (1.75s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/accepted (0.16s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/create (0.16s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/partial-create (0.16s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/partial (0.16s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/lost (0.15s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/denied (0.12s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/missing-permit (0.06s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/receipt-revoked (0.16s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/changed-source (0.07s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/replaced-device (0.07s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/foreign-owner (0.07s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/pruned-group (0.07s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/changed-controller-after-claim (0.12s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/late-device-replacement (0.10s)
+    --- PASS: TestWiredBulkDispatchUsesSharedPermit/late-source-change (0.12s)
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/default
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/root
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/managed
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/deep-managed
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/prefix-boundary
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/ambiguous
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/root-precedence
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-root
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/deep-root
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-site
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/dangling-state
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/bad-state
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/duplicate-name
+=== RUN   TestWiredBulkGroupingPinnedSelectionAndChunks/wireless
+--- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks (0.01s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/default (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/root (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/managed (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/deep-managed (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/prefix-boundary (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/ambiguous (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/root-precedence (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-root (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/deep-root (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/unknown-site (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/dangling-state (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/bad-state (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/duplicate-name (0.00s)
+    --- PASS: TestWiredBulkGroupingPinnedSelectionAndChunks/wireless (0.00s)
+=== RUN   TestWiredBulkSiteAssetsUseExistingSourceRevision
+--- PASS: TestWiredBulkSiteAssetsUseExistingSourceRevision (0.02s)
+=== RUN   TestWiredBulkResolvedSiteContext
+=== RUN   TestWiredBulkResolvedSiteContext/source
+=== RUN   TestWiredBulkResolvedSiteContext/same-external
+=== RUN   TestWiredBulkResolvedSiteContext/extra-external
+=== RUN   TestWiredBulkResolvedSiteContext/missing-site
+=== RUN   TestWiredBulkResolvedSiteContext/empty-sites
+=== RUN   TestWiredBulkResolvedSiteContext/null-sites
+=== RUN   TestWiredBulkResolvedSiteContext/invalid-site-field
+=== RUN   TestWiredBulkResolvedSiteContext/unselected-section
+=== RUN   TestWiredBulkResolvedSiteContext/duplicate-yaml
+--- PASS: TestWiredBulkResolvedSiteContext (0.09s)
+    --- PASS: TestWiredBulkResolvedSiteContext/source (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/same-external (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/extra-external (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/missing-site (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/empty-sites (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/null-sites (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/invalid-site-field (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/unselected-section (0.01s)
+    --- PASS: TestWiredBulkResolvedSiteContext/duplicate-yaml (0.01s)
+=== RUN   TestWiredBulkContextRetainsFloorAssetValidation
+=== RUN   TestWiredBulkContextRetainsFloorAssetValidation/complete
+=== RUN   TestWiredBulkContextRetainsFloorAssetValidation/missing-asset
+=== RUN   TestWiredBulkContextRetainsFloorAssetValidation/bad-asset
+=== RUN   TestWiredBulkContextRetainsFloorAssetValidation/bad-ap
+=== RUN   TestWiredBulkContextRetainsFloorAssetValidation/bad-geometry
+--- PASS: TestWiredBulkContextRetainsFloorAssetValidation (0.01s)
+    --- PASS: TestWiredBulkContextRetainsFloorAssetValidation/complete (0.00s)
+    --- PASS: TestWiredBulkContextRetainsFloorAssetValidation/missing-asset (0.00s)
+    --- PASS: TestWiredBulkContextRetainsFloorAssetValidation/bad-asset (0.00s)
+    --- PASS: TestWiredBulkContextRetainsFloorAssetValidation/bad-ap (0.00s)
+    --- PASS: TestWiredBulkContextRetainsFloorAssetValidation/bad-geometry (0.00s)
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/subtree
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/specific
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/global-only
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/global-managed
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/specific-global
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/root-outside-selection
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/root-missing-managed
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/specific-empty
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/bad-specific
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/bad-global
+=== RUN   TestWiredBulkPinnedSiteSelectionOptions/disabled-selection
+--- PASS: TestWiredBulkPinnedSiteSelectionOptions (0.11s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/subtree (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/specific (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/global-only (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/global-managed (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/specific-global (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/root-outside-selection (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/root-missing-managed (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/specific-empty (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/bad-specific (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/bad-global (0.01s)
+    --- PASS: TestWiredBulkPinnedSiteSelectionOptions/disabled-selection (0.01s)
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/default
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/root
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/managed
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/root-precedence
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/false
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/bad-bool
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/root-without-bulk
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/deep-root
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/unknown-root
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/null-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/string-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/bad-site
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/duplicate-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/overlapping-sites
+=== RUN   TestWiredBulkModuleOptionsAndSourceGrouping/wrong-section
+--- PASS: TestWiredBulkModuleOptionsAndSourceGrouping (0.14s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/default (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/root (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/managed (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/root-precedence (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/false (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/bad-bool (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/root-without-bulk (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/deep-root (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/unknown-root (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/null-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/string-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/bad-site (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/duplicate-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/overlapping-sites (0.01s)
+    --- PASS: TestWiredBulkModuleOptionsAndSourceGrouping/wrong-section (0.01s)
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global
+=== RUN   TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled
+--- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback (0.10s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selected (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/root-disabled (0.02s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/resolved-selected (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/specific-empty (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/invalid-global (0.01s)
+    --- PASS: TestWiredBulkPublicOptionsRefuseSingleDeviceFallback/selection-disabled (0.01s)
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/create
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/update
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/noop
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/invalid-later-batch
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/duplicate-later-batch
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/foreign-owner
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/changed-source
+=== RUN   TestWiredBulkPreparationPreflightsEntireSequence/replaced-device
+--- PASS: TestWiredBulkPreparationPreflightsEntireSequence (0.39s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/create (0.07s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/update (0.07s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/noop (0.05s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/invalid-later-batch (0.04s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/duplicate-later-batch (0.05s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/foreign-owner (0.04s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/changed-source (0.04s)
+    --- PASS: TestWiredBulkPreparationPreflightsEntireSequence/replaced-device (0.04s)
+=== RUN   TestWiredBulkNativeProvisionRecovery
+=== RUN   TestWiredBulkNativeProvisionRecovery/create
+=== RUN   TestWiredBulkNativeProvisionRecovery/reprovision
+=== RUN   TestWiredBulkNativeProvisionRecovery/noop
+=== RUN   TestWiredBulkNativeProvisionRecovery/existing-member
+=== RUN   TestWiredBulkNativeProvisionRecovery/denied
+=== RUN   TestWiredBulkNativeProvisionRecovery/late-serial
+=== RUN   TestWiredBulkNativeProvisionRecovery/late-record
+=== RUN   TestWiredBulkNativeProvisionRecovery/partial
+=== RUN   TestWiredBulkNativeProvisionRecovery/lost-receipt
+=== RUN   TestWiredBulkNativeProvisionRecovery/failed-child
+=== RUN   TestWiredBulkNativeProvisionRecovery/running-child
+=== RUN   TestWiredBulkNativeProvisionRecovery/replaced-existing
+=== RUN   TestWiredBulkNativeProvisionRecovery/replaced-reprovision
+=== RUN   TestWiredBulkNativeProvisionRecovery/missing-guard
+=== RUN   TestWiredBulkNativeProvisionRecovery/mixed
+=== RUN   TestWiredBulkNativeProvisionRecovery/duplicate
+=== RUN   TestWiredBulkNativeProvisionRecovery/outside-root
+=== RUN   TestWiredBulkNativeProvisionRecovery/oversized
+--- PASS: TestWiredBulkNativeProvisionRecovery (0.32s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/create (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/reprovision (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/noop (0.01s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/existing-member (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/denied (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/late-serial (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/late-record (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/partial (0.03s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/lost-receipt (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/failed-child (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/running-child (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/replaced-existing (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/replaced-reprovision (0.02s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/missing-guard (0.01s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/mixed (0.01s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/duplicate (0.01s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/outside-root (0.01s)
+    --- PASS: TestWiredBulkNativeProvisionRecovery/oversized (0.00s)
+=== RUN   TestWiredBulkResourceRejectsMalformedMasks
+--- PASS: TestWiredBulkResourceRejectsMalformedMasks (0.00s)
+=== RUN   TestWiredBulkObservationUsesOneFreshCatalog
+--- PASS: TestWiredBulkObservationUsesOneFreshCatalog (0.01s)
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/accepted
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/unknown
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/running
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/failed
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/partial
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/revoked
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/changed-source
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/pruned-group
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/invalid-bulk-options
+=== RUN   TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/removed-bulk-options
+--- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence (1.25s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/accepted (0.14s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/unknown (0.14s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/running (0.12s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/failed (0.12s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/partial (0.13s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/revoked (0.11s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/changed-source (0.10s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/pruned-group (0.09s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/invalid-bulk-options (0.15s)
+    --- PASS: TestWiredBulkPublicAcknowledgedRecoveryRetainsConvergenceFence/removed-bulk-options (0.14s)
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/applied
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/missing
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/new-generation
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/new-controller
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/new-source
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/foreign
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/no-owner
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/duplicate-owner
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/duplicate-receipt
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/unverified
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/missing-time
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/future-time
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/wrong-digest
+=== RUN   TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/native-baseline-drift
+--- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision (0.01s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/applied (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/missing (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/new-generation (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/new-controller (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/new-source (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/foreign (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/no-owner (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/duplicate-owner (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/duplicate-receipt (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/unverified (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/missing-time (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/future-time (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/wrong-digest (0.00s)
+    --- PASS: TestWiredBulkOwnedReceiptSuppressesOnlyExactRevision/native-baseline-drift (0.00s)
+=== RUN   TestWiredBulkDeclarationCannotBeGuessedFromBatch
+--- PASS: TestWiredBulkDeclarationCannotBeGuessedFromBatch (0.00s)
+=== RUN   TestWiredBulkSequencePreflightsAllBatches
+=== RUN   TestWiredBulkSequencePreflightsAllBatches/sequence
+=== RUN   TestWiredBulkSequencePreflightsAllBatches/later-unmanaged
+=== RUN   TestWiredBulkSequencePreflightsAllBatches/cross-batch-alias
+=== RUN   TestWiredBulkSequencePreflightsAllBatches/later-native-race
+=== RUN   TestWiredBulkSequencePreflightsAllBatches/later-node-race
+=== RUN   TestWiredBulkSequencePreflightsAllBatches/missing-guard
+--- PASS: TestWiredBulkSequencePreflightsAllBatches (0.43s)
+    --- PASS: TestWiredBulkSequencePreflightsAllBatches/sequence (0.19s)
+    --- PASS: TestWiredBulkSequencePreflightsAllBatches/later-unmanaged (0.02s)
+    --- PASS: TestWiredBulkSequencePreflightsAllBatches/cross-batch-alias (0.03s)
+    --- PASS: TestWiredBulkSequencePreflightsAllBatches/later-native-race (0.08s)
+    --- PASS: TestWiredBulkSequencePreflightsAllBatches/later-node-race (0.08s)
+    --- PASS: TestWiredBulkSequencePreflightsAllBatches/missing-guard (0.03s)
+=== RUN   TestWiredBulkManagedIdentityBoundaries
+=== RUN   TestWiredBulkManagedIdentityBoundaries/valid
+=== RUN   TestWiredBulkManagedIdentityBoundaries/missing-device
+=== RUN   TestWiredBulkManagedIdentityBoundaries/alias
+=== RUN   TestWiredBulkManagedIdentityBoundaries/wrong-address
+=== RUN   TestWiredBulkManagedIdentityBoundaries/wrong-driver
+=== RUN   TestWiredBulkManagedIdentityBoundaries/node-replaced
+=== RUN   TestWiredBulkManagedIdentityBoundaries/guard-address-race
+=== RUN   TestWiredBulkManagedIdentityBoundaries/guard-node-race
+--- PASS: TestWiredBulkManagedIdentityBoundaries (0.23s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/valid (0.05s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/missing-device (0.02s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/alias (0.02s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/wrong-address (0.02s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/wrong-driver (0.02s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/node-replaced (0.02s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/guard-address-race (0.04s)
+    --- PASS: TestWiredBulkManagedIdentityBoundaries/guard-node-race (0.04s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	234.813s

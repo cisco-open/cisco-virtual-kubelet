@@ -1,0 +1,31 @@
+=== RUN   TestLiveCatalystCenterTemplateProject
+    template_projects_live_test.go:125: submitted Create CVK-Q-Project-20261016-151206 01a14545-40b8-77f6-baef-0bf446bcbf07
+    template_projects_live_test.go:125: submitted Update CVK-Q-Project-20261016-151206 01a14545-524a-7e59-bb60-f228f4de04cb
+    template_projects_live_test.go:151: project create and description update verified
+    template_projects_live_test.go:153: native template operation Create draft:CVK-Q-Project-20261016-151206#CVK-Commit-Qualification 01a14545-6fd1-7d2c-9a69-029a9044e841
+    template_projects_live_test.go:153: native template operation Update commit:CVK-Q-Project-20261016-151206#CVK-Commit-Qualification 01a14545-aec5-7d86-b753-61a8c41fb029
+    template_projects_live_test.go:153: native template operation Update draft:CVK-Q-Project-20261016-151206#CVK-Commit-Qualification 01a14545-fefd-755f-9411-8ffe9c819bdd
+    template_projects_live_test.go:153: native template operation Update commit:CVK-Q-Project-20261016-151206#CVK-Commit-Qualification 01a14546-3df8-7a47-ba9a-259fa10850ce
+    template_projects_live_test.go:153: native draft create/update and two committed versions verified 42529026-039e-4495-bea2-be7db97cbe7e
+    template_projects_live_test.go:153: native composite dependency operation draft:CVK-Q-Project-20261016-151206#CVK-Composite-Qualification 01a14546-8094-789a-b936-49d933358b75
+    template_projects_live_test.go:153: native composite dependency operation commit:CVK-Q-Project-20261016-151206#CVK-Composite-Qualification 01a14546-b639-7260-88b9-4a5a77e3262d
+    template_projects_live_test.go:153: native composite dependency operation draft:CVK-Q-Project-20261016-151206#CVK-Commit-Qualification 01a14547-0b37-7d42-9d35-65339efec2a6
+    template_projects_live_test.go:153: native composite dependency operation commit:CVK-Q-Project-20261016-151206#CVK-Commit-Qualification 01a14547-4649-792d-963f-2fe7ad0dd1fc
+    template_projects_live_test.go:153: native composite dependency operation commit:CVK-Q-Project-20261016-151206#CVK-Composite-Qualification 01a14547-84ef-796f-8cfe-539638884ea5
+    template_projects_live_test.go:153: native composite create/commit and member-change recommit verified d89e2c2b-49da-48fb-8e68-92d71dcd1d09
+    template_projects_live_test.go:153: native composite draft and both committed references verified
+    template_projects_live_test.go:153: native alternate consumer operation Create draft:CVK-Q-Project-20261016-151206#CVK-Reference-Alternative 01a14548-d912-70e2-879f-7e7d799e04ff
+    template_projects_live_test.go:153: native alternate consumer operation Update commit:CVK-Q-Project-20261016-151206#CVK-Reference-Alternative 01a14549-1fe3-7e2d-a8d0-dbdeb1b9bd69
+    template_projects_live_test.go:153: native alternate consumer operation Update draft:CVK-Q-Project-20261016-151206#CVK-Composite-Qualification 01a14549-6e7a-7d39-8e88-1562178fd25e
+    template_projects_live_test.go:153: native alternate consumer operation Update commit:CVK-Q-Project-20261016-151206#CVK-Composite-Qualification 01a1454a-48bd-70b2-9f1b-cc8e722d79a9
+    template_projects_live_test.go:153: native older versions retain original member references after draft/latest move to alternate member
+    template_composite_live_test.go:52: template mutation receipt DELETE 01a1454c-9925-7d4e-97f9-a54ff464db4f
+    template_composite_reference_live_test.go:153: template mutation receipt DELETE 01a1454c-a0f3-77ee-b02b-989322185cdd
+    template_composite_reference_live_test.go:161: alternative member cleanup verified 54e68941-924e-4943-99aa-8d6ca1fd7381
+    template_composite_live_test.go:70: composite cleanup verified d89e2c2b-49da-48fb-8e68-92d71dcd1d09
+    template_commit_live_test.go:84: template mutation receipt DELETE 01a1454c-a8d6-70cf-b5cd-acccb7b23b68
+    template_commit_live_test.go:95: template fixture cleanup verified 42529026-039e-4495-bea2-be7db97cbe7e
+    template_projects_live_test.go:99: isolated project cleanup verified 3cba4c64-ddef-4a5b-90ba-af67ef9aa3b1
+--- PASS: TestLiveCatalystCenterTemplateProject (491.05s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	493.440s

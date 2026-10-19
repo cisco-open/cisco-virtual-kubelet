@@ -1,0 +1,12 @@
+=== RUN   TestEnvtestFeatureCreatorReceiptRelease
+=== RUN   TestEnvtestFeatureCreatorReceiptRelease/known
+=== RUN   TestEnvtestFeatureCreatorReceiptRelease/missing
+=== RUN   TestEnvtestFeatureCreatorReceiptRelease/duplicate
+=== RUN   TestEnvtestFeatureCreatorReceiptRelease/pruned
+--- PASS: TestEnvtestFeatureCreatorReceiptRelease (6.35s)
+    --- PASS: TestEnvtestFeatureCreatorReceiptRelease/known (2.68s)
+    --- PASS: TestEnvtestFeatureCreatorReceiptRelease/missing (0.05s)
+    --- PASS: TestEnvtestFeatureCreatorReceiptRelease/duplicate (0.05s)
+    --- PASS: TestEnvtestFeatureCreatorReceiptRelease/pruned (0.05s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.501s

@@ -1,0 +1,51 @@
+# Creates/updates and commits template definitions only.
+# software_version filters applicability; it does not upgrade any device.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: catc-template-versions
+  namespace: cvk-live
+data:
+  model.yaml: |
+    catalyst_center:
+      templates:
+        software_version: "17.18.3"
+        projects:
+          - name: CVK-Version-Examples
+            dayn_templates:
+              - name: inherited
+                language: JINJA
+                software_type: IOS-XE
+                device_types: [{product_family: Switches and Hubs}]
+                variables: []
+              - name: overridden
+                software_version: "26.2.1"
+                language: JINJA
+                software_type: IOS-XE
+                device_types: [{product_family: Switches and Hubs}]
+                variables: []
+  cvk-template-assets.json: |
+    {"CVK-Version-Examples#inherited.j2":"! inherited applicability example\n","CVK-Version-Examples#overridden.j2":"! overridden applicability example\n"}
+---
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-template-versions-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  managedSections: [templates]
+  scope: global
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-template-software-version-example-v1
+  source:
+    configMapRef:
+      name: catc-template-versions
+      key: model.yaml

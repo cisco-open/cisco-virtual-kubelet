@@ -1,6 +1,6 @@
 # Cisco Virtual Kubelet Provider
 
-[![Go Version](https://img.shields.io/badge/Go-1.26.7%2B-blue.svg)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26.9%2B-blue.svg)](https://go.dev/)
 [![Project code license](https://img.shields.io/badge/Project%20code-Apache%202.0-blue.svg)](LICENSE)
 
 A [Virtual Kubelet](https://github.com/virtual-kubelet/virtual-kubelet) provider that enables [Kubernetes](https://kubernetes.io/docs/home/) to schedule container workloads on **Cisco Catalyst** series switches and other **IOS-XE devices** — with Beta support for Cisco Nexus (NX-OS) switches — that offer [App-Hosting](https://developer.cisco.com/docs/app-hosting/) capabilities.
@@ -27,11 +27,17 @@ This provider allows Kubernetes pods to be deployed as containers directly on Ci
 | **IOS-XE Telemetry**| Beta | Declare MDT-over-gNMI subscriptions and emit OpenTelemetry metrics, logs, and state-transition traces |
 | **Topology Observability** | Beta | Emit CDP/OSPF topology and hosted-app traces to any OTLP-compatible backend |
 | **Managed Topology and Fleet Rollouts** | Opt-in | **This is disabled by default**. Project protected inventory labels for native kube-scheduler affinity/spread and admit bounded IOS-XE campaigns across failure domains |
-| **Network Controller Extension API**| Alpha | Generic `NetworkController` and `NetworkControllerConfig` contracts for future controller adapters; ships with zero product adapters (report-only) |
+| **Network Controller Integrations**| Alpha | Shared `NetworkController` and `NetworkControllerConfig` contracts with Nexus Dashboard and Catalyst Center adapters; Catalyst Center has bounded configuration and managed SWIM support, with incomplete NetAsCode parity |
 | **Topology-Aware Image Distribution** | Preview | Freeze each target's image URL, digest and Secret identity from topology-scoped sources in an approved `IOSXESoftwareRollout` plan |
 | **PDB-Aware Workload Drain** | Dev Preview | Kubernetes Eviction for the documented eligible workload subset before a device upgrade; not general-purpose evacuation or a zero-downtime guarantee |
 
 ### Supported Devices
+
+Controller integration is **alpha**. See the [Catalyst Center alpha scope and
+merge gates](docs/controllers/catalyst-center-alpha.md) and the
+[roadmap to full parity](docs/controllers/catalyst-center-roadmap.md) before
+enabling controller mutation. This does not change the maturity labels of the
+existing device providers.
 
 - **Cisco Catalyst 8000V virtual routers**
 - **Cisco Catalyst 9000 switches**
@@ -311,7 +317,7 @@ For local development and testing, the VK provider can be run directly against a
 
 ### Prerequisites
 
-- [Go](https://go.dev/doc/devel/release) 1.26.7+ on the 1.26 line, or 1.27.0+
+- [Go](https://go.dev/doc/devel/release) 1.26.9+ on the 1.26 line, or 1.27.2+
   on the 1.27 line
 
 ### Build and run locally

@@ -1,0 +1,14 @@
+{
+  "response": {
+    "data": "Golden-Tagging",
+    "endTime": 1791519793765,
+    "startTime": 1791519792625,
+    "version": 1791519793765,
+    "progress": "Tagging image  cat9k_iosxe.26.02.01.SPA.bin  golden for site  MUC07 for family Cisco Catalyst 9300 Switch  for device deviceRole ACCESS successful.",
+    "isError": false,
+    "serviceType": "NCSW",
+    "instanceTenantId": "6aac917b41bd7b001357e1e2",
+    "id": "01a11ee6-9df0-7d35-ab76-6d9a1680c183"
+  },
+  "version": "1.0"
+}

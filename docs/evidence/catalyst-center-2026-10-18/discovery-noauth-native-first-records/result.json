@@ -1,0 +1,15 @@
+{
+  "baselineRestored": false,
+  "cleanupCompleted": false,
+  "cleanupSupervised": false,
+  "deletes": 0,
+  "deviceAuthenticationQualified": false,
+  "installedActors": false,
+  "issue": "native execution did not reach InSync within bounded observation",
+  "mutationAttempts": 1,
+  "nativeDeviceOperationSubmitted": false,
+  "nativeID": "",
+  "originalUnknownRecovered": true,
+  "posts": 1,
+  "qualified": false
+}

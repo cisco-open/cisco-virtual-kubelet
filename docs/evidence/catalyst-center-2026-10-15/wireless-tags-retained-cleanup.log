@@ -1,0 +1,7 @@
+cleanup /dna/intent/api/v1/networkProfilesForSites/8889b9f0-358b-4eab-b29b-eeb278d161ef/siteAssignments/b9c8f55a-340f-4d4c-93f8-43e570a561a8 01a13e39-d07a-7c7e-a043-97ae07b34c4e
+cleanup /dna/intent/api/v1/networkProfilesForSites/8889b9f0-358b-4eab-b29b-eeb278d161ef/siteAssignments/c6fcd6db-6416-46f1-8f78-432dc541c9d9 01a13e39-d90d-7ee2-a425-a6f391e2b9c3
+cleanup /dna/intent/api/v1/wirelessProfiles/8889b9f0-358b-4eab-b29b-eeb278d161ef 01a13e39-eb85-7457-ba72-50709ce01f1d
+cleanup /dna/intent/api/v1/sites/8995b7da-5b82-40fd-a706-82150affe92d/wirelessSettings/ssids/mdiYq1zl-x1nF-mdLH-yJHJ-ntHJzMu5mde4zKmWvJflmL8ZuZrF 01a13e39-f20d-7835-9d56-029e606fd092
+cleanup /dna/intent/api/v1/areas/b9c8f55a-340f-4d4c-93f8-43e570a561a8 01a13e39-f7ec-741d-9e6c-1db44dea1c03
+cleanup /dna/intent/api/v1/areas/c6fcd6db-6416-46f1-8f78-432dc541c9d9 01a13e3a-0053-71da-8a6c-e3739ca8e2c1
+isolated profile, SSID, assignments and areas cleanup verified; no device operations

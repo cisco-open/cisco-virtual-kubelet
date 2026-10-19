@@ -1,0 +1,6 @@
+=== RUN   TestLiveRetainedPnPRegistrationCleanup
+    pnp_registration_stage_live_test.go:370: context deadline exceeded
+--- FAIL: TestLiveRetainedPnPRegistrationCleanup (20.01s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	21.031s
+FAIL

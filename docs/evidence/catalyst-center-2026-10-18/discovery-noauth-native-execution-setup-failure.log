@@ -1,0 +1,6 @@
+=== RUN   TestLiveNoAuthGeneratedNativeExecution
+    discovery_noauth_native_execution_staged_test.go:111: open /private/tmp/cvk-noauth-native-execution-records/baseline.json: no such file or directory
+--- FAIL: TestLiveNoAuthGeneratedNativeExecution (6.91s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.379s
+FAIL

@@ -1,0 +1,33 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "upstream": [
+    {
+      "file": "cc_network_settings.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_settings.tf",
+      "sha256": "36082cfd33d097f5ae37dd7248ceb3fe704f101f59b7a77fb9f746387ed8a159"
+    }
+  ],
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/network_execution.go": "7528d8ebde0f656b892348061c764ae069781cea5ad9dc5afd24d4d0f527bca8",
+    "internal/controlleradapter/catalystcenter/network_submission.go": "2e5b99dc2c7172a484633a6e1a12c847687a609d4b441b772943ef31ebe8a6b7",
+    "internal/controlleradapter/catalystcenter/network_settings.go": "236aaf0faf64970c162c3ad1492ef079fc3a42d2192d2f8c52eec8cd5c5ba5b5",
+    "internal/controlleradapter/catalystcenter/network_submission_test.go": "e77806c53b38d36170d66f66b2efa9d05ece13dc3ec5a65a4838bb7db2d7c3d6",
+    "internal/controlleradapter/catalystcenter/network_submission_recovery_test.go": "2779c551bbc5afdc20fcfd09d8afb4430498741fc7d9dbb13eb442d8e24f2839",
+    "internal/controlleradapter/catalystcenter/network_submission_envtest_test.go": "b0e48c63f4e711d8b3c121d3413d7fdc150ea185dbba6aed09ed8038c12f8868",
+    "internal/controlleradapter/catalystcenter/network_execution_live_test.go": "5d400cb06bae86bb55fbeb0fbe600b343aece48279979e0d100f93200b9b6af0",
+    "internal/controlleradapter/catalystcenter/network_execution_test.go": "63aefa4208dda4f1e505ceaa776ab66ea83b13606ea8a64cd7b56c32d784cef1",
+    "internal/controlleradapter/catalystcenter/network_credential_configuration.go": "698ec4ccf72eee8eb01e0629896eef11900e0649c9bb9cbf6ceaf1148f65f7fc",
+    "internal/controlleradapter/catalystcenter/telemetry_settings.go": "35e986948bea38b9331d3387f4bd1ba60433f864dbe6aac269fcb61d02a44ffe",
+    "internal/controlleradapter/catalystcenter/ipam_execution.go": "c2995558f640885581906ed27a3cf6bb48cdf1c2116e9e5dc8b11c3d9835cce5",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "aa8bb03e712b91c24edb09b83222b3865848940586d4c6a11def5622381c626b",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch_test.go": "37cfda62325e4fb2c667336ae247f6a50e4122fd1bc61431ff6621f1451c2945",
+    "internal/controlleradapter/catalystcenter/config_dispatch.go": "fd798ca12493dac7ff996d963b610d0076e1c1e68f9d5756661f98bd78a85f09",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "6cb45055bc6402032d4f5f610f5a63f1b01961de47a9d3df5b9bfadf9c77c3f7",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "ad8c271e18d7517fafcd0928bd90343acc5f5648a56a373db844ad9f408519bb",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "18d717fca13b92f3656b5e15dd6c562a48c560148f3529c870eacd3006886ecd",
+    "internal/controlleradapter/catalystcenter/site_execution_live_test.go": "977e08f13e577a825f903e9e18f48f3bb5af7e7d5936ead6e7754c031181e7c8"
+  },
+  "scope": "Frozen whole-selected-cohort native submission guards and original one-use no-dispatch retirement for NTP, DHCP, DNS, timezone, banner and telemetry. Existing inheritance resolver reused with observation-local caching. 72 race submission cases, 24 public fixture cases, existing shared refusal contracts and 24 real API lifecycle cases. Real public-reconciler six-write lab cycle with six synthetic preflight GET refusals, automatic retirement/replan, no replay and exact generated hierarchy cleanup; storage/actors simulated in native run. No taskless replay, known-task Unknown activation, physical rollout, destructive settings lifecycle or complete NetAsCode parity claim."
+}

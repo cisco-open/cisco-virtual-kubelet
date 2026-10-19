@@ -1,0 +1,53 @@
+{
+  "time": "2026-10-08T15:56:36.680065+00:00",
+  "rollout": "catc-handoff-20261008-101-r7",
+  "phase": "Paused",
+  "control": {
+    "pause": true,
+    "reason": "Activation readiness flash check: 1938 MB available, 2620 MB required. Guarded cleanup execution is not implemented; preserve staged/running images.",
+    "requestedAt": "2026-10-08T15:55:54Z",
+    "requestedBy": "system:admin",
+    "revision": 2
+  },
+  "leafPhase": "Staging",
+  "previousVersion": "17.18.03.0.5496.1776157760",
+  "activationRequested": false,
+  "handoff": {
+    "distributionNotBefore": "2026-10-08T15:38:39Z",
+    "distributionTask": "01a11c2b-9ff7-7a65-aa15-3d7734f696e1",
+    "phase": "CheckingReadiness",
+    "readinessFor": "ReadyToActivate",
+    "readinessNotBefore": "2026-10-08T15:50:46Z",
+    "readinessTask": "01a11c36-b3e3-78f2-96a6-2c2548e6c1cd"
+  },
+  "maintenancePhase": "Active",
+  "lease": {
+    "acquireTime": "2026-10-08T14:38:42.887879Z",
+    "holderIdentity": "software-upgrade/4960d563-e07f-4b5e-a6e3-ffcd013d454d",
+    "leaseDurationSeconds": 93600,
+    "leaseTransitions": 15312,
+    "renewTime": "2026-10-08T15:56:27.056736Z"
+  },
+  "nodeUnschedulable": false,
+  "nodeTaints": [
+    {
+      "effect": "NoSchedule",
+      "key": "cisco.vk/device-maintenance",
+      "value": "gnoi"
+    }
+  ],
+  "workloads": [
+    {
+      "name": "cvk-topology-drain-a-0926-649c457fff-wrjds",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "ready": true
+    },
+    {
+      "name": "cvk-topology-drain-b-0926-67ff7d64b-wrnff",
+      "node": "cat9k-live",
+      "phase": "Running",
+      "ready": true
+    }
+  ]
+}

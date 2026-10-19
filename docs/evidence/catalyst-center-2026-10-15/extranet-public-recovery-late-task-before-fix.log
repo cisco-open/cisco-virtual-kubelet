@@ -1,0 +1,8 @@
+--- FAIL: TestExtranetAcknowledgedRecovery (1.30s)
+    --- FAIL: TestExtranetAcknowledgedRecovery/create/publish-task-changed (0.94s)
+        fabric_extranet_recovery_test.go:294: publication outcome <nil>
+    --- FAIL: TestExtranetAcknowledgedRecovery/update/publish-task-changed (0.36s)
+        fabric_extranet_recovery_test.go:294: publication outcome <nil>
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	2.402s
+FAIL

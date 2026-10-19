@@ -1,0 +1,46 @@
+# Requires matching journal CRDs, manager and worker. Global site ownership.
+# Bulk is a transport option outside the resolved NetAsCode stripe.
+# Retains removed sites. Failed/uncertain batches remain fenced; no replay.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-sites-bulk-apply
+  namespace: cvk-live
+  annotations:
+    cisco.vk/catalyst-center-bulk-sites: "true"
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [sites]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  driftDetectInterval: 5m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-bulk-site-example-v1
+  source:
+    inline:
+      catalyst_center:
+        sites:
+          areas:
+            - name: CVK-Bulk-Lab
+              parent_name: Global
+          buildings:
+            - name: Building
+              parent_name: Global/CVK-Bulk-Lab
+              country: United States
+              latitude: 37.3381234
+              longitude: -121.8861234
+          floors:
+            - name: Floor
+              parent_name: Global/CVK-Bulk-Lab/Building
+              floor_number: 1
+              rf_model: Free Space
+              width: 10.123456
+              length: 15.123456
+              height: 3.123456
+              units_of_measure: meters

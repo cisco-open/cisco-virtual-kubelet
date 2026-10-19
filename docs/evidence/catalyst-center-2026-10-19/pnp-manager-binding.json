@@ -1,0 +1,100 @@
+{
+  "status": "PASS manager-to-provider read-only preparation binding; actor admission/public dispatch incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "controlleradapter": {
+      "files": 14,
+      "sha256": "eb32904d69c5427ac7151f98f4bcaea237eff5eaa6fdf468f232cee2e0251887",
+      "productionSHA256": "1b48d6df0e70225e71110709c8f7046da6527283fa5b94aa8aeca987f94ffda8"
+    },
+    "controlleradapter/catalystcenter": {
+      "files": 1694,
+      "sha256": "3e1e83312e2940af14197601a9ba71836a24f9910cc7d73dbc850154ff008d0c",
+      "productionSHA256": "18e212c177f47d85c119c0c9ccf23ffae047bf647b114848b1a6937b2b24a69d"
+    },
+    "controllerconfiguration": {
+      "files": 137,
+      "sha256": "b1806f844160f6d71b8b9cfe48ba37e75d8c9466c2d5f2a3382b2ce786894d39",
+      "productionSHA256": "9339923af5529b267e7d79de48a89a64499ea457353ee5daa8c1caefdd5839ce"
+    },
+    "controller": {
+      "files": 93,
+      "sha256": "d7d561e4b771bdf5943507254a6d6233a66034aa033b3eea7e2f2f4bd01a1524",
+      "productionSHA256": "489a770cf72efe0a60dfeb5d850d247d8e3efcb7f5703a909d4cb1a93627ac9f"
+    }
+  },
+  "gates": {
+    "providerControlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 29,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter": 10.341
+      },
+      "log": "/private/tmp/cvk-pnp-manager-binding-api.log"
+    },
+    "foundationsAndManager": {
+      "result": "PASS",
+      "passingEvents": 3143,
+      "packages": 6,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter": 2.273,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/nexusdashboard": 4.947,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/maintenance": 6.783,
+        "github.com/cisco/virtual-kubelet-cisco/internal/provider/softwareupgrade": 15.143,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controller": 35.335,
+        "github.com/cisco/virtual-kubelet-cisco/internal/controllerconfiguration": 35.37
+      },
+      "log": "/private/tmp/cvk-pnp-manager-binding-foundation.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1046,
+      "packages": 1,
+      "packageSeconds": {
+        "github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter": 62.705
+      },
+      "log": "/private/tmp/cvk-pnp-manager-binding-compat.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "binary": "/private/tmp/cvk-pnp-manager-binding-cisco-vk"
+    },
+    "formatAndFrozenSource": {
+      "result": "PASS"
+    },
+    "strictDocumentationAndLedger": {
+      "result": "PASS",
+      "seconds": 7.65,
+      "log": "/private/tmp/cvk-pnp-manager-binding-docs.log",
+      "uniquePinnedResourceRows": 93
+    }
+  },
+  "implementation": {
+    "optionalPureRegistryCallbacks": true,
+    "factoryConstructedByManager": false,
+    "sourceReads": "existing namespaced inline or ConfigMap model; no Secrets",
+    "selectedOperation": "strict prepared pnp-remove:v2 metadata Delete",
+    "projection": "all remaining canonical owned creator serials, exact selected first UUID and creator digest",
+    "managerEntrypoint": "reconcileConfigurationReservationCreation -> reconcileConfigurationMetadataScope -> CheckUnmanagedMetadataScope",
+    "sourceOwnerRecheckedBySharedScope": true,
+    "journalPhaseAfterObservation": "Prepared",
+    "statusAttestationPublished": false,
+    "dispatchPermitGranted": false,
+    "newRBAC": false,
+    "newPhysicalProtocol": false,
+    "newTransport": false,
+    "NDCallback": null
+  },
+  "nativeQualification": {
+    "newNativeFlowEnabled": false,
+    "performed": false,
+    "reason": "This increment wires manager read-only scope observation, not installed actor authorization or new public dispatch. Previous private native cohort cleanup qualification remains historical evidence."
+  },
+  "remaining": [
+    "Installed actor/version binding and protected serialization between manager observation and worker dispatch",
+    "Native consumer protection beyond current listed fields",
+    "Missing-source and CR-deletion context, manager finalization, installed full public cleanup lifecycle",
+    "All other remaining pinned 93-resource execution and hardware qualification gaps"
+  ]
+}

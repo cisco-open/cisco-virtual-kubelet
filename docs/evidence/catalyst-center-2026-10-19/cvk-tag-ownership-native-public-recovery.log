@@ -1,0 +1,12 @@
+=== RUN   TestLiveTagKnownTaskPublicRestart
+    tag_task_recovery_live_test.go:222: retained original task Create 01a15123-9c3a-72d4-be46-3ec1632fa54b
+    tag_task_recovery_live_test.go:291: durable immutable creator and current latest-state rows 1 0
+    tag_task_recovery_live_test.go:292: recovered native manifest revision without replay 1 f8650cdd-d28f-4606-a0ef-199c606a0feb
+    tag_task_recovery_live_test.go:222: retained original task Update 01a15123-a50d-71e4-b579-c3c0079bd2b6
+    tag_task_recovery_live_test.go:291: durable immutable creator and current latest-state rows 1 1
+    tag_task_recovery_live_test.go:292: recovered native manifest revision without replay 2 f8650cdd-d28f-4606-a0ef-199c606a0feb
+    tag_task_recovery_live_test.go:298: exact native mutation counts 1 1
+    tag_task_recovery_live_test.go:192: supervised exact original-task-bound cleanup and baseline restoration f8650cdd-d28f-4606-a0ef-199c606a0feb
+--- PASS: TestLiveTagKnownTaskPublicRestart (12.10s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	14.854s

@@ -1,0 +1,91 @@
+=== RUN   TestEnvtestSitePruneManifestLifecycle
+=== RUN   TestEnvtestSitePruneManifestLifecycle/complete
+=== RUN   TestEnvtestSitePruneManifestLifecycle/consumer
+=== RUN   TestEnvtestSitePruneManifestLifecycle/foreign-child
+=== RUN   TestEnvtestSitePruneManifestLifecycle/missing-owned
+=== RUN   TestEnvtestSitePruneManifestLifecycle/replaced-owned
+=== RUN   TestEnvtestSitePruneManifestLifecycle/reappeared-retired
+=== RUN   TestEnvtestSitePruneManifestLifecycle/lost-ack
+=== RUN   TestEnvtestSitePruneManifestLifecycle/failed-task
+--- PASS: TestEnvtestSitePruneManifestLifecycle (18.58s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/complete (7.83s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/consumer (1.14s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/foreign-child (1.00s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/missing-owned (0.98s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/replaced-owned (0.98s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/reappeared-retired (2.24s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/lost-ack (0.32s)
+    --- PASS: TestEnvtestSitePruneManifestLifecycle/failed-task (0.32s)
+=== RUN   TestEnvtestSitePruneHierarchyManifestLifecycle
+--- PASS: TestEnvtestSitePruneHierarchyManifestLifecycle (15.09s)
+=== RUN   TestEnvtestSiteRecreationHistory
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 6712 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).Enabled(0xc000a05980, 0x1)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:111 +0x30
+	>  github.com/go-logr/logr.Logger.Info({{0x10839ada8?, 0xc000a05980?}, 0x1026b3ba0?}, {0x105a38737, 0x16}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:276 +0x60
+	>  sigs.k8s.io/controller-runtime/pkg/envtest.(*Environment).Start(0xc000af2b08)
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/envtest/server.go:303 +0x934
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClientEnvironment(0xc000114d88, 0xc000af2b08)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:27 +0x44
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.qualificationAPIServerClient(0xc000114d88, {0xc0007b3e20, 0x1, 0x1026f87f8?})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/configuration_envtest_test.go:22 +0x1ac
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestSiteRecreationHistory(0xc000114d88)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/site_recreation_envtest_test.go:17 +0x5c
+	>  testing.tRunner(0xc000114d88, 0x10833dd90)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 1
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestSiteRecreationHistory/latest-false/roundtrip
+=== RUN   TestEnvtestSiteRecreationHistory/latest-false/drop-history
+=== RUN   TestEnvtestSiteRecreationHistory/latest-false/drop-successor
+=== RUN   TestEnvtestSiteRecreationHistory/latest-false/edit-history
+=== RUN   TestEnvtestSiteRecreationHistory/latest-true/roundtrip
+=== RUN   TestEnvtestSiteRecreationHistory/latest-true/drop-history
+=== RUN   TestEnvtestSiteRecreationHistory/latest-true/drop-successor
+=== RUN   TestEnvtestSiteRecreationHistory/latest-true/edit-history
+--- PASS: TestEnvtestSiteRecreationHistory (6.07s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-false/roundtrip (2.10s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-false/drop-history (0.09s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-false/drop-successor (0.09s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-false/edit-history (0.09s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-true/roundtrip (0.09s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-true/drop-history (0.10s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-true/drop-successor (0.11s)
+    --- PASS: TestEnvtestSiteRecreationHistory/latest-true/edit-history (0.11s)
+=== RUN   TestEnvtestSiteRecreationExecution
+=== RUN   TestEnvtestSiteRecreationExecution/complete
+=== RUN   TestEnvtestSiteRecreationExecution/latest
+=== RUN   TestEnvtestSiteRecreationExecution/unknown
+=== RUN   TestEnvtestSiteRecreationExecution/pending
+=== RUN   TestEnvtestSiteRecreationExecution/source
+=== RUN   TestEnvtestSiteRecreationExecution/history
+=== RUN   TestEnvtestSiteRecreationExecution/lost-ack
+=== RUN   TestEnvtestSiteRecreationExecution/prepared
+--- PASS: TestEnvtestSiteRecreationExecution (10.24s)
+    --- PASS: TestEnvtestSiteRecreationExecution/complete (2.60s)
+    --- PASS: TestEnvtestSiteRecreationExecution/latest (0.66s)
+    --- PASS: TestEnvtestSiteRecreationExecution/unknown (0.57s)
+    --- PASS: TestEnvtestSiteRecreationExecution/pending (0.57s)
+    --- PASS: TestEnvtestSiteRecreationExecution/source (0.43s)
+    --- PASS: TestEnvtestSiteRecreationExecution/history (0.40s)
+    --- PASS: TestEnvtestSiteRecreationExecution/lost-ack (0.44s)
+    --- PASS: TestEnvtestSiteRecreationExecution/prepared (0.61s)
+=== RUN   TestEnvtestSiteRecreationParentHandoff
+=== RUN   TestEnvtestSiteRecreationParentHandoff/complete
+=== RUN   TestEnvtestSiteRecreationParentHandoff/drop-parent-archive
+=== RUN   TestEnvtestSiteRecreationParentHandoff/edit-parent-reference
+=== RUN   TestEnvtestSiteRecreationParentHandoff/unknown-version
+--- PASS: TestEnvtestSiteRecreationParentHandoff (5.85s)
+    --- PASS: TestEnvtestSiteRecreationParentHandoff/complete (2.11s)
+    --- PASS: TestEnvtestSiteRecreationParentHandoff/drop-parent-archive (0.09s)
+    --- PASS: TestEnvtestSiteRecreationParentHandoff/edit-parent-reference (0.11s)
+    --- PASS: TestEnvtestSiteRecreationParentHandoff/unknown-version (0.09s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	58.038s

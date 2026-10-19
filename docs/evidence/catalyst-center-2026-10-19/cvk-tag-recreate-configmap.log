@@ -1,0 +1,54 @@
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/inventory/prune-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/inventory/recreate-twice-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/inventory/late-consumer-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/inventory/old-task-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/templates/prune-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/templates/recreate-twice-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/templates/late-consumer-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/templates/old-task-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/combined/prune-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/combined/recreate-twice-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/combined/late-consumer-configmap
+=== RUN   TestEnvtestTagProjectedPruneAndRecreation/combined/old-task-configmap
+--- PASS: TestEnvtestTagProjectedPruneAndRecreation (26.84s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/inventory/prune-configmap (3.68s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/inventory/recreate-twice-configmap (3.18s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/inventory/late-consumer-configmap (1.79s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/inventory/old-task-configmap (0.96s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/templates/prune-configmap (0.98s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/templates/recreate-twice-configmap (3.10s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/templates/late-consumer-configmap (1.78s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/templates/old-task-configmap (0.94s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/combined/prune-configmap (1.05s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/combined/recreate-twice-configmap (3.20s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/combined/late-consumer-configmap (1.89s)
+    --- PASS: TestEnvtestTagProjectedPruneAndRecreation/combined/old-task-configmap (0.98s)
+=== RUN   TestTagProjectedPruneAndRecreation
+=== RUN   TestTagProjectedPruneAndRecreation/inventory/prune-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/inventory/recreate-twice-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/inventory/late-consumer-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/inventory/old-task-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/templates/prune-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/templates/recreate-twice-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/templates/late-consumer-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/templates/old-task-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/combined/prune-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/combined/recreate-twice-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/combined/late-consumer-configmap
+=== RUN   TestTagProjectedPruneAndRecreation/combined/old-task-configmap
+--- PASS: TestTagProjectedPruneAndRecreation (6.81s)
+    --- PASS: TestTagProjectedPruneAndRecreation/inventory/prune-configmap (0.35s)
+    --- PASS: TestTagProjectedPruneAndRecreation/inventory/recreate-twice-configmap (1.10s)
+    --- PASS: TestTagProjectedPruneAndRecreation/inventory/late-consumer-configmap (0.58s)
+    --- PASS: TestTagProjectedPruneAndRecreation/inventory/old-task-configmap (0.29s)
+    --- PASS: TestTagProjectedPruneAndRecreation/templates/prune-configmap (0.31s)
+    --- PASS: TestTagProjectedPruneAndRecreation/templates/recreate-twice-configmap (1.06s)
+    --- PASS: TestTagProjectedPruneAndRecreation/templates/late-consumer-configmap (0.57s)
+    --- PASS: TestTagProjectedPruneAndRecreation/templates/old-task-configmap (0.27s)
+    --- PASS: TestTagProjectedPruneAndRecreation/combined/prune-configmap (0.33s)
+    --- PASS: TestTagProjectedPruneAndRecreation/combined/recreate-twice-configmap (1.09s)
+    --- PASS: TestTagProjectedPruneAndRecreation/combined/late-consumer-configmap (0.59s)
+    --- PASS: TestTagProjectedPruneAndRecreation/combined/old-task-configmap (0.29s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	36.011s

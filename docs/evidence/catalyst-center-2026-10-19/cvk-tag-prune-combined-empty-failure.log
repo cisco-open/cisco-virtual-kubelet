@@ -1,0 +1,117 @@
+=== RUN   TestTagPrunePublicLifecycle
+=== RUN   TestTagPrunePublicLifecycle/inventory/prune
+=== RUN   TestTagPrunePublicLifecycle/inventory/retain
+=== RUN   TestTagPrunePublicLifecycle/inventory/legacy
+=== RUN   TestTagPrunePublicLifecycle/inventory/member-device
+=== RUN   TestTagPrunePublicLifecycle/inventory/member-interface
+=== RUN   TestTagPrunePublicLifecycle/inventory/member-template
+=== RUN   TestTagPrunePublicLifecycle/inventory/unknown-type
+=== RUN   TestTagPrunePublicLifecycle/inventory/native-drift
+=== RUN   TestTagPrunePublicLifecycle/inventory/unknown-field-drift
+=== RUN   TestTagPrunePublicLifecycle/inventory/foreign-id
+=== RUN   TestTagPrunePublicLifecycle/inventory/protected
+=== RUN   TestTagPrunePublicLifecycle/inventory/external-absence
+=== RUN   TestTagPrunePublicLifecycle/inventory/missing-count
+=== RUN   TestTagPrunePublicLifecycle/inventory/list-error
+=== RUN   TestTagPrunePublicLifecycle/inventory/count-list-disagree
+=== RUN   TestTagPrunePublicLifecycle/inventory/lost-ack
+=== RUN   TestTagPrunePublicLifecycle/inventory/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/inventory/second-referenced
+=== RUN   TestTagPrunePublicLifecycle/templates/prune
+=== RUN   TestTagPrunePublicLifecycle/templates/retain
+=== RUN   TestTagPrunePublicLifecycle/templates/legacy
+=== RUN   TestTagPrunePublicLifecycle/templates/member-device
+=== RUN   TestTagPrunePublicLifecycle/templates/member-interface
+=== RUN   TestTagPrunePublicLifecycle/templates/member-template
+=== RUN   TestTagPrunePublicLifecycle/templates/unknown-type
+=== RUN   TestTagPrunePublicLifecycle/templates/native-drift
+=== RUN   TestTagPrunePublicLifecycle/templates/unknown-field-drift
+=== RUN   TestTagPrunePublicLifecycle/templates/foreign-id
+=== RUN   TestTagPrunePublicLifecycle/templates/protected
+=== RUN   TestTagPrunePublicLifecycle/templates/external-absence
+=== RUN   TestTagPrunePublicLifecycle/templates/missing-count
+=== RUN   TestTagPrunePublicLifecycle/templates/list-error
+=== RUN   TestTagPrunePublicLifecycle/templates/count-list-disagree
+=== RUN   TestTagPrunePublicLifecycle/templates/lost-ack
+=== RUN   TestTagPrunePublicLifecycle/templates/late-consumer
+=== RUN   TestTagPrunePublicLifecycle/templates/second-referenced
+=== RUN   TestTagPrunePublicLifecycle/combined/prune
+    tag_prune_test.go:25: owned manifest cleanup did not settle once 0 0 [{AdapterAvailable True 3 2026-10-19 00:49:59 +0200 CEST AdapterAvailable Catalyst Center configuration adapter is available} {IntentValid False 3 2026-10-19 00:49:59 +0200 CEST UnsupportedIntent Configuration intent contains invalid, unresolved or unimplemented execution fields} {Ready False 3 2026-10-19 00:49:59 +0200 CEST UnsupportedIntent Configuration intent contains invalid, unresolved or unimplemented execution fields}]
+=== RUN   TestTagPrunePublicLifecycle/combined/retain
+    tag_prune_test.go:25: Retain performed cleanup
+=== RUN   TestTagPrunePublicLifecycle/combined/legacy
+=== RUN   TestTagPrunePublicLifecycle/combined/member-device
+=== RUN   TestTagPrunePublicLifecycle/combined/member-interface
+=== RUN   TestTagPrunePublicLifecycle/combined/member-template
+=== RUN   TestTagPrunePublicLifecycle/combined/unknown-type
+=== RUN   TestTagPrunePublicLifecycle/combined/native-drift
+=== RUN   TestTagPrunePublicLifecycle/combined/unknown-field-drift
+=== RUN   TestTagPrunePublicLifecycle/combined/foreign-id
+=== RUN   TestTagPrunePublicLifecycle/combined/protected
+=== RUN   TestTagPrunePublicLifecycle/combined/external-absence
+=== RUN   TestTagPrunePublicLifecycle/combined/missing-count
+=== RUN   TestTagPrunePublicLifecycle/combined/list-error
+=== RUN   TestTagPrunePublicLifecycle/combined/count-list-disagree
+=== RUN   TestTagPrunePublicLifecycle/combined/lost-ack
+    tag_prune_test.go:25: ambiguous Delete replayed or fabricated a tombstone 0 <nil>
+=== RUN   TestTagPrunePublicLifecycle/combined/late-consumer
+    tag_prune_test.go:25: pre-submit consumer race not exercised
+=== RUN   TestTagPrunePublicLifecycle/combined/second-referenced
+--- FAIL: TestTagPrunePublicLifecycle (14.42s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/prune (0.89s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/retain (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/legacy (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/member-device (0.27s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/member-interface (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/member-template (0.29s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/unknown-type (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/native-drift (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/unknown-field-drift (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/foreign-id (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/protected (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/external-absence (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/missing-count (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/list-error (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/count-list-disagree (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/lost-ack (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/late-consumer (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/inventory/second-referenced (0.48s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/prune (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/retain (0.21s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/legacy (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/member-device (0.26s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/member-interface (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/member-template (0.28s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/unknown-type (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/native-drift (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/unknown-field-drift (0.24s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/foreign-id (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/protected (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/external-absence (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/missing-count (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/list-error (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/count-list-disagree (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/lost-ack (0.25s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/late-consumer (0.54s)
+    --- PASS: TestTagPrunePublicLifecycle/templates/second-referenced (0.47s)
+    --- FAIL: TestTagPrunePublicLifecycle/combined/prune (0.22s)
+    --- FAIL: TestTagPrunePublicLifecycle/combined/retain (0.21s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/legacy (0.21s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/member-device (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/member-interface (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/member-template (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/unknown-type (0.23s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/native-drift (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/unknown-field-drift (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/foreign-id (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/protected (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/external-absence (0.21s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/missing-count (0.21s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/list-error (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/count-list-disagree (0.22s)
+    --- FAIL: TestTagPrunePublicLifecycle/combined/lost-ack (0.22s)
+    --- FAIL: TestTagPrunePublicLifecycle/combined/late-consumer (0.22s)
+    --- PASS: TestTagPrunePublicLifecycle/combined/second-referenced (0.38s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	15.909s
+FAIL

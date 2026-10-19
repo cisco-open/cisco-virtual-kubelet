@@ -1,0 +1,526 @@
+=== RUN   TestTemplateKnownTaskRecovery
+=== RUN   TestTemplateKnownTaskRecovery/project-create/known
+=== RUN   TestTemplateKnownTaskRecovery/project-create/missing-task
+=== RUN   TestTemplateKnownTaskRecovery/project-create/source-changed
+=== RUN   TestTemplateKnownTaskRecovery/project-create/owner-changed
+=== RUN   TestTemplateKnownTaskRecovery/project-create/parent-changed
+=== RUN   TestTemplateKnownTaskRecovery/project-create/missing-native
+=== RUN   TestTemplateKnownTaskRecovery/project-create/failed-child
+=== RUN   TestTemplateKnownTaskRecovery/project-create/pending-child
+=== RUN   TestTemplateKnownTaskRecovery/project-create/foreign-child
+=== RUN   TestTemplateKnownTaskRecovery/project-create/missing-tree
+=== RUN   TestTemplateKnownTaskRecovery/project-update/known
+=== RUN   TestTemplateKnownTaskRecovery/project-update/missing-task
+=== RUN   TestTemplateKnownTaskRecovery/project-update/source-changed
+=== RUN   TestTemplateKnownTaskRecovery/project-update/owner-changed
+=== RUN   TestTemplateKnownTaskRecovery/project-update/parent-changed
+=== RUN   TestTemplateKnownTaskRecovery/project-update/missing-native
+=== RUN   TestTemplateKnownTaskRecovery/project-update/failed-child
+=== RUN   TestTemplateKnownTaskRecovery/project-update/pending-child
+=== RUN   TestTemplateKnownTaskRecovery/project-update/foreign-child
+=== RUN   TestTemplateKnownTaskRecovery/project-update/missing-tree
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/known
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/missing-task
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/source-changed
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/owner-changed
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/parent-changed
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/missing-native
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/failed-child
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/pending-child
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/foreign-child
+=== RUN   TestTemplateKnownTaskRecovery/draft-create/missing-tree
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/known
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/missing-task
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/source-changed
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/owner-changed
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/parent-changed
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/missing-native
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/failed-child
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/pending-child
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/foreign-child
+=== RUN   TestTemplateKnownTaskRecovery/draft-update/missing-tree
+=== RUN   TestTemplateKnownTaskRecovery/commit/known
+=== RUN   TestTemplateKnownTaskRecovery/commit/missing-task
+=== RUN   TestTemplateKnownTaskRecovery/commit/source-changed
+=== RUN   TestTemplateKnownTaskRecovery/commit/owner-changed
+=== RUN   TestTemplateKnownTaskRecovery/commit/parent-changed
+=== RUN   TestTemplateKnownTaskRecovery/commit/missing-native
+=== RUN   TestTemplateKnownTaskRecovery/commit/failed-child
+=== RUN   TestTemplateKnownTaskRecovery/commit/pending-child
+=== RUN   TestTemplateKnownTaskRecovery/commit/foreign-child
+=== RUN   TestTemplateKnownTaskRecovery/commit/missing-tree
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/known
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/missing-task
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/source-changed
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/owner-changed
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/parent-changed
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/missing-native
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/failed-child
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/pending-child
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/foreign-child
+=== RUN   TestTemplateKnownTaskRecovery/composite-draft/missing-tree
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/known
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/missing-task
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/source-changed
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/owner-changed
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/parent-changed
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/missing-native
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/failed-child
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/pending-child
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/foreign-child
+=== RUN   TestTemplateKnownTaskRecovery/composite-commit/missing-tree
+--- PASS: TestTemplateKnownTaskRecovery (6.75s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/known (0.67s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/missing-task (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/source-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/owner-changed (0.06s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/parent-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/missing-native (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/failed-child (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/pending-child (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/foreign-child (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-create/missing-tree (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/known (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/missing-task (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/source-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/owner-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/parent-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/missing-native (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/failed-child (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/pending-child (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/foreign-child (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/project-update/missing-tree (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/known (0.13s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/missing-task (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/source-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/owner-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/parent-changed (0.09s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/missing-native (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/failed-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/pending-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/foreign-child (0.09s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-create/missing-tree (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/known (0.13s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/missing-task (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/source-changed (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/owner-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/parent-changed (0.09s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/missing-native (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/failed-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/pending-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/foreign-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/draft-update/missing-tree (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/known (0.09s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/missing-task (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/source-changed (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/owner-changed (0.07s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/parent-changed (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/missing-native (0.09s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/failed-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/pending-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/foreign-child (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/commit/missing-tree (0.08s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/known (0.18s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/missing-task (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/source-changed (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/owner-changed (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/parent-changed (0.12s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/missing-native (0.12s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/failed-child (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/pending-child (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/foreign-child (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-draft/missing-tree (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/known (0.12s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/missing-task (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/source-changed (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/owner-changed (0.10s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/parent-changed (0.13s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/missing-native (0.12s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/failed-child (0.11s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/pending-child (0.11s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/foreign-child (0.11s)
+    --- PASS: TestTemplateKnownTaskRecovery/composite-commit/missing-tree (0.11s)
+=== RUN   TestTemplateRecoveryScope
+=== RUN   TestTemplateRecoveryScope/false/project-create/known
+=== RUN   TestTemplateRecoveryScope/false/project-create/taskless
+=== RUN   TestTemplateRecoveryScope/false/project-create/phase
+=== RUN   TestTemplateRecoveryScope/false/project-create/section
+=== RUN   TestTemplateRecoveryScope/false/project-create/unselected
+=== RUN   TestTemplateRecoveryScope/false/project-create/prefix
+=== RUN   TestTemplateRecoveryScope/false/project-create/parent
+=== RUN   TestTemplateRecoveryScope/false/project-create/created
+=== RUN   TestTemplateRecoveryScope/false/project-create/serial
+=== RUN   TestTemplateRecoveryScope/false/project-create/group
+=== RUN   TestTemplateRecoveryScope/false/project-create/dependencies
+=== RUN   TestTemplateRecoveryScope/false/project-create/cancellation
+=== RUN   TestTemplateRecoveryScope/false/project-create/prepared
+=== RUN   TestTemplateRecoveryScope/false/project-create/missing-time
+=== RUN   TestTemplateRecoveryScope/false/project-create/id
+=== RUN   TestTemplateRecoveryScope/false/project-create/owner
+=== RUN   TestTemplateRecoveryScope/false/project-create/generation
+=== RUN   TestTemplateRecoveryScope/false/project-create/delete
+=== RUN   TestTemplateRecoveryScope/false/project-create/wrong-action
+=== RUN   TestTemplateRecoveryScope/false/project-update/known
+=== RUN   TestTemplateRecoveryScope/false/project-update/taskless
+=== RUN   TestTemplateRecoveryScope/false/project-update/phase
+=== RUN   TestTemplateRecoveryScope/false/project-update/section
+=== RUN   TestTemplateRecoveryScope/false/project-update/unselected
+=== RUN   TestTemplateRecoveryScope/false/project-update/prefix
+=== RUN   TestTemplateRecoveryScope/false/project-update/parent
+=== RUN   TestTemplateRecoveryScope/false/project-update/created
+=== RUN   TestTemplateRecoveryScope/false/project-update/serial
+=== RUN   TestTemplateRecoveryScope/false/project-update/group
+=== RUN   TestTemplateRecoveryScope/false/project-update/dependencies
+=== RUN   TestTemplateRecoveryScope/false/project-update/cancellation
+=== RUN   TestTemplateRecoveryScope/false/project-update/prepared
+=== RUN   TestTemplateRecoveryScope/false/project-update/missing-time
+=== RUN   TestTemplateRecoveryScope/false/project-update/id
+=== RUN   TestTemplateRecoveryScope/false/project-update/owner
+=== RUN   TestTemplateRecoveryScope/false/project-update/generation
+=== RUN   TestTemplateRecoveryScope/false/project-update/delete
+=== RUN   TestTemplateRecoveryScope/false/project-update/wrong-action
+=== RUN   TestTemplateRecoveryScope/false/draft-create/known
+=== RUN   TestTemplateRecoveryScope/false/draft-create/taskless
+=== RUN   TestTemplateRecoveryScope/false/draft-create/phase
+=== RUN   TestTemplateRecoveryScope/false/draft-create/section
+=== RUN   TestTemplateRecoveryScope/false/draft-create/unselected
+=== RUN   TestTemplateRecoveryScope/false/draft-create/prefix
+=== RUN   TestTemplateRecoveryScope/false/draft-create/parent
+=== RUN   TestTemplateRecoveryScope/false/draft-create/created
+=== RUN   TestTemplateRecoveryScope/false/draft-create/serial
+=== RUN   TestTemplateRecoveryScope/false/draft-create/group
+=== RUN   TestTemplateRecoveryScope/false/draft-create/dependencies
+=== RUN   TestTemplateRecoveryScope/false/draft-create/cancellation
+=== RUN   TestTemplateRecoveryScope/false/draft-create/prepared
+=== RUN   TestTemplateRecoveryScope/false/draft-create/missing-time
+=== RUN   TestTemplateRecoveryScope/false/draft-create/id
+=== RUN   TestTemplateRecoveryScope/false/draft-create/owner
+=== RUN   TestTemplateRecoveryScope/false/draft-create/generation
+=== RUN   TestTemplateRecoveryScope/false/draft-create/delete
+=== RUN   TestTemplateRecoveryScope/false/draft-create/wrong-action
+=== RUN   TestTemplateRecoveryScope/false/draft-update/known
+=== RUN   TestTemplateRecoveryScope/false/draft-update/taskless
+=== RUN   TestTemplateRecoveryScope/false/draft-update/phase
+=== RUN   TestTemplateRecoveryScope/false/draft-update/section
+=== RUN   TestTemplateRecoveryScope/false/draft-update/unselected
+=== RUN   TestTemplateRecoveryScope/false/draft-update/prefix
+=== RUN   TestTemplateRecoveryScope/false/draft-update/parent
+=== RUN   TestTemplateRecoveryScope/false/draft-update/created
+=== RUN   TestTemplateRecoveryScope/false/draft-update/serial
+=== RUN   TestTemplateRecoveryScope/false/draft-update/group
+=== RUN   TestTemplateRecoveryScope/false/draft-update/dependencies
+=== RUN   TestTemplateRecoveryScope/false/draft-update/cancellation
+=== RUN   TestTemplateRecoveryScope/false/draft-update/prepared
+=== RUN   TestTemplateRecoveryScope/false/draft-update/missing-time
+=== RUN   TestTemplateRecoveryScope/false/draft-update/id
+=== RUN   TestTemplateRecoveryScope/false/draft-update/owner
+=== RUN   TestTemplateRecoveryScope/false/draft-update/generation
+=== RUN   TestTemplateRecoveryScope/false/draft-update/delete
+=== RUN   TestTemplateRecoveryScope/false/draft-update/wrong-action
+=== RUN   TestTemplateRecoveryScope/false/commit/known
+=== RUN   TestTemplateRecoveryScope/false/commit/taskless
+=== RUN   TestTemplateRecoveryScope/false/commit/phase
+=== RUN   TestTemplateRecoveryScope/false/commit/section
+=== RUN   TestTemplateRecoveryScope/false/commit/unselected
+=== RUN   TestTemplateRecoveryScope/false/commit/prefix
+=== RUN   TestTemplateRecoveryScope/false/commit/parent
+=== RUN   TestTemplateRecoveryScope/false/commit/created
+=== RUN   TestTemplateRecoveryScope/false/commit/serial
+=== RUN   TestTemplateRecoveryScope/false/commit/group
+=== RUN   TestTemplateRecoveryScope/false/commit/dependencies
+=== RUN   TestTemplateRecoveryScope/false/commit/cancellation
+=== RUN   TestTemplateRecoveryScope/false/commit/prepared
+=== RUN   TestTemplateRecoveryScope/false/commit/missing-time
+=== RUN   TestTemplateRecoveryScope/false/commit/id
+=== RUN   TestTemplateRecoveryScope/false/commit/owner
+=== RUN   TestTemplateRecoveryScope/false/commit/generation
+=== RUN   TestTemplateRecoveryScope/false/commit/delete
+=== RUN   TestTemplateRecoveryScope/false/commit/wrong-action
+=== RUN   TestTemplateRecoveryScope/true/project-create/known
+=== RUN   TestTemplateRecoveryScope/true/project-create/taskless
+=== RUN   TestTemplateRecoveryScope/true/project-create/phase
+=== RUN   TestTemplateRecoveryScope/true/project-create/section
+=== RUN   TestTemplateRecoveryScope/true/project-create/unselected
+=== RUN   TestTemplateRecoveryScope/true/project-create/prefix
+=== RUN   TestTemplateRecoveryScope/true/project-create/parent
+=== RUN   TestTemplateRecoveryScope/true/project-create/created
+=== RUN   TestTemplateRecoveryScope/true/project-create/serial
+=== RUN   TestTemplateRecoveryScope/true/project-create/group
+=== RUN   TestTemplateRecoveryScope/true/project-create/dependencies
+=== RUN   TestTemplateRecoveryScope/true/project-create/cancellation
+=== RUN   TestTemplateRecoveryScope/true/project-create/prepared
+=== RUN   TestTemplateRecoveryScope/true/project-create/missing-time
+=== RUN   TestTemplateRecoveryScope/true/project-create/id
+=== RUN   TestTemplateRecoveryScope/true/project-create/owner
+=== RUN   TestTemplateRecoveryScope/true/project-create/generation
+=== RUN   TestTemplateRecoveryScope/true/project-create/delete
+=== RUN   TestTemplateRecoveryScope/true/project-create/wrong-action
+=== RUN   TestTemplateRecoveryScope/true/project-update/known
+=== RUN   TestTemplateRecoveryScope/true/project-update/taskless
+=== RUN   TestTemplateRecoveryScope/true/project-update/phase
+=== RUN   TestTemplateRecoveryScope/true/project-update/section
+=== RUN   TestTemplateRecoveryScope/true/project-update/unselected
+=== RUN   TestTemplateRecoveryScope/true/project-update/prefix
+=== RUN   TestTemplateRecoveryScope/true/project-update/parent
+=== RUN   TestTemplateRecoveryScope/true/project-update/created
+=== RUN   TestTemplateRecoveryScope/true/project-update/serial
+=== RUN   TestTemplateRecoveryScope/true/project-update/group
+=== RUN   TestTemplateRecoveryScope/true/project-update/dependencies
+=== RUN   TestTemplateRecoveryScope/true/project-update/cancellation
+=== RUN   TestTemplateRecoveryScope/true/project-update/prepared
+=== RUN   TestTemplateRecoveryScope/true/project-update/missing-time
+=== RUN   TestTemplateRecoveryScope/true/project-update/id
+=== RUN   TestTemplateRecoveryScope/true/project-update/owner
+=== RUN   TestTemplateRecoveryScope/true/project-update/generation
+=== RUN   TestTemplateRecoveryScope/true/project-update/delete
+=== RUN   TestTemplateRecoveryScope/true/project-update/wrong-action
+=== RUN   TestTemplateRecoveryScope/true/draft-create/known
+=== RUN   TestTemplateRecoveryScope/true/draft-create/taskless
+=== RUN   TestTemplateRecoveryScope/true/draft-create/phase
+=== RUN   TestTemplateRecoveryScope/true/draft-create/section
+=== RUN   TestTemplateRecoveryScope/true/draft-create/unselected
+=== RUN   TestTemplateRecoveryScope/true/draft-create/prefix
+=== RUN   TestTemplateRecoveryScope/true/draft-create/parent
+=== RUN   TestTemplateRecoveryScope/true/draft-create/created
+=== RUN   TestTemplateRecoveryScope/true/draft-create/serial
+=== RUN   TestTemplateRecoveryScope/true/draft-create/group
+=== RUN   TestTemplateRecoveryScope/true/draft-create/dependencies
+=== RUN   TestTemplateRecoveryScope/true/draft-create/cancellation
+=== RUN   TestTemplateRecoveryScope/true/draft-create/prepared
+=== RUN   TestTemplateRecoveryScope/true/draft-create/missing-time
+=== RUN   TestTemplateRecoveryScope/true/draft-create/id
+=== RUN   TestTemplateRecoveryScope/true/draft-create/owner
+=== RUN   TestTemplateRecoveryScope/true/draft-create/generation
+=== RUN   TestTemplateRecoveryScope/true/draft-create/delete
+=== RUN   TestTemplateRecoveryScope/true/draft-create/wrong-action
+=== RUN   TestTemplateRecoveryScope/true/draft-update/known
+=== RUN   TestTemplateRecoveryScope/true/draft-update/taskless
+=== RUN   TestTemplateRecoveryScope/true/draft-update/phase
+=== RUN   TestTemplateRecoveryScope/true/draft-update/section
+=== RUN   TestTemplateRecoveryScope/true/draft-update/unselected
+=== RUN   TestTemplateRecoveryScope/true/draft-update/prefix
+=== RUN   TestTemplateRecoveryScope/true/draft-update/parent
+=== RUN   TestTemplateRecoveryScope/true/draft-update/created
+=== RUN   TestTemplateRecoveryScope/true/draft-update/serial
+=== RUN   TestTemplateRecoveryScope/true/draft-update/group
+=== RUN   TestTemplateRecoveryScope/true/draft-update/dependencies
+=== RUN   TestTemplateRecoveryScope/true/draft-update/cancellation
+=== RUN   TestTemplateRecoveryScope/true/draft-update/prepared
+=== RUN   TestTemplateRecoveryScope/true/draft-update/missing-time
+=== RUN   TestTemplateRecoveryScope/true/draft-update/id
+=== RUN   TestTemplateRecoveryScope/true/draft-update/owner
+=== RUN   TestTemplateRecoveryScope/true/draft-update/generation
+=== RUN   TestTemplateRecoveryScope/true/draft-update/delete
+=== RUN   TestTemplateRecoveryScope/true/draft-update/wrong-action
+=== RUN   TestTemplateRecoveryScope/true/commit/known
+=== RUN   TestTemplateRecoveryScope/true/commit/taskless
+=== RUN   TestTemplateRecoveryScope/true/commit/phase
+=== RUN   TestTemplateRecoveryScope/true/commit/section
+=== RUN   TestTemplateRecoveryScope/true/commit/unselected
+=== RUN   TestTemplateRecoveryScope/true/commit/prefix
+=== RUN   TestTemplateRecoveryScope/true/commit/parent
+=== RUN   TestTemplateRecoveryScope/true/commit/created
+=== RUN   TestTemplateRecoveryScope/true/commit/serial
+=== RUN   TestTemplateRecoveryScope/true/commit/group
+=== RUN   TestTemplateRecoveryScope/true/commit/dependencies
+=== RUN   TestTemplateRecoveryScope/true/commit/cancellation
+=== RUN   TestTemplateRecoveryScope/true/commit/prepared
+=== RUN   TestTemplateRecoveryScope/true/commit/missing-time
+=== RUN   TestTemplateRecoveryScope/true/commit/id
+=== RUN   TestTemplateRecoveryScope/true/commit/owner
+=== RUN   TestTemplateRecoveryScope/true/commit/generation
+=== RUN   TestTemplateRecoveryScope/true/commit/delete
+=== RUN   TestTemplateRecoveryScope/true/commit/wrong-action
+--- PASS: TestTemplateRecoveryScope (0.01s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-create/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/project-update/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-create/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/draft-update/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/false/commit/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-create/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/project-update/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-create/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/draft-update/wrong-action (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/known (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/taskless (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/phase (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/section (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/unselected (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/prefix (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/parent (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/created (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/serial (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/group (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/dependencies (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/cancellation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/prepared (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/missing-time (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/id (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/owner (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/generation (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/delete (0.00s)
+    --- PASS: TestTemplateRecoveryScope/true/commit/wrong-action (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	9.098s

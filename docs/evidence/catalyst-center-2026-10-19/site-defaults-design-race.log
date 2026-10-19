@@ -1,0 +1,136 @@
+=== RUN   TestFloorImageAssetIndex
+=== RUN   TestFloorImageAssetIndex/valid
+=== RUN   TestFloorImageAssetIndex/missing-index
+=== RUN   TestFloorImageAssetIndex/duplicate
+=== RUN   TestFloorImageAssetIndex/missing-binary
+=== RUN   TestFloorImageAssetIndex/text-collision
+=== RUN   TestFloorImageAssetIndex/model-key
+=== RUN   TestFloorImageAssetIndex/null
+=== RUN   TestFloorImageAssetIndex/non-string
+=== RUN   TestFloorImageAssetIndex/array
+=== RUN   TestFloorImageAssetIndex/trailing
+=== RUN   TestFloorImageAssetIndex/binary-index
+=== RUN   TestFloorImageAssetIndex/wrong-type
+=== RUN   TestFloorImageAssetIndex/invalid-key
+--- PASS: TestFloorImageAssetIndex (0.00s)
+    --- PASS: TestFloorImageAssetIndex/valid (0.00s)
+    --- PASS: TestFloorImageAssetIndex/missing-index (0.00s)
+    --- PASS: TestFloorImageAssetIndex/duplicate (0.00s)
+    --- PASS: TestFloorImageAssetIndex/missing-binary (0.00s)
+    --- PASS: TestFloorImageAssetIndex/text-collision (0.00s)
+    --- PASS: TestFloorImageAssetIndex/model-key (0.00s)
+    --- PASS: TestFloorImageAssetIndex/null (0.00s)
+    --- PASS: TestFloorImageAssetIndex/non-string (0.00s)
+    --- PASS: TestFloorImageAssetIndex/array (0.00s)
+    --- PASS: TestFloorImageAssetIndex/trailing (0.00s)
+    --- PASS: TestFloorImageAssetIndex/binary-index (0.00s)
+    --- PASS: TestFloorImageAssetIndex/wrong-type (0.00s)
+    --- PASS: TestFloorImageAssetIndex/invalid-key (0.00s)
+=== RUN   TestSiteDefaultsDesignSnapshot
+--- PASS: TestSiteDefaultsDesignSnapshot (0.05s)
+=== RUN   TestSiteDefaultsDesignLogicalPathsAndNullImage
+--- PASS: TestSiteDefaultsDesignLogicalPathsAndNullImage (0.02s)
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/missing-index
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/missing-byte
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/corrupt-byte
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/unused-corrupt-byte
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/collision
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/binary-index
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/model-binary
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/duplicate-index
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/model-index
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/unknown-snapshot-field
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/wrong-kind
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/missing-model
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/invalid-model-key
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/out-of-bounds
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/bad-AP-field
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/unknown-floor
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/duplicate-document
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/duplicate-key
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/alias
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/over-limit
+=== RUN   TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/too-many-assets
+--- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput (0.06s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/missing-index (0.01s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/missing-byte (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/corrupt-byte (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/unused-corrupt-byte (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/collision (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/binary-index (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/model-binary (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/duplicate-index (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/model-index (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/unknown-snapshot-field (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/wrong-kind (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/missing-model (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/invalid-model-key (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/out-of-bounds (0.01s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/bad-AP-field (0.01s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/unknown-floor (0.01s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/duplicate-document (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/duplicate-key (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/alias (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/over-limit (0.00s)
+    --- PASS: TestSiteDefaultsDesignSnapshotRefusesPartialOrAmbiguousInput/too-many-assets (0.00s)
+=== RUN   TestSiteDefaultsDesignManifest
+=== RUN   TestSiteDefaultsDesignManifest/defaults-recover-private
+=== RUN   TestSiteDefaultsDesignManifest/image-defaults-recover-private
+=== RUN   TestSiteDefaultsDesignManifest/image-defaults-keyed-recover-private
+--- PASS: TestSiteDefaultsDesignManifest (3.08s)
+    --- PASS: TestSiteDefaultsDesignManifest/defaults-recover-private (1.03s)
+    --- PASS: TestSiteDefaultsDesignManifest/image-defaults-recover-private (0.77s)
+    --- PASS: TestSiteDefaultsDesignManifest/image-defaults-keyed-recover-private (1.28s)
+=== RUN   TestSiteDefaultsExport
+--- PASS: TestSiteDefaultsExport (0.02s)
+=== RUN   TestSiteDefaultsNullAndBulkSemantics
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/numeric-null
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/explicit
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/bulk-parent
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/singular-parent
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/rf-null
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/units-null
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/zero
+=== RUN   TestSiteDefaultsNullAndBulkSemantics/string-number
+--- PASS: TestSiteDefaultsNullAndBulkSemantics (0.09s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/numeric-null (0.01s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/explicit (0.01s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/bulk-parent (0.01s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/singular-parent (0.01s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/rf-null (0.01s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/units-null (0.01s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/zero (0.01s)
+    --- PASS: TestSiteDefaultsNullAndBulkSemantics/string-number (0.01s)
+=== RUN   TestSiteDefaultsOverridesAndHiddenInvalidInput
+--- PASS: TestSiteDefaultsOverridesAndHiddenInvalidInput (0.13s)
+=== RUN   TestSiteDefaultsManifestLifecycle
+=== RUN   TestSiteDefaultsManifestLifecycle/cm-false
+=== RUN   TestSiteDefaultsManifestLifecycle/cm-true
+--- PASS: TestSiteDefaultsManifestLifecycle (8.03s)
+    --- PASS: TestSiteDefaultsManifestLifecycle/cm-false (3.92s)
+    --- PASS: TestSiteDefaultsManifestLifecycle/cm-true (4.11s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.961s
+=== RUN   TestControllerExportSitesConfigMapSnapshot
+--- PASS: TestControllerExportSitesConfigMapSnapshot (0.03s)
+=== RUN   TestControllerExportSitesSnapshotRefusal
+=== RUN   TestControllerExportSitesSnapshotRefusal/missing-key
+=== RUN   TestControllerExportSitesSnapshotRefusal/mixed-input
+=== RUN   TestControllerExportSitesSnapshotRefusal/key-without-snapshot
+=== RUN   TestControllerExportSitesSnapshotRefusal/wrong-kind
+=== RUN   TestControllerExportSitesSnapshotRefusal/unbound-image
+=== RUN   TestControllerExportSitesSnapshotRefusal/malformed
+--- PASS: TestControllerExportSitesSnapshotRefusal (0.01s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/missing-key (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/mixed-input (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/key-without-snapshot (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/wrong-kind (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/unbound-image (0.00s)
+    --- PASS: TestControllerExportSitesSnapshotRefusal/malformed (0.00s)
+=== RUN   TestControllerExportSitesPrivateArtifact
+--- PASS: TestControllerExportSitesPrivateArtifact (0.03s)
+=== RUN   TestControllerExportSitesRefusalAndBulkOption
+--- PASS: TestControllerExportSitesRefusalAndBulkOption (0.04s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/tools/cvk-netascode-migrate	2.206s

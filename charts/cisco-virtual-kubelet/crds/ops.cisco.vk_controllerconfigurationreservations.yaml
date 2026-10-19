@@ -1,0 +1,393 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: controllerconfigurationreservations.ops.cisco.vk
+spec:
+  group: ops.cisco.vk
+  names:
+    kind: ControllerConfigurationReservation
+    listKind: ControllerConfigurationReservationList
+    plural: controllerconfigurationreservations
+    singular: controllerconfigurationreservation
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ControllerConfigurationReservation separates device-worker lease authority
+          from controller-worker API execution. This contract alone grants no authority:
+          manager creation, actor-specific admission, lease renewal and recovery must be
+          installed before workers can use it. References are in metadata.namespace,
+          except the cluster-scoped Node and explicitly namespaced canonical Lease.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              config:
+                properties:
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  uid:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                - uid
+                type: object
+              configGeneration:
+                format: int64
+                minimum: 1
+                type: integer
+              controller:
+                properties:
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  uid:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                - uid
+                type: object
+              controllerGeneration:
+                format: int64
+                minimum: 1
+                type: integer
+              controllerUsername:
+                pattern: ^system:serviceaccount:[a-z0-9-]+:[a-z0-9.-]+$
+                type: string
+              controllerWorkerPod:
+                properties:
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  uid:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                - uid
+                type: object
+              device:
+                properties:
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  uid:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                - uid
+                type: object
+              deviceGeneration:
+                format: int64
+                minimum: 1
+                type: integer
+              deviceWorkerPod:
+                properties:
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  uid:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                - uid
+                type: object
+              deviceWorkerRevision:
+                maxLength: 256
+                minLength: 1
+                type: string
+              deviceWorkerUsername:
+                pattern: ^system:serviceaccount:[a-z0-9-]+:[a-z0-9.-]+$
+                type: string
+              inventoryID:
+                maxLength: 128
+                minLength: 1
+                type: string
+              managementAddress:
+                maxLength: 253
+                minLength: 1
+                type: string
+              node:
+                properties:
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  uid:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                - uid
+                type: object
+              operationDigest:
+                description: |-
+                  OperationDigest binds the exact non-secret journal operation and source
+                  revision. It is not a digest of intent payloads or credential material.
+                pattern: ^[a-f0-9]{64}$
+                type: string
+              operationID:
+                pattern: ^[a-f0-9]{32}$
+                type: string
+              physicalIdentity:
+                maxLength: 128
+                minLength: 1
+                type: string
+              protocol:
+                enum:
+                - controller-configuration-v1
+                - controller-configuration-group-v1
+                type: string
+            required:
+            - config
+            - configGeneration
+            - controller
+            - controllerGeneration
+            - controllerUsername
+            - controllerWorkerPod
+            - device
+            - deviceGeneration
+            - deviceWorkerPod
+            - deviceWorkerRevision
+            - deviceWorkerUsername
+            - inventoryID
+            - managementAddress
+            - node
+            - operationDigest
+            - operationID
+            - physicalIdentity
+            - protocol
+            type: object
+            x-kubernetes-validations:
+            - message: configuration reservation binding is immutable
+              rule: self == oldSelf
+          status:
+            properties:
+              claim:
+                description: |-
+                  Claim is written only by the bound controller worker in a CAS against an
+                  active grant, before remote submission. It never authorizes a retry.
+                properties:
+                  claimedAt:
+                    format: date-time
+                    type: string
+                  operationDigest:
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
+                  operationID:
+                    pattern: ^[a-f0-9]{32}$
+                    type: string
+                required:
+                - claimedAt
+                - operationDigest
+                - operationID
+                type: object
+                x-kubernetes-validations:
+                - message: configuration submission claim is immutable
+                  rule: self == oldSelf
+              completion:
+                description: |-
+                  Completion is controller-written evidence of a verified, persisted action receipt.
+                  The device worker must independently read that receipt before releasing.
+                properties:
+                  operationDigest:
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
+                  operationID:
+                    pattern: ^[a-f0-9]{32}$
+                    type: string
+                  submittedAt:
+                    format: date-time
+                    type: string
+                  taskID:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  verifiedAt:
+                    format: date-time
+                    type: string
+                required:
+                - operationDigest
+                - operationID
+                - submittedAt
+                - taskID
+                - verifiedAt
+                type: object
+                x-kubernetes-validations:
+                - message: configuration completion is immutable
+                  rule: self == oldSelf
+              grant:
+                description: |-
+                  Grant is written only by the bound device worker. A live matching Lease
+                  and managed identity are required in addition to this status evidence.
+                properties:
+                  grantedAt:
+                    format: date-time
+                    type: string
+                  holder:
+                    maxLength: 128
+                    minLength: 1
+                    type: string
+                  lease:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      uid:
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    - uid
+                    type: object
+                  leaseNamespace:
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                  leaseTransitions:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  phase:
+                    enum:
+                    - Held
+                    - Revoked
+                    - Released
+                    type: string
+                required:
+                - grantedAt
+                - holder
+                - lease
+                - leaseNamespace
+                - leaseTransitions
+                - phase
+                type: object
+              groupCancellation:
+                description: |-
+                  GroupCancellation acknowledges the durable journal cancellation fence.
+                  Existing claims remain evidence; this does not prove lease release.
+                properties:
+                  acknowledgedAt:
+                    format: date-time
+                    type: string
+                  operationDigest:
+                    pattern: ^[a-f0-9]{64}$
+                    type: string
+                  operationID:
+                    pattern: ^[a-f0-9]{32}$
+                    type: string
+                  requestedAt:
+                    format: date-time
+                    type: string
+                required:
+                - acknowledgedAt
+                - operationDigest
+                - operationID
+                - requestedAt
+                type: object
+                x-kubernetes-validations:
+                - message: cancellation acknowledgement cannot precede its journal
+                    fence
+                  rule: self.acknowledgedAt >= self.requestedAt
+              managerSettledAt:
+                description: |-
+                  ManagerSettledAt retains manager settlement after the device advances to a
+                  later maintenance session. It is set once, after the exact session settles.
+                format: date-time
+                type: string
+              preparationCancelledAt:
+                description: |-
+                  PreparationCancelledAt closes an ungranted reservation permanently.
+                  Written only by its bound device worker; it is not evidence of Lease or
+                  maintenance-session release. Manager settlement is still required.
+                format: date-time
+                type: string
+            type: object
+            x-kubernetes-validations:
+            - message: manager settlement evidence is immutable
+              rule: '!has(oldSelf.managerSettledAt) || (has(self.managerSettledAt)
+                && self.managerSettledAt == oldSelf.managerSettledAt)'
+            - message: manager settlement requires released or cancelled operation
+                evidence
+              rule: '!has(self.managerSettledAt) || ((has(self.grant) && self.grant.phase
+                == ''Released'' && (!has(self.claim) || has(self.completion) || has(self.groupCancellation)))
+                || (has(self.groupCancellation) && !has(self.grant) && !has(self.claim))
+                || (has(self.preparationCancelledAt) && !has(self.grant) && !has(self.claim)
+                && !has(self.completion)))'
+            - message: preparation cancellation is immutable
+              rule: '!has(oldSelf.preparationCancelledAt) || (has(self.preparationCancelledAt)
+                && self.preparationCancelledAt == oldSelf.preparationCancelledAt)'
+            - message: cancelled preparation cannot have a grant, claim, or completion
+              rule: '!has(self.preparationCancelledAt) || (!has(self.grant) && !has(self.claim)
+                && !has(self.completion))'
+            - message: group cancellation cannot invent completion or lose claimed
+                grant evidence
+              rule: '!has(self.groupCancellation) || (!has(self.completion) && !has(self.preparationCancelledAt)
+                && (!has(self.claim) || has(self.grant)))'
+            - message: group cancellation acknowledgement is immutable
+              rule: '!has(oldSelf.groupCancellation) || (has(self.groupCancellation)
+                && self.groupCancellation == oldSelf.groupCancellation)'
+            - message: acknowledged group cancellation forbids new claims or grants
+              rule: '!has(oldSelf.groupCancellation) || (has(self.claim) == has(oldSelf.claim)
+                && (!has(self.claim) || self.claim == oldSelf.claim) && has(self.grant)
+                == has(oldSelf.grant))'
+            - message: cancelled grant identity is frozen and release cannot be reversed
+              rule: '!has(oldSelf.groupCancellation) || !has(oldSelf.grant) || !has(self.grant)
+                || (self.grant.leaseNamespace == oldSelf.grant.leaseNamespace && self.grant.lease
+                == oldSelf.grant.lease && self.grant.holder == oldSelf.grant.holder
+                && self.grant.leaseTransitions == oldSelf.grant.leaseTransitions &&
+                self.grant.grantedAt == oldSelf.grant.grantedAt && (self.grant.phase
+                == oldSelf.grant.phase || self.grant.phase == ''Released'' || (oldSelf.grant.phase
+                == ''Held'' && self.grant.phase == ''Revoked'')))'
+        required:
+        - spec
+        type: object
+        x-kubernetes-validations:
+        - message: group cancellation requires the exact group reservation binding
+          rule: '!has(self.status) || !has(self.status.groupCancellation) || (self.spec.protocol
+            == ''controller-configuration-group-v1'' && self.status.groupCancellation.operationID
+            == self.spec.operationID && self.status.groupCancellation.operationDigest
+            == self.spec.operationDigest)'
+    served: true
+    storage: true
+    subresources:
+      status: {}

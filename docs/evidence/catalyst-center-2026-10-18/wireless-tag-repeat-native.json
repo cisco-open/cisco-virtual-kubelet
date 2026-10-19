@@ -1,0 +1,192 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "packageSource": {
+    "files": 1636,
+    "sha256": "bff2c9f2f44854c3df2b8c1020aeb409400eea552bc8e5465db9fc59fce92654"
+  },
+  "scope": "Native repeated wireless site/policy tag lifecycle using generated disabled SSID/profile and two empty areas",
+  "resourceTypes": [
+    "catalystcenter_wireless_profile_site_tag",
+    "catalystcenter_wireless_profile_policy_tag"
+  ],
+  "cases": {
+    "singleton": {
+      "qualified": true,
+      "status": "passed",
+      "packageResults": [
+        "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t1629.144s"
+      ],
+      "log": "wireless-tag-repeat-native-singleton.log",
+      "originalTaskIDs": [
+        "01a1502b-0671-71c9-8389-ff2bcb69656c",
+        "01a1502b-7ef3-794e-9a10-c585b9c3624c",
+        "01a1502b-b98b-7f47-9482-ad8df5dcbeca",
+        "01a1502c-192e-7257-8af5-9e31bba77d3b",
+        "01a1502c-dbba-786e-87e5-957c1ecf63c6",
+        "01a1502d-9ff6-7d8b-a448-85fd007c85d6",
+        "01a1502e-e2f6-7c60-9c36-8cf4e21d000c",
+        "01a1502f-b4d8-7bae-a842-993fb0441cb8",
+        "01a15031-2d31-7dee-977a-1da58367913b",
+        "01a15032-22a0-7475-a3fd-0ec8246b4352",
+        "01a15033-683e-7ad9-9e45-24ba2d06f859",
+        "01a15034-1c81-77c9-b775-249809a2b188",
+        "01a15035-21ae-7478-92a1-a2caf2bad686",
+        "01a15035-efe0-7fe8-b9d2-5a38a49928f1",
+        "01a15037-3288-7016-bf15-f5c81c84b9b3",
+        "01a15037-d967-777c-bc4a-231acef40309",
+        "01a15039-4efd-7e85-ba32-3e81a24f6e1b",
+        "01a1503a-1360-7912-aca8-2802974a5a77",
+        "01a1503b-a5c9-7e58-8926-56fef8877f6e",
+        "01a1503c-589f-7c69-8bae-2700ddddfe98",
+        "01a1503d-5e8b-77b4-af99-8af013d24d72",
+        "01a1503e-2ce6-7986-b44b-014b28fa5b62",
+        "01a15041-1ccb-7de0-9140-ac974ae764de",
+        "01a15042-2b7b-7523-927e-7ef8a95b0b26",
+        "01a15042-a165-7752-8397-a83d656a409d",
+        "01a15043-19ba-7f00-91cb-9e5d56a1d8b7"
+      ],
+      "recoveredOriginalTasks": 26,
+      "provenPreflightRefusalsRetired": 26,
+      "predecessorCohorts": 4,
+      "baselineRestored": true,
+      "nativeDevicesAssignedOrProvisioned": false
+    },
+    "cohort": {
+      "qualified": false,
+      "status": "failed",
+      "log": "wireless-tag-repeat-native-cohort-failed.log",
+      "failure": "45-minute qualification context deadline expired during the pre-cleanup reference read",
+      "coreRepeatedCycleChecksObserved": true,
+      "recoveredOriginalTasksBeforeTimeout": 28,
+      "predecessorCohortsObserved": 4,
+      "baselineRestored": false,
+      "retainedFixtureCleanup": {
+        "supervised": true,
+        "passed": true,
+        "baselineRestored": true,
+        "log": "wireless-tag-repeat-native-cohort-retained-cleanup.log",
+        "taskCount": 9,
+        "doesNotQualifyOriginalTimedOutWorkflow": true,
+        "sourcePackage": {
+          "files": 1637,
+          "sha256": "b90ca2f5b58ee816f24dc907ee98818f2a2d4d8b62b3511d3a55d4bfbd338bbd"
+        }
+      }
+    },
+    "cohortRetry": {
+      "kind": "cohort",
+      "attempt": "retry-75-minute-qualification",
+      "qualified": true,
+      "status": "passed",
+      "packageSource": {
+        "files": 1637,
+        "sha256": "b90ca2f5b58ee816f24dc907ee98818f2a2d4d8b62b3511d3a55d4bfbd338bbd"
+      },
+      "packageResults": [
+        "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t3371.438s"
+      ],
+      "log": "wireless-tag-repeat-native-cohort-retry.log",
+      "originalTaskIDs": [
+        "01a15088-4736-73ba-9759-acadaf4592fa",
+        "01a15088-7727-79f3-b612-80ecdebae6dc",
+        "01a15088-bb32-783e-9388-36e2f8b9bf22",
+        "01a15088-fb8c-73dd-b2d8-76c43c4dd6f5",
+        "01a15089-f5e3-7af3-8d2d-33e805013f83",
+        "01a1508a-fe2a-742e-8d51-7c1f72c6bcf6",
+        "01a1508c-c705-7570-8111-3845d251bad7",
+        "01a1508d-f347-7961-8487-5bf184b0bca7",
+        "01a1508f-32a2-7043-9918-352a0caf78d5",
+        "01a15091-91a2-7131-8a00-b3fb7c67a72b",
+        "01a15093-3d55-7cb6-bea0-9d947984028d",
+        "01a15094-ccc4-7622-b07c-e35018077b39",
+        "01a15097-2ebe-7d69-9df2-ee2be369f798",
+        "01a15098-b1f0-72b4-90ba-51d7c90e0c8f",
+        "01a15099-d626-7466-b4f4-888f8ffce930",
+        "01a1509b-918c-7d90-b975-7cfa135e7788",
+        "01a1509d-2347-70cf-90d4-3542fb298120",
+        "01a1509f-1091-7fd7-803a-2ce1e006e3bc",
+        "01a150a0-0de3-7371-84ed-b181045734d8",
+        "01a150a1-1d69-7f7e-9c37-fd43b94a18b8",
+        "01a150a3-5ef6-76a1-9255-bb603a5f82a8",
+        "01a150a4-afb4-7999-a4c9-be1cdc0288ef",
+        "01a150a5-ed82-7664-af2f-7b0b11895e41",
+        "01a150a8-c1bf-70bf-87d0-679c8752cd68",
+        "01a150aa-48a8-73b8-90c5-4a71f392c4c2",
+        "01a150ab-69be-762a-b129-286167b46fa0",
+        "01a150ad-1ddc-7bad-a80a-c047c0174662",
+        "01a150ae-b110-762d-be3c-107979bd5ed4",
+        "01a150b3-d8ca-7008-9480-4684fb48176e",
+        "01a150b5-ff29-7d85-b33a-ff89b41141b1",
+        "01a150b8-c731-735b-8f22-27267e357c74",
+        "01a150b9-95a6-794e-b996-139022520fb2",
+        "01a150ba-6c9f-71e9-adc8-db7d9f2ff3aa"
+      ],
+      "recoveredOriginalTasks": 33,
+      "provenPreflightRefusalsRetired": 33,
+      "coreRepeatedCycleOriginalTasks": 28,
+      "predecessorCohorts": 4,
+      "nativeTagMembers": 3,
+      "policyTagMembers": 2,
+      "nativeTagIDsStableAcrossRecreation": 3,
+      "orderedPruning": {
+        "tagDeletes": 3,
+        "associationDeletes": 2,
+        "originalTaskTombstones": true
+      },
+      "baselineRestored": true,
+      "nativeDevicesAssignedOrProvisioned": false,
+      "kubernetesActorsAndStorageSimulated": true,
+      "installedWorkerQualification": false,
+      "physicalWLCOrAPQualification": false,
+      "qualificationTimeoutMinutes": 75,
+      "goTestTimeoutMinutes": 90,
+      "assertionsAndDefaultProductionTimeoutsUnchanged": true,
+      "postQualificationReadOnlyInventory": {
+        "log": "wireless-tag-repeat-native-cohort-retry-post-inventory.json",
+        "counts": {
+          "devices": 3,
+          "discoveryJobs": 1,
+          "swimImages": 2
+        },
+        "readOnly": true
+      },
+      "docsGate": {
+        "passed": true,
+        "strict": true,
+        "durationSeconds": 7.81,
+        "log": "wireless-tag-repeat-native-cohort-retry-docs.log"
+      }
+    }
+  },
+  "priorFixtureEvidence": "docs/evidence/catalyst-center-2026-10-17/wireless-tag-repeat-recreation-validation.json",
+  "priorSourceFingerprintsMatched": {
+    "internal/controlleradapter/catalystcenter/wireless_tag_repeated_recreation_test.go": "7d3e75daa2f763952525430bcc6241b58350fe7bb2e8c5962622c999d76030e2",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_execution_test.go": "82dfc5ebfe728cd76fe46fe065ef782e284b6f5cdc1707f0685140d2dee7afa6",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_test.go": "b2ecd0743dc30a776cb5e281603d28c9bbec0d4d10bfaa7117823de3e030c016",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "ad9033b7085fb291b7709498602c729b73ff668e34afa73a9433a1afea0a32c2",
+    "internal/controlleradapter/catalystcenter/wireless_tag_recreate_live_test.go": "1240d472a78a8879c0cd978c298e66c1a86c3ad6009d98e9ec9557d1524f6b28",
+    "internal/controlleradapter/catalystcenter/wireless_tag_repeated_recreation_live_test.go": "8eeb5475a09e54391cf29ff30d278478abc73cd36eedcdd2c9cf13ea09b7d276",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "aa9c4aa7c0f243a0bdc4bd2e9ffc0402bf03a99ff4b8e007994b78c0152e8d64"
+  },
+  "nativeMetadataOperationsExecuted": true,
+  "kubernetesActorsAndStorageSimulated": true,
+  "installedWorkerQualification": false,
+  "physicalWLCOrAPQualification": false,
+  "newProductionCodeOrSharedFoundationChange": false,
+  "resourceLedgerRows": 93,
+  "fullPinnedModelParity": false,
+  "remaining": [
+    "Larger/mixed scopes and ownership/key/archive retirement/handoff",
+    "Parent/config deletion and association resurrection",
+    "Installed workers and physical WLC/AP behavior",
+    "Remaining pinned model resource gaps"
+  ],
+  "docsGate": {
+    "passed": true,
+    "log": "wireless-tag-repeat-native-docs.log"
+  },
+  "latestCohortCase": "cohortRetry",
+  "latestCohortQualified": true,
+  "earlierFailedAttemptAndSupervisedCleanupPreserved": true
+}

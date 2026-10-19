@@ -1,0 +1,60 @@
+# Replacement for wireless-ap-apply.yaml, using the SAME config owner/name.
+# Choose profile names you own or unused names. Creates logical definitions;
+# this manifest requests no site assignment, WLC provisioning or AP operation.
+# Power definition must converge before the calendar-bearing AP definition.
+# DAILY, WEEKLY, MONTHLY, two nonoverlapping calendars and explicit removal have native
+# definition-level lab evidence. Installed worker/device execution is separate.
+# remote_worker_enabled is create-only on the qualified appliance. To change
+# that mode, declare a different profile name; the existing definition is retained.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-wireless-ap-apply
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [wireless]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  taskTimeout: 15m
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-wireless-ap-calendar-example-v2
+  source:
+    inline:
+      catalyst_center:
+        wireless:
+          power_profiles:
+            - name: CVK_CALENDAR_POWER
+              rules:
+                - interface_type: ETHERNET
+                  interface_id: GIGABITETHERNET0
+                  parameter_type: SPEED
+                  parameter_value: 1000MBPS
+            - name: CVK_CALENDAR_POWER_ALT
+              rules:
+                - interface_type: ETHERNET
+                  interface_id: GIGABITETHERNET0
+                  parameter_type: SPEED
+                  parameter_value: 1000MBPS
+          ap_profiles:
+            - name: CVK_AP
+              description: CVK calendar AP definition
+              client_limit: 10
+              country_code: US
+              time_zone: Controller
+              calendar_power_profiles:
+                - power_profile: CVK_CALENDAR_POWER
+                  scheduler_type: WEEKLY
+                  scheduler_start_time: '22:00'
+                  scheduler_end_time: '23:00'
+                  scheduler_day: [monday, friday]
+                - power_profile: CVK_CALENDAR_POWER_ALT
+                  scheduler_type: DAILY
+                  scheduler_start_time: '20:00'
+                  scheduler_end_time: '21:00'

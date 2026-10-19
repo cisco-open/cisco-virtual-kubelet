@@ -1,0 +1,5 @@
+=== RUN   TestLiveProfileTagsRetainedReadback
+    zz_profile_tags_retained_live_test.go:43: original accepted site-tag create verified with identical resource binding, no replay and unchanged inventory
+--- PASS: TestLiveProfileTagsRetainedReadback (2.54s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	4.425s

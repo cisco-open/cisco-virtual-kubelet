@@ -1,0 +1,6 @@
+=== RUN   TestLiveRetainedEmptyFabricCleanupReadback
+    fabric_authentication_retained_live_test.go:390: acknowledged delete and full task tree verified twice without replay 01a14082-0f78-7058-8679-81d78a5911da
+    fabric_authentication_retained_live_test.go:391: exact empty area and descendants absent; zero fabrics/zones; original global authentication baseline unchanged e115620c-5e8d-43c8-ad75-c830d46ae1e7 devices 3
+--- PASS: TestLiveRetainedEmptyFabricCleanupReadback (1.65s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	3.733s

@@ -1,0 +1,7 @@
+=== RUN   TestLivePrivateAPIOwnedMetadataComposition
+    wired_bulk_owned_metadata_api_live_test.go:20: metadata native producer uses private real API-server objects 65a38689-4249-45b4-8d05-4d0140183e0b 86eea1af-2606-47e7-b084-e2d0875a3140
+    wired_bulk_owned_metadata_api_live_test.go:20: SNMP manifest did not converge; retained journal requires inspection []
+--- FAIL: TestLivePrivateAPIOwnedMetadataComposition (127.71s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	129.102s
+FAIL

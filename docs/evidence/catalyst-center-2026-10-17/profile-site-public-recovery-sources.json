@@ -1,0 +1,51 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "sourceSha256": {
+    "internal/controlleradapter/catalystcenter/network_profile_recovery.go": "af591a51f7cdcefb9902534fad4f4a1a60720d0c29e9509a81d1bf49d17c4514",
+    "internal/controlleradapter/catalystcenter/network_profile_sites.go": "e2eeba006757cabaaec1700c4d8210c4c806bad7e30a674dd03ecd0efb9a6d1a",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery.go": "3e8a64af32c6aac93a6a446ea0c0d68be2755d848a0d374950edbfcf1ec00699",
+    "internal/controlleradapter/catalystcenter/config_no_dispatch.go": "66d14ee99cc0791b863eeae396187e61156274a8b3481c5768ca94ffc6883d3c",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "80c6c1dd58b2b90a25362b1694aa436f208087475be0eca6f75bbe9d3c47aaa1",
+    "internal/controlleradapter/catalystcenter/template_deployment_adapter_recovery.go": "e18192207cff0d2d2af93edc5b4dccc3c7d2935b224f65bbf89e6a607ceff59b",
+    "internal/controlleradapter/catalystcenter/network_profile_site_recovery_test.go": "8f3b495fc2d9316917ee1531343dad92e4a6d03984c3a0a8234fa2f3d5b5ce09",
+    "internal/controlleradapter/catalystcenter/network_profile_site_recovery_envtest_test.go": "e7ef9aa1b5f6e7dadab64548f0f1b511cdea894ecf948f2559c9783fe5b4cb63",
+    "internal/controlleradapter/catalystcenter/network_profile_site_guard_test.go": "149f6c5f950db8480be18373fbea719c8857be92c46e1d5947231cc5f0c80b75",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_test.go": "73ab5acdb506258b54dbc8072286e63552757d02704c68899d489f959333742e",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "2efc05dc5d9aa5d9ed6f195cfc59da466bfb057944297a0364f4e6b9db86efef",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "de9caab9b6a8913b8b7a37570f8ddb196e92e8c551bab336947bf4be3843741d",
+    "internal/controlleradapter/catalystcenter/network_profiles_live_test.go": "45cb4df0d53fdc512d1a40e3903c89d2249970a1fbcf73149ebf8da165187789",
+    "internal/controlleradapter/catalystcenter/template_projects_live_test.go": "f84e468209e19a20ceb0f3cf531343a0a99e36b7ed2851477dbe75e2511bf47c",
+    "examples/configs/catalyst-center/network-profiles-apply.yaml": "54fcfa6bd2d8f8e79d5c29c81a9950372bf2ae7d36a5ab7ee14788e5451487da",
+    "examples/configs/catalyst-center/wireless-profile-tags-apply.yaml": "d1670365b1d94a5cac593d4ddf51fdb998cf46a33dea38188ab7bcb476a7a136",
+    "examples/configs/catalyst-center/wireless-policy-cohort-apply.yaml": "347cdc6f8d5c5a758f50e479c1ea20b954952750d4235b754ebd4bd50fbc3c16"
+  },
+  "upstream": [
+    {
+      "path": "cc_network_profiles.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_profiles.tf",
+      "sha256": "f49a96dfababdbcdbaebda90d5a8d50e424d3b0c64727baf8de442bb67e1c6c3"
+    },
+    {
+      "path": "cc_wireless.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_wireless.tf",
+      "sha256": "55956a619e460b28e3a57a797b981ed5d3601513e2968793e3b565afa12f3322"
+    }
+  ],
+  "qualification": {
+    "publicAssociationCases": 34,
+    "actualKubernetesAPIAssociationCases": 34,
+    "nativePublicMetadataTasks": 18,
+    "nativeAssociationTasks": 5,
+    "nativeProofRetirements": 18,
+    "nativeFinalInSyncWorkflows": 3,
+    "wirelessBaselineRestorations": 2,
+    "switchingProfileSiteTemplateProjectCleanup": true,
+    "nativeKubernetesActorsAndStorage": "simulated",
+    "installedQualification": false,
+    "membershipOwnershipOrRemoval": false,
+    "physicalDeviceActions": false
+  },
+  "scope": "Shared switching/wireless profile/site metadata recovery through existing guard/CAS/journal/task-tree and exact acknowledged pair observation. Existing wire identities retained; no new schema/store/transport/admission. Actual native tasks/readback/cleanup with simulated Kubernetes actors/storage and local preflight faults. No membership ownership, unassignment/prune, adoption/handoff, device provisioning, installed concurrency or complete model parity claim. Final source fingerprints are not installed-binary attestations."
+}

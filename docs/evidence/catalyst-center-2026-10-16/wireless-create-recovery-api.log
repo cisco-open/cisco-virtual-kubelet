@@ -1,0 +1,100 @@
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/unknown-create
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-taskless
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-changed-source
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-missing-target
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-child-failed
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-child-pending
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-child-foreign
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-tree-unavailable
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/unknown-create
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-taskless
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-changed-source
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-missing-target
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-child-failed
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-child-pending
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-child-foreign
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-tree-unavailable
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/unknown-create
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-taskless
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-changed-source
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-missing-target
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-child-failed
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-child-pending
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-child-foreign
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-tree-unavailable
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/unknown-create
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-taskless
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-changed-source
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-missing-target
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-child-failed
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-child-pending
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-child-foreign
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-tree-unavailable
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/unknown-create
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-taskless
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-changed-source
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-missing-target
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-child-failed
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-child-pending
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-child-foreign
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-tree-unavailable
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/unknown-create
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-taskless
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-changed-source
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-missing-target
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-child-failed
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-child-pending
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-child-foreign
+=== RUN   TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-tree-unavailable
+--- PASS: TestEnvtestWirelessDefinitionCreateRecovery (15.12s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/unknown-create (2.86s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-taskless (0.20s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-changed-source (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-missing-target (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-child-failed (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-child-pending (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-child-foreign (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/anchor_groups/create-tree-unavailable (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/unknown-create (0.22s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-taskless (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-changed-source (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-missing-target (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-child-failed (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-child-pending (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-child-foreign (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/interfaces/create-tree-unavailable (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/unknown-create (0.22s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-taskless (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-changed-source (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-missing-target (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-child-failed (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-child-pending (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-child-foreign (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/power_profiles/create-tree-unavailable (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/unknown-create (0.21s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-taskless (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-changed-source (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-missing-target (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-child-failed (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-child-pending (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-child-foreign (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/dot11be_profiles/create-tree-unavailable (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/unknown-create (0.22s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-taskless (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-changed-source (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-missing-target (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-child-failed (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-child-pending (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-child-foreign (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/security_settings/create-tree-unavailable (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/unknown-create (0.22s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-taskless (0.19s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-changed-source (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-missing-target (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-child-failed (0.17s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-child-pending (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-child-foreign (0.18s)
+    --- PASS: TestEnvtestWirelessDefinitionCreateRecovery/rf_profiles/create-tree-unavailable (0.18s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	17.455s

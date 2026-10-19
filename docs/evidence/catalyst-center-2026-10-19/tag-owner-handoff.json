@@ -1,0 +1,158 @@
+{
+  "status": "Repeated same-section tag owner handoff qualified within stated limits; full model incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1676,
+    "sha256": "4b150f2ca2e235e50eb522d86c9a10dd09916ed0993bd527ef50e90f1592e5d3",
+    "productionSHA256": "732494eb6a62cf3060203648bf7c07c94be01a1aada74dbdf56c8cf6721a9768",
+    "nativeBuildSourceSHA256": "5d9e3f43526432124eb3717bf24b51a452022f151314759a6d6b15945b8750af",
+    "testOnlyChangesAfterNative": [
+      "internal/controlleradapter/catalystcenter/tag_handoff_cas_test.go"
+    ],
+    "productionMatchesNativeGates": true
+  },
+  "native": [
+    {
+      "scope": "inventory",
+      "exitCode": 0,
+      "seconds": 54.04238319396973,
+      "log": "/private/tmp/cvk-tag-handoff-native-inventory.log",
+      "sourceSHA256": "5d9e3f43526432124eb3717bf24b51a452022f151314759a6d6b15945b8750af",
+      "unchanged": true,
+      "nativeIDs": [
+        "73c0871f-d4e3-4391-9aa5-dafdbd6d01b0",
+        "8a62c6e1-f751-4137-8f26-c61d8a5bf940",
+        "e8e80e8f-6b22-41c6-a9f5-c9f04eacbce3"
+      ],
+      "ownerUIDs": [
+        "d6f0df06-9333-4893-b50c-ee9b4d331a04",
+        "135463c0-3483-4216-b995-8abf97ee0955",
+        "b6fc7f77-2439-4145-9b89-2fe20c8fe08c"
+      ],
+      "mutationCounts": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "originalTaskRecoveries": 9,
+      "retiredOwnerCohorts": 2,
+      "finalOldCRGone": true,
+      "baselineRestored": true,
+      "originalOperationsPreserved": true
+    },
+    {
+      "scope": "combined",
+      "exitCode": 0,
+      "seconds": 53.56496572494507,
+      "log": "/private/tmp/cvk-tag-handoff-native-combined.log",
+      "sourceSHA256": "5d9e3f43526432124eb3717bf24b51a452022f151314759a6d6b15945b8750af",
+      "unchanged": true,
+      "nativeIDs": [
+        "b05ec394-706d-4aca-9861-969847623c33",
+        "88e07425-4cc6-4b61-832c-e27c3dcc1764",
+        "cc5790c1-b3c0-4322-aed3-eadd7106baf0"
+      ],
+      "ownerUIDs": [
+        "a0f8fcab-cff6-4b44-afe8-1c1142f9d43e",
+        "6555325c-4e4d-4676-90ab-4d5a4596eab5",
+        "10a690e5-eb3f-42cd-8303-1594ecd334bc"
+      ],
+      "mutationCounts": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "originalTaskRecoveries": 9,
+      "retiredOwnerCohorts": 2,
+      "finalOldCRGone": true,
+      "baselineRestored": true,
+      "originalOperationsPreserved": true
+    },
+    {
+      "scope": "templates",
+      "exitCode": 0,
+      "seconds": 56.420356035232544,
+      "log": "/private/tmp/cvk-tag-handoff-native-templates.log",
+      "sourceSHA256": "5d9e3f43526432124eb3717bf24b51a452022f151314759a6d6b15945b8750af",
+      "unchanged": true,
+      "nativeIDs": [
+        "ffec363d-66af-4577-b68e-87982ec303db",
+        "ca96bbd6-0e78-4b69-af71-1095576aad1b",
+        "891ac128-2d1f-4cb8-8faa-73460ec4a4ec"
+      ],
+      "ownerUIDs": [
+        "5c12eb37-c4d5-445d-8f87-59f8a632adc0",
+        "37f2e981-c65d-40ac-8aca-a96e059837d1",
+        "b8b4b4df-490a-4033-8d0f-810b5c38277e"
+      ],
+      "mutationCounts": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "originalTaskRecoveries": 9,
+      "retiredOwnerCohorts": 2,
+      "finalOldCRGone": true,
+      "baselineRestored": true,
+      "originalOperationsPreserved": true
+    }
+  ],
+  "scope": "Tagged inventory/templates/combined metadata-only Apply/Delete owners, exact same selected section set, same-name or renamed replacement configs, new native UUIDs.",
+  "qualificationGaps": [
+    "ConfigMap source handoff is not separately qualified.",
+    "Section-set changes are deliberately fenced; section handoff remains pending.",
+    "Legacy old CRs removed without a durable retirement witness need explicit migration.",
+    "Installed actors, native dynamic-rule owner handoff, owner-empty/recreated-cohort combinations and broader pinned model parity remain open."
+  ],
+  "gates": {
+    "handoffCodecRealAPI": {
+      "result": "PASS",
+      "passingEvents": 77,
+      "seconds": 149.675,
+      "log": "/private/tmp/cvk-tag-handoff-api-corrected.log"
+    },
+    "compatibility": {
+      "result": "PASS",
+      "passingEvents": 1486,
+      "seconds": 560.99,
+      "log": "/private/tmp/cvk-tag-handoff-compat.log"
+    },
+    "claimCASAndSuccessorExample": {
+      "result": "PASS",
+      "passingEvents": 90,
+      "seconds": 3.558,
+      "log": "/private/tmp/cvk-tag-handoff-cas-example.log"
+    },
+    "foundation": {
+      "result": "PASS",
+      "packages": [
+        "internal/controlleradapter",
+        "internal/controlleradapter/nexusdashboard",
+        "internal/provider/softwareupgrade",
+        "internal/provider/maintenance",
+        "internal/controller"
+      ],
+      "log": "/private/tmp/cvk-tag-handoff-foundation.log"
+    },
+    "swimReloadXFSUTransferFallback": {
+      "result": "PASS",
+      "log": "/private/tmp/cvk-tag-handoff-swim.log"
+    },
+    "mainBuild": {
+      "result": "PASS",
+      "log": "/private/tmp/cvk-tag-handoff-build.log"
+    },
+    "strictDocumentation": {
+      "result": "PASS",
+      "seconds": 7.77,
+      "log": "/private/tmp/cvk-tag-handoff-docs.log"
+    },
+    "scopedFormattingWhitespaceFingerprint": {
+      "result": "PASS"
+    }
+  },
+  "example": {
+    "path": "examples/configs/catalyst-center/tags-owner-successor-apply.yaml",
+    "sha256": "8d9a563e96e1ddb9d4aed8de4a9a482871ac05007487fb54ed18ee2122dc085c"
+  }
+}

@@ -1,0 +1,1628 @@
+=== RUN   TestWirelessNoDispatchReplan
+=== RUN   TestWirelessNoDispatchReplan/anchor_groups/field-edit
+=== RUN   TestWirelessNoDispatchReplan/anchor_groups/read-error
+=== RUN   TestWirelessNoDispatchReplan/anchor_groups/lost-ack
+=== RUN   TestWirelessNoDispatchReplan/interfaces/field-edit
+=== RUN   TestWirelessNoDispatchReplan/interfaces/read-error
+=== RUN   TestWirelessNoDispatchReplan/interfaces/lost-ack
+=== RUN   TestWirelessNoDispatchReplan/power_profiles/field-edit
+=== RUN   TestWirelessNoDispatchReplan/power_profiles/read-error
+=== RUN   TestWirelessNoDispatchReplan/power_profiles/lost-ack
+=== RUN   TestWirelessNoDispatchReplan/dot11be_profiles/field-edit
+=== RUN   TestWirelessNoDispatchReplan/dot11be_profiles/read-error
+=== RUN   TestWirelessNoDispatchReplan/dot11be_profiles/lost-ack
+=== RUN   TestWirelessNoDispatchReplan/security_settings/field-edit
+=== RUN   TestWirelessNoDispatchReplan/security_settings/read-error
+=== RUN   TestWirelessNoDispatchReplan/security_settings/lost-ack
+=== RUN   TestWirelessNoDispatchReplan/rf_profiles/field-edit
+=== RUN   TestWirelessNoDispatchReplan/rf_profiles/read-error
+=== RUN   TestWirelessNoDispatchReplan/rf_profiles/lost-ack
+--- PASS: TestWirelessNoDispatchReplan (1.84s)
+    --- PASS: TestWirelessNoDispatchReplan/anchor_groups/field-edit (0.69s)
+    --- PASS: TestWirelessNoDispatchReplan/anchor_groups/read-error (0.09s)
+    --- PASS: TestWirelessNoDispatchReplan/anchor_groups/lost-ack (0.05s)
+    --- PASS: TestWirelessNoDispatchReplan/interfaces/field-edit (0.07s)
+    --- PASS: TestWirelessNoDispatchReplan/interfaces/read-error (0.07s)
+    --- PASS: TestWirelessNoDispatchReplan/interfaces/lost-ack (0.05s)
+    --- PASS: TestWirelessNoDispatchReplan/power_profiles/field-edit (0.08s)
+    --- PASS: TestWirelessNoDispatchReplan/power_profiles/read-error (0.08s)
+    --- PASS: TestWirelessNoDispatchReplan/power_profiles/lost-ack (0.05s)
+    --- PASS: TestWirelessNoDispatchReplan/dot11be_profiles/field-edit (0.07s)
+    --- PASS: TestWirelessNoDispatchReplan/dot11be_profiles/read-error (0.07s)
+    --- PASS: TestWirelessNoDispatchReplan/dot11be_profiles/lost-ack (0.05s)
+    --- PASS: TestWirelessNoDispatchReplan/security_settings/field-edit (0.08s)
+    --- PASS: TestWirelessNoDispatchReplan/security_settings/read-error (0.08s)
+    --- PASS: TestWirelessNoDispatchReplan/security_settings/lost-ack (0.05s)
+    --- PASS: TestWirelessNoDispatchReplan/rf_profiles/field-edit (0.08s)
+    --- PASS: TestWirelessNoDispatchReplan/rf_profiles/read-error (0.08s)
+    --- PASS: TestWirelessNoDispatchReplan/rf_profiles/lost-ack (0.05s)
+=== RUN   TestConfigurationNoDispatchProof
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/refuse
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/read-error
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/cancel
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/conflict
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/tag-delete/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/tag-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/tag-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/tag-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/tag-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/tag-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/tag-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/tag-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/tag-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/tag-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/tag-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/tag-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/tag-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/tag-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/tag-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/tag-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/tag-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/tag-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/tag-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/tag-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/tag-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/tag-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/tag-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/tag-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/tag-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/wireless/refuse
+=== RUN   TestConfigurationNoDispatchProof/wireless/read-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/wireless/cancel
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict
+=== RUN   TestConfigurationNoDispatchProof/wireless/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/wireless/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/wireless/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/wireless/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/wireless/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/wireless/feature-scope
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/wireless/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-ntp/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-dhcp/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-dns/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-dns/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-dns/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-dns/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-dns/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-dns/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-dns/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-dns/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dns/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-dns/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-dns/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-dns/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-timezone/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-banner/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-banner/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-banner/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-banner/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-banner/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-banner/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-banner/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-banner/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-banner/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-banner/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-banner/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-banner/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/refuse
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/read-error
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/cancel
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/conflict
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/network-telemetry/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/refuse
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/read-error
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/cancel
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/conflict
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/pnp-registration/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/project-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/project-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/project-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/project-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/project-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/project-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/project-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/project-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/project-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-create/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-create/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-create/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-create/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-create/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-create/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-create/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-create/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/refuse
+=== RUN   TestConfigurationNoDispatchProof/draft-update/read-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/draft-update/cancel
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict
+=== RUN   TestConfigurationNoDispatchProof/draft-update/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/draft-update/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/draft-update/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/draft-update/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/draft-update/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/draft-update/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/commit/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-draft/changed-preparation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/refuse
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/read-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/unknown-phase
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/cancel
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/ordinary-error
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/lost-ack
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/foreign-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/replayed-proof
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-operation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-owner
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-generation
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-task
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-parent
+=== RUN   TestConfigurationNoDispatchProof/prepared-commit/changed-preparation
+--- PASS: TestConfigurationNoDispatchProof (11.39s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/conflict-exhausted (0.33s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-delete/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/tag-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/conflict-exhausted (0.33s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/lost-ack (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-operation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-owner (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-task (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/feature-scope (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/wireless/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/conflict-exhausted (0.33s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-ntp/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dhcp/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-owner (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/recorded-task (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/recorded-receipt (0.05s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-dns/changed-preparation (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/unknown-phase (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-timezone/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-banner/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/network-telemetry/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/unknown-phase (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/lost-ack (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-owner (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-parent (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/pnp-registration/changed-preparation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/cancel (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/foreign-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-operation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-create/changed-preparation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-task (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/project-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/read-error (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/conflict-exhausted (0.35s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/ordinary-error (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/replayed-proof (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-owner (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-generation (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/recorded-receipt (0.07s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-create/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/unknown-phase (0.06s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/cancel (0.04s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/conflict-exhausted (0.37s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/recorded-receipt (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/draft-update/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-generation (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/commit/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/refuse (0.01s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-draft/changed-preparation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/refuse (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/read-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/unknown-phase (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/cancel (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict (0.03s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/conflict-exhausted (0.34s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/ordinary-error (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/lost-ack (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/foreign-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/replayed-proof (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-operation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-owner (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-generation (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-task (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/recorded-receipt (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-parent (0.02s)
+    --- PASS: TestConfigurationNoDispatchProof/prepared-commit/changed-preparation (0.02s)
+=== RUN   TestWirelessAPManifestDependenciesRotationRestart
+--- PASS: TestWirelessAPManifestDependenciesRotationRestart (0.23s)
+=== RUN   TestWirelessAPPrunedCredentialJournalCannotRelease
+--- PASS: TestWirelessAPPrunedCredentialJournalCannotRelease (0.01s)
+=== RUN   TestWirelessAPCombinedPreflightBlocksPrerequisiteWrite
+--- PASS: TestWirelessAPCombinedPreflightBlocksPrerequisiteWrite (0.01s)
+=== RUN   TestWirelessAPNoDispatchReplan
+=== RUN   TestWirelessAPNoDispatchReplan/field-edit
+=== RUN   TestWirelessAPNoDispatchReplan/read-error
+=== RUN   TestWirelessAPNoDispatchReplan/lost-ack
+--- PASS: TestWirelessAPNoDispatchReplan (0.27s)
+    --- PASS: TestWirelessAPNoDispatchReplan/field-edit (0.13s)
+    --- PASS: TestWirelessAPNoDispatchReplan/read-error (0.09s)
+    --- PASS: TestWirelessAPNoDispatchReplan/lost-ack (0.05s)
+=== RUN   TestWirelessAPDispatchSnapshots
+=== RUN   TestWirelessAPDispatchSnapshots/stable
+=== RUN   TestWirelessAPDispatchSnapshots/create-appeared
+=== RUN   TestWirelessAPDispatchSnapshots/replaced
+=== RUN   TestWirelessAPDispatchSnapshots/missing
+=== RUN   TestWirelessAPDispatchSnapshots/native-edit
+=== RUN   TestWirelessAPDispatchSnapshots/desired-edit
+=== RUN   TestWirelessAPDispatchSnapshots/version-edit
+=== RUN   TestWirelessAPDispatchSnapshots/unrelated
+=== RUN   TestWirelessAPDispatchSnapshots/power-replaced
+=== RUN   TestWirelessAPDispatchSnapshots/power-edited
+=== RUN   TestWirelessAPDispatchSnapshots/power-missing
+=== RUN   TestWirelessAPDispatchSnapshots/power-read-error
+=== RUN   TestWirelessAPDispatchSnapshots/failed-read
+=== RUN   TestWirelessAPDispatchSnapshots/lost-ack
+=== RUN   TestWirelessAPDispatchSnapshots/planned-power-missing
+=== RUN   TestWirelessAPDispatchSnapshots/planned-power-appeared
+=== RUN   TestWirelessAPDispatchSnapshots/retained-power-replaced
+=== RUN   TestWirelessAPDispatchSnapshots/retained-calendar-power-replaced
+--- PASS: TestWirelessAPDispatchSnapshots (0.22s)
+    --- PASS: TestWirelessAPDispatchSnapshots/stable (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/create-appeared (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/replaced (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/missing (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/native-edit (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/desired-edit (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/version-edit (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/unrelated (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/power-replaced (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/power-edited (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/power-missing (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/power-read-error (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/failed-read (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/lost-ack (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/planned-power-missing (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/planned-power-appeared (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/retained-power-replaced (0.01s)
+    --- PASS: TestWirelessAPDispatchSnapshots/retained-calendar-power-replaced (0.01s)
+=== RUN   TestWirelessAPMetadataRecoverySelection
+--- PASS: TestWirelessAPMetadataRecoverySelection (0.00s)
+=== RUN   TestWirelessAPMetadataRecoveryPublic
+=== RUN   TestWirelessAPMetadataRecoveryPublic/known
+=== RUN   TestWirelessAPMetadataRecoveryPublic/taskless
+=== RUN   TestWirelessAPMetadataRecoveryPublic/foreign-task
+=== RUN   TestWirelessAPMetadataRecoveryPublic/changed-source
+=== RUN   TestWirelessAPMetadataRecoveryPublic/replaced-target
+=== RUN   TestWirelessAPMetadataRecoveryPublic/missing-target
+=== RUN   TestWirelessAPMetadataRecoveryPublic/pending-task
+=== RUN   TestWirelessAPMetadataRecoveryPublic/failed-task
+=== RUN   TestWirelessAPMetadataRecoveryPublic/child-failed
+=== RUN   TestWirelessAPMetadataRecoveryPublic/child-pending
+=== RUN   TestWirelessAPMetadataRecoveryPublic/child-foreign
+=== RUN   TestWirelessAPMetadataRecoveryPublic/tree-unavailable
+=== RUN   TestWirelessAPMetadataRecoveryPublic/unknown-create
+=== RUN   TestWirelessAPMetadataRecoveryPublic/create-taskless
+=== RUN   TestWirelessAPMetadataRecoveryPublic/create-changed-source
+=== RUN   TestWirelessAPMetadataRecoveryPublic/create-child-failed
+=== RUN   TestWirelessAPMetadataRecoveryPublic/create-child-pending
+=== RUN   TestWirelessAPMetadataRecoveryPublic/create-tree-unavailable
+--- PASS: TestWirelessAPMetadataRecoveryPublic (1.81s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/known (0.11s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/taskless (0.09s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/foreign-task (0.12s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/changed-source (0.11s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/replaced-target (0.10s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/missing-target (0.10s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/pending-task (0.09s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/failed-task (0.10s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/child-failed (0.10s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/child-pending (0.13s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/child-foreign (0.10s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/tree-unavailable (0.17s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/unknown-create (0.09s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/create-taskless (0.06s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/create-changed-source (0.07s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/create-child-failed (0.09s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/create-child-pending (0.08s)
+    --- PASS: TestWirelessAPMetadataRecoveryPublic/create-tree-unavailable (0.09s)
+=== RUN   TestWirelessAPCredentialCreateRotationAndReplacement
+--- PASS: TestWirelessAPCredentialCreateRotationAndReplacement (0.03s)
+=== RUN   TestWirelessAPPreflightAndPreservation
+=== RUN   TestWirelessAPPreflightAndPreservation/built-in
+=== RUN   TestWirelessAPPreflightAndPreservation/dependency
+=== RUN   TestWirelessAPPreflightAndPreservation/preserve
+=== RUN   TestWirelessAPPreflightAndPreservation/calendar-drift
+--- PASS: TestWirelessAPPreflightAndPreservation (0.08s)
+    --- PASS: TestWirelessAPPreflightAndPreservation/built-in (0.02s)
+    --- PASS: TestWirelessAPPreflightAndPreservation/dependency (0.02s)
+    --- PASS: TestWirelessAPPreflightAndPreservation/preserve (0.02s)
+    --- PASS: TestWirelessAPPreflightAndPreservation/calendar-drift (0.02s)
+=== RUN   TestWirelessAPRejectsIncompleteAuthenticationBeforeSubmission
+--- PASS: TestWirelessAPRejectsIncompleteAuthenticationBeforeSubmission (0.00s)
+=== RUN   TestWirelessAPMetadataNoopDoesNotRequirePasswordReadback
+--- PASS: TestWirelessAPMetadataNoopDoesNotRequirePasswordReadback (0.02s)
+=== RUN   TestWirelessAPRemoteWorkerModeIsCreateOnly
+=== RUN   TestWirelessAPRemoteWorkerModeIsCreateOnly/enable
+=== RUN   TestWirelessAPRemoteWorkerModeIsCreateOnly/disable
+=== RUN   TestWirelessAPRemoteWorkerModeIsCreateOnly/unknown
+=== RUN   TestWirelessAPRemoteWorkerModeIsCreateOnly/same-mode-update
+--- PASS: TestWirelessAPRemoteWorkerModeIsCreateOnly (0.10s)
+    --- PASS: TestWirelessAPRemoteWorkerModeIsCreateOnly/enable (0.02s)
+    --- PASS: TestWirelessAPRemoteWorkerModeIsCreateOnly/disable (0.02s)
+    --- PASS: TestWirelessAPRemoteWorkerModeIsCreateOnly/unknown (0.02s)
+    --- PASS: TestWirelessAPRemoteWorkerModeIsCreateOnly/same-mode-update (0.05s)
+=== RUN   TestWirelessAPImmutableModeBlocksPowerPrerequisite
+--- PASS: TestWirelessAPImmutableModeBlocksPowerPrerequisite (0.03s)
+=== RUN   TestWirelessAPImmutableManifestReportsActionableFailure
+--- PASS: TestWirelessAPImmutableManifestReportsActionableFailure (0.05s)
+=== RUN   TestWirelessAPCalendarManifestWithoutCredentials
+--- PASS: TestWirelessAPCalendarManifestWithoutCredentials (0.33s)
+=== RUN   TestWirelessAPDefaultsAndCredentialBindings
+--- PASS: TestWirelessAPDefaultsAndCredentialBindings (0.00s)
+=== RUN   TestWirelessAPInputRejectsInvalidFieldsAndInlinePasswords
+--- PASS: TestWirelessAPInputRejectsInvalidFieldsAndInlinePasswords (0.00s)
+=== RUN   TestWirelessAPCalendarMapping
+--- PASS: TestWirelessAPCalendarMapping (0.00s)
+=== RUN   TestWirelessAPMetadataNeverRetainsReturnedPasswords
+--- PASS: TestWirelessAPMetadataNeverRetainsReturnedPasswords (0.00s)
+=== RUN   TestWirelessAPCalendarReadbackAndStableSecretPaths
+--- PASS: TestWirelessAPCalendarReadbackAndStableSecretPaths (0.00s)
+=== RUN   TestWirelessAPObservedSentinelsAreNotManifestValues
+--- PASS: TestWirelessAPObservedSentinelsAreNotManifestValues (0.00s)
+=== RUN   TestWirelessDefinitionRecoveryScope
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/known
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/create
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/section
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/created
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/group
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/history
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/id
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/known
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/create
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/section
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/created
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/group
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/history
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/id
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/anchor_groupstrue/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/known
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/create
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/section
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/created
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/group
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/history
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/id
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacesfalse/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/known
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/create
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/section
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/created
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/group
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/history
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/id
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/interfacestrue/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/known
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/create
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/section
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/created
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/group
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/history
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/id
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilesfalse/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/known
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/create
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/section
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/created
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/group
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/history
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/id
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/power_profilestrue/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/known
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/create
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/section
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/created
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/group
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/history
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/id
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/known
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/create
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/section
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/created
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/group
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/history
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/id
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/known
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/create
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/section
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/created
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/group
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/history
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/id
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingsfalse/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/known
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/create
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/section
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/created
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/group
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/history
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/id
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/security_settingstrue/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/known
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/create
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/section
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/created
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/group
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/history
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/id
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilesfalse/prefix
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/known
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/taskless
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/targetless
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/create
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/delete
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/section
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/phase
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/serial
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/parent
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/created
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/group
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/dependencies
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/cancellation
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/prepared
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/credential
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/history
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/missing-time
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/zero-time
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/id
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/owner
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/generation
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/unselected
+=== RUN   TestWirelessDefinitionRecoveryScope/rf_profilestrue/prefix
+--- PASS: TestWirelessDefinitionRecoveryScope (0.04s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupsfalse/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/anchor_groupstrue/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacesfalse/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/interfacestrue/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilesfalse/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/power_profilestrue/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilesfalse/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/dot11be_profilestrue/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingsfalse/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/security_settingstrue/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilesfalse/prefix (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/known (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/taskless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/targetless (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/create (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/delete (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/section (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/phase (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/serial (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/parent (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/created (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/group (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/dependencies (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/cancellation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/prepared (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/credential (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/history (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/missing-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/zero-time (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/id (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/owner (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/generation (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/unselected (0.00s)
+    --- PASS: TestWirelessDefinitionRecoveryScope/rf_profilestrue/prefix (0.00s)
+=== RUN   TestWirelessDefinitionRecoveryPublic
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/known
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/replaced-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/unknown-create
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/anchor_groups/create-tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/known
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/replaced-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/unknown-create
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/interfaces/create-tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/known
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/replaced-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/unknown-create
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/power_profiles/create-tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/known
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/replaced-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/unknown-create
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/known
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/replaced-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/unknown-create
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/security_settings/create-tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/known
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/replaced-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/tree-unavailable
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/unknown-create
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-taskless
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-foreign-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-changed-source
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-missing-target
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-pending-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-failed-task
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-child-failed
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-child-pending
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-child-foreign
+=== RUN   TestWirelessDefinitionRecoveryPublic/rf_profiles/create-tree-unavailable
+--- PASS: TestWirelessDefinitionRecoveryPublic (12.80s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/known (0.22s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/taskless (0.13s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/foreign-task (0.13s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/changed-source (0.14s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/replaced-target (0.16s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/missing-target (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/pending-task (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/failed-task (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/child-failed (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/child-pending (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/child-foreign (0.16s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/tree-unavailable (0.17s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/unknown-create (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-taskless (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-foreign-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-changed-source (0.08s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-missing-target (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-pending-task (0.08s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-failed-task (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-child-failed (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-child-pending (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-child-foreign (0.08s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/anchor_groups/create-tree-unavailable (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/known (0.14s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/taskless (0.12s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/foreign-task (0.13s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/changed-source (0.13s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/replaced-target (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/missing-target (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/pending-task (0.14s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/failed-task (0.14s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/child-failed (0.13s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/child-pending (0.13s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/child-foreign (0.12s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/tree-unavailable (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/unknown-create (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-taskless (0.07s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-foreign-task (0.08s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-changed-source (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-missing-target (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-pending-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-failed-task (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-child-failed (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-child-pending (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-child-foreign (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/interfaces/create-tree-unavailable (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/known (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/taskless (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/foreign-task (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/changed-source (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/replaced-target (0.12s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/missing-target (0.12s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/pending-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/failed-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/child-failed (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/child-pending (0.12s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/child-foreign (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/tree-unavailable (0.15s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/unknown-create (0.08s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-taskless (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-foreign-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-changed-source (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-missing-target (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-pending-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-failed-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-child-failed (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-child-pending (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-child-foreign (0.08s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/power_profiles/create-tree-unavailable (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/known (0.12s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/taskless (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/foreign-task (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/changed-source (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/replaced-target (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/missing-target (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/pending-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/failed-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/child-failed (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/child-pending (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/child-foreign (0.09s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/tree-unavailable (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/unknown-create (0.07s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-taskless (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-foreign-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-changed-source (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-missing-target (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-pending-task (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-failed-task (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-child-failed (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-child-pending (0.05s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-child-foreign (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/dot11be_profiles/create-tree-unavailable (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/known (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/taskless (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/foreign-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/changed-source (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/replaced-target (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/missing-target (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/pending-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/failed-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/child-failed (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/child-pending (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/child-foreign (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/tree-unavailable (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/unknown-create (0.07s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-taskless (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-foreign-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-changed-source (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-missing-target (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-pending-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-failed-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-child-failed (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-child-pending (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-child-foreign (0.07s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/security_settings/create-tree-unavailable (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/known (0.11s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/taskless (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/foreign-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/changed-source (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/replaced-target (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/missing-target (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/pending-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/failed-task (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/child-failed (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/child-pending (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/child-foreign (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/tree-unavailable (0.10s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/unknown-create (0.07s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-taskless (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-foreign-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-changed-source (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-missing-target (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-pending-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-failed-task (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-child-failed (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-child-pending (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-child-foreign (0.06s)
+    --- PASS: TestWirelessDefinitionRecoveryPublic/rf_profiles/create-tree-unavailable (0.06s)
+=== RUN   TestWirelessDefinitionRecoveryCombined
+--- PASS: TestWirelessDefinitionRecoveryCombined (0.74s)
+=== RUN   TestWirelessDefinitionRecoveryPreservesSSIDFallback
+--- PASS: TestWirelessDefinitionRecoveryPreservesSSIDFallback (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	32.356s

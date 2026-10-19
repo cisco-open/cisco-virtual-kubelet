@@ -1,0 +1,631 @@
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/refuse
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/read-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/conflict
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/conflict-exhausted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/lost-clear-ack
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/changed-owner
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/changed-operation
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/recorded-task
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/recorded-credential
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/ordinary-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/ambiguous
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/accepted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/create/foreign-proof
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/refuse
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/read-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/conflict
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/conflict-exhausted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/lost-clear-ack
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/changed-owner
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/changed-operation
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-task
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-credential
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/ordinary-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/ambiguous
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/accepted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/foreign-proof
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/refuse
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/read-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict-exhausted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/lost-clear-ack
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-owner
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-operation
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-task
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-credential
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/ordinary-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/ambiguous
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/accepted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/foreign-proof
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/refuse
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/read-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/conflict
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/conflict-exhausted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/lost-clear-ack
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/changed-owner
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/changed-operation
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/recorded-task
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/recorded-credential
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/ordinary-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/ambiguous
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/accepted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/foreign-proof
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/refuse
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/read-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/conflict
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/conflict-exhausted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/lost-clear-ack
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/changed-owner
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/changed-operation
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/recorded-task
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/recorded-credential
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/ordinary-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/ambiguous
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/accepted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/prune/foreign-proof
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/refuse
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/read-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict-exhausted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/lost-clear-ack
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-owner
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-operation
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-task
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-credential
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/ordinary-error
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/ambiguous
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/accepted
+=== RUN   TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/foreign-proof
+--- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof (14.36s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/refuse (2.69s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/read-error (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/conflict (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/conflict-exhausted (0.39s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/lost-clear-ack (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/changed-owner (0.05s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/changed-operation (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/recorded-task (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/recorded-credential (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/ordinary-error (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/ambiguous (0.05s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/accepted (0.05s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/create/foreign-proof (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/refuse (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/read-error (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/conflict (0.12s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/conflict-exhausted (0.42s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/lost-clear-ack (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/changed-owner (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/changed-operation (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-task (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-credential (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/ordinary-error (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/ambiguous (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/accepted (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-create/foreign-proof (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/refuse (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/read-error (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict (0.06s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict-exhausted (0.37s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/lost-clear-ack (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-owner (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-operation (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-task (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-credential (0.05s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/ordinary-error (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/ambiguous (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/accepted (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/metadata-retain/foreign-proof (0.04s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/refuse (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/read-error (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/conflict (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/conflict-exhausted (0.42s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/lost-clear-ack (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/changed-owner (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/changed-operation (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/recorded-task (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/recorded-credential (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/ordinary-error (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/ambiguous (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/accepted (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/replacement/foreign-proof (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/refuse (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/read-error (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/conflict (0.09s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/conflict-exhausted (0.42s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/lost-clear-ack (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/changed-owner (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/changed-operation (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/recorded-task (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/recorded-credential (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/ordinary-error (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/ambiguous (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/accepted (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/prune/foreign-proof (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/refuse (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/read-error (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict (0.10s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict-exhausted (0.41s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/lost-clear-ack (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-owner (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-operation (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-task (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-credential (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/ordinary-error (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/ambiguous (0.08s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/accepted (0.07s)
+    --- PASS: TestEnvtestDiscoveryCredentialNoDispatchProof/config-cleanup/foreign-proof (0.08s)
+=== RUN   TestDiscoveryCredentialNoDispatchProof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/create/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-create/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/metadata-retain/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/replacement/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/prune/foreign-proof
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/refuse
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/read-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict-exhausted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/lost-clear-ack
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-owner
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-operation
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-task
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-credential
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/ordinary-error
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/ambiguous
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/accepted
+=== RUN   TestDiscoveryCredentialNoDispatchProof/config-cleanup/foreign-proof
+--- PASS: TestDiscoveryCredentialNoDispatchProof (4.33s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/refuse (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/read-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/conflict (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/conflict-exhausted (0.35s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/lost-clear-ack (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/changed-owner (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/changed-operation (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/recorded-task (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/recorded-credential (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/ordinary-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/ambiguous (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/accepted (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/create/foreign-proof (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/refuse (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/conflict-exhausted (0.38s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/lost-clear-ack (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-owner (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/changed-operation (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-task (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/recorded-credential (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-create/foreign-proof (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/refuse (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/read-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/conflict-exhausted (0.35s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/lost-clear-ack (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-owner (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/changed-operation (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-task (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/recorded-credential (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/ordinary-error (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/ambiguous (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/accepted (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/metadata-retain/foreign-proof (0.02s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/refuse (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/conflict (0.05s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/conflict-exhausted (0.37s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/lost-clear-ack (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/changed-owner (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/changed-operation (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/recorded-task (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/recorded-credential (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/replacement/foreign-proof (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/refuse (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/conflict (0.05s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/conflict-exhausted (0.37s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/lost-clear-ack (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/changed-owner (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/changed-operation (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/recorded-task (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/recorded-credential (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/prune/foreign-proof (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/refuse (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/read-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/conflict-exhausted (0.38s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/lost-clear-ack (0.04s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-owner (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/changed-operation (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-task (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/recorded-credential (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/ordinary-error (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/ambiguous (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/accepted (0.03s)
+    --- PASS: TestDiscoveryCredentialNoDispatchProof/config-cleanup/foreign-proof (0.03s)
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/inline
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/unknown
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-source-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff
+[controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+Detected at:
+	>  goroutine 5039 [running]:
+	>  runtime/debug.Stack()
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/runtime/debug/stack.go:26 +0x6c
+	>  sigs.k8s.io/controller-runtime/pkg/log.eventuallyFulfillRoot()
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:60 +0xc4
+	>  sigs.k8s.io/controller-runtime/pkg/log.(*delegatingLogSink).WithValues(0xc00060cd00, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/deleg.go:168 +0x3c
+	>  github.com/go-logr/logr.Logger.WithValues(...)
+	>  	/Users/johalley/go/pkg/mod/github.com/go-logr/logr@v1.4.4/logr.go:332
+	>  sigs.k8s.io/controller-runtime/pkg/log.FromContext({0x10a6fe968, 0x10b8531c0}, {0x0, 0x0, 0x0})
+	>  	/Users/johalley/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.23.3/pkg/log/log.go:98 +0xb8
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controller.(*NetworkControllerReconciler).Reconcile(0xc0009feb60, {0x10a6fe968, 0x10b8531c0}, {{{0xc000730720, 0x16}, {0xc001c925ec, 0x4}}})
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controller/networkcontroller_controller.go:101 +0x5c
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.initialNoAuthScenario(0xc0005ae008, {0x107c48c11, 0x7}, 0xc00082fe88)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_initial_noauth_test.go:521 +0x4744
+	>  github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter.TestEnvtestDiscoveryInitialNoAuthLifecycle.func1(0xc0005ae008)
+	>  	/Users/johalley/Git/cisco-virtual-kubelet/internal/controlleradapter/catalystcenter/discovery_initial_noauth_envtest_test.go:13 +0xe0
+	>  testing.tRunner(0xc0005ae008, 0xc00100c4e0)
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2036 +0x168
+	>  created by testing.(*T).Run in goroutine 2348
+	>  	/Users/johalley/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.26.9.darwin-arm64/src/testing/testing.go:2101 +0x7c0
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff-configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-handoff
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/projected
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-configmap
+=== RUN   TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata
+--- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle (26.08s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/inline (2.65s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/configmap (0.73s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/unknown (0.71s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared (0.23s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-configmap (0.24s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-source-loss (1.15s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss (0.23s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict (1.18s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss (0.86s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff (2.44s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/handoff-configmap (2.59s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-handoff (1.76s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff (1.84s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/projected (1.51s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-configmap (1.64s)
+    --- PASS: TestEnvtestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata (2.30s)
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/inline
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/default
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/configmap
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/unknown
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/unknown-source-loss
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/projected
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-configmap
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-return-to-metadata
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-reintroduce
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-reuse
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/versioned-origin
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/prepared
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/blocked-discovery-finalizer
+=== RUN   TestEnvtestDiscoveryNoAuthRetainLifecycle/blocked-feature-finalizer
+--- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle (20.96s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/inline (2.44s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/default (0.43s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/configmap (0.45s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/unknown (0.41s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/unknown-source-loss (0.46s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/projected (1.19s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-configmap (1.34s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-return-to-metadata (1.87s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-reintroduce (3.02s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/projected-reuse (2.42s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/versioned-origin (2.14s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/prepared (0.21s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/blocked-discovery-finalizer (0.16s)
+    --- PASS: TestEnvtestDiscoveryNoAuthRetainLifecycle/blocked-feature-finalizer (0.15s)
+=== RUN   TestDiscoveryInitialNoAuthLifecycle
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/inline
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/unknown
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/handoff-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected-configmap
+=== RUN   TestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata
+--- PASS: TestDiscoveryInitialNoAuthLifecycle (7.59s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/inline (0.22s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/configmap (0.23s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/unknown (0.22s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-configmap (0.08s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-source-loss (0.31s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss (0.10s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-native-conflict (0.36s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-scope-loss (0.24s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff (1.12s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/handoff-configmap (1.14s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-handoff (0.77s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/prepared-committed-source-loss-handoff (0.79s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected (0.54s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected-configmap (0.57s)
+    --- PASS: TestDiscoveryInitialNoAuthLifecycle/projected-return-to-metadata (0.84s)
+=== RUN   TestDiscoveryNoAuthRetainLifecycle
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/inline
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/default
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/configmap
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/unknown
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/unknown-source-loss
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-configmap
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-return-to-metadata
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-reintroduce
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/projected-reuse
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/versioned-origin
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/prepared
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/blocked-discovery-finalizer
+=== RUN   TestDiscoveryNoAuthRetainLifecycle/blocked-feature-finalizer
+--- PASS: TestDiscoveryNoAuthRetainLifecycle (5.25s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/inline (0.16s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/default (0.16s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/configmap (0.17s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/unknown (0.16s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/unknown-source-loss (0.17s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected (0.42s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-configmap (0.46s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-return-to-metadata (0.67s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-reintroduce (1.08s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/projected-reuse (0.84s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/versioned-origin (0.76s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/prepared (0.10s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/blocked-discovery-finalizer (0.05s)
+    --- PASS: TestDiscoveryNoAuthRetainLifecycle/blocked-feature-finalizer (0.05s)
+=== RUN   TestApplyExamplesCompile
+=== RUN   TestApplyExamplesCompile/aaa-apply.yaml
+=== RUN   TestApplyExamplesCompile/aaa-prerequisites-apply.yaml
+=== RUN   TestApplyExamplesCompile/anycast-gateways-apply.yaml
+=== RUN   TestApplyExamplesCompile/authentication-templates-apply.yaml
+=== RUN   TestApplyExamplesCompile/composite-template-deployment-apply.yaml
+=== RUN   TestApplyExamplesCompile/device-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-cohort-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-composition-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-delete-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-noauth-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-noauth-retain-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-null-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-prune-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-replacement-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/discovery-templates-apply.yaml
+=== RUN   TestApplyExamplesCompile/dynamic-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/extranet-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-associated-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-authentication-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-l2-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-l3-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-sites-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-transits-apply.yaml
+=== RUN   TestApplyExamplesCompile/fabric-zones-apply.yaml
+=== RUN   TestApplyExamplesCompile/global-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/inventory-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-dualstack-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-fabric-apply.yaml
+=== RUN   TestApplyExamplesCompile/ipam-prune-apply.yaml
+=== RUN   TestApplyExamplesCompile/ise-policy-server-apply.yaml
+=== RUN   TestApplyExamplesCompile/merged-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-credentials-combined-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-profiles-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-settings-apply.yaml
+=== RUN   TestApplyExamplesCompile/network-settings-reset-apply.yaml
+=== RUN   TestApplyExamplesCompile/planned-ap-apply.yaml
+=== RUN   TestApplyExamplesCompile/policy-servers-apply.yaml
+=== RUN   TestApplyExamplesCompile/policy-servers-keywrap-apply.yaml
+=== RUN   TestApplyExamplesCompile/rma-mark-apply.yaml
+=== RUN   TestApplyExamplesCompile/rma-unmark-apply.yaml
+=== RUN   TestApplyExamplesCompile/site-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/sites-apply.yaml
+=== RUN   TestApplyExamplesCompile/sites-bulk-apply.yaml
+=== RUN   TestApplyExamplesCompile/snmpv3-noauth-apply.yaml
+=== RUN   TestApplyExamplesCompile/system-external-auth-apply.yaml
+=== RUN   TestApplyExamplesCompile/system-settings-apply.yaml
+=== RUN   TestApplyExamplesCompile/tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/telemetry-partial-apply.yaml
+=== RUN   TestApplyExamplesCompile/template-deployment-apply.yaml
+=== RUN   TestApplyExamplesCompile/template-projects-apply.yaml
+=== RUN   TestApplyExamplesCompile/wired-provision-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-acls-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-anchor-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-anchor-multi-peer-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ap-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ap-calendar-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ap-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-cleanair-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-dot11be-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-feature-prune-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-feature-recreate-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-fra-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-interfaces-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-policy-cohort-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-power-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-profile-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-profile-tags-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-rf-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-empty-multipsk-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-multipsk-credentials-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-ssid-retire-priority4-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-tag-baselines-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-tag-membership-apply.yaml
+=== RUN   TestApplyExamplesCompile/wireless-tag-prune-apply.yaml
+--- PASS: TestApplyExamplesCompile (0.27s)
+    --- PASS: TestApplyExamplesCompile/aaa-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/aaa-prerequisites-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/anycast-gateways-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/authentication-templates-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/composite-template-deployment-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/device-credentials-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/discovery-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-cohort-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-composition-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-delete-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/discovery-noauth-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/discovery-noauth-retain-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-null-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-prune-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-replacement-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/discovery-tags-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/discovery-templates-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/dynamic-tags-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/extranet-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-associated-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-authentication-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-l2-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-l3-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-sites-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-transits-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/fabric-zones-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/global-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/inventory-tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-dualstack-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-fabric-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ipam-prune-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/ise-policy-server-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/merged-tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/network-credentials-combined-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/network-profiles-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/network-settings-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/network-settings-reset-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/planned-ap-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/policy-servers-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/policy-servers-keywrap-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/rma-mark-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/rma-unmark-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/site-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/sites-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/sites-bulk-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/snmpv3-noauth-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/system-external-auth-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/system-settings-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/telemetry-partial-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/template-deployment-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/template-projects-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wired-provision-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-acls-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-anchor-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-anchor-multi-peer-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ap-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ap-calendar-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ap-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-cleanair-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-dot11be-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-feature-prune-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-feature-recreate-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-fra-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-interfaces-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-policy-cohort-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-power-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-profile-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-profile-tags-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-rf-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-credentials-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-empty-multipsk-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-multipsk-credentials-apply.yaml (0.01s)
+    --- PASS: TestApplyExamplesCompile/wireless-ssid-retire-priority4-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-tag-baselines-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-tag-membership-apply.yaml (0.00s)
+    --- PASS: TestApplyExamplesCompile/wireless-tag-prune-apply.yaml (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	81.183s

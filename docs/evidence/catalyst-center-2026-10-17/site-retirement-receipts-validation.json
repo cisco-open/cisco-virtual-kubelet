@@ -1,0 +1,51 @@
+{
+  "status": "atomic-retirement-receipt-component-qualified; public lifecycle incomplete",
+  "sources": {
+    "internal/controlleradapter/catalystcenter/config_journal.go": "3e8b14bb7ab73d3733c5e330fd0476d9bf4774026d926f9cf10c9ec42a79d4b6",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding.go": "d0a4e2faea35619e23ffe4444bd27978f90dbf3a0be2e39164b7557403d57320",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_test.go": "5351e5e3dc2a851a0e8ffdbd014bc7b79c897e93b181516379ab65663d6b9fc2",
+    "internal/controlleradapter/catalystcenter/site_retirement_binding_envtest_test.go": "fb381c0ed69fe3de27956b4b165583d07a5754d98373e8d63c0204291fcc0c3f",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery.go": "208170f87d0f13de5ae2e0e7ada760f776ca1d7aeb0d2f2e3b8add891b701f2f",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery_test.go": "c1684312298e0d4dc83b6e4c5cb32303ca91d91ad19b8d0d1fb080274dbed141",
+    "internal/controlleradapter/catalystcenter/site_retirement_recovery_envtest_test.go": "c28997651486ae1a973df6479ffc4ce46e78196e9792c3023dd4ac940bc35262",
+    "internal/controlleradapter/catalystcenter/site_retirement_receipt.go": "2eefbf391adaded6c133a9530d767bbe904b6aa0cb71e586792faa4d06d883fd",
+    "internal/controlleradapter/catalystcenter/site_retirement_receipt_test.go": "3ae8975b783ae15e44bdafb994f70b89aa4ea5c4615f37e4df2655df200b117f",
+    "internal/controlleradapter/catalystcenter/site_retirement_receipt_envtest_test.go": "18339c6de0f2d2bb895f04790c0e2c78174e36e24021ffce699ee34e30c28b2c"
+  },
+  "gates": [
+    {
+      "log": "site-retirement-receipts-regression.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t53.176s",
+      "topLevelPassingTests": 57,
+      "passingSubcases": 720,
+      "sha256": "e26b2c66c691b8137869d761e84aa955bc8ca67dca3520004fb6aef9f6021cba"
+    },
+    {
+      "log": "site-retirement-receipts-api.log",
+      "result": "ok  \tgithub.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter\t31.812s",
+      "topLevelPassingTests": 3,
+      "passingSubcases": 54,
+      "sha256": "dac0c99a0a88131b39b4150b5c9af37a3c8874ce4a8d6bcfc6fad397d0c4bc6e"
+    }
+  ],
+  "contracts": {
+    "verifiedAndReceiptSingleStatusCAS": true,
+    "originalCreatorAndLatestRowsPreserved": true,
+    "lostResponseIdempotentWithoutNativeReadOrReplay": true,
+    "conflictRequiresFreshOriginalTaskObservation": true,
+    "prunedProducerOrResultRetainsFence": true,
+    "genericSitesDeleteVerificationBypassBlocked": true,
+    "submittedPreparedRelabelDoesNotCancel": true,
+    "unsubmittedPreparedCancellationAllowed": true,
+    "sectionOwnershipRetainedAfterSlotRelease": true,
+    "samePathRetirementReplacementEnabled": false,
+    "publicDeleteEnabled": false
+  },
+  "liveQualification": "No new lab mutation in this stage; tests use private API servers and native HTTP fixtures. Earlier native evidence is not promoted to installed retirement qualification.",
+  "remaining": [
+    "public policy/compiler and guarded Delete submission",
+    "remaining operational/settings consumer lifecycle checks",
+    "bounded retirement/recreation archive and lineage protocol",
+    "source/config deletion and installed full-cycle qualification"
+  ]
+}

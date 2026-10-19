@@ -1,0 +1,13 @@
+{
+  "image": "cvk-catc-worker-qualification:20261017-v4-d46bafc03b6f",
+  "binarySha256": "d46bafc03b6fe11adb6b9ed7cc804aab6d6c04f431f604995722d06dedebf24d",
+  "base": "gcr.io/distroless/static-debian12@sha256:d75cdd72874d4790092fcb1b058493ecf6bb5bf2b2b897045b00ff01d91843f2",
+  "scope": "Build/CLI smoke only. Local private image, not published. No credentials mounted; no cluster change, device operation or native metadata mutation performed by this smoke test.",
+  "imageID": "sha256:440ab621bc957280d892718824b34bd703633cbf0f0ea78fe15c97ef60f7a31d",
+  "architecture": "arm64",
+  "os": "linux",
+  "user": "65532:65532",
+  "entrypoint": [
+    "/usr/local/bin/cisco-vk"
+  ]
+}

@@ -1,0 +1,8 @@
+=== RUN   TestLiveLANSessionLaunchPrerequisites
+    lan_session_start_live_test.go:52: read-only prerequisites: maximum=5 active=0 managed=3 PnP=0 LAN-pools=0 complete-usage=0; no launch/reset/stop submitted
+=== RUN   TestLiveLANSessionLaunchPrerequisites/DeclaredLaunch
+    lan_session_start_live_test.go:56: no explicit isolated LAN session declaration supplied; full native launch preflight unqualified
+--- PASS: TestLiveLANSessionLaunchPrerequisites (10.25s)
+    --- SKIP: TestLiveLANSessionLaunchPrerequisites/DeclaredLaunch (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	12.385s

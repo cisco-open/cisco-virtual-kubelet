@@ -1,0 +1,40 @@
+# Offline importer input. Runtime manifests consume its resolved JSON output.
+# CVK_SOURCE_PARENT must be explicitly authorized with --env.
+defaults:
+  catalyst_center:
+    sites:
+      floors: &geometry
+        width: 30
+        length: 30
+        height: 3
+        units_of_measure: meters
+catalyst_center:
+  sites:
+    areas:
+      - name: CVK-YAML-Design
+        parent_name: Global
+    buildings:
+      - name: Building
+        parent_name: Global/CVK-YAML-Design
+        country: United States
+        latitude: 37.33812
+        longitude: -121.88612
+    floors:
+      - <<: [*geometry, *geometry]
+        name: Floor
+        parent_name: !env CVK_SOURCE_PARENT
+        floor_number: 1
+        planned_access_points:
+          - name: CVK-YAML-AP
+            ap_type: AP9130I
+            position_x: 4.5
+            position_y: 6
+            position_z: 4
+            mac_address: 02:00:00:00:00:03
+            radios:
+              - band: 5
+                channel: 36
+                tx_power: 12
+                antenna_name: Internal-9130-5GHz
+                antenna_azimuth: 90
+                antenna_elevation: -10

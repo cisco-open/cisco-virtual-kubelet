@@ -1,0 +1,26 @@
+=== RUN   TestLiveCatalystCenterAAAOwnedReset
+    aaa_settings_manifest_live_test.go:109: isolated dual-protocol registration verified 84d6f21a-9799-448a-908e-73b1753b4bc3
+    aaa_settings_manifest_live_test.go:109: isolated dual-protocol registration verified 75f44078-f1c3-4058-b49c-d97e4e47388d
+    aaa_settings_manifest_live_test.go:110: assignment fixture area task Global/CVK-Cred-20261015-133400-000000000 01a13fc5-0b7b-7c3e-a771-f9751aff7a00
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 1 credentialVersion 1 secondaryServers false
+    aaa_settings_manifest_live_test.go:280: AAA version projection lag refused without a native write
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 2 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 3 credentialVersion 2 secondaryServers true
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:312: AAA public manifest reached InSync with receipt, simulated restart and no-op phase 4 credentialVersion 2 secondaryServers false
+    aaa_settings_manifest_live_test.go:334: owned reset child created Global/CVK-Cred-20261015-133400-000000000/AAA-Reset-Child fa96873c-2902-473d-b7bc-7bf66782f277
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:334: child AAA reconciliation 0 Waiting Accepted 01a13fc6-0019-73bd-952d-7c390588efe2
+    aaa_settings_manifest_live_test.go:334: child AAA reconciliation 20 Waiting Accepted 01a13fc6-0019-73bd-952d-7c390588efe2
+    aaa_settings_manifest_live_test.go:95: isolated site AAA response HTTP 202 transportError false
+    aaa_settings_manifest_live_test.go:334: native reset representation did not converge; retain
+    aaa_settings_reset_live_test.go:132: reset child retained Global/CVK-Cred-20261015-133400-000000000/AAA-Reset-Child fa96873c-2902-473d-b7bc-7bf66782f277
+    site_credentials_live_test.go:82: assignment fixture retained for inspection Global/CVK-Cred-20261015-133400-000000000 60c5aee7-ff55-4df6-8218-c229c3720d02
+    aaa_settings_registration_live_test.go:59: isolated AAA registration prerequisites retained 2
+--- FAIL: TestLiveCatalystCenterAAAOwnedReset (246.89s)
+FAIL
+FAIL	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	247.999s
+FAIL

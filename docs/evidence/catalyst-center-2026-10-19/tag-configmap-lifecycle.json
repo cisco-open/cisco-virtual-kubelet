@@ -1,0 +1,225 @@
+{
+  "status": "Native projected-source static tag lifecycle and same-section handoff qualified within stated limits; full model incomplete",
+  "fullModelComplete": false,
+  "source": {
+    "files": 1677,
+    "sha256": "a35d6c941b88a3c6af015f8ce8f138f24d66079fc18788cd257002463632a99e",
+    "productionSHA256": "732494eb6a62cf3060203648bf7c07c94be01a1aada74dbdf56c8cf6721a9768",
+    "nativeBuildSourceSHA256": "b5a571ca051039267721a01b5c2f4d102523b84d6da3b566869bda5b72a6b0c3",
+    "testOnlyChangesAfterNative": [
+      "internal/controlleradapter/catalystcenter/tag_projected_example_test.go"
+    ],
+    "productionMatchesNativeAndPriorCompatibility": true
+  },
+  "gates": {
+    "controlledAndRealAPI": {
+      "result": "PASS",
+      "passingEvents": 9,
+      "seconds": 24.305,
+      "log": "/private/tmp/cvk-tag-configmap-api.log"
+    },
+    "projectedAndExistingExamples": {
+      "result": "PASS",
+      "passingEvents": 88,
+      "seconds": 3.276,
+      "log": "/private/tmp/cvk-tag-configmap-example.log"
+    },
+    "strictDocs": {
+      "result": "PASS",
+      "seconds": 7.87,
+      "log": "/private/tmp/cvk-tag-configmap-docs.log",
+      "scope": "Original ConfigMap qualification documentation before subsequent section-handoff changes"
+    }
+  },
+  "native": [
+    {
+      "scope": "inventory",
+      "exitCode": 0,
+      "seconds": 86.91118693351746,
+      "log": "/private/tmp/cvk-tag-configmap-native-inventory.log",
+      "sourceSHA256": "b5a571ca051039267721a01b5c2f4d102523b84d6da3b566869bda5b72a6b0c3",
+      "unchanged": true,
+      "nativeIDs": [
+        "96655b1f-5f62-40a0-a9af-dac1ba39bff1",
+        "ca3ce235-6574-48fe-9d26-762607d98606",
+        "a2ce5820-cdb6-4fbe-a401-f0d4470199c3"
+      ],
+      "configMapUIDs": [
+        "f3fe0703-b941-41b3-818d-54ecbd146c1f",
+        "31c431f8-8826-4aa1-9fdf-93fec10ea301",
+        "a99ee161-b449-48da-81ed-85b75638248b"
+      ],
+      "modelRevisions": [
+        {
+          "digest": "7e2bf8a99efadae7c2a86a635eea4f5b4b45399bcbfa9b50f7853144feef3f29",
+          "uid": "f3fe0703-b941-41b3-818d-54ecbd146c1f",
+          "version": "214"
+        },
+        {
+          "digest": "6503dd2067ca2f7574d9f65dd8d66e688d7d014ac1840fedcd78e28d16714e5f",
+          "uid": "f3fe0703-b941-41b3-818d-54ecbd146c1f",
+          "version": "229"
+        },
+        {
+          "digest": "5a02057043b144acd5f63c92c447e793ec89fac64eb92ce715960f9672bdfb73",
+          "uid": "31c431f8-8826-4aa1-9fdf-93fec10ea301",
+          "version": "261"
+        },
+        {
+          "digest": "2da3c93dc087534cab6af5edae74a07f82b15946f069a23de44b46690ab0a3e6",
+          "uid": "31c431f8-8826-4aa1-9fdf-93fec10ea301",
+          "version": "277"
+        },
+        {
+          "digest": "0f4ff47408d21bb013e514b20cd4ac33f454167b709020ef10709bf7a9b6ee5d",
+          "uid": "a99ee161-b449-48da-81ed-85b75638248b",
+          "version": "309"
+        },
+        {
+          "digest": "06134de2005cce81b7c7d33639bb8f3a64a6470ef9f0550dca4dd5a90fca53b8",
+          "uid": "a99ee161-b449-48da-81ed-85b75638248b",
+          "version": "327"
+        }
+      ],
+      "staleSnapshotRefusals": 3,
+      "originalTaskRecoveries": 9,
+      "mutationCounts": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "sourceRemovedBeforeEachDelete": true,
+      "baselineRestored": true
+    },
+    {
+      "scope": "combined",
+      "exitCode": 0,
+      "seconds": 53.84832787513733,
+      "log": "/private/tmp/cvk-tag-configmap-native-combined.log",
+      "sourceSHA256": "b5a571ca051039267721a01b5c2f4d102523b84d6da3b566869bda5b72a6b0c3",
+      "unchanged": true,
+      "nativeIDs": [
+        "5a3db9ee-2db2-4edd-98c1-e8bca0e347af",
+        "229e9348-9899-407a-a4b5-df1c71d65763",
+        "e450c6a3-a18b-466a-a7d1-7f02f003d53e"
+      ],
+      "configMapUIDs": [
+        "d11f6726-b9ee-4255-b6ba-f7f743db6aab",
+        "ef138d82-0fe2-4515-b5fc-c69112f81974",
+        "8bab0363-31c5-42b5-bdac-ca19d5cc95d4"
+      ],
+      "modelRevisions": [
+        {
+          "digest": "6e5d7258d79856b0194d2faae5c63cc96c10279ff8967ea114a2674c041a05cb",
+          "uid": "d11f6726-b9ee-4255-b6ba-f7f743db6aab",
+          "version": "214"
+        },
+        {
+          "digest": "5ff1f7c6120c9470128b9346a49019e7a097517da369872e476fe71c51c4aa42",
+          "uid": "d11f6726-b9ee-4255-b6ba-f7f743db6aab",
+          "version": "229"
+        },
+        {
+          "digest": "a28b7206c40072ac750385832ef0c856040c580c2bed10563c6285a43fc31ef0",
+          "uid": "ef138d82-0fe2-4515-b5fc-c69112f81974",
+          "version": "261"
+        },
+        {
+          "digest": "96908a564aaa27261a37c850a7c3eab4ee7b2801cca5ee9c63921ff227e9a548",
+          "uid": "ef138d82-0fe2-4515-b5fc-c69112f81974",
+          "version": "277"
+        },
+        {
+          "digest": "fd683affdf2617dd06e4fe6edd6b19a98fcaa322d816aaf0243c9d75f20c1b2b",
+          "uid": "8bab0363-31c5-42b5-bdac-ca19d5cc95d4",
+          "version": "309"
+        },
+        {
+          "digest": "936ab8c7f1bb92ce1c5c17274c853406a457e993221790bf8ede660233628f40",
+          "uid": "8bab0363-31c5-42b5-bdac-ca19d5cc95d4",
+          "version": "327"
+        }
+      ],
+      "staleSnapshotRefusals": 3,
+      "originalTaskRecoveries": 9,
+      "mutationCounts": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "sourceRemovedBeforeEachDelete": true,
+      "baselineRestored": true
+    },
+    {
+      "scope": "templates",
+      "exitCode": 0,
+      "seconds": 53.557969093322754,
+      "log": "/private/tmp/cvk-tag-configmap-native-templates.log",
+      "sourceSHA256": "b5a571ca051039267721a01b5c2f4d102523b84d6da3b566869bda5b72a6b0c3",
+      "unchanged": true,
+      "nativeIDs": [
+        "dd360a34-493d-45d5-9675-a334dafcc888",
+        "4e58b43c-435c-48ba-bb95-42f4825aa9c4",
+        "57caa4dc-4c04-4f61-91aa-1d5d424bfda0"
+      ],
+      "configMapUIDs": [
+        "ce792c6f-f34c-4f41-98f8-afdcee00a363",
+        "8eb2034a-d7c8-46c0-9c41-735c42879e5c",
+        "d37ba378-35f6-4fad-af78-2ff9b6cdd723"
+      ],
+      "modelRevisions": [
+        {
+          "digest": "9ad33b2e3afa2c1a99658453b37eef488ef6232a996f49a4d934ea91541850bc",
+          "uid": "ce792c6f-f34c-4f41-98f8-afdcee00a363",
+          "version": "214"
+        },
+        {
+          "digest": "d9002fa859618f5e8ee7157607ec3b4f5e5d5ad8e2a4d044cdb19b3b9a1b1eb6",
+          "uid": "ce792c6f-f34c-4f41-98f8-afdcee00a363",
+          "version": "229"
+        },
+        {
+          "digest": "13c3904452a3c21a480790cc6c42aa0f97ff07a24ff536f678d3ab7fcc946141",
+          "uid": "8eb2034a-d7c8-46c0-9c41-735c42879e5c",
+          "version": "261"
+        },
+        {
+          "digest": "0cb99d73043f3270e367b83f10133b255517572440fb28fd45c1081d883f9775",
+          "uid": "8eb2034a-d7c8-46c0-9c41-735c42879e5c",
+          "version": "277"
+        },
+        {
+          "digest": "2b87217345d50337a0990b61980f4a28b196130b6f51de4a338ac73449331b95",
+          "uid": "d37ba378-35f6-4fad-af78-2ff9b6cdd723",
+          "version": "309"
+        },
+        {
+          "digest": "4f2bc5ff6bf8f15413139db1f15ddb9597faf9e7fbaa7453ef4786989e425210",
+          "uid": "d37ba378-35f6-4fad-af78-2ff9b6cdd723",
+          "version": "327"
+        }
+      ],
+      "staleSnapshotRefusals": 3,
+      "originalTaskRecoveries": 9,
+      "mutationCounts": {
+        "POST": 3,
+        "PUT": 3,
+        "DELETE": 3
+      },
+      "sourceRemovedBeforeEachDelete": true,
+      "baselineRestored": true
+    }
+  ],
+  "runtimeUnchangedFromQualifiedHandoff": "732494eb6a62cf3060203648bf7c07c94be01a1aada74dbdf56c8cf6721a9768",
+  "priorRuntimeCompatibilityEvidence": "tag-owner-handoff.json",
+  "limitations": [
+    "Installed manager/worker projection and rollout remain unqualified.",
+    "An already accepted operation whose exact source revision is lost remains fenced; these cycles remove source only after settled verification.",
+    "Inventory source loss before any ownership receipt cannot establish family custody.",
+    "Section handoff, legacy owner migration, dynamic/recreated/empty-owner combinations, scale limits and broader93-resource parity remain open."
+  ],
+  "example": {
+    "path": "examples/configs/catalyst-center/tags-projected-owner-execution.yaml",
+    "sha256": "08bd476d74c667ed483a7b7160d9cfc00bf4ad1dd38c536d88126d376be3915e"
+  }
+}

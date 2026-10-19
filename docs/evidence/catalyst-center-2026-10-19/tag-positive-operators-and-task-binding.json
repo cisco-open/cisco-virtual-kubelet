@@ -1,0 +1,193 @@
+{
+  "modelVersion": "0.5.0",
+  "upstreamRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "baseSourceSHA256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e",
+  "positiveOperators": [
+    {
+      "form": "OR",
+      "exitCode": 0,
+      "seconds": 69.50022888183594,
+      "log": "cvk-tag-positive-or.log"
+    },
+    {
+      "form": "LIKE",
+      "exitCode": 0,
+      "seconds": 38.527390003204346,
+      "log": "cvk-tag-positive-like.log"
+    },
+    {
+      "form": "ILIKE",
+      "exitCode": 0,
+      "seconds": 38.42993116378784,
+      "log": "cvk-tag-positive-ilike.log"
+    },
+    {
+      "form": "IN",
+      "exitCode": 0,
+      "seconds": 39.94528579711914,
+      "log": "cvk-tag-positive-in.log"
+    }
+  ],
+  "positiveOperatorLifecycle": [
+    "first-device",
+    "second-device",
+    "clear-matching-rule",
+    "restore-first-device",
+    "no-match",
+    "clear"
+  ],
+  "combinedInventoryTemplates": true,
+  "provenanceVerified": [
+    "DYNAMIC",
+    "STATIC",
+    "MIXED"
+  ],
+  "nativeFixtureCleanupPassed": true,
+  "deviceProvisioningOrUpgradePerformed": false,
+  "nativeTaskResult": {
+    "taskID": "01a1510e-3b23-7ec7-b57d-2cb8f80f1904",
+    "serviceType": "Grouping Service",
+    "isError": false,
+    "fields": [
+      "data",
+      "endTime",
+      "id",
+      "instanceTenantId",
+      "isError",
+      "operationIdList",
+      "progress",
+      "serviceType",
+      "startTime",
+      "version"
+    ],
+    "dataType": "str",
+    "dataLength": 36,
+    "progressType": "str",
+    "dataCanonicalUUID": true,
+    "dataUUID": "bf00dc0d-f53c-4547-8879-597094458bbc",
+    "progressCanonicalUUID": false
+  },
+  "taskBindingCandidate": {
+    "applied": true,
+    "files": [
+      {
+        "path": "internal/controlleradapter/catalystcenter/template_tags.go",
+        "candidateSHA256": "cce6e7436fec9f78025ae4a82eb6a08b2a029d61f617e4c5b2341698eed86c9e"
+      },
+      {
+        "path": "internal/controlleradapter/catalystcenter/template_tags_test.go",
+        "candidateSHA256": "f8b1d2de152febf1e21c0df95166251ae066a51277f3446aa52ff36a3b328905"
+      },
+      {
+        "path": "internal/controlleradapter/catalystcenter/config_apply_plan_test.go",
+        "candidateSHA256": "659c5cc9f743fc45698763f8e3b0ed88e1e687fbe490509504af99c116d07dfe"
+      },
+      {
+        "path": "internal/controlleradapter/catalystcenter/template_tag_clear_test.go",
+        "candidateSHA256": "972dbe7c9640332349e53d5d252c0f55e06df7d834c3b4575e24d7adac02504d"
+      },
+      {
+        "path": "internal/controlleradapter/catalystcenter/discovery_test.go",
+        "candidateSHA256": "53c8de659c0eb6f6b41f4eae806ca48a76a992439c37ae5abfe6193d9c663035"
+      },
+      {
+        "path": "internal/controlleradapter/catalystcenter/template_tags_live_test.go",
+        "candidateSHA256": "6d9723d1f8bf95d5229e6549c164d21861ce1be351ad4bc18e5516be3350a10a"
+      },
+      {
+        "path": "internal/controlleradapter/catalystcenter/tag_create_task_test.go",
+        "candidateSHA256": "5605a701f0c5b4894782a7f68ca89b4c2e29242bcc58d13ba029e717de881fae"
+      }
+    ],
+    "regressionSession": 80474,
+    "nativeSession": 64230,
+    "overlay": "/private/tmp/cvk-tag-task-binding-overlay.json",
+    "fullRegressionBaseSession": 4528,
+    "native": {
+      "form": "OR",
+      "exitCode": 0,
+      "seconds": 68.96901488304138,
+      "log": "cvk-tag-task-binding-native-or.log"
+    },
+    "nativeLifecyclePassed": true,
+    "core": {
+      "passed": true,
+      "passingEvents": 109,
+      "log": "cvk-tag-task-binding-core.log"
+    },
+    "regression": {
+      "passed": true,
+      "passingEvents": 1336,
+      "durationSeconds": 303.541,
+      "log": "cvk-tag-task-binding-regression.log"
+    }
+  },
+  "deletionOwnershipImplemented": false,
+  "installedActorQualified": false,
+  "fullResourceParity": false,
+  "strictDocsPassed": true,
+  "appliedSource": {
+    "applied": true,
+    "files": 1647,
+    "sha256": "4bfedfa3f0c937bc8dae567c0a41e02a2e082dafc68d7b44bcbec6984d966b55",
+    "overlayFiles": 12,
+    "mappedFilesMatch": true
+  },
+  "knownTaskRecovery": {
+    "applied": true,
+    "scope": "declared metadata tag leaves under inventory/templates/combined plans; shared source/owner/journal checks retained",
+    "newStateMachineTransportOrCRD": false,
+    "tasklessRecovery": false,
+    "deletionAuthority": false,
+    "envtest": {
+      "passed": true,
+      "passingEvents": 150,
+      "durationSeconds": 12.588,
+      "log": "cvk-tag-recovery-envtest.log"
+    },
+    "native": {
+      "passed": true,
+      "durationSeconds": 13.79,
+      "creates": 1,
+      "updates": 1,
+      "recoveredOriginalTasks": 2,
+      "cleanup": "supervised exact-UUID original-task-bound cleanup; not manifest deletion",
+      "baselineRestored": true,
+      "installedActors": false,
+      "log": "cvk-tag-recovery-native-public-recovery.log"
+    }
+  },
+  "appliedRegression": {
+    "passed": true,
+    "passingEvents": 650,
+    "durationSeconds": 23.736,
+    "log": "cvk-tag-recovery-applied-regression.log"
+  },
+  "mixedDiscovery": {
+    "passed": true,
+    "sourceSHA256": "4bfedfa3f0c937bc8dae567c0a41e02a2e082dafc68d7b44bcbec6984d966b55",
+    "log": "cvk-tag-recovery-discovery-composition.log",
+    "passingEvents": 16
+  },
+  "foundation": {
+    "passed": true,
+    "sourceSHA256": "4bfedfa3f0c937bc8dae567c0a41e02a2e082dafc68d7b44bcbec6984d966b55",
+    "log": "cvk-tag-recovery-foundation-corrected.log"
+  },
+  "swim": {
+    "passed": true,
+    "sourceSHA256": "4bfedfa3f0c937bc8dae567c0a41e02a2e082dafc68d7b44bcbec6984d966b55",
+    "log": "cvk-tag-recovery-swim.log"
+  },
+  "build": {
+    "passed": true,
+    "sourceSHA256": "4bfedfa3f0c937bc8dae567c0a41e02a2e082dafc68d7b44bcbec6984d966b55",
+    "binarySHA256": "e072ce663e1c68c94c63074051fc5917d9b4cbd7474f6662cb2af2e0a5a7d265"
+  },
+  "earlierFoundationSetupFailure": "The first command used nonexistent internal/softwareupgrade and internal/maintenance paths. The subsequent fresh all-four gate used the correct internal/provider paths and passed.",
+  "strictDocs": {
+    "passed": true,
+    "durationSeconds": 7.52,
+    "log": "cvk-tag-recovery-docs.log"
+  }
+}

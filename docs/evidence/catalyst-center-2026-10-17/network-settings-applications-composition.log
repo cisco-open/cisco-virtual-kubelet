@@ -1,0 +1,144 @@
+=== RUN   TestAAANetworkPreflightRefusesPartialApply
+=== RUN   TestAAANetworkPreflightRefusesPartialApply/aaa-ownership
+=== RUN   TestAAANetworkPreflightRefusesPartialApply/network-response
+=== RUN   TestAAANetworkPreflightRefusesPartialApply/aaa-registration
+--- PASS: TestAAANetworkPreflightRefusesPartialApply (0.04s)
+    --- PASS: TestAAANetworkPreflightRefusesPartialApply/aaa-ownership (0.02s)
+    --- PASS: TestAAANetworkPreflightRefusesPartialApply/network-response (0.01s)
+    --- PASS: TestAAANetworkPreflightRefusesPartialApply/aaa-registration (0.01s)
+=== RUN   TestAAANetworkBindingSplitPreservesSharedProfile
+--- PASS: TestAAANetworkBindingSplitPreservesSharedProfile (0.00s)
+=== RUN   TestAAASettingsRequireRegisteredServers
+=== RUN   TestAAASettingsRequireRegisteredServers/valid
+=== RUN   TestAAASettingsRequireRegisteredServers/dual-protocol
+=== RUN   TestAAASettingsRequireRegisteredServers/missing
+=== RUN   TestAAASettingsRequireRegisteredServers/wrong-protocol
+=== RUN   TestAAASettingsRequireRegisteredServers/ise-record
+=== RUN   TestAAASettingsRequireRegisteredServers/unknown-type
+=== RUN   TestAAASettingsRequireRegisteredServers/secondary-missing
+=== RUN   TestAAASettingsRequireRegisteredServers/reader-failure
+=== RUN   TestAAASettingsRequireRegisteredServers/replacement-before-submit
+--- PASS: TestAAASettingsRequireRegisteredServers (0.10s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/valid (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/dual-protocol (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/missing (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/wrong-protocol (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/ise-record (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/unknown-type (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/secondary-missing (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/reader-failure (0.01s)
+    --- PASS: TestAAASettingsRequireRegisteredServers/replacement-before-submit (0.01s)
+=== RUN   TestAAASettingsVerificationRefusesMissingRegistration
+--- PASS: TestAAASettingsVerificationRefusesMissingRegistration (0.01s)
+=== RUN   TestAAASettingsApplyParser
+--- PASS: TestAAASettingsApplyParser (0.00s)
+=== RUN   TestAAASettingsExecutorLifecycle
+=== RUN   TestAAASettingsExecutorLifecycle/initial
+=== RUN   TestAAASettingsExecutorLifecycle/noop
+=== RUN   TestAAASettingsExecutorLifecycle/rotate
+=== RUN   TestAAASettingsExecutorLifecycle/metadata
+=== RUN   TestAAASettingsExecutorLifecycle/remove-secondary
+=== RUN   TestAAASettingsExecutorLifecycle/foreign
+=== RUN   TestAAASettingsExecutorLifecycle/replaced
+=== RUN   TestAAASettingsExecutorLifecycle/rollback
+=== RUN   TestAAASettingsExecutorLifecycle/remapped
+=== RUN   TestAAASettingsExecutorLifecycle/duplicate
+=== RUN   TestAAASettingsExecutorLifecycle/readback-missing
+=== RUN   TestAAASettingsExecutorLifecycle/bad-task
+--- PASS: TestAAASettingsExecutorLifecycle (0.18s)
+    --- PASS: TestAAASettingsExecutorLifecycle/initial (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/noop (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/rotate (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/metadata (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/remove-secondary (0.02s)
+    --- PASS: TestAAASettingsExecutorLifecycle/foreign (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/replaced (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/rollback (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/remapped (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/duplicate (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/readback-missing (0.01s)
+    --- PASS: TestAAASettingsExecutorLifecycle/bad-task (0.01s)
+=== RUN   TestAAASettingsManifestRotateRestart
+=== RUN   TestAAASettingsManifestRotateRestart/root/combined=false
+=== RUN   TestAAASettingsManifestRotateRestart/root/combined=true
+=== RUN   TestAAASettingsManifestRotateRestart/area/combined=false
+=== RUN   TestAAASettingsManifestRotateRestart/area/combined=true
+--- PASS: TestAAASettingsManifestRotateRestart (3.44s)
+    --- PASS: TestAAASettingsManifestRotateRestart/root/combined=false (0.86s)
+    --- PASS: TestAAASettingsManifestRotateRestart/root/combined=true (1.18s)
+    --- PASS: TestAAASettingsManifestRotateRestart/area/combined=false (0.23s)
+    --- PASS: TestAAASettingsManifestRotateRestart/area/combined=true (1.18s)
+=== RUN   TestAAAResetShapesRemainDistinct
+--- PASS: TestAAAResetShapesRemainDistinct (0.00s)
+=== RUN   TestAAAReporting
+=== RUN   TestAAAReporting/match
+=== RUN   TestAAAReporting/changed
+=== RUN   TestAAAReporting/inherited
+=== RUN   TestAAAReporting/unset
+=== RUN   TestAAAReporting/missing-group
+=== RUN   TestAAAReporting/bad-type
+=== RUN   TestAAAReporting/missing-pan
+=== RUN   TestAAAReporting/null-primary
+=== RUN   TestAAAReporting/partial
+--- PASS: TestAAAReporting (0.10s)
+    --- PASS: TestAAAReporting/match (0.01s)
+    --- PASS: TestAAAReporting/changed (0.01s)
+    --- PASS: TestAAAReporting/inherited (0.01s)
+    --- PASS: TestAAAReporting/unset (0.01s)
+    --- PASS: TestAAAReporting/missing-group (0.01s)
+    --- PASS: TestAAAReporting/bad-type (0.01s)
+    --- PASS: TestAAAReporting/missing-pan (0.01s)
+    --- PASS: TestAAAReporting/null-primary (0.01s)
+    --- PASS: TestAAAReporting/partial (0.01s)
+=== RUN   TestAAAIntentRejected
+--- PASS: TestAAAIntentRejected (0.00s)
+=== RUN   TestAAAConfigReportScope
+=== RUN   TestAAAConfigReportScope/report
+=== RUN   TestAAAConfigReportScope/secret
+=== RUN   TestAAAConfigReportScope/apply
+--- PASS: TestAAAConfigReportScope (0.07s)
+    --- PASS: TestAAAConfigReportScope/report (0.03s)
+    --- PASS: TestAAAConfigReportScope/secret (0.02s)
+    --- PASS: TestAAAConfigReportScope/apply (0.03s)
+=== RUN   TestNetworkApplicationCompositionSelection
+=== RUN   TestNetworkApplicationCompositionSelection/direct
+=== RUN   TestNetworkApplicationCompositionSelection/section
+=== RUN   TestNetworkApplicationCompositionSelection/credentials
+=== RUN   TestNetworkApplicationCompositionSelection/aaa
+=== RUN   TestNetworkApplicationCompositionSelection/aaa-credentials
+--- PASS: TestNetworkApplicationCompositionSelection (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/direct (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/section (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/credentials (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/aaa (0.00s)
+    --- PASS: TestNetworkApplicationCompositionSelection/aaa-credentials (0.00s)
+=== RUN   TestNetworkTaskRecoveryEnvelope
+=== RUN   TestNetworkTaskRecoveryEnvelope/valid
+=== RUN   TestNetworkTaskRecoveryEnvelope/undeclared
+=== RUN   TestNetworkTaskRecoveryEnvelope/no-time
+=== RUN   TestNetworkTaskRecoveryEnvelope/no-task
+=== RUN   TestNetworkTaskRecoveryEnvelope/bad-id
+=== RUN   TestNetworkTaskRecoveryEnvelope/accepted
+=== RUN   TestNetworkTaskRecoveryEnvelope/create
+=== RUN   TestNetworkTaskRecoveryEnvelope/parent
+=== RUN   TestNetworkTaskRecoveryEnvelope/physical
+=== RUN   TestNetworkTaskRecoveryEnvelope/credentials
+=== RUN   TestNetworkTaskRecoveryEnvelope/history
+=== RUN   TestNetworkTaskRecoveryEnvelope/cancelled
+=== RUN   TestNetworkTaskRecoveryEnvelope/wrong-kind
+--- PASS: TestNetworkTaskRecoveryEnvelope (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/valid (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/undeclared (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/no-time (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/no-task (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/bad-id (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/accepted (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/create (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/parent (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/physical (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/credentials (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/history (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/cancelled (0.00s)
+    --- PASS: TestNetworkTaskRecoveryEnvelope/wrong-kind (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.356s

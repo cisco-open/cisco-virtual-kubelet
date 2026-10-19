@@ -1,0 +1,72 @@
+=== RUN   TestProfileSiteApplications
+=== RUN   TestProfileSiteApplications/wireless-false/complete
+=== RUN   TestProfileSiteApplications/wireless-false/accepted
+=== RUN   TestProfileSiteApplications/wireless-false/import
+=== RUN   TestProfileSiteApplications/wireless-false/legacy
+=== RUN   TestProfileSiteApplications/wireless-false/repair
+=== RUN   TestProfileSiteApplications/wireless-false/capacity
+=== RUN   TestProfileSiteApplications/wireless-false/replace-at-capacity
+=== RUN   TestProfileSiteApplications/wireless-false/drop-verified-row
+=== RUN   TestProfileSiteApplications/wireless-false/corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-false/corrupt-commit
+=== RUN   TestProfileSiteApplications/wireless-false/settled-corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-false/duplicate
+=== RUN   TestProfileSiteApplications/wireless-false/history-race
+=== RUN   TestProfileSiteApplications/wireless-false/alias
+=== RUN   TestProfileSiteApplications/wireless-false/site-replaced
+=== RUN   TestProfileSiteApplications/wireless-false/parent-replaced
+=== RUN   TestProfileSiteApplications/wireless-false/deselect
+=== RUN   TestProfileSiteApplications/wireless-true/complete
+=== RUN   TestProfileSiteApplications/wireless-true/accepted
+=== RUN   TestProfileSiteApplications/wireless-true/import
+=== RUN   TestProfileSiteApplications/wireless-true/legacy
+=== RUN   TestProfileSiteApplications/wireless-true/repair
+=== RUN   TestProfileSiteApplications/wireless-true/capacity
+=== RUN   TestProfileSiteApplications/wireless-true/replace-at-capacity
+=== RUN   TestProfileSiteApplications/wireless-true/drop-verified-row
+=== RUN   TestProfileSiteApplications/wireless-true/corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-true/corrupt-commit
+=== RUN   TestProfileSiteApplications/wireless-true/settled-corrupt-row
+=== RUN   TestProfileSiteApplications/wireless-true/duplicate
+=== RUN   TestProfileSiteApplications/wireless-true/history-race
+=== RUN   TestProfileSiteApplications/wireless-true/alias
+=== RUN   TestProfileSiteApplications/wireless-true/site-replaced
+=== RUN   TestProfileSiteApplications/wireless-true/parent-replaced
+=== RUN   TestProfileSiteApplications/wireless-true/deselect
+--- PASS: TestProfileSiteApplications (16.51s)
+    --- PASS: TestProfileSiteApplications/wireless-false/complete (0.70s)
+    --- PASS: TestProfileSiteApplications/wireless-false/accepted (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-false/import (0.07s)
+    --- PASS: TestProfileSiteApplications/wireless-false/legacy (0.07s)
+    --- PASS: TestProfileSiteApplications/wireless-false/repair (0.19s)
+    --- PASS: TestProfileSiteApplications/wireless-false/capacity (1.51s)
+    --- PASS: TestProfileSiteApplications/wireless-false/replace-at-capacity (4.84s)
+    --- PASS: TestProfileSiteApplications/wireless-false/drop-verified-row (0.09s)
+    --- PASS: TestProfileSiteApplications/wireless-false/corrupt-row (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-false/corrupt-commit (0.09s)
+    --- PASS: TestProfileSiteApplications/wireless-false/settled-corrupt-row (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-false/duplicate (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-false/history-race (0.09s)
+    --- PASS: TestProfileSiteApplications/wireless-false/alias (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-false/site-replaced (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-false/parent-replaced (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-false/deselect (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-true/complete (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-true/accepted (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-true/import (0.08s)
+    --- PASS: TestProfileSiteApplications/wireless-true/legacy (0.07s)
+    --- PASS: TestProfileSiteApplications/wireless-true/repair (0.19s)
+    --- PASS: TestProfileSiteApplications/wireless-true/capacity (1.55s)
+    --- PASS: TestProfileSiteApplications/wireless-true/replace-at-capacity (4.83s)
+    --- PASS: TestProfileSiteApplications/wireless-true/drop-verified-row (0.09s)
+    --- PASS: TestProfileSiteApplications/wireless-true/corrupt-row (0.09s)
+    --- PASS: TestProfileSiteApplications/wireless-true/corrupt-commit (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-true/settled-corrupt-row (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-true/duplicate (0.10s)
+    --- PASS: TestProfileSiteApplications/wireless-true/history-race (0.09s)
+    --- PASS: TestProfileSiteApplications/wireless-true/alias (0.13s)
+    --- PASS: TestProfileSiteApplications/wireless-true/site-replaced (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-true/parent-replaced (0.12s)
+    --- PASS: TestProfileSiteApplications/wireless-true/deselect (0.12s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	18.921s

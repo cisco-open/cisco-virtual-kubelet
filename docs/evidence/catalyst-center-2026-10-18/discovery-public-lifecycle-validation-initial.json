@@ -1,0 +1,168 @@
+{
+  "scope": "public manager-enrolled pure-discovery Delete-policy apply, task drain, exact cleanup, completion and manager-only finalizer release; source/policy validation and retained ownership fences remain",
+  "sourceSHA256": {
+    "internal/controlleradapter/config_lifecycle.go": "a4fe85ba5d460f832224952f214489779cfe971b11c008042c7403b15fbc896d",
+    "internal/controlleradapter/registry.go": "99669efaff131c581ae28f96da81632529cf9b38e134feaee85eef783914af45",
+    "internal/controlleradapter/registry_test.go": "f175e5a16be68efc44bcac8bf8612a4520a5cafbd3ede4fb90f3c05283b91636",
+    "internal/controller/networkcontroller_config_lifecycle.go": "c21ce493db23bdddf4898e8348ca85f8a40074d24f6614ae39084619d1c8537a",
+    "internal/controller/networkcontroller_config_lifecycle_test.go": "c6d05506d585194e07d78a5d5c694a7f70428534f1d4ced23109265b084f56b1",
+    "internal/controlleradapter/catalystcenter/register.go": "9eb48d98d98f2597c6290acd2906088eb17e9cccc0baef07f3d2b286389e1065",
+    "internal/controlleradapter/catalystcenter/config_report.go": "6036c111da5453eded19f82b48b8cf3fada977e3475ecfd0794a991754a4550e",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "007e64ebcc1252a33dc1057f52a2cf2b28267a37487ddab10e9cc7b26100b64e",
+    "internal/controlleradapter/catalystcenter/discovery_owned.go": "9178d7deeb57a92a06db1a80cf11df25188ad0c00327ad92d4e7ea989f038fcb",
+    "internal/controlleradapter/catalystcenter/discovery_prune.go": "aed321f483a1b62f52300a3d1654cd92c98f7de00e555cacb45c10a8335ceb12",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation.go": "133ad93d148c1e8d19d4af72419ac9e637362b0f60a3018c5e5203d223cff402",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_completion.go": "ac6a603942b758838b72915a7f9e3d31ce5c7e1fb87dddcabce66666c25e1fb9",
+    "internal/controlleradapter/catalystcenter/discovery_config_deletion.go": "dc9699e01702dbb26bb9d04c514d9f0234787838aed12258f2a6f5807e869695",
+    "internal/controlleradapter/catalystcenter/discovery_config_deletion_test.go": "23e96eb6ecfa89b064b752acb1e7f8c95a619daf26bf50bb332086e68325ce8e",
+    "internal/controlleradapter/catalystcenter/discovery_config_deletion_live_test.go": "59b592ffd9d9e96773930ba8be0673dbbe347052714bbea53d3d125cbd9b7fda",
+    "internal/controlleradapter/catalystcenter/discovery_owned_live_test.go": "d518b6b5314e66c6c0a0d982029232d9048dd5fd909bef4b419d7ef204ed76f5",
+    "internal/controlleradapter/catalystcenter/discovery_config_cleanup_observation_envtest_test.go": "87ddd21ae81b60d0a49e32ecbe58bd75bb451a797be917fd55174c20bc145a0f",
+    "examples/configs/catalyst-center/discovery-delete-apply.yaml": "6bc11619b0fa6580de7146bd671a36941c7b6778cb8a3080267ad29349ff3a57"
+  },
+  "gates": {
+    "targeted": "registry/controller/CC public tests passed 2.080/2.699/4.793s",
+    "publicAPI": "passed 15.090s; 13 scenarios; real CRD reads/status CAS and metadata patches with emulated cache indexes",
+    "fullFoundation": "passed adapter registry 2.059s and controller 33.782s",
+    "fullCatalystCenter": "running; must verify terminal result before delivery",
+    "ND": "passed complete package 4.999s",
+    "softwareUpgrades": "passed complete package 14.642s",
+    "directGNOI": "passed complete package 5.101s",
+    "native": "passed 37.012s"
+  },
+  "native": {
+    "checkpoint": "/private/tmp/cvk-discovery-owned-4142827654",
+    "enrollment": {
+      "configUID": "config",
+      "controllerUID": "controller",
+      "finalizers": [
+        "test.cisco.vk/public-qualification",
+        "config.cisco.vk/catalyst-center-discovery-cleanup"
+      ],
+      "generation": 2,
+      "installedClusterMutated": false,
+      "managerEnrolled": true
+    },
+    "cleanup": {
+      "deleteTaskId": "01a14cdc-bee4-7e2b-ad18-016ac244a704",
+      "deleted": true,
+      "id": "183",
+      "injectedKnownTaskRecovery": true,
+      "installedClusterMutated": false,
+      "managerEnrolled": true,
+      "managerReleased": true,
+      "publicLifecycle": true
+    },
+    "completion": {
+      "cleaned": true,
+      "deletes": 1,
+      "installedClusterMutated": false,
+      "inventoryIdentityPreserved": true,
+      "managerEnrolled": true,
+      "managerReleased": true,
+      "posts": 1,
+      "publicLifecycle": true
+    },
+    "release": {
+      "configUID": "config",
+      "finalizers": [
+        "test.cisco.vk/public-qualification"
+      ],
+      "managerReleased": true,
+      "ownerRetained": true,
+      "receiptRetained": true
+    },
+    "journal": {
+      "actionApplications": [
+        {
+          "section": "inventory",
+          "resource": "discovery-record:5693240fc0d4c52de9b5a0122fd42e84f91c42355d60aee43f3dcecd7e72bb26:183",
+          "operation": {
+            "id": "d1732ca3603093fcc4fd030a233ba029",
+            "configName": "sites",
+            "configUID": "config",
+            "configGeneration": 2,
+            "controllerGeneration": 1,
+            "section": "inventory",
+            "resource": "discovery-finalize:v1:f0998553814ff7e8ef7d854a6087fcde3c39a58ab84ab1a45dc553a82a955f4b:772aae5132fb49f0848fd5e050c0e23f144ea5cb3a9e5680b3889398c12a65ab:1fedcdaf41f09b76b393da9126b6e5bfc64f8f152e05764fb2738f0f41684126:discovery-owned:5693240fc0d4c52de9b5a0122fd42e84f91c42355d60aee43f3dcecd7e72bb26:1f:d16b30f60de3d9cc2a0b2eb05dca48fd65f6bf000abb98606ef5cc039eccffb7:prune",
+            "targetID": "183",
+            "action": "Delete",
+            "phase": "Verified",
+            "submittedAt": "2026-10-18T02:34:57Z",
+            "taskID": "01a14cdc-bee4-7e2b-ad18-016ac244a704"
+          },
+          "verifiedAt": "2026-10-18T02:34:59Z"
+        }
+      ],
+      "owners": [
+        {
+          "section": "inventory",
+          "configName": "sites",
+          "configUID": "config"
+        }
+      ]
+    },
+    "completionStatus": {
+      "phase": "Waiting",
+      "observedGeneration": 2,
+      "lastAppliedTime": "2026-10-18T02:34:55Z",
+      "lastControllerCheck": "2026-10-18T02:34:55Z",
+      "controllerAPIVersion": "v1/v2",
+      "sectionStatus": [
+        {
+          "name": "inventory",
+          "state": "Applying",
+          "message": "Discovery cleanup retains its original tasks, ownership and exact native identities"
+        }
+      ],
+      "conditions": [
+        {
+          "type": "AdapterAvailable",
+          "status": "True",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T02:34:29Z",
+          "reason": "AdapterAvailable",
+          "message": "Catalyst Center discovery cleanup adapter is available"
+        },
+        {
+          "type": "IntentValid",
+          "status": "True",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T02:34:29Z",
+          "reason": "ApplyVerified",
+          "message": "Owned configuration attributes match authoritative controller state"
+        },
+        {
+          "type": "Ready",
+          "status": "False",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T02:34:56Z",
+          "reason": "DiscoveryConfigFinalized",
+          "message": "Deleting config awaits manager finalization"
+        },
+        {
+          "type": "ControllerCleanupComplete",
+          "status": "True",
+          "observedGeneration": 2,
+          "lastTransitionTime": "2026-10-18T02:35:02Z",
+          "reason": "DiscoveryConfigFinalized",
+          "message": "{\"ControllerUID\":\"controller\",\"ConfigUID\":\"config\",\"SpecDigest\":\"772aae5132fb49f0848fd5e050c0e23f144ea5cb3a9e5680b3889398c12a65ab\",\"DeletionDigest\":\"f0998553814ff7e8ef7d854a6087fcde3c39a58ab84ab1a45dc553a82a955f4b\",\"EvidenceDigest\":\"663c1609a160440b7cef04dca672cb850fa2ab52aa996bd3648daf7559088928\",\"SourceUID\":\"\",\"SourceVersion\":\"\",\"ModelDigest\":\"3d5cd3f19b4b0562ebd56c1d9918152e79e096af50952c7e70e05da459e6274d\",\"ControllerGeneration\":1,\"ConfigGeneration\":2}"
+        }
+      ]
+    },
+    "scope": "Actual public manager/worker entry points with status-only worker and simulated Kubernetes persistence; native Catalyst Center tasks/catalogues are real; cleanup Accepted-to-Unknown fault injected. Not installed process qualification."
+  },
+  "productionBuild": {
+    "path": "/private/tmp/cvk-discovery-public",
+    "sha256": "9061fc2444ff7ebe4079bb445b155faaa00a8173e5763329c57536a14493b7cd",
+    "installed": false
+  },
+  "remaining": [
+    "installed manager/worker process qualification",
+    "automatic owner retirement/handoff after config deletion",
+    "missing-source recovery policy",
+    "paused/changed-controller recovery",
+    "mixed/grouped or legacy task cleanup",
+    "full pinned-model defaults/inline/null and wider 93-resource execution parity"
+  ]
+}

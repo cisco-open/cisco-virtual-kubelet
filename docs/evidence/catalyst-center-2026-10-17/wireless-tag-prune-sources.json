@@ -1,0 +1,105 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "moduleVersion": "0.5.0",
+  "moduleRevision": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "toolchain": "go1.26.9",
+  "upstream": [
+    {
+      "path": "cc_network_profiles.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_network_profiles.tf",
+      "sha256": "f49a96dfababdbcdbaebda90d5a8d50e424d3b0c64727baf8de442bb67e1c6c3"
+    },
+    {
+      "path": "cc_wireless.tf",
+      "url": "https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter/blob/a435555fe828f03cf3311d52fe1ab6572a247916/cc_wireless.tf",
+      "sha256": "55956a619e460b28e3a57a797b981ed5d3601513e2968793e3b565afa12f3322"
+    }
+  ],
+  "sourceSha256": {
+    "api/v1alpha1/networkcontroller_configuration_types.go": "d108fde7081cfebf219265c4d179efa4dab126de1a7930dd2f5bd27182083d02",
+    "examples/configs/catalyst-center/profile-site-tag-dependencies.yaml": "449d7a4d17fd3e4672fc738dfc6780aeb25df1dddae2abd62e7ecffa7e0ef1c9",
+    "examples/configs/catalyst-center/wireless-tag-baselines-apply.yaml": "04805b2ccd60eb87b3544a57076283b0dadaf0f8d2e377a607f6336afef1597e",
+    "examples/configs/catalyst-center/wireless-tag-membership-apply.yaml": "d22d374c31b1de10ba9ba1b63a18087acf6dfe9ac31f56c1f6e16bba62ae72fe",
+    "examples/configs/catalyst-center/wireless-tag-prune-apply.yaml": "39fbe57dfbd4581a2760bae0a3f4ef11876fcbbb84751768a59d7bf88519157b",
+    "internal/controlleradapter/catalystcenter/config_apply.go": "33e595f6c1fb707c9f44c54151da9ed439a5f25e16efd46897702f3160a8c82a",
+    "internal/controlleradapter/catalystcenter/config_journal.go": "b2c7d55f1683f404cd8ac338c4d993ce5d015b9ebcc54cc3ef292410165748a2",
+    "internal/controlleradapter/catalystcenter/config_secrets.go": "ded98534a23909505c0e91311d72ea0b556e1b83ac96e037419ad147b8036e9c",
+    "internal/controlleradapter/catalystcenter/network_profile_configuration.go": "dc48c62fa3755e16c83a1de6d3e874c2e2528d57ef2052d5bd5d420e9dc04e7e",
+    "internal/controlleradapter/catalystcenter/network_profile_recovery.go": "051243f298f564dc964c0606be2ccf1afa4c52e513ab77f1bcd457da6a319008",
+    "internal/controlleradapter/catalystcenter/profile_site_prune.go": "2ef661d3fc076bef5b570845b98882e1d99d5526268aa52ba53bcc9dbf8cb6be",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies.go": "80fa19e9c976f11251dfc4266efd1d3e3b84beab1421dbd1dda32a7e6bb93a8f",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies_envtest_test.go": "4509c1a076341b2ed3ac9b72f669d00cfcb1b75a22474cbc98622360cf794d21",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies_example_test.go": "42714a2f7927fed3d7abb4c0bea96768ad100979959c2a601790c27a7899cb39",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_dependencies_test.go": "148779b32cd015f71183222eebe4a34173c7eaa6566d0fa00632a1db8563f195",
+    "internal/controlleradapter/catalystcenter/profile_site_tag_projection_test.go": "b0529d653e24905491ca45f4a0a2c7848b152761470cc9a8ed591f2d83d6dffb",
+    "internal/controlleradapter/catalystcenter/template_deployment_adapter_recovery.go": "3534b45daba35c4c91bd7ebca3f7931257bed96b37918428c5d10f03099fc149",
+    "internal/controlleradapter/catalystcenter/template_input_comparison.go": "fd175047db6c3acc548bbb6f17174cac44f3cf845371b75b4410d87ba2a49767",
+    "internal/controlleradapter/catalystcenter/wireless_profile_configuration_test.go": "db1a009a32977fa71c5e75ddbaf0f844f664aef26ccb7e10d3b8830070cc1c29",
+    "internal/controlleradapter/catalystcenter/wireless_profile_execution_live_test.go": "359944ffd8b792c41cdbe3a39cd6fa597e00300402ea1d30b622ef0c8389a53e",
+    "internal/controlleradapter/catalystcenter/wireless_profile_fixture_cleanup_live_test.go": "4b33dbd775b383c527a07198c529c44c2861fd5fbd9c0b2d10640ebc28a3d239",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_live_test.go": "725f8c70edef9f31bf8f90b61522353987fe89f261b9ffb23d4e4f308a35db58",
+    "internal/controlleradapter/catalystcenter/wireless_profile_recovery_test.go": "ec03266a3047c0b471f59409f76965511b8eaca299140988ed31ba9007f8a05e",
+    "internal/controlleradapter/catalystcenter/wireless_profile_tag_execution.go": "d81c3f3042de09f478718c25b432c407c08bc70bb6f07ee1c05b3460d9c43c36",
+    "internal/controlleradapter/catalystcenter/wireless_profile_tag_inventory.go": "41d1404d842c8fb36fa710443b34ae667eae69806b1dc2b1e6624b14e780ae9b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership.go": "695ae88a8573de9cb05eb1d799cdf674766f7ad4fa9228be3175385d91fb534b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_envtest_test.go": "d9106763c063bf43b7ae147993623cea874ae08da3e549b2e762211d38a1a224",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_example_test.go": "280c07f42e744af0565d131290c54ef670436ae5dbc75028ef67770cdf221ce5",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_live_test.go": "57fd9bd8ad7b08e160bca4b7ba2764ec0b317b858c73ef651b0227be22c6c2b3",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_protocol_test.go": "b0f3d002e93c2568873cc610bdea575d9c517536edacf4abd8d7ecc2c305d528",
+    "internal/controlleradapter/catalystcenter/wireless_tag_membership_test.go": "0705c4627a026c5f0837d0667ffe189849f37407d467bc83114c0561ede9b75b",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune.go": "af4a3973b18068bf584a76b3f6f0c0cb67a5a2c496a699621f7e62b25517f978",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_envtest_test.go": "c8f3289678e9d003de691693f5d0fce87af595e756240a1f7ed4f63089d4f7c6",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_example_test.go": "019503eea92acb597e78ddb12e9ed4496093dedb65cb83a3103d18cf2445b9dd",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_live_test.go": "0843445e986f94aec193bd8c1feca36d75f522247dc890033a6e3cc5176562d3",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_protocol_test.go": "25f70b2542d3650a34da70f57bb01e83ad38c20d347f7f355865812e630c1907",
+    "internal/controlleradapter/catalystcenter/wireless_tag_prune_test.go": "7462ea1e358257f1dc422847730a8c2ce2a54fdb833c863c725c75bd99409f8d",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts.go": "17e8ce24524bdfc6324e12af64bf58a3a724882b25797669bba0673d9e4a4c27",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_envtest_test.go": "4d105f7f9093a009ff6f09230a5f3ff386bae050603929c09016bf4528a8e196",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_example_test.go": "43ab89e35256bff806bb4673a3d081f91cd7e422c2c0ae3804d2415d29c34a19",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_protocol_test.go": "0cd753a9f2b5d54a5bd3a0143c9fa7ec6dcf4b2a269b540f9ef7c4e5f5f4b4a6",
+    "internal/controlleradapter/catalystcenter/wireless_tag_receipts_test.go": "747020cf6fc56e341885abc321d4cac17729837bc8464b25c8d3ede557f45b49",
+    "internal/controlleradapter/catalystcenter/client.go": "63ab17f41a36b676def48d597207272f9424549c3cbe81902669ce19b369739a",
+    "internal/controlleradapter/catalystcenter/template_no_dispatch_live_test.go": "07b97bb02d7af7a78b2f567976916a90d15cd69b57125f2842b292d825f45209",
+    "internal/controlleradapter/catalystcenter/metadata_session_trace_test.go": "5e5a7a0a4ea39b532712c559cf8284bde2ce45db56d8955be179dcfbab014493"
+  },
+  "scope": "Current source/test/example fingerprints, not installed binary attestations. Four lifecycle families preceded the optional session-observer hook; original source fingerprints are preserved in wireless-tag-prune-sources-before-session-renewal.json. The hook has forced-lifetime and GET-401 renewal coverage plus default authentication/TLS/no-replay SWIM regression. Native API is real; actor/storage faults are simulated and separately qualified with temporary Kubernetes API gates. Single native workflow passed in 622.71s; first cohort timed out; second completed native deletions but failed an observer assertion after the 15-minute REST rebuild. Both retained fixtures were cleaned. The session-stable cohort rerun passed in 959.97s with all 14 task/tree/native recoveries, final no-op and complete generated-fixture cleanup. Later changes to six other test harnesses have separate source evidence and do not imply native requalification of those resources.",
+  "qualification": {
+    "localWholeTagPruneCases": 60,
+    "APIWholeTagPruneCases": 60,
+    "nativeSingleSeconds": 622.71,
+    "nativeCohortStatus": "passed",
+    "regression": {
+      "qualification": {
+        "TestWirelessTagPrune": 60,
+        "TestEnvtestWirelessTagPrune": 60
+      },
+      "association": {
+        "TestProfileSitePrune": 82,
+        "TestEnvtestProfileSitePrune": 82
+      },
+      "dependencies": {
+        "TestProfileSiteTagDependencies": 28,
+        "TestEnvtestProfileSiteTagDependencies": 28,
+        "TestProfileSiteTagProjectionScope": 9
+      },
+      "receipts": {
+        "TestWirelessTagMembershipRemoval": 34,
+        "TestEnvtestWirelessTagMembershipRemoval": 34,
+        "TestWirelessTagReceipts": 44,
+        "TestEnvtestWirelessTagReceipts": 44
+      }
+    },
+    "nativeCohortLog": "wireless-tag-prune-native-cohort-renewal.log",
+    "renewalRegressionSeconds": 3.019,
+    "defaultClientRegressionSeconds": 2.591,
+    "nativeCohortSeconds": 959.97,
+    "nativeCohortGoSeconds": 962.055,
+    "nativeDistinctOriginalTasks": 26,
+    "nativeTagDeletes": 5,
+    "nativeAssociationDeletes": 4,
+    "nativeWorkflowBaselinesRestored": 2,
+    "nativeAudit": "wireless-tag-prune-native-audit.json",
+    "nativePrivateRowsAcrossPassingWorkflows": 9,
+    "nativePrivateEffectsAcrossPassingWorkflows": 10
+  }
+}

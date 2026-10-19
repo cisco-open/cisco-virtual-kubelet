@@ -1434,6 +1434,7 @@ spec:
            !has(object.status.activationStartTime) &&
            !has(object.status.completionTime) &&
            !has(object.status.conditions) &&
+           !has(object.status.controllerHandoff) &&
            !has(object.status.executionModel) &&
            !has(object.status.failureReason) &&
            !has(object.status.individualSupervisorInstall) &&
@@ -1475,6 +1476,8 @@ spec:
            (!has(object.status.completionTime) || object.status.completionTime == oldObject.status.completionTime) &&
            (has(object.status.conditions) == has(oldObject.status.conditions)) &&
            (!has(object.status.conditions) || object.status.conditions == oldObject.status.conditions) &&
+           (has(object.status.controllerHandoff) == has(oldObject.status.controllerHandoff)) &&
+           (!has(object.status.controllerHandoff) || object.status.controllerHandoff == oldObject.status.controllerHandoff) &&
            (has(object.status.executionModel) == has(oldObject.status.executionModel)) &&
            (!has(object.status.executionModel) || object.status.executionModel == oldObject.status.executionModel) &&
            (has(object.status.failureReason) == has(oldObject.status.failureReason)) &&
@@ -1940,7 +1943,7 @@ spec:
           object.metadata.annotations['topology.cisco.vk/lease-purpose'] == 'device-mutation' ?
            (variables.newHeld ?
              ((object.spec.holderIdentity.matches(
-                '^(software-upgrade|software-drain|operational-action)/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') ||
+                '^(software-upgrade|software-drain|operational-action|controller-configuration)/[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') ||
                object.spec.holderIdentity.matches(
                 '^device-write/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')) &&
               has(object.spec.leaseDurationSeconds) && object.spec.leaseDurationSeconds > 0 &&
@@ -2025,13 +2028,17 @@ spec:
             (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'rollout-v1' ?
               (!('topology.cisco.vk/maintenance-purpose' in object.metadata.annotations) ||
                object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] == 'SoftwareMutation') :
+              (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'controller-configuration-v1' ?
+               ('topology.cisco.vk/maintenance-purpose' in object.metadata.annotations &&
+                object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] == 'ConfigurationMutation' &&
+                object.metadata.annotations['topology.cisco.vk/maintenance-control-revision'].matches('^[1-9][0-9]{0,18}$')) :
               (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'pdb-drain-v1' &&
                'topology.cisco.vk/maintenance-purpose' in object.metadata.annotations &&
                object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] in
-                 ['WorkloadDrain', 'SoftwareMutation'])) &&
+                 ['WorkloadDrain', 'SoftwareMutation']))) &&
             object.metadata.annotations['topology.cisco.vk/maintenance-session-token'].matches(
               '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') &&
-            (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] != 'pdb-drain-v1' ||
+            (object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'rollout-v1' ||
              object.metadata.annotations['topology.cisco.vk/maintenance-session-token'].matches(
                '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$')) &&
             object.metadata.annotations['topology.cisco.vk/maintenance-requested-at'].matches(
@@ -2043,6 +2050,9 @@ spec:
             (('topology.cisco.vk/maintenance-purpose' in object.metadata.annotations &&
               object.metadata.annotations['topology.cisco.vk/maintenance-purpose'] == 'WorkloadDrain') ?
               object.spec.holderIdentity == 'software-drain/' +
+                object.metadata.annotations['topology.cisco.vk/maintenance-operation-uid'] :
+              object.metadata.annotations['topology.cisco.vk/maintenance-request-version'] == 'controller-configuration-v1' ?
+              object.spec.holderIdentity == 'controller-configuration/' +
                 object.metadata.annotations['topology.cisco.vk/maintenance-operation-uid'] :
               object.spec.holderIdentity == 'software-upgrade/' +
                 object.metadata.annotations['topology.cisco.vk/maintenance-operation-uid']) &&
@@ -2105,6 +2115,20 @@ spec:
          int(object.metadata.annotations['topology.cisco.vk/maintenance-control-revision']) >=
            int(oldObject.metadata.annotations['topology.cisco.vk/maintenance-control-revision']))
       message: mutation request identity is immutable and its control revision cannot decrease while the holder is unchanged
+    - expression: >-
+        variables.manager ||
+        (!(variables.oldHeld && oldObject.spec.holderIdentity.startsWith('controller-configuration/')) &&
+         !(variables.newHeld && object.spec.holderIdentity.startsWith('controller-configuration/'))) ||
+        (variables.boundWorker &&
+         'topology.cisco.vk/network-worker-username' in oldObject.metadata.annotations &&
+         'topology.cisco.vk/network-worker-pod-uid' in oldObject.metadata.annotations &&
+         request.userInfo.username == oldObject.metadata.annotations['topology.cisco.vk/network-worker-username'] &&
+         has(request.userInfo.extra) &&
+         'authentication.kubernetes.io/pod-uid' in request.userInfo.extra &&
+         request.userInfo.extra['authentication.kubernetes.io/pod-uid'].size() == 1 &&
+         request.userInfo.extra['authentication.kubernetes.io/pod-uid'][0] ==
+           oldObject.metadata.annotations['topology.cisco.vk/network-worker-pod-uid'])
+      message: configuration reservation leases require the bound network worker Pod identity
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding

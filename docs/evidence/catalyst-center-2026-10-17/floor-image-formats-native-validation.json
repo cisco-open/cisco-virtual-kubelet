@@ -1,0 +1,97 @@
+{
+  "image": "cvk-catc-worker-qualification:20261017-image-lifetime-44ace7027833",
+  "binarySha256": "44ace7027833c0a9ab5b54af751d46fc517271b0adfff3d118c2e8d373c22512",
+  "sources": {
+    "internal/controlleradapter/catalystcenter/floor_image_journal.go": "db26e225330a2d77da600488dc965241e2b15d847ebb226e3503ca1c536834ca",
+    "internal/controlleradapter/catalystcenter/floor_image_journal_test.go": "eb736005e882049015299d7161597b2f68a38c2c5d70d1a722a0dad0a3300dc3",
+    "internal/controlleradapter/catalystcenter/floor_image_path_identity_test.go": "5d6265ffbece2c87fef0291958e5a279b96d27b0b9210f6c5da6d19377c4d0ea",
+    "internal/controlleradapter/catalystcenter/floor_image_live_test.go": "2e36d010bc5d75a4e1f4c5293c4d4de014c127ac3444950bfe26114b3e37b6e2",
+    "internal/controlleradapter/catalystcenter/floor_image_execution_test.go": "400e28be2468bee2206d78ae712da8f21316251c0fbcb56d36d0ccc66cb97f25",
+    "internal/controlleradapter/catalystcenter/floor_image_assets_test.go": "2b9899fd6ce83ffdacea8d7fc31c66be79f002248323565c147aaa4f3a2ff8b7",
+    "internal/controlleradapter/catalystcenter/floor_image_assets.go": "ba8f887c52cc92bf91c50bff8dc0e537b972a7ffedb437f10138c8c240c34a1e",
+    "internal/controlleradapter/catalystcenter/floor_image_preflight_test.go": "ab4c52d4f11a69b3548bab4571dfd3942dbd745d4c67cd187136b6e7fb7a2d30",
+    "internal/controlleradapter/catalystcenter/floor_image_report_test.go": "003e95a7401bc5f32c2a3142f9161d720eb915ff436b60f379250fbe3d153420",
+    "internal/controlleradapter/catalystcenter/floor_image_omission.go": "34f02594eca3e29b79027e3d6d16f55d3e993e12f53fd86bfa55c177ce959807",
+    "internal/controlleradapter/catalystcenter/floor_image_receipt.go": "2b38322b571f456b96d5b54c414d7f6a656f978af6dc16d81c923e83cc4dac57",
+    "internal/controlleradapter/catalystcenter/floor_image_apply.go": "c700f827a8f49a028a12d121685c0d5270945bebd336be871a96c9be8d96c32c",
+    "internal/controlleradapter/catalystcenter/floor_image_execution.go": "465d27045fcb5b842123633ce672300204dc854d063e33c290e328a76bc3ebac",
+    "internal/controlleradapter/catalystcenter/floor_image_model_test.go": "9957319bc785f508f9303e48f8e52f1ebc23744449fb0735eaa77c6fd4d684ca",
+    "internal/controlleradapter/catalystcenter/floor_image_model.go": "649a81ad0a52cd35be6bdbe4bfeb8eecdf7261aab2e4bcccf64164157da6f879",
+    "internal/controlleradapter/catalystcenter/floor_image_receipt_test.go": "ab9e591fbd8a541d3db467236cd6845805c16d5178ec9a426780c3169713f1fc",
+    "internal/controlleradapter/catalystcenter/floor_image_omission_envtest_test.go": "57156f092aacd82706d90d26a9a3e83aa76124a747ddf233e8286893578124de",
+    "internal/controlleradapter/catalystcenter/floor_image_omission_test.go": "18acb78e8eeae42fc9794dcc2ddfdd7eabadc4f6d4d0e94567a7d64a9c99e6bd",
+    "internal/controlleradapter/catalystcenter/floor_image_upload.go": "37c02bf5a87651aa49cd4093920cd58c9b0c6d7d58d65ec206b469c05e4ab192",
+    "internal/controlleradapter/catalystcenter/floor_image_sync_test.go": "04ad5246e9b1ea6f5a82835f11400ef82dd6f9a3fc5a5c874dc663890e36b3e2",
+    "internal/controlleradapter/catalystcenter/floor_image_upload_test.go": "7afe2d73b2254b6586359ec5b1d47d1e8422c415a2b31873d3d426c2019e5b6d"
+  },
+  "qualificationSourceSha256": {
+    "internal/controlleradapter/catalystcenter/installed_site_execution_live_test.go": "3c15289ae44818c89d2a9b18f800f5bb03fe22988bbcaaa98804793f0579d723",
+    "internal/controlleradapter/catalystcenter/installed_floor_images_live_test.go": "3ac94cd8bf8579067e167a747da66572e8f01569382eb5691b6ccf1a855bfb5c",
+    "internal/controlleradapter/catalystcenter/floor_image_formats_live_test.go": "f023581bf288d75dba1b4557bb3218435198efe5937323c48cde0ba71314bffa"
+  },
+  "status": "passed",
+  "seconds": 282.46,
+  "goSeconds": 284.845,
+  "log": "floor-image-formats-native.log",
+  "controllerUID": "901689b7-3239-47e9-8768-39c00a6fcdc6",
+  "clusterUID": "5d2a68ec-9be0-4597-90f8-35f2f3e707f1",
+  "formats": [
+    "maps/cvk-installed.png",
+    "maps/cvk-installed.jpg",
+    "maps/cvk-installed.pdf",
+    "maps/renamed/cvk-installed.pdf"
+  ],
+  "synchronousUploadCheckpoints": 6,
+  "pdfIdenticalBytePathReplacement": true,
+  "pdfReintroductionCycles": 2,
+  "configurationGenerationUnchanged": true,
+  "imageReceiptSlots": 1,
+  "retainedRows": 5,
+  "podReplacementPassed": true,
+  "originalGeometryTaskRecovered": true,
+  "typedSiteBaselinesRestored": true,
+  "finalControllerPhase": "Ready",
+  "activeIntentCount": 0,
+  "outstandingOperation": false,
+  "finalImageOperation": {
+    "action": "Update",
+    "configGeneration": 2,
+    "configName": "installed-private-sites",
+    "configUID": "543109ab-f629-4bbd-80ad-a5c2b54922b3",
+    "controllerGeneration": 1,
+    "id": "7c8fbc16c1254e0d5c4cdaaee2f3d1c0",
+    "phase": "Verified",
+    "resource": "floor-image-sync:v2:edadb1bb621e2a0253b0d8f0c1c07ffb2d9b1dd5786f4366daed683003490a0c:30d96681e1f786b88a20d69207d3042b5f2c70b838e76829eecf3abde283e8e7:57a4cd15ab0a283b894fed087c37b8c913c1483c9209c941ad119de2ce397805",
+    "section": "sites",
+    "sourceUID": "2e7928b0-c107-4b9a-9715-37b0d8d3bae8",
+    "sourceVersion": "17327",
+    "submittedAt": "2026-10-17T17:36:08Z",
+    "targetID": "40e18e8a-1c3d-49b6-ae54-c1b39bf064af"
+  },
+  "installedTasks": {
+    "01a14aeb-998b-7e08-a0ab-22184762ba8a": "Create",
+    "01a14aeb-efb4-70f8-8579-4fdd9b10d1a2": "Create",
+    "01a14aec-4ddc-7f90-bfed-87ffaa41d2c6": "Create",
+    "01a14aec-b43a-765c-bb2e-fc76e03038ed": "Update"
+  },
+  "supervisedCleanupTasks": [
+    {
+      "type": "floor",
+      "taskID": "01a14aef-c3a6-7d30-9e35-36354a993594"
+    },
+    {
+      "type": "building",
+      "taskID": "01a14aef-ca8a-77a2-b955-493bd9f9face"
+    },
+    {
+      "type": "area",
+      "taskID": "01a14aef-d172-7104-b8f4-6e23513a7bc2"
+    }
+  ],
+  "limitations": [
+    "Generated empty floor and small deterministic fixtures only",
+    "No independent remote-byte equality or wire-level request counts",
+    "Size/malformed/encrypted or multipage PDF and uncertain-response combinations unqualified",
+    "Legacy historical source_path migration, public Delete, physical/AP and full model parity remain open"
+  ]
+}

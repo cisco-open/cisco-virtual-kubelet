@@ -1,0 +1,111 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "pinnedModelCommit": "a435555fe828f03cf3311d52fe1ab6572a247916",
+  "fullModelComplete": false,
+  "installedMutationQualified": false,
+  "productionRuntimeHooksRemainUnset": true,
+  "scope": "Retained foreign metadata cohorts across cleared operations/release, and recognizable CVK Node identity completeness/consistency in the shared census",
+  "source": {
+    "internal/controllerconfiguration": {
+      "files": 160,
+      "sha256": "730fc22fa91b1ed651d8c5b8b3f38d718d5a11703539f1d824101a62b2b4a502"
+    },
+    "internal/controller": {
+      "files": 94,
+      "sha256": "3c65cdf0b24fe3b17705d4b93eedd33238a66871b1c184b14aeccfefd2f28ddc"
+    },
+    "internal/aggregator": {
+      "files": 11,
+      "sha256": "137bc460cb8794a00d09429e5291a0736a783f60389e6da00ebdf8f5b0631083"
+    },
+    "internal/controlleradapter/catalystcenter": {
+      "files": 1701,
+      "sha256": "352bfc265299738e7c056332dc9d0fe665604eccbd7e24b19552331fe408284a"
+    },
+    "cmd/cisco-vk": {
+      "files": 48,
+      "sha256": "1e3220c4e9cbd792830bf6dcfc6129568f0600eb290bd0c098eb33c98eeffd4e"
+    },
+    "internal/topology": {
+      "files": 8,
+      "sha256": "6507f15f462035ea01ef994067853894a4b2f3c1497f3b82a1ba1da1af6af05f"
+    },
+    "api/v1alpha1": {
+      "files": 27,
+      "sha256": "768f409f8ae7f17180077aa6e74c59f87d692dc3ea5de35233eaad73ebb9ab9a"
+    }
+  },
+  "gates": {
+    "sharedFoundationNDDirectUpgradeFinal": {
+      "result": "PASS",
+      "passingEvents": 4003,
+      "packages": 12,
+      "packageSecondsSum": 59.838,
+      "log": "/private/tmp/cvk-metadata-retained-foundation-final.log"
+    },
+    "metadataAndPublicPnPRealAPIFinal": {
+      "result": "PASS",
+      "passingEvents": 7,
+      "packages": 2,
+      "packageSecondsSum": 48.56699999999999,
+      "log": "/private/tmp/cvk-metadata-retained-public-api-final.log"
+    },
+    "PnPJournalSWIMFinal": {
+      "result": "PASS",
+      "passingEvents": 931,
+      "packages": 1,
+      "packageSecondsSum": 20.112,
+      "log": "/private/tmp/cvk-metadata-retained-pnp-final.log"
+    },
+    "nativePublicCycleFinal": {
+      "result": "PASS",
+      "passingEvents": 2,
+      "packages": 1,
+      "packageSecondsSum": 28.078,
+      "log": "/private/tmp/cvk-metadata-retained-native-final.log"
+    }
+  },
+  "nativePublicCycle": {
+    "result": "PASS",
+    "registrationPOSTs": 2,
+    "creatorBoundDELETEs": 2,
+    "privateEvidenceDirectory": "/private/tmp/cvk-pnp-cohort-113487672",
+    "records": [
+      {
+        "uuid": "6ad5c6b50bc0186771cb16bf",
+        "serial": "CVKC3B0F1D0"
+      },
+      {
+        "uuid": "6ad5c6b80bc0186771cb16c0",
+        "serial": "CVKC3B0F1D1"
+      }
+    ],
+    "emptyPnPCatalog": true,
+    "unchangedNetworkInventory": true,
+    "finalOperation": null,
+    "finalHandoff": null,
+    "creatorRows": 2,
+    "verifiedTombstoneRows": 2,
+    "KubernetesAuthority": "simulated/JSON-persisted; real API gates are separate",
+    "mustNotReplayCompletedEvidence": true
+  },
+  "mainBuild": {
+    "result": "PASS",
+    "path": "/private/tmp/cvk-metadata-retained-qualified-cisco-vk",
+    "sha256": "bc345e553a82dd373188c6bee6ec6b48aa6cbe67ab5e566466e1e1b1646be539"
+  },
+  "remaining": [
+    "Installed manager/worker/enrollment/settlement compatibility and runtime composition",
+    "Actual installed fleet/caller and cross-process active-operation drain proof",
+    "Artifacts without recognizable identity markers and undeclared hardware aliases",
+    "Generation/domain changes, configuration/controller deletion and missing-source finalization",
+    "Physical PnP claim completion and hardware qualification",
+    "Other pinned 93-resource execution/hardware gaps"
+  ],
+  "sourceFrozen": "PASS",
+  "uniqueResourceRows": 93,
+  "formatting": "PASS",
+  "scopedWhitespaceCheck": "PASS",
+  "strictDocumentation": "PASS"
+}

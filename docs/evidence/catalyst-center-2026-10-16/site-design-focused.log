@@ -1,0 +1,46 @@
+=== RUN   TestSynchronousConfigurationPreflightProof
+=== RUN   TestSynchronousConfigurationPreflightProof/completed
+=== RUN   TestSynchronousConfigurationPreflightProof/refused
+=== RUN   TestSynchronousConfigurationPreflightProof/lost-response
+--- PASS: TestSynchronousConfigurationPreflightProof (0.00s)
+    --- PASS: TestSynchronousConfigurationPreflightProof/completed (0.00s)
+    --- PASS: TestSynchronousConfigurationPreflightProof/refused (0.00s)
+    --- PASS: TestSynchronousConfigurationPreflightProof/lost-response (0.00s)
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/stable
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/appeared
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/replaced
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/mac
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/unselected-z
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/unselected-radio
+=== RUN   TestPlannedAPDispatchRechecksNativeObservation/lost-response
+--- PASS: TestPlannedAPDispatchRechecksNativeObservation (0.11s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/stable (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/appeared (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/replaced (0.01s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/mac (0.02s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/unselected-z (0.01s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/unselected-radio (0.01s)
+    --- PASS: TestPlannedAPDispatchRechecksNativeObservation/lost-response (0.02s)
+=== RUN   TestPrivateSiteDesignManifestComposition
+=== RUN   TestPrivateSiteDesignManifestComposition/normal-private
+=== RUN   TestPrivateSiteDesignManifestComposition/optional-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-private
+=== RUN   TestPrivateSiteDesignManifestComposition/recover-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-recover-private
+=== RUN   TestPrivateSiteDesignManifestComposition/ambiguous-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-ambiguous-private
+=== RUN   TestPrivateSiteDesignManifestComposition/image-refuse-private
+=== RUN   TestPrivateSiteDesignManifestComposition/recover-refuse-private
+--- PASS: TestPrivateSiteDesignManifestComposition (4.60s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/normal-private (0.94s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/optional-private (0.34s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-private (0.64s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/recover-private (0.36s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-recover-private (0.65s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/ambiguous-private (0.29s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-ambiguous-private (0.30s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/image-refuse-private (0.69s)
+    --- PASS: TestPrivateSiteDesignManifestComposition/recover-refuse-private (0.39s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	6.739s

@@ -1,0 +1,41 @@
+# Registers PnP database records only. Replace serials, PIDs and site paths.
+# This does not claim, reset, upgrade or provision a physical device.
+# After registration, Ready stays false with PnPClaimAdmissionUnavailable.
+# Retain preserves registered records; public prune/delete is not enabled.
+apiVersion: config.cisco.vk/v1alpha1
+kind: NetworkControllerConfig
+metadata:
+  name: catc-pnp-registration
+  namespace: cvk-live
+spec:
+  controllerRef:
+    name: catc
+  scope: global
+  managedSections: [inventory]
+  mode: apply
+  prunePolicy: Retain
+  deletionPolicy: Retain
+  modelSource:
+    format: netascode-catalyst-center
+    modelVersion: 0.5.0
+    resolved: true
+    exporter: cvk-pnp-registration-example-v1
+  source:
+    inline:
+      catalyst_center:
+        inventory:
+          devices:
+            - name: edge-onboarding-1
+              state: PNP
+              serial_number: FOC00000001
+              pid: C9300-48P
+              site: Global/Lab/Building
+              type: Default
+              image_skip: true
+            - name: edge-onboarding-2
+              state: PNP
+              serial_number: FOC00000002
+              pid: C9300-48P
+              site: Global/Lab/Building
+              type: Default
+              image_skip: true

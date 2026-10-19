@@ -1,0 +1,8 @@
+=== RUN   TestLiveInstalledRetainedSiteCleanup
+    installed_site_cleanup_live_test.go:160: supervised generated-site cleanup verified floor 01a14ae3-ddc3-7820-b56a-3bc632c56a4b
+    installed_site_cleanup_live_test.go:160: supervised generated-site cleanup verified building 01a14ae3-e4cb-7208-9903-8c2fd7ed086c
+    installed_site_cleanup_live_test.go:160: supervised generated-site cleanup verified area 01a14ae3-eb67-79b4-bf56-7d5ecfef6db7
+    installed_site_cleanup_live_test.go:165: settled retained generated fixture cleaned; unrelated current baseline preserved; original failed qualification is not converted to a pass
+--- PASS: TestLiveInstalledRetainedSiteCleanup (6.51s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	8.931s

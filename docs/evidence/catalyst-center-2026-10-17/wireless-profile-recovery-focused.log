@@ -1,0 +1,104 @@
+=== RUN   TestWirelessPolicyCohortPartialReadbackRetained
+--- PASS: TestWirelessPolicyCohortPartialReadbackRetained (0.95s)
+=== RUN   TestWirelessProfilePublicRecovery
+=== RUN   TestWirelessProfilePublicRecovery/cohort-false/complete
+=== RUN   TestWirelessProfilePublicRecovery/cohort-false/no-dispatch
+=== RUN   TestWirelessProfilePublicRecovery/cohort-true/complete
+=== RUN   TestWirelessProfilePublicRecovery/cohort-true/no-dispatch
+=== RUN   TestWirelessProfilePublicRecovery/profile/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/profile/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/profile/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/profile/pending
+=== RUN   TestWirelessProfilePublicRecovery/profile/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/profile/source
+=== RUN   TestWirelessProfilePublicRecovery/profile/owner
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/pending
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/source
+=== RUN   TestWirelessProfilePublicRecovery/site-tag/owner
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/pending
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/source
+=== RUN   TestWirelessProfilePublicRecovery/policy-tag/owner
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/lost-ack
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/child-failed
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/tree-missing
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/pending
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/managed-drift
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/source
+=== RUN   TestWirelessProfilePublicRecovery/policy-cohort/owner
+--- PASS: TestWirelessProfilePublicRecovery (9.72s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-false/complete (0.62s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-false/no-dispatch (0.83s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-true/complete (0.82s)
+    --- PASS: TestWirelessProfilePublicRecovery/cohort-true/no-dispatch (1.05s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/lost-ack (0.08s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/child-failed (0.10s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/tree-missing (0.10s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/pending (0.10s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/managed-drift (0.11s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/source (0.08s)
+    --- PASS: TestWirelessProfilePublicRecovery/profile/owner (0.08s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/lost-ack (0.19s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/child-failed (0.23s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/tree-missing (0.23s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/pending (0.23s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/managed-drift (0.26s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/source (0.21s)
+    --- PASS: TestWirelessProfilePublicRecovery/site-tag/owner (0.20s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/lost-ack (0.26s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/child-failed (0.29s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/tree-missing (0.29s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/pending (0.28s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/managed-drift (0.31s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/source (0.26s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-tag/owner (0.26s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/lost-ack (0.29s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/child-failed (0.34s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/tree-missing (0.34s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/pending (0.33s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/managed-drift (0.36s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/source (0.29s)
+    --- PASS: TestWirelessProfilePublicRecovery/policy-cohort/owner (0.29s)
+=== RUN   TestWirelessProfileRecoveryEnvelope
+=== RUN   TestWirelessProfileRecoveryEnvelope/valid
+=== RUN   TestWirelessProfileRecoveryEnvelope/taskless
+=== RUN   TestWirelessProfileRecoveryEnvelope/no-parent
+=== RUN   TestWirelessProfileRecoveryEnvelope/wrong-parent-format
+=== RUN   TestWirelessProfileRecoveryEnvelope/wrong-section
+=== RUN   TestWirelessProfileRecoveryEnvelope/undeclared
+=== RUN   TestWirelessProfileRecoveryEnvelope/malformed-binding
+=== RUN   TestWirelessProfileRecoveryEnvelope/future
+=== RUN   TestWirelessProfileRecoveryEnvelope/physical
+=== RUN   TestWirelessProfileRecoveryEnvelope/prepared
+=== RUN   TestWirelessProfileRecoveryEnvelope/credential
+=== RUN   TestWirelessProfileRecoveryEnvelope/created-id
+=== RUN   TestWirelessProfileRecoveryEnvelope/missing-owner
+=== RUN   TestWirelessProfileRecoveryEnvelope/wrong-action
+=== RUN   TestWirelessProfileRecoveryEnvelope/update-targetless
+=== RUN   TestWirelessProfileRecoveryEnvelope/unknown-family
+--- PASS: TestWirelessProfileRecoveryEnvelope (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/valid (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/taskless (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/no-parent (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/wrong-parent-format (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/wrong-section (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/undeclared (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/malformed-binding (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/future (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/physical (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/prepared (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/credential (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/created-id (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/missing-owner (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/wrong-action (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/update-targetless (0.00s)
+    --- PASS: TestWirelessProfileRecoveryEnvelope/unknown-family (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	13.084s

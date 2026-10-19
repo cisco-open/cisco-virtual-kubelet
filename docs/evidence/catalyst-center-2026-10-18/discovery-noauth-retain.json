@@ -1,0 +1,340 @@
+{
+  "branch": "pr/johalley/catc-support",
+  "modelVersion": "0.5.0",
+  "applied": true,
+  "status": "native-generated-create-recovery-delete-and-corrected-full-regression-qualified",
+  "source": {
+    "files": 1640,
+    "sha256": "58d659f127f68ad489023677204843ebc9ab1e3ba8dcb09b23856bf815e20f79",
+    "productionSHA256": "7ff4a941a2d2d9265f0ce4f614329b38e35d418837bba539476c88464b4693b8",
+    "manifestSHA256": "b72e2549c485046cddf6539bdf3afb49df5ddb78927ccb48db3b7792e011acb9"
+  },
+  "targetedLifecycle": {
+    "passed": true,
+    "source": {
+      "files": 1640,
+      "sha256": "07c56d4d175e8d8fadc7027bd4df14b3a385d94dbbd4aff71efc38cb43d1b1df"
+    },
+    "productionMatchesFinalSource": true,
+    "normalTestSourcesMatchFinalSource": true,
+    "subsequentChange": "Removed a duplicate opt-in environment check in the live-only qualifier; normal test and production sources unchanged",
+    "passingEvents": 303,
+    "durationSeconds": 81.183,
+    "retainScenariosPerPersistence": 14,
+    "metadataRetainNoDispatchFaultCasesPerPersistence": 13,
+    "log": "discovery-noauth-retain-targeted.log"
+  },
+  "reusesExistingCompilerSourceAttestationJournalTaskReaderAndTransport": true,
+  "newProviderCRDStoreOrFinalizer": false,
+  "retainConfigDeletionRemovesNativeJob": false,
+  "retainConfigDeletionReleasesOldReservation": false,
+  "newUIDMayAdoptRetainedOwner": false,
+  "noAuthInventsCredentialDelivery": false,
+  "deliveredVersionFloorsPreserved": true,
+  "fullAffectedRegressionPassed": true,
+  "nativeRetainPreflightQualified": true,
+  "nativeDiscoveryCreationQualified": true,
+  "installedActorQualification": false,
+  "physicalDeviceAuthenticationQualified": false,
+  "resourceLedgerRows": 93,
+  "fullPinnedModelParity": false,
+  "gateLogs": {
+    "full": "/private/tmp/cvk-noauth-retain-full-regression.log",
+    "nativeVersioned": "/private/tmp/cvk-noauth-retain-native-versioned.log",
+    "nativeNoAuthDelete": "/private/tmp/cvk-noauth-retain-native-noauth-delete.log",
+    "nativeRetain": "/private/tmp/cvk-noauth-retain-native-noauth-retain.log"
+  },
+  "nativeReadOnlyQualification": {
+    "passed": true,
+    "source": {
+      "files": 1640,
+      "sha256": "58d659f127f68ad489023677204843ebc9ab1e3ba8dcb09b23856bf815e20f79",
+      "productionSHA256": "7ff4a941a2d2d9265f0ce4f614329b38e35d418837bba539476c88464b4693b8",
+      "manifestSHA256": "b72e2549c485046cddf6539bdf3afb49df5ddb78927ccb48db3b7792e011acb9"
+    },
+    "cases": {
+      "versioned": {
+        "passed": true,
+        "cases": 5,
+        "durationSeconds": 14.621,
+        "log": "discovery-noauth-retain-native-versioned.log",
+        "records": "discovery-noauth-retain-native-records/versioned",
+        "nativeMutationAttempts": 0,
+        "nativeDevicesPreserved": 3,
+        "nativeDiscoveryJobsPreserved": 1,
+        "realIsolatedKubernetesAPI": true,
+        "installedActors": false
+      },
+      "noauth-delete": {
+        "passed": true,
+        "cases": 5,
+        "durationSeconds": 17.495,
+        "log": "discovery-noauth-retain-native-noauth-delete.log",
+        "records": "discovery-noauth-retain-native-records/noauth-delete",
+        "nativeMutationAttempts": 0,
+        "nativeDevicesPreserved": 3,
+        "nativeDiscoveryJobsPreserved": 1,
+        "realIsolatedKubernetesAPI": true,
+        "installedActors": false
+      },
+      "noauth-retain": {
+        "passed": true,
+        "cases": 1,
+        "durationSeconds": 9.517,
+        "log": "discovery-noauth-retain-native-noauth-retain.log",
+        "records": "discovery-noauth-retain-native-records/noauth-retain",
+        "nativeMutationAttempts": 0,
+        "nativeDevicesPreserved": 3,
+        "nativeDiscoveryJobsPreserved": 1,
+        "realIsolatedKubernetesAPI": true,
+        "installedActors": false
+      }
+    },
+    "totalCases": 11,
+    "mutationRefusingTransport": true
+  },
+  "compatibility": {
+    "build": {
+      "passed": true,
+      "source": {
+        "files": 1640,
+        "sha256": "58d659f127f68ad489023677204843ebc9ab1e3ba8dcb09b23856bf815e20f79",
+        "productionSHA256": "7ff4a941a2d2d9265f0ce4f614329b38e35d418837bba539476c88464b4693b8",
+        "manifestSHA256": "b72e2549c485046cddf6539bdf3afb49df5ddb78927ccb48db3b7792e011acb9"
+      },
+      "log": "discovery-noauth-retain-build.log",
+      "binarySHA256": "c93ebcb9e82d89811f2ef99a69d125370cf9d2bbe4661f1ba37147e1f801f9c0"
+    },
+    "foundation": {
+      "passed": true,
+      "source": {
+        "files": 1640,
+        "sha256": "58d659f127f68ad489023677204843ebc9ab1e3ba8dcb09b23856bf815e20f79",
+        "productionSHA256": "7ff4a941a2d2d9265f0ce4f614329b38e35d418837bba539476c88464b4693b8",
+        "manifestSHA256": "b72e2549c485046cddf6539bdf3afb49df5ddb78927ccb48db3b7792e011acb9"
+      },
+      "log": "discovery-noauth-retain-foundation.log"
+    },
+    "swim": {
+      "passed": true,
+      "source": {
+        "files": 1640,
+        "sha256": "58d659f127f68ad489023677204843ebc9ab1e3ba8dcb09b23856bf815e20f79",
+        "productionSHA256": "7ff4a941a2d2d9265f0ce4f614329b38e35d418837bba539476c88464b4693b8",
+        "manifestSHA256": "b72e2549c485046cddf6539bdf3afb49df5ddb78927ccb48db3b7792e011acb9"
+      },
+      "log": "discovery-noauth-retain-swim.log"
+    }
+  },
+  "initialFullRegression": {
+    "passed": false,
+    "terminalExitCode": 1,
+    "source": {
+      "files": 1640,
+      "sha256": "58d659f127f68ad489023677204843ebc9ab1e3ba8dcb09b23856bf815e20f79",
+      "productionSHA256": "7ff4a941a2d2d9265f0ce4f614329b38e35d418837bba539476c88464b4693b8",
+      "manifestSHA256": "b72e2549c485046cddf6539bdf3afb49df5ddb78927ccb48db3b7792e011acb9"
+    },
+    "passingEvents": 2778,
+    "durationSeconds": 1314.729,
+    "failingCases": [
+      "--- FAIL: TestDiscoveryCredentialPublicMultipleJobs (3.25s)",
+      "--- FAIL: TestDiscoveryCredentialPublicMultipleJobs/composition (0.55s)",
+      "--- FAIL: TestDiscoveryCredentialPublicMultipleJobs/composition-configmap (0.60s)",
+      "--- FAIL: TestDiscoveryCredentialPublicMultipleJobs/composition-unknown (0.55s)",
+      "--- FAIL: TestDiscoveryCredentialPublicMultipleJobs/composition-reclassify (0.56s)",
+      "--- FAIL: TestDiscoveryCredentialPublicMultipleJobs/composition-replace (0.54s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicPrune (51.78s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicPrune/prune-composition (1.59s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicPrune/prune-composition-pending (1.60s)",
+      "--- FAIL: TestDiscoveryCredentialPublicPrune (16.00s)",
+      "--- FAIL: TestDiscoveryCredentialPublicPrune/prune-composition (0.55s)",
+      "--- FAIL: TestDiscoveryCredentialPublicPrune/prune-composition-pending (0.57s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicMultipleJobs (15.31s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicMultipleJobs/composition (1.61s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicMultipleJobs/composition-configmap (1.81s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicMultipleJobs/composition-unknown (1.57s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicMultipleJobs/composition-reclassify (1.57s)",
+      "--- FAIL: TestEnvtestDiscoveryCredentialPublicMultipleJobs/composition-replace (1.59s)"
+    ],
+    "log": "discovery-noauth-retain-full-first-failure.log",
+    "cause": "Retain metadata routing could capture previously ordinary rows after a versioned creator appeared"
+  },
+  "ordinaryFamilyCorrection": {
+    "historyFenceSource": {
+      "files": 1640,
+      "sha256": "02657ff99b34513da41c98c46d2a6347d4879e41ba1884acb3a177f9b11d79a2",
+      "fix": "ordinary-history routing fence prevents mixed owner reclassification"
+    },
+    "historyFenceRegression": {
+      "passed": true,
+      "passingEvents": 209,
+      "durationSeconds": 144.189,
+      "log": "discovery-noauth-retain-composition-regression.log"
+    },
+    "pendingOperationAlsoReservesFamily": true,
+    "currentSource": {
+      "files": 1640,
+      "sha256": "432e1b8fa3144544f6fe655bb120c01fe320ce35a7cdf6f659fe0335132834ab",
+      "ordinaryReceiptAndPendingOperationFence": true
+    },
+    "expandedRegressionPending": false,
+    "expandedRegression": {
+      "passed": true,
+      "source": {
+        "files": 1640,
+        "sha256": "432e1b8fa3144544f6fe655bb120c01fe320ce35a7cdf6f659fe0335132834ab",
+        "ordinaryReceiptAndPendingOperationFence": true
+      },
+      "passingEvents": 367,
+      "durationSeconds": 160.27,
+      "log": "discovery-noauth-retain-family-fenced-regression.log"
+    }
+  },
+  "nativeReadbackNormalization": {
+    "applied": true,
+    "source": {
+      "files": 1641,
+      "sha256": "efec27b4773c20b8cfebc64f274ea783936857d353963b29bf0103849ca30cbc",
+      "SNMPVersionDerivedOnlyFromKnownModeAndUser": true,
+      "explicitVersionsPreserved": true
+    },
+    "responseSchema": "https://developer.cisco.com/docs/catalyst-center/get-discovery-by-id/",
+    "observedResponseOmitsSNMPVersion": true,
+    "v3RequiresKnownModeAndNonemptySNMPUser": true,
+    "explicitVersionPreserved": true,
+    "unknownOrIncompleteEvidenceNeverDefaultsToV3": true,
+    "targetedGate": {
+      "passed": true,
+      "passingEvents": 377,
+      "log": "discovery-noauth-retain-readback-regression.log"
+    }
+  },
+  "firstNativeExecutionAttempt": {
+    "qualified": false,
+    "createdJobID": "243",
+    "originalTaskID": "01a150f5-50da-7498-b161-b558628b16b2",
+    "rootCause": "Response omits snmpVersion; qualification guard also required uppercase SINGLE instead of canonical Single",
+    "log": "discovery-noauth-native-first-execution-failure.log",
+    "records": "discovery-noauth-native-first-records",
+    "exactSupervisedCleanup": {
+      "passed": true,
+      "baselineRestored": true,
+      "deleteAttempts": 1,
+      "log": "discovery-noauth-native-supervised-cleanup.log",
+      "doesNotQualifyFailedLifecycle": true
+    }
+  },
+  "nativeGeneratedExecution": {
+    "passed": true,
+    "source": {
+      "files": 1642,
+      "sha256": "57b2afd11381a2d6e26256a9c245ac5d29a52e7dd7c3655b61d03ac268d5e4f9"
+    },
+    "appliedSource": {
+      "files": 1642,
+      "sha256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e",
+      "liveQualifierFunctionBodySHA256": "a576c82693cdcb8d9345df3c4be967648d8aa30f6b14f0c98659d5a9a428e58e",
+      "liveQualifierFunctionBodyMatchesNativePassedOverlay": true,
+      "privateOneOffCleanupHelperApplied": false
+    },
+    "functionBodyMatchesAppliedLiveQualifier": true,
+    "functionBodySHA256": "a576c82693cdcb8d9345df3c4be967648d8aa30f6b14f0c98659d5a9a428e58e",
+    "durationSeconds": 37.291,
+    "log": "discovery-noauth-native-execution-qualified.log",
+    "records": "discovery-noauth-native-execution-qualified-records",
+    "result": {
+      "baselineRestored": true,
+      "cleanupCompleted": true,
+      "cleanupSupervised": false,
+      "deletes": 1,
+      "deviceAuthenticationQualified": false,
+      "installedActors": false,
+      "issue": "",
+      "mutationAttempts": 2,
+      "nativeDeviceOperationSubmitted": false,
+      "nativeID": "248",
+      "originalUnknownRecovered": true,
+      "posts": 1,
+      "qualified": true
+    },
+    "target": "198.51.100.101",
+    "nativeJobDefinitionCreateQualified": true,
+    "originalUnknownTaskRecoveryQualified": true,
+    "manifestDeleteAndManagerReleaseQualified": true,
+    "nativeDeviceAuthenticationQualified": false,
+    "isolatedRealKubernetesAPI": true,
+    "installedActors": false
+  },
+  "currentSource": {
+    "files": 1642,
+    "sha256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e",
+    "liveQualifierFunctionBodySHA256": "a576c82693cdcb8d9345df3c4be967648d8aa30f6b14f0c98659d5a9a428e58e",
+    "liveQualifierFunctionBodyMatchesNativePassedOverlay": true,
+    "privateOneOffCleanupHelperApplied": false
+  },
+  "correctedFullRegression": {
+    "passed": true,
+    "exitCode": 0,
+    "passingEvents": 2806,
+    "durationSeconds": 1316.824,
+    "source": {
+      "files": 1642,
+      "sha256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e"
+    },
+    "log": "discovery-noauth-retain-full-regression-corrected.log"
+  },
+  "correctedCompatibility": {
+    "build": {
+      "passed": true,
+      "source": {
+        "files": 1642,
+        "sha256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e",
+        "liveQualifierFunctionBodySHA256": "a576c82693cdcb8d9345df3c4be967648d8aa30f6b14f0c98659d5a9a428e58e",
+        "liveQualifierFunctionBodyMatchesNativePassedOverlay": true,
+        "privateOneOffCleanupHelperApplied": false
+      },
+      "log": "discovery-noauth-retain-corrected-build.log",
+      "binarySHA256": "c8c3ff2b1a1a7ad6ce36da7640d222bd878bf8d5c902e27a6a248cecf6a91e50"
+    },
+    "foundation": {
+      "passed": true,
+      "source": {
+        "files": 1642,
+        "sha256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e",
+        "liveQualifierFunctionBodySHA256": "a576c82693cdcb8d9345df3c4be967648d8aa30f6b14f0c98659d5a9a428e58e",
+        "liveQualifierFunctionBodyMatchesNativePassedOverlay": true,
+        "privateOneOffCleanupHelperApplied": false
+      },
+      "log": "discovery-noauth-retain-corrected-foundation.log"
+    },
+    "swim": {
+      "passed": true,
+      "source": {
+        "files": 1642,
+        "sha256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e",
+        "liveQualifierFunctionBodySHA256": "a576c82693cdcb8d9345df3c4be967648d8aa30f6b14f0c98659d5a9a428e58e",
+        "liveQualifierFunctionBodyMatchesNativePassedOverlay": true,
+        "privateOneOffCleanupHelperApplied": false
+      },
+      "log": "discovery-noauth-retain-corrected-swim.log"
+    }
+  },
+  "persistedLiveQualifierCompile": {
+    "passed": true,
+    "source": {
+      "files": 1642,
+      "sha256": "c637f7e6aae625dd4a5f26efe9a8ecf14b8964e59ec26cdd794971c74153222e",
+      "liveQualifierFunctionBodySHA256": "a576c82693cdcb8d9345df3c4be967648d8aa30f6b14f0c98659d5a9a428e58e",
+      "liveQualifierFunctionBodyMatchesNativePassedOverlay": true,
+      "privateOneOffCleanupHelperApplied": false
+    },
+    "noTestsExecuted": true,
+    "log": "discovery-noauth-retain-live-compile.log"
+  },
+  "documentationGate": {
+    "passed": true,
+    "strict": true,
+    "log": "discovery-noauth-retain-native-docs.log"
+  }
+}

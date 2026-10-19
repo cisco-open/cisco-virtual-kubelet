@@ -362,9 +362,12 @@ type IOSXESoftwareRolloutImageSpec struct {
 //
 // +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.urlSecretRef.name.size() > 0",message="urlSecretRef.name must not be empty"
 // +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.urlSecretRef.name.size() <= 253",message="urlSecretRef.name must contain at most 253 characters"
-// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || self.url.startsWith('sftp://')",message="urlSecretRef is supported only for sftp sources in the managed rollout API"
-// +kubebuilder:validation:XValidation:rule="!self.url.startsWith('sftp://') || has(self.urlSecretRef)",message="sftp sources require an endpoint-bound urlSecretRef"
+// +kubebuilder:validation:XValidation:rule="!has(self.urlSecretRef) || (has(self.url) && self.url.startsWith('sftp://'))",message="urlSecretRef is supported only for sftp sources in the managed rollout API"
+// +kubebuilder:validation:XValidation:rule="!has(self.url) || !self.url.startsWith('sftp://') || has(self.urlSecretRef)",message="sftp sources require an endpoint-bound urlSecretRef"
+// +kubebuilder:validation:XValidation:rule="has(self.url) != has(self.catalystCenter)",message="select exactly one URL or Catalyst Center source"
 type IOSXESoftwareRolloutSourceSpec struct {
+	// +optional
+	CatalystCenter *CatalystCenterImageSource `json:"catalystCenter,omitempty"`
 	// Name is the stable, low-cardinality endpoint identity reported in the
 	// frozen target status. It must be unique within image.sources.
 	// +kubebuilder:validation:Required
@@ -388,10 +391,10 @@ type IOSXESoftwareRolloutSourceSpec struct {
 
 	// URL is one HTTPS or SFTP image URI with no user information, query, or
 	// fragment. Runtime endpoint and resolved-address policy remains mandatory.
-	// +kubebuilder:validation:Required
+	// +optional
 	// +kubebuilder:validation:MaxLength=2048
 	// +kubebuilder:validation:Pattern=`^(https|sftp)://[^/?#@]+/[^?#]+$`
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 
 	// URLSecretRef references an endpoint-bound Secret in this namespace.
 	// +kubebuilder:validation:Optional
@@ -984,8 +987,11 @@ type IOSXESoftwareRolloutPolicySnapshot struct {
 // and known-host material may rotate in place; endpoint authorization is
 // revalidated against URL whenever the source is admitted or used.
 //
-// +kubebuilder:validation:XValidation:rule="self.url.startsWith('sftp://') ? (has(self.secretName) && has(self.secretUID)) : (!has(self.secretName) && !has(self.secretUID))",message="sftp snapshots require an exact Secret incarnation; HTTPS snapshots must not carry deferred HTTP credentials"
+// +kubebuilder:validation:XValidation:rule="(has(self.url) && self.url.startsWith('sftp://')) ? (has(self.secretName) && has(self.secretUID)) : (!has(self.secretName) && !has(self.secretUID))",message="sftp snapshots require an exact Secret incarnation; HTTPS snapshots must not carry deferred HTTP credentials"
+// +kubebuilder:validation:XValidation:rule="has(self.url) != has(self.catalystCenter)",message="select exactly one URL or Catalyst Center source"
 type IOSXESoftwareRolloutSourceSnapshot struct {
+	// +optional
+	CatalystCenter *CatalystCenterImageSource `json:"catalystCenter,omitempty"`
 	// Name is the selected source's stable identity.
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
@@ -1000,10 +1006,10 @@ type IOSXESoftwareRolloutSourceSnapshot struct {
 	Priority int32 `json:"priority"`
 
 	// URL is copied from the immutable plan after canonical validation.
-	// +kubebuilder:validation:Required
+	// +optional
 	// +kubebuilder:validation:MaxLength=2048
 	// +kubebuilder:validation:Pattern=`^(https|sftp)://[^/?#@]+/[^?#]+$`
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 
 	// SHA256 is the campaign-wide pinned lowercase digest.
 	// +kubebuilder:validation:Required

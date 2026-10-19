@@ -1,0 +1,16 @@
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/read-error
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/cohort
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/source
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/configmap
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/owner
+=== RUN   TestEnvtestPnPRegistrationNoDispatchReplan/operation
+--- PASS: TestEnvtestPnPRegistrationNoDispatchReplan (9.55s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/read-error (3.29s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/cohort (0.65s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/source (0.56s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/configmap (0.67s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/owner (0.15s)
+    --- PASS: TestEnvtestPnPRegistrationNoDispatchReplan/operation (0.14s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	11.742s

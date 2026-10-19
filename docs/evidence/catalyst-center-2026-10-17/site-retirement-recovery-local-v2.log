@@ -1,0 +1,404 @@
+=== RUN   TestSiteRetirementBinding
+=== RUN   TestSiteRetirementBinding/cm-false/stable
+=== RUN   TestSiteRetirementBinding/cm-false/latest
+=== RUN   TestSiteRetirementBinding/cm-false/retain
+=== RUN   TestSiteRetirementBinding/cm-false/delete-config
+=== RUN   TestSiteRetirementBinding/cm-false/legacy
+=== RUN   TestSiteRetirementBinding/cm-false/wrong-key
+=== RUN   TestSiteRetirementBinding/cm-false/same-source
+=== RUN   TestSiteRetirementBinding/cm-false/declared
+=== RUN   TestSiteRetirementBinding/cm-false/foreign-owner
+=== RUN   TestSiteRetirementBinding/cm-false/foreign-receipt
+=== RUN   TestSiteRetirementBinding/cm-false/missing-creator
+=== RUN   TestSiteRetirementBinding/cm-false/bad-latest
+=== RUN   TestSiteRetirementBinding/cm-false/effect-row
+=== RUN   TestSiteRetirementBinding/cm-false/credential-row
+=== RUN   TestSiteRetirementBinding/cm-false/pending
+=== RUN   TestSiteRetirementBinding/cm-false/native-drift
+=== RUN   TestSiteRetirementBinding/cm-false/missing
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-source
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-owner
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-history
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-key
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-pause
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-target
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-resource
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-task
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-phase
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-plan
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-caller-memory
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-late-owner
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-late-native
+=== RUN   TestSiteRetirementBinding/cm-false/dispatch-late-phase
+=== RUN   TestSiteRetirementBinding/cm-true/stable
+=== RUN   TestSiteRetirementBinding/cm-true/latest
+=== RUN   TestSiteRetirementBinding/cm-true/retain
+=== RUN   TestSiteRetirementBinding/cm-true/delete-config
+=== RUN   TestSiteRetirementBinding/cm-true/legacy
+=== RUN   TestSiteRetirementBinding/cm-true/wrong-key
+=== RUN   TestSiteRetirementBinding/cm-true/same-source
+=== RUN   TestSiteRetirementBinding/cm-true/declared
+=== RUN   TestSiteRetirementBinding/cm-true/foreign-owner
+=== RUN   TestSiteRetirementBinding/cm-true/foreign-receipt
+=== RUN   TestSiteRetirementBinding/cm-true/missing-creator
+=== RUN   TestSiteRetirementBinding/cm-true/bad-latest
+=== RUN   TestSiteRetirementBinding/cm-true/effect-row
+=== RUN   TestSiteRetirementBinding/cm-true/credential-row
+=== RUN   TestSiteRetirementBinding/cm-true/pending
+=== RUN   TestSiteRetirementBinding/cm-true/native-drift
+=== RUN   TestSiteRetirementBinding/cm-true/missing
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-source
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-owner
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-history
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-key
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-pause
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-target
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-resource
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-task
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-phase
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-plan
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-caller-memory
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-late-owner
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-late-native
+=== RUN   TestSiteRetirementBinding/cm-true/dispatch-late-phase
+--- PASS: TestSiteRetirementBinding (3.18s)
+    --- PASS: TestSiteRetirementBinding/cm-false/stable (0.67s)
+    --- PASS: TestSiteRetirementBinding/cm-false/latest (0.07s)
+    --- PASS: TestSiteRetirementBinding/cm-false/retain (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/delete-config (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/legacy (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/wrong-key (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/same-source (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/declared (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/foreign-owner (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/foreign-receipt (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/missing-creator (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/bad-latest (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/effect-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/credential-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/pending (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/native-drift (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/missing (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-source (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-owner (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-history (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-key (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-pause (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-target (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-resource (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-task (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-phase (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-plan (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-caller-memory (0.06s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-late-owner (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-late-native (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-false/dispatch-late-phase (0.06s)
+    --- PASS: TestSiteRetirementBinding/cm-true/stable (0.07s)
+    --- PASS: TestSiteRetirementBinding/cm-true/latest (0.08s)
+    --- PASS: TestSiteRetirementBinding/cm-true/retain (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/delete-config (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/legacy (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/wrong-key (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/same-source (0.04s)
+    --- PASS: TestSiteRetirementBinding/cm-true/declared (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/foreign-owner (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/foreign-receipt (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/missing-creator (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/bad-latest (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/effect-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/credential-row (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/pending (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/native-drift (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/missing (0.03s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-source (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-owner (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-history (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-key (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-pause (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-target (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-resource (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-task (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-phase (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-plan (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-caller-memory (0.07s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-late-owner (0.06s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-late-native (0.05s)
+    --- PASS: TestSiteRetirementBinding/cm-true/dispatch-late-phase (0.06s)
+=== RUN   TestSiteRetirementSelector
+=== RUN   TestSiteRetirementSelector/valid
+=== RUN   TestSiteRetirementSelector/configmap
+=== RUN   TestSiteRetirementSelector/legacy-version
+=== RUN   TestSiteRetirementSelector/wrong-version
+=== RUN   TestSiteRetirementSelector/wrong-kind
+=== RUN   TestSiteRetirementSelector/wrong-mode
+=== RUN   TestSiteRetirementSelector/upper-digest
+=== RUN   TestSiteRetirementSelector/truncated
+=== RUN   TestSiteRetirementSelector/suffix
+=== RUN   TestSiteRetirementSelector/source-pair
+=== RUN   TestSiteRetirementSelector/target
+=== RUN   TestSiteRetirementSelector/parent
+=== RUN   TestSiteRetirementSelector/action
+=== RUN   TestSiteRetirementSelector/prepared
+=== RUN   TestSiteRetirementSelector/credentials
+=== RUN   TestSiteRetirementSelector/physical
+=== RUN   TestSiteRetirementSelector/bad-task
+=== RUN   TestSiteRetirementSelector/mac-same
+=== RUN   TestSiteRetirementSelector/mac-native
+=== RUN   TestSiteRetirementSelector/mac-creator
+=== RUN   TestSiteRetirementSelector/mac-key
+=== RUN   TestSiteRetirementSelector/mac-family
+--- PASS: TestSiteRetirementSelector (0.00s)
+    --- PASS: TestSiteRetirementSelector/valid (0.00s)
+    --- PASS: TestSiteRetirementSelector/configmap (0.00s)
+    --- PASS: TestSiteRetirementSelector/legacy-version (0.00s)
+    --- PASS: TestSiteRetirementSelector/wrong-version (0.00s)
+    --- PASS: TestSiteRetirementSelector/wrong-kind (0.00s)
+    --- PASS: TestSiteRetirementSelector/wrong-mode (0.00s)
+    --- PASS: TestSiteRetirementSelector/upper-digest (0.00s)
+    --- PASS: TestSiteRetirementSelector/truncated (0.00s)
+    --- PASS: TestSiteRetirementSelector/suffix (0.00s)
+    --- PASS: TestSiteRetirementSelector/source-pair (0.00s)
+    --- PASS: TestSiteRetirementSelector/target (0.00s)
+    --- PASS: TestSiteRetirementSelector/parent (0.00s)
+    --- PASS: TestSiteRetirementSelector/action (0.00s)
+    --- PASS: TestSiteRetirementSelector/prepared (0.00s)
+    --- PASS: TestSiteRetirementSelector/credentials (0.00s)
+    --- PASS: TestSiteRetirementSelector/physical (0.00s)
+    --- PASS: TestSiteRetirementSelector/bad-task (0.00s)
+    --- PASS: TestSiteRetirementSelector/mac-same (0.00s)
+    --- PASS: TestSiteRetirementSelector/mac-native (0.00s)
+    --- PASS: TestSiteRetirementSelector/mac-creator (0.00s)
+    --- PASS: TestSiteRetirementSelector/mac-key (0.00s)
+    --- PASS: TestSiteRetirementSelector/mac-family (0.00s)
+=== RUN   TestSiteRetirementTaskRecovery
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/accepted
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/latest
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/latest-pruned
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/edited-state-proof
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/edited-ancestry-proof
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/unknown
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/verifying
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/present
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/replacement
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/reused-uuid
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/parent-replaced
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/parent-settings
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/reappear
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/pending-child
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/failed-child
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/missing-tree
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/old-tree
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/future-tree
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/changed-completion
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/final-failure
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/taskless
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/borrowed-task
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/mismatched-task
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/legacy-selector
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/current-missing
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/task-source
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/task-owner
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/task-key
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/absence-history
+=== RUN   TestSiteRetirementTaskRecovery/cm-false/absence-phase
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/accepted
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/latest
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/latest-pruned
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/edited-state-proof
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/edited-ancestry-proof
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/unknown
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/verifying
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/present
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/replacement
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/reused-uuid
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/parent-replaced
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/parent-settings
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/reappear
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/pending-child
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/failed-child
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/missing-tree
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/old-tree
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/future-tree
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/changed-completion
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/final-failure
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/taskless
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/borrowed-task
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/mismatched-task
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/legacy-selector
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/current-missing
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/task-source
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/task-owner
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/task-key
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/absence-history
+=== RUN   TestSiteRetirementTaskRecovery/cm-true/absence-phase
+--- PASS: TestSiteRetirementTaskRecovery (4.51s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/accepted (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/latest (0.09s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/latest-pruned (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/edited-state-proof (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/edited-ancestry-proof (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/unknown (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/verifying (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/present (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/replacement (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/reused-uuid (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/parent-replaced (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/parent-settings (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/reappear (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/pending-child (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/failed-child (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/missing-tree (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/old-tree (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/future-tree (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/changed-completion (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/final-failure (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/taskless (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/borrowed-task (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/mismatched-task (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/legacy-selector (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/current-missing (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/task-source (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/task-owner (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/task-key (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/absence-history (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-false/absence-phase (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/accepted (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/latest (0.10s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/latest-pruned (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/edited-state-proof (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/edited-ancestry-proof (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/unknown (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/verifying (0.09s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/present (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/replacement (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/reused-uuid (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/parent-replaced (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/parent-settings (0.09s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/reappear (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/pending-child (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/failed-child (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/missing-tree (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/old-tree (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/future-tree (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/changed-completion (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/final-failure (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/taskless (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/borrowed-task (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/mismatched-task (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/legacy-selector (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/current-missing (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/task-source (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/task-owner (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/task-key (0.07s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/absence-history (0.08s)
+    --- PASS: TestSiteRetirementTaskRecovery/cm-true/absence-phase (0.08s)
+=== RUN   TestSiteRetirementAncestryIdentity
+=== RUN   TestSiteRetirementAncestryIdentity/same
+=== RUN   TestSiteRetirementAncestryIdentity/settings
+=== RUN   TestSiteRetirementAncestryIdentity/parent
+=== RUN   TestSiteRetirementAncestryIdentity/ancestor
+=== RUN   TestSiteRetirementAncestryIdentity/missing
+=== RUN   TestSiteRetirementAncestryIdentity/duplicate
+=== RUN   TestSiteRetirementAncestryIdentity/wrong-kind
+--- PASS: TestSiteRetirementAncestryIdentity (0.00s)
+    --- PASS: TestSiteRetirementAncestryIdentity/same (0.00s)
+    --- PASS: TestSiteRetirementAncestryIdentity/settings (0.00s)
+    --- PASS: TestSiteRetirementAncestryIdentity/parent (0.00s)
+    --- PASS: TestSiteRetirementAncestryIdentity/ancestor (0.00s)
+    --- PASS: TestSiteRetirementAncestryIdentity/missing (0.00s)
+    --- PASS: TestSiteRetirementAncestryIdentity/duplicate (0.00s)
+    --- PASS: TestSiteRetirementAncestryIdentity/wrong-kind (0.00s)
+=== RUN   TestSiteRetirementDependencies
+=== RUN   TestSiteRetirementDependencies/stable
+=== RUN   TestSiteRetirementDependencies/legacy-wireless-alias
+=== RUN   TestSiteRetirementDependencies/unrelated-reference
+=== RUN   TestSiteRetirementDependencies/late-unrelated
+=== RUN   TestSiteRetirementDependencies/global
+=== RUN   TestSiteRetirementDependencies/invalid-id
+=== RUN   TestSiteRetirementDependencies/missing
+=== RUN   TestSiteRetirementDependencies/replacement
+=== RUN   TestSiteRetirementDependencies/child
+=== RUN   TestSiteRetirementDependencies/device
+=== RUN   TestSiteRetirementDependencies/pnp
+=== RUN   TestSiteRetirementDependencies/pnp-unbound
+=== RUN   TestSiteRetirementDependencies/planned-ap
+=== RUN   TestSiteRetirementDependencies/switching
+=== RUN   TestSiteRetirementDependencies/wireless
+=== RUN   TestSiteRetirementDependencies/site-tag
+=== RUN   TestSiteRetirementDependencies/policy-tag
+=== RUN   TestSiteRetirementDependencies/tag-unknown
+=== RUN   TestSiteRetirementDependencies/profile-unknown
+=== RUN   TestSiteRetirementDependencies/profile-collision
+=== RUN   TestSiteRetirementDependencies/other-profile
+=== RUN   TestSiteRetirementDependencies/fabric
+=== RUN   TestSiteRetirementDependencies/zone
+=== RUN   TestSiteRetirementDependencies/reservation
+=== RUN   TestSiteRetirementDependencies/dangling-profile
+=== RUN   TestSiteRetirementDependencies/dangling-fabric
+=== RUN   TestSiteRetirementDependencies/dangling-zone
+=== RUN   TestSiteRetirementDependencies/dangling-reservation
+=== RUN   TestSiteRetirementDependencies/late-device
+=== RUN   TestSiteRetirementDependencies/late-profile
+=== RUN   TestSiteRetirementDependencies/late-native
+=== RUN   TestSiteRetirementDependencies/late-parent
+=== RUN   TestSiteRetirementDependencies/late-replacement
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/sites
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkDevices/assignedToSite
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/onboarding/pnp-device
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v2/floors/11111111-1111-4111-8111-111111111111/plannedAccessPointPositions
+=== RUN   TestSiteRetirementDependencies/error:/api/v1/siteprofile
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkProfilesForSites/switch-profile/siteAssignments
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles/wireless-profile/siteTags
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricSites
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricZones
+=== RUN   TestSiteRetirementDependencies/error:/dna/intent/api/v1/ipam/siteIpAddressPools
+--- PASS: TestSiteRetirementDependencies (0.65s)
+    --- PASS: TestSiteRetirementDependencies/stable (0.02s)
+    --- PASS: TestSiteRetirementDependencies/legacy-wireless-alias (0.02s)
+    --- PASS: TestSiteRetirementDependencies/unrelated-reference (0.04s)
+    --- PASS: TestSiteRetirementDependencies/late-unrelated (0.03s)
+    --- PASS: TestSiteRetirementDependencies/global (0.00s)
+    --- PASS: TestSiteRetirementDependencies/invalid-id (0.00s)
+    --- PASS: TestSiteRetirementDependencies/missing (0.01s)
+    --- PASS: TestSiteRetirementDependencies/replacement (0.01s)
+    --- PASS: TestSiteRetirementDependencies/child (0.01s)
+    --- PASS: TestSiteRetirementDependencies/device (0.01s)
+    --- PASS: TestSiteRetirementDependencies/pnp (0.01s)
+    --- PASS: TestSiteRetirementDependencies/pnp-unbound (0.02s)
+    --- PASS: TestSiteRetirementDependencies/planned-ap (0.01s)
+    --- PASS: TestSiteRetirementDependencies/switching (0.01s)
+    --- PASS: TestSiteRetirementDependencies/wireless (0.01s)
+    --- PASS: TestSiteRetirementDependencies/site-tag (0.01s)
+    --- PASS: TestSiteRetirementDependencies/policy-tag (0.01s)
+    --- PASS: TestSiteRetirementDependencies/tag-unknown (0.01s)
+    --- PASS: TestSiteRetirementDependencies/profile-unknown (0.01s)
+    --- PASS: TestSiteRetirementDependencies/profile-collision (0.01s)
+    --- PASS: TestSiteRetirementDependencies/other-profile (0.01s)
+    --- PASS: TestSiteRetirementDependencies/fabric (0.01s)
+    --- PASS: TestSiteRetirementDependencies/zone (0.01s)
+    --- PASS: TestSiteRetirementDependencies/reservation (0.01s)
+    --- PASS: TestSiteRetirementDependencies/dangling-profile (0.01s)
+    --- PASS: TestSiteRetirementDependencies/dangling-fabric (0.01s)
+    --- PASS: TestSiteRetirementDependencies/dangling-zone (0.01s)
+    --- PASS: TestSiteRetirementDependencies/dangling-reservation (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-device (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-profile (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-native (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-parent (0.02s)
+    --- PASS: TestSiteRetirementDependencies/late-replacement (0.02s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/sites (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkDevices/assignedToSite (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/onboarding/pnp-device (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v2/floors/11111111-1111-4111-8111-111111111111/plannedAccessPointPositions (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/api/v1/siteprofile (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/networkProfilesForSites/switch-profile/siteAssignments (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/wirelessProfiles/wireless-profile/siteTags (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricSites (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/sda/fabricZones (0.01s)
+    --- PASS: TestSiteRetirementDependencies/error:/dna/intent/api/v1/ipam/siteIpAddressPools (0.01s)
+=== RUN   TestSiteRetirementObservationRedactsNative
+--- PASS: TestSiteRetirementObservationRedactsNative (0.00s)
+PASS
+ok  	github.com/cisco/virtual-kubelet-cisco/internal/controlleradapter/catalystcenter	10.704s
